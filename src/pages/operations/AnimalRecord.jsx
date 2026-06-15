@@ -1,18 +1,151 @@
 import React, { useState } from 'react';
 import { 
   Activity, Syringe, Baby, Calendar, Droplets, 
-  HeartPulse, ShieldCheck, FileText, Filter, ArrowLeft, Download, Share2, Calculator
+  HeartPulse, ShieldCheck, FileText, Filter, ArrowLeft, Download, Share2, Calculator, Plus
 } from 'lucide-react';
 import { Link, useParams } from 'react-router-dom';
 import { Skeleton } from '../../components/ui';
 import AlertBanner from '../../components/ui/AlertBanner';
+import Modal from '../../components/ui/Modal';
 import LABELS from '../../lib/labels';
+import cowAvatar from '../../assets/cow-avatar.svg';
+
+function getAvatarLabel(animal) {
+  const nameInitial = animal?.name?.trim()?.charAt(0)?.toUpperCase();
+  const idInitial = animal?.id?.trim()?.charAt(0)?.toUpperCase();
+  return nameInitial || idInitial || 'C';
+}
+
+function calculateDaysInMilk(lastCalved) {
+  if (!lastCalved) return null;
+
+  const calvingDate = new Date(lastCalved);
+  if (Number.isNaN(calvingDate.getTime())) return null;
+
+  const elapsedDays = Math.floor((Date.now() - calvingDate.getTime()) / (1000 * 60 * 60 * 24));
+  return Math.max(0, elapsedDays);
+}
+
+function getSummaryStats(animal) {
+  const daysInMilk = calculateDaysInMilk(animal.lastCalved);
+
+  return [
+    {
+      title: 'Identity',
+      items: [
+        { label: LABELS.BREED_PARENTS, value: animal.breed, helper: `Sire: ${animal.sire} | Dam: ${animal.dam}` },
+      ],
+    },
+    {
+      title: 'Demographics',
+      items: [
+        { label: 'Age', value: animal.age, helper: animal.status },
+      ],
+    },
+    {
+      title: 'Production',
+      items: [
+        { label: 'Days in Milk', value: daysInMilk === null ? 'N/A' : daysInMilk, helper: 'Since last calving' },
+        { label: '7-Day Avg.', value: animal.sevenDayAvg, helper: 'Rolling average yield' },
+      ],
+    },
+    {
+      title: 'Reproduction',
+      items: [
+        { label: 'Pregnancy Status', value: animal.pregnancyStatus, helper: animal.daysOpen === null ? 'Open days unavailable' : `${animal.daysOpen} Days Open` },
+      ],
+    },
+  ];
+}
+
+function SummarySection({ section, isLoading }) {
+  return (
+    <div className="space-y-3 rounded-2xl border border-ink/5 bg-surface-raised p-4 shadow-sm">
+      <div>
+        <span className="block text-[10px] font-bold uppercase tracking-widest text-brand/70">{section.title}</span>
+      </div>
+
+      <div className="space-y-4">
+        {section.items.map((item) => (
+          <div key={item.label} className="space-y-1">
+            <span className="block text-[10px] font-bold uppercase tracking-widest text-ink/50">{item.label}</span>
+            <div className="text-lg font-bold text-brand">{isLoading ? <Skeleton className="h-6 w-32" /> : item.value}</div>
+            <div className="text-xs text-ink-muted">{item.helper}</div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function getTimelineTheme(type) {
+  if (type === 'Health') {
+    return {
+      badgeClass: 'text-danger bg-danger/10 border-danger/20',
+      cardClass: 'border-l-danger bg-danger/5 border-danger/15',
+    };
+  }
+
+  if (type === 'Breeding') {
+    return {
+      badgeClass: 'text-brand bg-brand/10 border-brand/20',
+      cardClass: 'border-l-brand bg-brand/5 border-brand/15',
+    };
+  }
+
+  return {
+    badgeClass: 'text-accent-dark bg-accent/10 border-accent/20',
+    cardClass: 'border-l-accent bg-accent/5 border-accent/15',
+  };
+}
+
+function TimelineEventCard({ event }) {
+  const theme = getTimelineTheme(event.type);
+
+  return (
+    <div className="relative flex items-start group">
+      <div className={`absolute left-[-22px] z-10 flex h-8 w-8 items-center justify-center rounded-full border-2 bg-surface transition-transform group-hover:scale-110 md:left-[-34px] ${theme.badgeClass}`}>
+        {event.icon}
+      </div>
+
+      <div className="ml-6 w-full md:ml-4">
+        <div className={`rounded-xl border bg-surface p-4 transition-colors hover:bg-surface-raised ${theme.cardClass}`}>
+          <div className="mb-2 flex flex-col gap-1 md:flex-row md:items-center md:justify-between">
+            <h4 className="text-sm font-bold text-ink md:text-base">{event.title}</h4>
+            <span className="rounded bg-surface-warm px-2 py-0.5 font-mono text-xs text-ink-muted">{event.date}</span>
+          </div>
+          <p className="text-sm leading-relaxed text-ink-muted">{event.description}</p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function createTimelineEntry(event) {
+  const toneByType = {
+    Health: 'text-danger bg-danger/10 border-danger/20',
+    Breeding: 'text-brand bg-brand/10 border-brand/20',
+    General: 'text-accent bg-accent/10 border-accent/20',
+  };
+
+  return {
+    id: Date.now(),
+    date: event.date || new Date().toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' }),
+    type: event.type || 'General',
+    title: event.title?.trim() || 'Untitled Event',
+    description: event.description?.trim() || 'No additional details provided.',
+    icon: event.type === 'Health' ? <HeartPulse size={16} /> : event.type === 'Breeding' ? <Syringe size={16} /> : <FileText size={16} />,
+    color: toneByType[event.type] || 'text-ink-muted bg-surface-raised border-ink/10',
+  };
+}
 
 export default function AnimalPassport() {
   const [activeFilter, setActiveFilter] = useState('All');
   const [activeTab, setActiveTab] = useState('timeline');
   const [isLoading] = useState(false);
   const [successMessage, setSuccessMessage] = useState('');
+  const [isEventOpen, setIsEventOpen] = useState(false);
+  const [newEvent, setNewEvent] = useState({ title: '', description: '', date: '', type: 'Health' });
 
   // Nutrition planner state
   const [targetYield, setTargetYield] = useState('');
@@ -52,12 +185,17 @@ View the verified medical passport here: ${publicVerifyLink}`;
     age: "3 Years, 2 Months",
     status: "Active Milker",
     peakYield: "26.5 L/day",
+    sevenDayAvg: '24.8 L/day',
+    pregnancyStatus: 'Open - Action Required',
+    daysOpen: 84,
+    lastCalved: '2025-03-02',
+    photoUrl: cowAvatar,
     sire: "FR-889 (Premium AI)",
     dam: "C-042 (Bella)"
   };
 
   // Mock Data: Lifetime Chronological Events
-  const events = [
+  const [events, setEvents] = useState([
     {
       id: 1,
       date: "May 10, 2026",
@@ -112,7 +250,16 @@ View the verified medical passport here: ${publicVerifyLink}`;
       icon: <FileText size={16} />,
       color: "text-ink-muted bg-surface-raised border-ink/10"
     }
-  ];
+  ]);
+
+  const handleAddTimelineEvent = (event) => {
+    const timelineEvent = createTimelineEntry(event);
+    setEvents((current) => [timelineEvent, ...current]);
+    setActiveFilter('All');
+    setSuccessMessage(`Logged ${timelineEvent.type.toLowerCase()} event for ${animal.id}.`);
+    setIsEventOpen(false);
+    setNewEvent({ title: '', description: '', date: '', type: 'Health' });
+  };
 
   // Filter Logic
   const filteredEvents = events.filter(event => 
@@ -141,7 +288,7 @@ View the verified medical passport here: ${publicVerifyLink}`;
         <div className="flex items-center gap-2">
           <button 
             onClick={handleWhatsAppShare}
-            className="px-4 py-2 bg-[#25D366] text-white rounded-lg text-sm font-bold shadow-sm hover:bg-[#1DA851] transition-colors flex items-center gap-2"
+            className="px-4 py-2 rounded-lg text-sm font-bold border border-[#25D366]/30 bg-white text-[#128C7E] shadow-sm transition-colors hover:border-[#25D366] hover:bg-[#25D366]/5 flex items-center gap-2"
           >
             <Share2 size={16} /> Send using WhatsApp
           </button>
@@ -156,37 +303,41 @@ View the verified medical passport here: ${publicVerifyLink}`;
       </div>
 
       {/* ANIMAL PROFILE HERO */}
-      <div className="card-machined p-6 bg-surface grid grid-cols-1 md:grid-cols-4 gap-6">
+      <div className="card-machined grid grid-cols-1 gap-6 bg-surface p-6 md:grid-cols-4 xl:grid-cols-4">
         {successMessage && (
           <div className="fixed top-4 right-4 z-50 w-[min(92vw,430px)]">
             <AlertBanner type="success" title="Done" message={successMessage} autoDismiss={2400} onDismiss={() => setSuccessMessage('')} />
           </div>
         )}
-        <div className="col-span-1 md:col-span-2 space-y-4">
-          <div>
-            <span className="block text-[10px] font-bold text-ink/50 uppercase tracking-widest">{LABELS.BREED_PARENTS}</span>
-            <div className="text-lg font-bold text-brand">{isLoading ? <Skeleton className="h-6 w-48" /> : animal.breed}</div>
-            <div className="text-xs text-ink-muted mt-1 font-mono">{isLoading ? <Skeleton className="h-4 w-56" /> : `Sire: ${animal.sire} | Dam: ${animal.dam}`}</div>
-          </div>
-        </div>
-        
         <div className="space-y-4">
-          <div>
-            <span className="block text-[10px] font-bold text-ink/50 uppercase tracking-widest">Age & Status</span>
-            <div className="text-base font-bold text-ink">{isLoading ? <Skeleton className="h-5 w-24" /> : animal.age}</div>
-            <div className="inline-flex items-center gap-1.5 px-2 py-0.5 mt-1 bg-accent/20 text-brand-dark text-xs font-bold rounded">
-              <span className="w-1.5 h-1.5 rounded-full bg-accent animate-pulse"></span> {animal.status}
+          <div className="flex items-start gap-4">
+            <div className="relative h-16 w-16 shrink-0 overflow-hidden rounded-full border border-brand/10 bg-gradient-to-br from-brand/15 via-accent/10 to-surface shadow-sm">
+              {isLoading ? (
+                <Skeleton className="h-full w-full rounded-full" />
+              ) : animal.photoUrl ? (
+                <img
+                  src={animal.photoUrl}
+                  alt={`${animal.name} profile`}
+                  className="h-full w-full object-cover"
+                />
+              ) : (
+                <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-brand/15 via-accent/20 to-surface text-xl font-black text-brand">
+                  {getAvatarLabel(animal)}
+                </div>
+              )}
+            </div>
+
+            <div className="min-w-0 flex-1">
+              <span className="block text-[10px] font-bold text-ink/50 uppercase tracking-widest">{LABELS.BREED_PARENTS}</span>
+              <div className="text-lg font-bold text-brand">{isLoading ? <Skeleton className="h-6 w-48" /> : animal.breed}</div>
+              <div className="mt-1 text-xs font-mono text-slate-500">{isLoading ? <Skeleton className="h-4 w-56" /> : `Sire: ${animal.sire} | Dam: ${animal.dam}`}</div>
             </div>
           </div>
         </div>
 
-        <div className="space-y-4">
-          <div>
-            <span className="block text-[10px] font-bold text-ink/50 uppercase tracking-widest">{LABELS.BEST_DAILY_MILK}</span>
-            <div className="text-2xl font-bold text-brand">{isLoading ? <Skeleton className="h-8 w-32" /> : animal.peakYield}</div>
-            <div className="text-xs text-ink-muted mt-1">{LABELS.BEST_DAILY_MILK_SUB}</div>
-          </div>
-        </div>
+        {getSummaryStats(animal).map((section) => (
+          <SummarySection key={section.title} section={section} isLoading={isLoading} />
+        ))}
       </div>
 
       {/* TIMELINE / NUTRITION PLANNER SECTION */}
@@ -213,6 +364,14 @@ View the verified medical passport here: ${publicVerifyLink}`;
             >
               {LABELS.TARGET_FEED_CALCULATOR}
             </button>
+            {activeTab === 'timeline' && (
+              <button
+                onClick={() => setIsEventOpen(true)}
+                className="inline-flex items-center gap-1.5 rounded-md border border-brand/20 bg-white px-3 py-1.5 text-xs font-bold text-brand shadow-sm transition-colors hover:bg-brand/5"
+              >
+                <Plus size={14} /> Log Action
+              </button>
+            )}
           </div>
         </div>
 
@@ -239,15 +398,15 @@ View the verified medical passport here: ${publicVerifyLink}`;
             </div>
 
             {/* Vertical Timeline */}
-            <div className="relative pl-4 md:pl-8 space-y-8 before:absolute before:inset-0 before:ml-5 md:before:ml-9 before:-translate-x-px md:before:mx-auto md:before:translate-x-0 before:h-full before:w-0.5 before:bg-gradient-to-b before:from-brand/20 before:via-brand/20 before:to-transparent">
+            <div className="relative space-y-8 pl-4 md:pl-8 before:absolute before:inset-y-0 before:left-4 before:w-px before:bg-gradient-to-b before:from-brand/25 before:via-brand/20 before:to-transparent md:before:left-8">
               {isLoading ? (
                 Array.from({ length: 3 }).map((_, idx) => (
                   <div key={idx} className="relative flex items-start group">
-                    <div className={`absolute left-[-22px] md:left-[-34px] w-8 h-8 rounded-full border-2 flex items-center justify-center bg-surface z-10 transition-transform`}> 
+                    <div className="absolute left-[-22px] z-10 flex h-8 w-8 items-center justify-center rounded-full border-2 bg-surface transition-transform md:left-[-34px]"> 
                       <Skeleton className="h-4 w-4 rounded-full" />
                     </div>
                     <div className="ml-6 md:ml-4 w-full">
-                      <div className="p-4 rounded-xl border bg-surface hover:bg-surface-raised transition-colors">
+                      <div className="rounded-xl border border-ink/10 bg-surface p-4 transition-colors hover:bg-surface-raised">
                         <div className="flex justify-between items-center mb-2">
                           <Skeleton className="h-4 w-48" />
                           <Skeleton className="h-4 w-20" />
@@ -259,23 +418,7 @@ View the verified medical passport here: ${publicVerifyLink}`;
                 ))
               ) : (
                 filteredEvents.map((event) => (
-                  <div key={event.id} className="relative flex items-start group">
-                    <div className={`absolute left-[-22px] md:left-[-34px] w-8 h-8 rounded-full border-2 flex items-center justify-center bg-surface z-10 transition-transform group-hover:scale-110 ${event.color}`}>
-                      {event.icon}
-                    </div>
-
-                    <div className="ml-6 md:ml-4 w-full">
-                      <div className={`p-4 rounded-xl border bg-surface hover:bg-surface-raised transition-colors ${event.color.split(' ')[2]}`}>
-                        <div className="flex flex-col md:flex-row md:items-center justify-between mb-2 gap-1">
-                          <h4 className="font-bold text-ink text-sm md:text-base">{event.title}</h4>
-                          <span className="font-mono text-xs text-ink-muted bg-surface-warm px-2 py-0.5 rounded">
-                            {event.date}
-                          </span>
-                        </div>
-                        <p className="text-sm text-ink-muted leading-relaxed">{event.description}</p>
-                      </div>
-                    </div>
-                  </div>
+                  <TimelineEventCard key={event.id} event={event} />
                 ))
               )}
             </div>
@@ -373,6 +516,74 @@ View the verified medical passport here: ${publicVerifyLink}`;
           </div>
         )}
       </div>
+
+      <Modal isOpen={isEventOpen} onClose={() => setIsEventOpen(false)} title="Log Action">
+        <form
+          className="space-y-4"
+          onSubmit={(event) => {
+            event.preventDefault();
+            handleAddTimelineEvent(newEvent);
+          }}
+        >
+          <div>
+            <label className="mb-1 block text-xs font-bold uppercase tracking-wider text-ink-muted">Event Type</label>
+            <select
+              className="input-machined w-full"
+              value={newEvent.type}
+              onChange={(event) => setNewEvent((current) => ({ ...current, type: event.target.value }))}
+            >
+              <option value="Health">Health</option>
+              <option value="Breeding">Breeding</option>
+              <option value="General">General</option>
+            </select>
+          </div>
+
+          <div>
+            <label className="mb-1 block text-xs font-bold uppercase tracking-wider text-ink-muted">Title</label>
+            <input
+              className="input-machined w-full"
+              value={newEvent.title}
+              onChange={(event) => setNewEvent((current) => ({ ...current, title: event.target.value }))}
+              placeholder="e.g. Vet check completed"
+              required
+            />
+          </div>
+
+          <div>
+            <label className="mb-1 block text-xs font-bold uppercase tracking-wider text-ink-muted">Date</label>
+            <input
+              type="date"
+              className="input-machined w-full"
+              value={newEvent.date}
+              onChange={(event) => setNewEvent((current) => ({ ...current, date: event.target.value }))}
+            />
+          </div>
+
+          <div>
+            <label className="mb-1 block text-xs font-bold uppercase tracking-wider text-ink-muted">Description</label>
+            <textarea
+              className="input-machined w-full min-h-[110px]"
+              value={newEvent.description}
+              onChange={(event) => setNewEvent((current) => ({ ...current, description: event.target.value }))}
+              placeholder="Add treatment notes, breeding details, or general remarks"
+              required
+            />
+          </div>
+
+          <div className="flex justify-end gap-3 pt-2">
+            <button
+              type="button"
+              onClick={() => setIsEventOpen(false)}
+              className="rounded-lg border border-ink/20 px-4 py-2 text-sm font-bold text-ink-muted transition-colors hover:bg-ink/5"
+            >
+              Cancel
+            </button>
+            <button type="submit" className="btn-command px-4 py-2 text-sm">
+              Save Event
+            </button>
+          </div>
+        </form>
+      </Modal>
     </div>
   );
 }

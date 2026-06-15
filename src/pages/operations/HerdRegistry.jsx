@@ -79,7 +79,7 @@ export default function HerdRegistry() {
         </div>
         <div className="flex items-center gap-3">
           <button type="button" onClick={() => setIsAddOpen(true)} className="btn-command flex items-center gap-2">
-            Add Cow
+            +Add Cow
           </button>
         </div>
       </div>
