@@ -2,33 +2,33 @@
 
 **jivu-frontend** is a modern React-based dashboard for farm management and dairy operations, featuring real-time production tracking, feed formulation, herd management, and business intelligence.
 
-## ✨ Features
+## Features
 
 ### Core Modules
-- **🐄 HerdsmanView Dashboard** — Live herd status, today's plan, feed mix composition
-- **🥗 Feed & Nutrition** — Live mix builder with template persistence, profitability charts, recipe management
-- **🥛 Production Tracking** — Fast milk logging, yield history, medical records  
-- **📦 Inventory Management** — Feed formulation, stock registry, buyer tracking
-- **💰 Finance** — Ledger, customer profiles, payments
-- **👥 HR & Staffing** — Payroll, staff registry
+- **HerdsmanView Dashboard** — Live herd status, today's plan, feed mix composition
+- **Feed & Nutrition** — Live mix builder with template persistence, profitability charts, recipe management
+- **Production Tracking** — Fast milk logging, yield history, medical records  
+- **Inventory Management** — Feed formulation, stock registry, buyer tracking
+- **Finance** — Ledger, customer profiles, payments
+- **HR & Staffing** — Payroll, staff registry
 
 ### UI/UX Highlights
-- ✅ Responsive design with Tailwind CSS
-- ✅ Dark/light theme toggle
-- ✅ Offline queue support (PWA-ready)
-- ✅ Loading skeletons and status indicators
-- ✅ Modal workflows for intuitive data entry
+- Responsive design with Tailwind CSS
+- Dark/light theme toggle
+- Offline queue support (PWA-ready)
+- Loading skeletons and status indicators
+- Modal workflows for intuitive data entry
 
 ### Developer Experience
-- ✅ MSW mocks for realistic API simulation
-- ✅ Comprehensive test suite (Vitest, 24+ tests)
-- ✅ React Query for efficient server state management
-- ✅ Hot module reloading with Vite
-- ✅ SRP component architecture
+- MSW mocks for realistic API simulation
+- Comprehensive test suite (Vitest, 24+ tests)
+- React Query for efficient server state management
+- Hot module reloading with Vite
+- SRP component architecture
 
 ---
 
-## 🚀 Quick Start
+## Quick Start
 
 **Prerequisites:** Node.js 18+, npm 9+
 
@@ -68,7 +68,7 @@ npm run lint               # Run ESLint
 
 ---
 
-## 📁 Project Structure
+## Project Structure
 
 ```
 src/
@@ -98,7 +98,7 @@ src/
 
 ---
 
-## 🛠 Technology Stack
+## Technology Stack
 
 | Layer | Technology | Version |
 |-------|-----------|---------|
@@ -115,7 +115,7 @@ src/
 
 ---
 
-## 🏗 Architecture Highlights
+## Architecture Highlights
 
 ### Single Responsibility Principle (SRP)
 Each component has one job. Example: **Nutrition Dashboard**
@@ -140,15 +140,15 @@ Realistic development endpoints:
 - More in [`src/mocks/handlers.js`](src/mocks/handlers.js)
 
 ### Testing
-- ✅ Unit tests for utilities (`src/lib/__tests__/`)
-- ✅ Component tests for flows (`src/components/**/__tests__/`)
-- ✅ Mock handler validation (`src/mocks/__tests__/handlers.test.jsx`)
-- ✅ Layout & navigation tests
+- Unit tests for utilities (`src/lib/__tests__/`)
+- Component tests for flows (`src/components/**/__tests__/`)
+- Mock handler validation (`src/mocks/__tests__/handlers.test.jsx`)
+- Layout & navigation tests
 - **Total:** 24+ passing tests
 
 ---
 
-## 🔐 Environment & Security
+## Environment & Security
 
 ### Environment Variables
 Create `.env.local` in project root (excluded from git):
@@ -171,7 +171,7 @@ Files **excluded from git** (see [`.gitignore`](.gitignore)):
 
 ---
 
-## 📝 Git & Version Control
+## Git & Version Control
 
 ### Commit Conventions
 Descriptive commit messages:
@@ -195,7 +195,7 @@ docs/api-documentation
 
 ---
 
-## 🤝 Contributing
+## Contributing
 
 ### 1. Clone & Install
 ```bash
@@ -226,7 +226,7 @@ Open a PR on GitHub and request review.
 
 ---
 
-## 🐛 Troubleshooting
+## Troubleshooting
 
 ### Peer Dependency Issues
 ```bash
@@ -251,7 +251,7 @@ npm test -- --run --testTimeout=10000
 
 ---
 
-## 📚 Documentation
+## Documentation
 
 - **[React Router Docs](https://reactrouter.com/)**
 - **[Tailwind CSS](https://tailwindcss.com/)**
@@ -262,17 +262,17 @@ npm test -- --run --testTimeout=10000
 
 ---
 
-## 📄 License
+## License
 
 Proprietary — Smart Dairy ERP System (2024-2026)
 
 ---
 
-## 📧 Support
+## Support
 
 - **Issues:** [GitHub Issues](https://github.com/JamesKamau-5773/Smart-Dairy-system-frontend/issues)
 - **Discussions:** [GitHub Discussions](https://github.com/JamesKamau-5773/Smart-Dairy-system-frontend/discussions)
 
 ---
 
-**Made with ❤️ by the Smart Dairy Development Team**
+**Made with care by the Smart Dairy Development Team**
