@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { 
   Database, AlertOctagon, PackagePlus, ArrowDownRight, 
-  ArrowUpRight, Wheat, Syringe, HeartPulse, Search 
+  ArrowUpRight, Wheat, Syringe, HeartPulse, Search, ChevronDown, ChevronUp
 } from 'lucide-react';
 
 export default function StockRegistry() {
@@ -13,9 +13,23 @@ export default function StockRegistry() {
     { id: 4, name: "Penstrep Antibiotic", category: "Medicine", unit: "Vials (100ml)", qty: 5, threshold: 2, icon: <HeartPulse size={16} /> },
     { id: 5, name: "Boma Rhodes Hay", category: "Feed", unit: "Bales", qty: 45, threshold: 20, icon: <Wheat size={16} /> }
   ]);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [categoryFilter, setCategoryFilter] = useState('All');
+  const [controlsOpen, setControlsOpen] = useState(false);
+
+  const visibleInventory = useMemo(() => {
+    const normalizedSearch = searchTerm.trim().toLowerCase();
+
+    return inventory.filter((item) => {
+      const matchesSearch = !normalizedSearch || [item.name, item.category, item.unit].some((value) => String(value).toLowerCase().includes(normalizedSearch));
+      const matchesCategory = categoryFilter === 'All' || item.category === categoryFilter;
+      return matchesSearch && matchesCategory;
+    });
+  }, [inventory, searchTerm, categoryFilter]);
 
   // Derived State: Items below their minimum threshold
-  const criticalStock = inventory.filter(item => item.qty <= item.threshold);
+  const criticalStock = visibleInventory.filter(item => item.qty <= item.threshold);
+  const activeFilterCount = [searchTerm.trim(), categoryFilter !== 'All'].filter(Boolean).length;
 
   return (
     <div className="animate-reveal space-y-8 max-w-6xl mx-auto">
@@ -67,24 +81,62 @@ export default function StockRegistry() {
 
       {/* MAIN INVENTORY TABLE */}
       <div className="card-machined bg-surface overflow-hidden">
-        
         {/* Search & Filter Bar */}
-        <div className="p-4 border-b border-ink/10 flex items-center justify-between bg-surface-warm/30">
-          <div className="relative w-64">
-            <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-ink/40" />
-            <input 
-              type="text" 
-              placeholder="Search items..." 
-              className="w-full pl-9 pr-4 py-2 bg-surface border border-ink/10 rounded-lg text-sm focus:outline-none focus:border-brand/50 transition-colors"
-            />
-          </div>
-          <div className="flex gap-2">
-            {['All', 'Feed', 'Medicine', 'Breeding'].map(filter => (
-              <button key={filter} className="px-3 py-1 text-xs font-bold text-ink-muted hover:bg-ink/5 rounded-md transition-colors">
-                {filter}
+        <div className="p-4 border-b border-ink/10 bg-surface-warm/30 space-y-4">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest text-ink-muted">
+                <Search size={12} /> Search and filters
+              </div>
+              <p className="mt-1 text-sm leading-6 text-ink-muted">Narrow the inventory by item name, unit, or supply category.</p>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <span className="rounded-full border border-ink/10 bg-surface px-3 py-1 text-[10px] font-bold uppercase tracking-widest text-ink-muted">
+                {activeFilterCount} active
+              </span>
+              <button
+                type="button"
+                onClick={() => setControlsOpen((current) => !current)}
+                aria-expanded={controlsOpen}
+                className="inline-flex items-center gap-1.5 rounded-lg border border-ink/10 bg-surface px-3 py-1.5 text-xs font-semibold text-ink shadow-sm transition-all hover:border-brand/20 hover:bg-brand/5 hover:text-brand"
+              >
+                {controlsOpen ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
+                {controlsOpen ? 'Hide filters' : 'Show filters'}
               </button>
-            ))}
+            </div>
           </div>
+
+          {controlsOpen && (
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <div className="relative w-full sm:w-64">
+                <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-ink/40" />
+                <input 
+                  type="text" 
+                  placeholder="Search items..." 
+                  className="w-full pl-9 pr-4 py-2 bg-surface border border-ink/10 rounded-lg text-sm focus:outline-none focus:border-brand/50 transition-colors"
+                  value={searchTerm}
+                  onChange={(event) => setSearchTerm(event.target.value)}
+                />
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {['All', 'Feed', 'Medicine', 'Breeding'].map((filter) => (
+                  <button
+                    key={filter}
+                    type="button"
+                    onClick={() => setCategoryFilter(filter)}
+                    className={`px-3 py-1 text-xs font-bold rounded-md transition-colors ${
+                      categoryFilter === filter
+                        ? 'bg-brand text-surface'
+                        : 'text-ink-muted hover:bg-ink/5'
+                    }`}
+                  >
+                    {filter}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Data Grid */}
@@ -99,7 +151,7 @@ export default function StockRegistry() {
             </tr>
           </thead>
           <tbody className="divide-y divide-ink/5">
-            {inventory.map((item) => {
+            {visibleInventory.map((item) => {
               const isLow = item.qty <= item.threshold;
               const isWarning = item.qty <= (item.threshold * 1.5) && !isLow;
               

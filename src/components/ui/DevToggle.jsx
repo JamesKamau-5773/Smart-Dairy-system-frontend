@@ -27,7 +27,7 @@ export default function DevToggle() {
 
   return (
     <button
-      className={`ml-2 px-2 py-1 text-xs rounded-md border ${adminMode ? 'bg-brand text-surface' : 'bg-surface'}`}
+      className={`ml-2 text-xs ${adminMode ? 'btn-command' : 'btn-secondary'}`}
       onClick={handleToggle}
       title="Toggle MSW Admin Override"
     >

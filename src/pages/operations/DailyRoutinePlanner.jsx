@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { Clock, Save, CheckSquare } from 'lucide-react';
 import { loadScheduleTasks, saveScheduleTasks } from '../../lib/schedule';
 
@@ -10,8 +10,22 @@ export default function DailyRoutinePlanner() {
   const initialTasks = loadInitialTasks();
   const [tasks, setTasks] = useState(initialTasks);
   const [activeTaskId, setActiveTaskId] = useState(initialTasks[0]?.id ?? 1);
+  const [lastSavedAt, setLastSavedAt] = useState(null);
 
   const activeTask = tasks.find((task) => task.id === activeTaskId) || tasks[0] || null;
+
+  const plannerSummary = useMemo(() => {
+    const tasksWithNotes = tasks.filter((task) => Boolean((task.checklist || task.notes || '').trim())).length;
+
+    return {
+      totalTasks: tasks.length,
+      tasksWithNotes,
+      activeSteps: (activeTask?.checklist || activeTask?.notes || '')
+        .split('\n')
+        .map((step) => step.trim())
+        .filter(Boolean).length,
+    };
+  }, [activeTask?.checklist, activeTask?.notes, tasks]);
 
   const handleNoteChange = (text) => {
     setTasks((currentTasks) => currentTasks.map((task) => 
@@ -21,6 +35,7 @@ export default function DailyRoutinePlanner() {
 
   const handleSave = () => {
     saveScheduleTasks(tasks);
+    setLastSavedAt(new Date());
   };
 
   const checklistSteps = (activeTask?.checklist || activeTask?.notes || '')
@@ -30,12 +45,26 @@ export default function DailyRoutinePlanner() {
 
   return (
     <div className="max-w-6xl mx-auto space-y-6 animate-reveal">
-      {/* Header */}
-      <div className="border-b border-ink/10 pb-4">
-        <h2 className="font-sans font-bold text-3xl text-brand">Daily Routine Planner</h2>
-        <p className="text-ink-muted text-sm mt-2">
-          Set the daily schedule. The notes you type here will appear as a checklist on the herdsman's phone.
-        </p>
+      <div className="rounded-[28px] border border-ink/10 bg-[linear-gradient(135deg,rgba(223,249,255,0.94),rgba(255,255,255,0.98))] p-5 sm:p-6 shadow-[0_20px_60px_rgba(15,23,42,0.08)]">
+        <div className="flex flex-col gap-4 border-b border-ink/10 pb-5 lg:flex-row lg:items-end lg:justify-between">
+          <div>
+            <h2 className="font-sans text-3xl font-black tracking-tight text-brand">Daily Routine Planner</h2>
+            <p className="mt-2 max-w-2xl text-sm leading-6 text-ink">
+              Set the daily schedule. The notes you type here will appear as a checklist on the herdsman&apos;s phone.
+            </p>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-2 text-[10px] font-bold uppercase tracking-widest text-ink-muted">
+            <span className="rounded-full border border-ink/10 bg-surface/90 px-3 py-1">{plannerSummary.totalTasks} blocks</span>
+            <span className="rounded-full border border-ink/10 bg-surface/90 px-3 py-1">{plannerSummary.tasksWithNotes} with notes</span>
+            <span className="rounded-full border border-ink/10 bg-surface/90 px-3 py-1">{plannerSummary.activeSteps} active steps</span>
+            {lastSavedAt && (
+              <span className="rounded-full border border-brand/15 bg-brand/5 px-3 py-1 text-brand">
+                Saved {lastSavedAt.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+              </span>
+            )}
+          </div>
+        </div>
       </div>
 
       {/* Main Grid Layout */}
@@ -103,16 +132,16 @@ export default function DailyRoutinePlanner() {
             <label className="block text-xs font-semibold text-ink-muted mb-2">
               Type one action per line to create a checklist:
             </label>
-            
+
             <textarea
               value={activeTask?.checklist || activeTask?.notes || ''}
               onChange={(e) => handleNoteChange(e.target.value)}
               placeholder={"e.g. Sweep the floor\nCheck the water"}
               className="w-full h-64 p-4 rounded-xl border border-ink/20 focus:border-brand focus:ring-1 focus:ring-brand bg-white text-sm text-ink-strong leading-relaxed resize-none transition-colors"
             />
-            
+
             <p className="text-[10px] text-ink-muted mt-3 italic text-center">
-              Changes auto-save to this time block. Don't forget to click "Save Schedule" when done.
+              Changes stay on this time block until you click "Save Routine".
             </p>
           </div>
         </div>

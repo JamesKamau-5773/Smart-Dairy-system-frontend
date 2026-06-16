@@ -20,7 +20,7 @@ export default function Modal({ isOpen, onClose, title, children }) {
           </h3>
           <button 
             onClick={onClose}
-            className="p-2 min-h-[44px] min-w-[44px] hover:bg-danger hover:text-surface transition-colors border-2 border-ink hover:scale-110 flex-shrink-0"
+            className="btn-ghost h-11 w-11 !p-0 flex-shrink-0"
             aria-label="Close modal"
           >
             <X size={20} />

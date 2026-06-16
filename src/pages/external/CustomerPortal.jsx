@@ -41,7 +41,7 @@ export default function CustomerPortal() {
             </h1>
             <p className="text-ink-muted mt-1">Issued to: <span className="font-semibold text-ink">{portalData.customerName}</span></p>
           </div>
-          <button className="btn-command bg-surface text-brand border border-ink/10 shadow-sm flex items-center gap-2 text-sm">
+          <button className="btn-secondary gap-2 text-sm">
             <Download size={16} /> Download PDF
           </button>
         </header>

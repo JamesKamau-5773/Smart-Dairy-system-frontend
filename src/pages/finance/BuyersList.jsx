@@ -10,6 +10,7 @@ export default function BuyersList() {
   const { tenantId, farmId } = useTenant();
   const [searchTerm, setSearchTerm] = useState('');
   const [expandedCustomerId, setExpandedCustomerId] = useState(null);
+  const [searchOpen, setSearchOpen] = useState(false);
 
   const { data: buyers = [], isLoading } = useQuery({
     queryKey: ['finance-buyers', tenantId, farmId],
@@ -29,6 +30,7 @@ export default function BuyersList() {
 
   const totalOutstanding = buyers.reduce((sum, buyer) => sum + Number(buyer.balance || 0), 0);
   const settledBuyers = buyers.filter((buyer) => Number(buyer.balance || 0) === 0).length;
+  const activeSearchCount = searchTerm.trim() ? 1 : 0;
 
   return (
     <div className="animate-reveal space-y-8">
@@ -73,18 +75,46 @@ export default function BuyersList() {
       </div>
 
       <div className="card-machined overflow-hidden bg-surface">
-        <div className="p-6 border-b border-ink/10 bg-surface-warm/50 flex gap-4 items-center">
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-ink/40" size={18} />
-            <input
-              type="text"
-              placeholder="Search customers by name or ID..."
-              className="input-machined pl-10 !py-2 text-sm"
-              value={searchTerm}
-              onChange={(event) => setSearchTerm(event.target.value)}
-            />
+        <div className="p-6 border-b border-ink/10 bg-surface-warm/50 space-y-4">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest text-ink-muted">
+                <Search size={12} /> Customer search
+              </div>
+              <p className="mt-1 text-sm leading-6 text-ink-muted">Search customers by name, ID, type, or contact.</p>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <span className="rounded-full border border-ink/10 bg-surface px-3 py-1 text-[10px] font-bold uppercase tracking-widest text-ink-muted">
+                {activeSearchCount} active
+              </span>
+              <button
+                type="button"
+                onClick={() => setSearchOpen((current) => !current)}
+                aria-expanded={searchOpen}
+                className="btn-ghost gap-1.5 px-3 py-1.5 text-xs"
+              >
+                {searchOpen ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
+                {searchOpen ? 'Hide search' : 'Show search'}
+              </button>
+            </div>
           </div>
-          <div className="hidden md:block text-xs text-ink-muted">Tap a customer row to expand their statement</div>
+
+          {searchOpen && (
+            <div className="flex gap-4 items-center">
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-ink/40" size={18} />
+                <input
+                  type="text"
+                  placeholder="Search customers by name or ID..."
+                  className="input-machined pl-10 !py-2 text-sm"
+                  value={searchTerm}
+                  onChange={(event) => setSearchTerm(event.target.value)}
+                />
+              </div>
+              <div className="hidden md:block text-xs text-ink-muted">Tap a customer row to expand their statement</div>
+            </div>
+          )}
         </div>
 
         <div className="space-y-3 p-4 sm:p-6">

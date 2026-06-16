@@ -74,6 +74,27 @@ export default function YieldLog() {
     return filterMilkRows(milkRows, filters);
   }, [filters, milkRows]);
 
+  const summary = useMemo(() => {
+    const verified = milkRows.filter((row) => row.status === 'Verified').length;
+    const pending = milkRows.filter((row) => row.status === 'Pending').length;
+    const flagged = milkRows.filter((row) => row.status === 'Flagged').length;
+    const totalVolume = milkRows.reduce((sum, row) => sum + Number(row.amount || 0), 0);
+
+    return {
+      verified,
+      pending,
+      flagged,
+      totalVolume: totalVolume.toFixed(1),
+    };
+  }, [milkRows]);
+
+  const summaryTone = {
+    brand: 'text-brand',
+    success: 'text-success',
+    warning: 'text-warning-dark',
+    danger: 'text-danger',
+  };
+
   const updateFilter = (name, value) => {
     setFilters((prev) => ({ ...prev, [name]: value }));
   };
@@ -143,27 +164,44 @@ export default function YieldLog() {
   };
 
   return (
-    <div className="animate-reveal space-y-8">
-      {/* SECTION HEADER */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:justify-between sm:items-end border-b border-ink/10 pb-6">
-        <div className="min-w-0">
-          <div className="inline-flex items-center gap-2 px-2 py-1 bg-brand/10 text-brand text-[10px] font-semibold tracking-normal mb-4 rounded-md border border-brand/20">
-            <Beaker size={12} /> Production Interface
+    <div className="animate-reveal space-y-6">
+      <div className="rounded-[28px] border border-ink/10 bg-[linear-gradient(135deg,rgba(223,249,255,0.95),rgba(255,255,255,0.98))] p-5 sm:p-6 shadow-[0_20px_60px_rgba(15,23,42,0.08)]">
+        <div className="flex flex-col gap-4 border-b border-ink/10 pb-5 lg:flex-row lg:items-end lg:justify-between">
+          <div className="min-w-0">
+            <div className="inline-flex items-center gap-2 px-2 py-1 bg-brand/10 text-brand text-[10px] font-semibold tracking-normal mb-4 rounded-md border border-brand/20">
+              <Beaker size={12} /> Production Interface
+            </div>
+            <h2 className="font-display font-semibold text-4xl tracking-tight text-brand m-0">
+              Daily <span className="text-ink/30">Milk Log</span>
+            </h2>
+            <p className="mt-2 max-w-2xl text-sm leading-6 text-ink-muted">
+              Review milk entries, keep withdrawals visible, and work from a single place with filters and edit history.
+            </p>
           </div>
-          <h2 className="font-display font-semibold text-4xl tracking-tight text-brand m-0">
-            Daily <span className="text-ink/30">Milk Log</span>
-          </h2>
+          <div className="flex">
+            <button
+              type="button"
+              onClick={openCreateLog}
+              className="btn-command w-full sm:w-auto justify-center gap-2 whitespace-nowrap min-h-11 px-4 py-3 sm:px-5 sm:py-3"
+            >
+              <Plus size={10} className="shrink-0" />
+              <span className="text-sm sm:text-base">Record Milk</span>
+            </button>
+          </div>
         </div>
-        <div className="flex">
-          <button
-            type="button"
-            onClick={openCreateLog}
-            className="btn-command w-full sm:w-auto justify-center gap-2 whitespace-nowrap bg-brand text-surface hover:scale-105 active:scale-95 transition-transform shadow-[0_6px_18px_rgba(3,105,161,0.28)] min-h-11 px-4 py-3 sm:px-5 sm:py-3"
-          >
-            <Plus size={10} className="shrink-0" />
-            <span className="text-sm sm:text-base">Record
-               Milk</span>
-          </button>
+
+        <div className="mt-5 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+          {[
+            { label: 'Total volume', value: `${summary.totalVolume} L`, tone: 'brand' },
+            { label: 'Verified entries', value: summary.verified, tone: 'success' },
+            { label: 'Pending entries', value: summary.pending, tone: 'warning' },
+            { label: 'Flagged entries', value: summary.flagged, tone: 'danger' },
+          ].map((item) => (
+            <div key={item.label} className="rounded-2xl border border-ink/10 bg-surface p-4 shadow-[0_10px_30px_rgba(15,23,42,0.05)]">
+              <p className="text-[10px] font-bold uppercase tracking-widest text-ink-muted">{item.label}</p>
+              <p className={`mt-2 text-3xl font-black ${summaryTone[item.tone]}`}>{item.value}</p>
+            </div>
+          ))}
         </div>
       </div>
 
@@ -177,7 +215,6 @@ export default function YieldLog() {
         />
       )}
 
-      {/* VETERINARY HARDLOCK BANNER */}
       {hardlocks?.length > 0 && (
         <div className="card-machined bg-danger/5 border-danger !shadow-[0_10px_28px_rgba(239,68,68,0.22)] p-6 flex gap-6 items-start">
           <div className="p-3 bg-danger text-surface">
@@ -188,12 +225,8 @@ export default function YieldLog() {
               Cows on Medicine (Do Not Mix!)
             </h4>
             <p className="font-sans text-sm text-ink-normal mt-1 max-w-2xl">
-              The system has identified{" "}
-              <strong className="text-ink-strong">
-                {hardlocks.length} cows
-              </strong>{" "}
-              currently under withdrawal periods. Milk entries for these
-              specific IDs are restricted to prevent contamination of the batch.
+              The system has identified <strong className="text-ink-strong">{hardlocks.length} cows</strong> currently under withdrawal periods.
+              Milk entries for these specific IDs are restricted to prevent contamination of the batch.
             </p>
           </div>
         </div>
@@ -204,20 +237,20 @@ export default function YieldLog() {
           <button
             type="button"
             onClick={() => setFiltersOpen((prev) => !prev)}
-            className="group flex items-center gap-2 text-brand font-bold text-left"
+            className="inline-flex items-center gap-1.5 rounded-lg border border-ink/10 bg-surface px-3 py-1.5 text-xs font-semibold text-ink shadow-sm transition-all hover:border-brand/20 hover:bg-brand/5 hover:text-brand"
             aria-expanded={filtersOpen}
             aria-controls="production-filter-panel"
           >
-            <Filter size={16} /> Production filters
+            <Filter size={12} /> Production filters
             <ChevronDown
-              size={14}
-              className={`text-ink-muted transition-transform duration-300 ease-out motion-reduce:transition-none group-hover:translate-y-0.5 ${filtersOpen ? 'rotate-180' : ''}`}
+              size={12}
+              className={`text-ink-muted transition-transform duration-300 ease-out motion-reduce:transition-none ${filtersOpen ? 'rotate-180' : ''}`}
             />
           </button>
           <button
             type="button"
             onClick={clearFilters}
-            className="inline-flex items-center gap-2 text-xs font-semibold text-ink-muted hover:text-brand"
+            className="btn-ghost gap-2 px-3 py-1.5 text-xs"
           >
             <RotateCcw size={14} /> Reset filters
           </button>
@@ -290,49 +323,27 @@ export default function YieldLog() {
         )}
       </div>
 
-      {/* LOGGING TABLE - MACHINED VARIANT */}
       <div className="card-machined overflow-hidden !p-0">
         <table className="w-full text-left border-collapse">
           <thead>
             <tr className="bg-brand text-surface">
-              <th className="p-5 font-sans text-xs font-semibold uppercase tracking-[0.12em] text-surface/95">
-                Time
-              </th>
-              <th className="p-5 font-sans text-xs font-semibold uppercase tracking-[0.12em] text-surface/95">
-                Milker
-              </th>
-              <th className="p-5 font-sans text-xs font-semibold uppercase tracking-[0.12em] text-surface/95">
-                Cow ID
-              </th>
-              <th className="p-5 font-sans text-xs font-semibold uppercase tracking-[0.12em] text-right text-surface/95">
-                Amount
-              </th>
-              <th className="p-5 font-sans text-xs font-semibold uppercase tracking-[0.12em] text-center text-surface/95">
-                Status
-              </th>
-              <th className="p-5 font-sans text-xs font-semibold uppercase tracking-[0.12em] text-right text-surface/95">
-                Actions
-              </th>
+              <th className="p-5 font-sans text-xs font-semibold uppercase tracking-[0.12em] text-surface/95">Time</th>
+              <th className="p-5 font-sans text-xs font-semibold uppercase tracking-[0.12em] text-surface/95">Milker</th>
+              <th className="p-5 font-sans text-xs font-semibold uppercase tracking-[0.12em] text-surface/95">Cow ID</th>
+              <th className="p-5 font-sans text-xs font-semibold uppercase tracking-[0.12em] text-right text-surface/95">Amount</th>
+              <th className="p-5 font-sans text-xs font-semibold uppercase tracking-[0.12em] text-center text-surface/95">Status</th>
+              <th className="p-5 font-sans text-xs font-semibold uppercase tracking-[0.12em] text-right text-surface/95">Actions</th>
             </tr>
           </thead>
           <tbody className="divide-y-2 divide-ink/5">
             {filteredMilkRows.map((row) => (
-              <tr
-                key={row.id}
-                style={{ animationDelay: '0.1s' }}
-                className="animate-stagger group hover:bg-surface-raised transition-colors"
-              >
+              <tr key={row.id} style={{ animationDelay: '0.1s' }} className="animate-stagger group hover:bg-surface-raised transition-colors">
                 <td className="p-5 font-sans text-xs text-ink-muted">{row.time}</td>
-                <td className="p-5 font-sans text-xs font-medium text-ink">
-                  {row.milker}
-                </td>
+                <td className="p-5 font-sans text-xs font-medium text-ink">{row.milker}</td>
                 <td className="p-5">
                   <div className="flex items-center gap-3">
                     <div className="w-2 h-2 rounded-full bg-accent"></div>
-                    <Link
-                      to={`/operations/animal/${row.cowId}/milk-history`}
-                      className="p-3 text-right font-sans text-1.8xl font-medium text-brand tabular-nums"
-                    >
+                    <Link to={`/operations/animal/${row.cowId}/milk-history`} className="p-3 text-right font-sans text-1.8xl font-medium text-brand tabular-nums">
                       {row.cowId} ({row.cowName})
                     </Link>
                   </div>
@@ -342,13 +353,15 @@ export default function YieldLog() {
                 </td>
                 <td className="p-5">
                   <div className="flex justify-center">
-                    <div className={`inline-flex items-center gap-1 px-2 py-1 border font-sans text-[11px] font-medium ${
-                      row.status === 'Verified'
-                        ? 'border-brand/20 bg-brand/5 text-brand'
-                        : row.status === 'Pending'
-                          ? 'border-amber-200 bg-amber-50 text-amber-700'
-                          : 'border-danger/20 bg-danger/5 text-danger'
-                    }`}>
+                    <div
+                      className={`inline-flex items-center gap-1 px-2 py-1 border font-sans text-[11px] font-medium ${
+                        row.status === 'Verified'
+                          ? 'border-brand/20 bg-brand/5 text-brand'
+                          : row.status === 'Pending'
+                            ? 'border-amber-200 bg-amber-50 text-amber-700'
+                            : 'border-danger/20 bg-danger/5 text-danger'
+                      }`}
+                    >
                       <ShieldCheck size={10} /> {row.status}
                     </div>
                   </div>
@@ -358,14 +371,14 @@ export default function YieldLog() {
                     <button
                       type="button"
                       onClick={() => openEditLog(row)}
-                      className="inline-flex items-center gap-1 rounded-lg border border-ink/10 bg-surface px-3 py-2 text-xs font-semibold text-ink-muted hover:border-brand/30 hover:text-brand transition-colors"
+                      className="btn-secondary gap-1 px-3 py-2 text-xs"
                     >
                       <Pencil size={12} /> Edit
                     </button>
                     <button
                       type="button"
                       onClick={() => setMilkRows((prev) => prev.filter((entry) => entry.id !== row.id))}
-                      className="inline-flex items-center gap-1 rounded-lg border border-danger/20 bg-danger/5 px-3 py-2 text-xs font-semibold text-danger hover:bg-danger/10 transition-colors"
+                      className="btn-danger gap-1 px-3 py-2 text-xs"
                     >
                       <Trash2 size={12} /> Delete
                     </button>

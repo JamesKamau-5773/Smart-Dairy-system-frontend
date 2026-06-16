@@ -18,6 +18,8 @@ import {
   Snowflake,
   Plus,
   ChevronRight,
+  ChevronDown,
+  ChevronUp,
   Search
 } from 'lucide-react';
 
@@ -291,13 +293,13 @@ function VetQueueItem({ log, onOutcome }) {
           <div className="flex gap-2">
             <button
               onClick={() => onOutcome(log.id, 'Open (Not Pregnant)')}
-              className="flex items-center gap-1 rounded-md border border-danger/20 bg-white px-3 py-2 text-xs font-bold text-danger transition-colors hover:bg-danger/5"
+              className="btn-danger gap-1 px-3 py-2 text-xs"
             >
               <XCircle size={14} /> Mark Open
             </button>
             <button
               onClick={() => onOutcome(log.id, 'Pregnant')}
-              className="flex items-center gap-1 rounded-md bg-brand px-3 py-2 text-xs font-bold text-surface shadow-sm transition-colors hover:bg-brand-dark"
+              className="btn-command gap-1 px-3 py-2 text-xs"
             >
               <CheckCircle2 size={14} /> Confirm Pregnant
             </button>
@@ -367,6 +369,7 @@ export default function BreedingHub() {
   const [isInventoryOpen, setIsInventoryOpen] = useState(false);
   const [historyFilter, setHistoryFilter] = useState('All');
   const [historySearch, setHistorySearch] = useState('');
+  const [historyControlsOpen, setHistoryControlsOpen] = useState(false);
   const [logForm, setLogForm] = useState({ cowId: '', aiDate: '', sireCode: '', note: '' });
   const [inventoryForm, setInventoryForm] = useState({ name: '', code: '', strawsLeft: '', improves: '' });
   const [formErrors, setFormErrors] = useState({});
@@ -405,6 +408,7 @@ export default function BreedingHub() {
   const filteredHistory = getFilteredHistory(vetHistory, historyFilter, historySearch);
   const groupedHistory = groupHistoryByMonth(filteredHistory);
   const hasActiveHistoryFilters = historyFilter !== 'All' || historySearch.trim() !== '';
+  const activeHistoryControlCount = [historySearch.trim(), historyFilter !== 'All'].filter(Boolean).length;
 
   const handleAddHistoryEntry = async (event) => {
     event.preventDefault();
@@ -639,7 +643,7 @@ export default function BreedingHub() {
             </div>
           </SimpleModalSection>
           <div className="flex justify-end gap-3 pt-2">
-            <button type="button" disabled={isSaving} onClick={() => setIsLogServiceOpen(false)} className="rounded-lg border border-ink/20 px-4 py-2 text-sm font-bold text-ink-muted transition-colors hover:bg-ink/5">Cancel</button>
+            <button type="button" disabled={isSaving} onClick={() => setIsLogServiceOpen(false)} className="btn-secondary px-4 py-2 text-sm">Cancel</button>
             <button type="submit" disabled={isSaving} className="btn-command px-4 py-2 text-sm">{isSaving ? 'Saving...' : 'Save Service'}</button>
           </div>
         </form>
@@ -648,52 +652,80 @@ export default function BreedingHub() {
       <Modal isOpen={isHistoryOpen} onClose={() => setIsHistoryOpen(false)} title="Historical Checks">
         <div className="space-y-4">
           <SimpleModalSection title="All Checks">
-            <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-              <div className="flex flex-1 items-center gap-2 rounded-lg border border-ink/10 bg-surface-raised px-3 py-2">
-                <Search size={14} className="text-ink-muted" />
-                <input
-                  type="search"
-                  value={historySearch}
-                  onChange={(event) => setHistorySearch(event.target.value)}
-                  placeholder="Search cow ID..."
-                  className="w-full bg-transparent text-sm text-ink-strong outline-none placeholder:text-ink-muted"
-                />
+            <div className="flex flex-col gap-3 border-b border-ink/10 pb-4 md:flex-row md:items-center md:justify-between">
+              <div>
+                <div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest text-ink-muted">
+                  <Search size={12} /> Search and filters
+                </div>
+                <p className="mt-1 text-sm leading-6 text-ink-muted">Filter breeding history by record status or cow ID.</p>
               </div>
 
               <div className="flex items-center gap-2">
+                <span className="rounded-full border border-ink/10 bg-surface-warm/60 px-3 py-1 text-[10px] font-bold uppercase tracking-widest text-ink-muted">
+                  {activeHistoryControlCount} active
+                </span>
                 <button
                   type="button"
-                  onClick={() => {
-                    setHistoryFilter('All');
-                    setHistorySearch('');
-                  }}
-                  className={`rounded-lg border px-3 py-2 text-xs font-bold transition-colors ${
-                    hasActiveHistoryFilters
-                      ? 'border-brand/20 bg-brand/5 text-brand hover:bg-brand/10'
-                      : 'border-ink/10 bg-surface-raised text-ink-muted'
-                  }`}
+                  onClick={() => setHistoryControlsOpen((current) => !current)}
+                  aria-expanded={historyControlsOpen}
+                  className="inline-flex items-center gap-1.5 rounded-lg border border-ink/10 bg-surface px-3 py-1.5 text-xs font-semibold text-ink shadow-sm transition-all hover:border-brand/20 hover:bg-brand/5 hover:text-brand"
                 >
-                  Clear filters
+                  {historyControlsOpen ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
+                  {historyControlsOpen ? 'Hide filters' : 'Show filters'}
                 </button>
               </div>
             </div>
 
-            <div className="flex flex-wrap gap-2">
-              {['All', 'Pregnant', 'Open', 'Pending'].map((filter) => (
-                <button
-                  key={filter}
-                  type="button"
-                  onClick={() => setHistoryFilter(filter)}
-                  className={`rounded-full border px-3 py-1.5 text-xs font-bold transition-colors ${
-                    historyFilter === filter
-                      ? 'border-brand bg-brand text-surface'
-                      : 'border-ink/10 bg-surface-raised text-ink-muted hover:border-brand/20 hover:text-brand'
-                  }`}
-                >
-                  {filter}
-                </button>
-              ))}
-            </div>
+            {historyControlsOpen && (
+              <div className="space-y-4 pt-4">
+                <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                  <div className="flex flex-1 items-center gap-2 rounded-lg border border-ink/10 bg-surface-raised px-3 py-2">
+                    <Search size={14} className="text-ink-muted" />
+                    <input
+                      type="search"
+                      value={historySearch}
+                      onChange={(event) => setHistorySearch(event.target.value)}
+                      placeholder="Search cow ID..."
+                      className="w-full bg-transparent text-sm text-ink-strong outline-none placeholder:text-ink-muted"
+                    />
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setHistoryFilter('All');
+                        setHistorySearch('');
+                      }}
+                      className={`rounded-lg border px-3 py-2 text-xs font-bold transition-colors ${
+                        hasActiveHistoryFilters
+                          ? 'border-brand/20 bg-brand/5 text-brand hover:bg-brand/10'
+                          : 'border-ink/10 bg-surface-raised text-ink-muted'
+                      }`}
+                    >
+                      Clear filters
+                    </button>
+                  </div>
+                </div>
+
+                <div className="flex flex-wrap gap-2">
+                  {['All', 'Pregnant', 'Open', 'Pending'].map((filter) => (
+                    <button
+                      key={filter}
+                      type="button"
+                      onClick={() => setHistoryFilter(filter)}
+                      className={`rounded-full border px-3 py-1.5 text-xs font-bold transition-colors ${
+                        historyFilter === filter
+                          ? 'border-brand bg-brand text-surface'
+                          : 'border-ink/10 bg-surface-raised text-ink-muted hover:border-brand/20 hover:text-brand'
+                      }`}
+                    >
+                      {filter}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
 
             <div className="max-h-[420px] overflow-y-auto pr-1">
               {filteredHistory.length === 0 && (
@@ -810,7 +842,7 @@ export default function BreedingHub() {
             </div>
           </SimpleModalSection>
           <div className="flex justify-end gap-3 pt-2">
-            <button type="button" disabled={isSaving} onClick={() => setIsInventoryOpen(false)} className="rounded-lg border border-ink/20 px-4 py-2 text-sm font-bold text-ink-muted transition-colors hover:bg-ink/5">Cancel</button>
+            <button type="button" disabled={isSaving} onClick={() => setIsInventoryOpen(false)} className="btn-secondary px-4 py-2 text-sm">Cancel</button>
             <button type="submit" disabled={isSaving} className="btn-command px-4 py-2 text-sm">{isSaving ? 'Saving...' : 'Add Inventory'}</button>
           </div>
         </form>

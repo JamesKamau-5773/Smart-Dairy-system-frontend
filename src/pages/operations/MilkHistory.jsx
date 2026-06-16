@@ -21,9 +21,16 @@ export function filterMilkHistorySessions(sessions, filters) {
 }
 
 function MetricCard({ label, value, icon: Icon, tone = 'brand' }) {
+  const toneStyles = {
+    brand: 'bg-brand/10 text-brand',
+    accent: 'bg-accent/10 text-accent-dark',
+    success: 'bg-success/10 text-success',
+    danger: 'bg-danger/10 text-danger',
+  };
+
   return (
     <div className="card-machined p-5 bg-surface flex items-center gap-4">
-      <div className={`w-11 h-11 rounded-xl flex items-center justify-center bg-${tone}/10 text-${tone}`}>
+      <div className={`w-11 h-11 rounded-xl flex items-center justify-center ${toneStyles[tone] || toneStyles.brand}`}>
         <Icon size={20} />
       </div>
       <div>
@@ -68,13 +75,15 @@ export default function MilkHistory() {
   );
 
   const totalYield = filteredSessions.reduce((sum, entry) => sum + entry.liters, 0).toFixed(1);
+  const totalSessions = resolvedHistory.sessions.length;
 
   const clearFilters = () => setFilters({ search: '', date: '', status: 'all', session: 'all' });
 
   return (
     <div className="animate-reveal space-y-6 max-w-6xl mx-auto">
-      <div className="flex items-center justify-between border-b border-ink/10 pb-4">
-        <div className="flex items-center gap-4 min-w-0">
+      <div className="rounded-[28px] border border-ink/10 bg-[linear-gradient(135deg,rgba(223,249,255,0.95),rgba(255,255,255,0.98))] p-5 sm:p-6 shadow-[0_20px_60px_rgba(15,23,42,0.08)]">
+        <div className="flex items-center justify-between border-b border-ink/10 pb-5 gap-4">
+          <div className="flex items-center gap-4 min-w-0">
           <Link to="/operations/yield" className="p-2 hover:bg-surface-raised rounded-lg text-ink-muted transition-colors">
             <ArrowLeft size={20} />
           </Link>
@@ -86,6 +95,11 @@ export default function MilkHistory() {
               {id} <span className="text-ink-muted">({resolvedHistory.name})</span>
             </h2>
             <p className="text-sm text-ink-muted mt-1">Detailed yield history for the selected animal.</p>
+          </div>
+          </div>
+          <div className="hidden sm:block text-right">
+            <p className="text-[10px] font-bold uppercase tracking-widest text-ink-muted">Session count</p>
+            <p className="text-2xl font-black text-ink">{totalSessions}</p>
           </div>
         </div>
       </div>
@@ -102,14 +116,14 @@ export default function MilkHistory() {
           <button
             type="button"
             onClick={() => setFiltersOpen((prev) => !prev)}
-            className="group flex items-center gap-2 text-brand font-bold text-left"
+            className="inline-flex items-center gap-1.5 rounded-lg border border-ink/10 bg-surface px-3 py-1.5 text-xs font-semibold text-ink shadow-sm transition-all hover:border-brand/20 hover:bg-brand/5 hover:text-brand"
             aria-expanded={filtersOpen}
             aria-controls="history-filter-panel"
           >
-            <Filter size={16} /> Search & filter history
+            <Filter size={12} /> Search & filter history
             <ChevronDown
-              size={14}
-              className={`text-ink-muted transition-transform duration-300 ease-out motion-reduce:transition-none group-hover:translate-y-0.5 ${filtersOpen ? 'rotate-180' : ''}`}
+              size={12}
+              className={`text-ink-muted transition-transform duration-300 ease-out motion-reduce:transition-none ${filtersOpen ? 'rotate-180' : ''}`}
             />
           </button>
           <button
@@ -221,8 +235,15 @@ export default function MilkHistory() {
             </tbody>
           </table>
         ) : (
-          <div className="p-8 text-center text-ink-muted">
-            No milk history matches the current filters.
+          <div className="p-10 text-center text-ink-muted bg-surface-warm/30">
+            <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-brand/10 text-brand mb-3">
+              <Search size={18} />
+            </div>
+            <p className="font-semibold text-ink">No milk history matches the current filters.</p>
+            <p className="text-sm mt-1 leading-6">Try clearing the filters or searching by date, milker, session, or status.</p>
+            <button type="button" onClick={clearFilters} className="btn-command bg-surface-raised text-ink mt-4">
+              Clear filters
+            </button>
           </div>
         )}
       </div>

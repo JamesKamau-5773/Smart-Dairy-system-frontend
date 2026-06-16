@@ -14,13 +14,13 @@ export default function ThemeToggle() {
     <div className="flex items-center gap-2">
       <button
         onClick={() => setTone('soft')}
-        className={`px-2 py-1 rounded text-sm ${tone === 'soft' ? 'bg-brand text-surface font-ui' : 'bg-surface text-ink'}`}
+        className={`text-sm ${tone === 'soft' ? 'btn-command font-ui' : 'btn-secondary'}`}
         aria-pressed={tone === 'soft'}
         title="Soft typography"
       >Soft</button>
       <button
         onClick={() => setTone('dense')}
-        className={`px-2 py-1 rounded text-sm ${tone === 'dense' ? 'bg-brand text-surface font-ui' : 'bg-surface text-ink'}`}
+        className={`text-sm ${tone === 'dense' ? 'btn-command font-ui' : 'btn-secondary'}`}
         aria-pressed={tone === 'dense'}
         title="Dense typography (higher contrast)"
       >Dense</button>

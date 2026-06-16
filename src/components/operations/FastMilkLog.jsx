@@ -1,12 +1,13 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useMutation, useQuery } from '@tanstack/react-query';
+import { useNavigate } from 'react-router-dom';
 import { useTenant } from '../../hooks/useTenant';
 import { QUERY_KEYS } from '../../providers/QueryProvider';
 import apiClient from '../../lib/apiClient';
 import AlertBanner from '../../components/ui/AlertBanner';
 import offlineQueue from '../../lib/offlineQueue';
-import { Droplets, CheckCircle2, AlertOctagon, Trash2, X } from 'lucide-react';
+import { ArrowLeft, Droplets, CheckCircle2, AlertOctagon, Trash2, X } from 'lucide-react';
 
 const mockHerd = [
   { id: 'C-101', name: 'Luna' },
@@ -39,6 +40,7 @@ const FastMilkUI = ({
   isPending,
   isDeleting,
   onClose,
+  onBack,
   message,
   messageType,
   onDismissMessage,
@@ -68,6 +70,17 @@ const FastMilkUI = ({
       {onClose && (
         <button onClick={onClose} className="absolute top-4 right-4 p-2 text-ink-muted hover:text-danger hover:bg-danger/5 rounded-full transition-colors" aria-label="Close Fast Log">
           <X size={20} />
+        </button>
+      )}
+
+      {onBack && (
+        <button
+          type="button"
+          onClick={onBack}
+          className="btn-ghost absolute left-4 top-4 h-9 w-9 !min-h-0 !p-0"
+          aria-label="Go back"
+        >
+          <ArrowLeft size={16} />
         </button>
       )}
 
@@ -166,6 +179,7 @@ const FastMilkUI = ({
 ========================================================================= */
 
 export default function FastMilkLog({ onClose, onSaveSuccess, onDeleteSuccess, mode = 'create', record = null } = {}) {
+  const navigate = useNavigate();
   const { tenantId, farmId } = useTenant();
   const [formData, setFormData] = useState(() => normalizeFormData(record));
   const [saveStatus, setSaveStatus] = useState(null);
@@ -351,6 +365,7 @@ export default function FastMilkLog({ onClose, onSaveSuccess, onDeleteSuccess, m
         isPending={mutation.isLoading}
         isDeleting={isDeleting}
         onClose={onClose}
+        onBack={!onClose ? () => navigate(-1) : undefined}
         message={message}
         messageType={messageType}
         onDismissMessage={() => setMessage('')}

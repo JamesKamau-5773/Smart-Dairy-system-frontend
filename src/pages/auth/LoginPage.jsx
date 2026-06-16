@@ -119,7 +119,7 @@ export default function LoginPage() {
               <button
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-ink-muted hover:text-brand transition-colors focus:outline-none"
+                className="btn-ghost absolute right-2 top-1/2 h-8 w-8 !min-h-0 -translate-y-1/2 !p-0 text-ink-muted"
                 aria-label={showPassword ? "Hide password" : "Show password"}
               >
                 {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
@@ -130,7 +130,7 @@ export default function LoginPage() {
           <div style={{ animationDelay: '0.3s' }} className="animate-stagger">
             <button 
               type="submit" 
-              className="w-full py-4 bg-brand/90 hover:bg-brand text-surface font-sans font-semibold tracking-normal shadow-lg hover:shadow-[0_12px_48px_rgba(3,105,161,0.35)] active:shadow-none active:translate-y-[1px] transition-all rounded-md border border-brand/20 backdrop-blur-sm hover:scale-[1.01] disabled:opacity-75 disabled:cursor-not-allowed"
+              className="btn-command w-full py-4"
               disabled={isSubmitting}
             >
               {isSubmitting ? 'Logging in…' : 'Log in'}
@@ -155,14 +155,14 @@ export default function LoginPage() {
             <button 
               type="button" 
               onClick={() => autofill('0712345678')}
-              className="px-2 py-1 bg-surface border border-brand/30 text-[11px] text-brand font-sans hover:bg-brand hover:text-surface transition-colors rounded"
+              className="btn-secondary px-2 py-1 text-[11px]"
             >
               Single Farm
             </button>
             <button 
               type="button" 
               onClick={() => autofill('0787654321')}
-              className="px-2 py-1 bg-surface border border-brand/30 text-[11px] text-brand font-sans hover:bg-brand hover:text-surface transition-colors rounded"
+              className="btn-secondary px-2 py-1 text-[11px]"
             >
               Cooperative
             </button>

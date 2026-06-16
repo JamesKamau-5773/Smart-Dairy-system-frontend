@@ -28,10 +28,10 @@ export default function FinancialLedger() {
           </h2>
         </div>
         <div className="flex gap-4">
-          <button className="btn-command bg-surface text-brand">
+          <button className="btn-secondary">
             <ArrowDownLeft size={18} className="mr-2 text-danger" /> Expense
           </button>
-          <button className="btn-command bg-accent text-brand">
+          <button className="btn-command">
             <ArrowUpRight size={18} className="mr-2" /> Income
           </button>
         </div>

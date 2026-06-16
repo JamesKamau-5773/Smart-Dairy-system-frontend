@@ -94,7 +94,7 @@ export default function FeedPlanner() {
           <button
             type="submit"
             disabled={calcMutation.isPending || !targetLiters}
-            className="bg-brand text-surface px-6 py-2 rounded-lg font-bold disabled:opacity-60 transition-all flex items-center justify-center min-w-[110px]"
+            className="btn-command min-w-[110px] px-6 py-2 disabled:opacity-60"
           >
             {calcMutation.isPending ? <Loader2 size={20} className="animate-spin" /> : 'Calculate'}
           </button>

@@ -70,7 +70,7 @@ export default function Confirmation({
           <button
             onClick={onCancel}
             disabled={isLoading}
-            className="flex-1 rounded-lg border border-ink/10 bg-surface-raised px-4 py-2.5 font-medium text-ink transition-colors hover:bg-surface-raised/80 disabled:opacity-50"
+            className="btn-secondary flex-1 px-4 py-2.5 text-sm font-semibold"
             aria-label={cancelText}
           >
             {cancelText}
@@ -78,7 +78,7 @@ export default function Confirmation({
           <button
             onClick={onConfirm}
             disabled={isLoading}
-            className={`flex-1 rounded-lg ${config.buttonColor} px-4 py-2.5 font-medium text-white shadow-md transition-colors disabled:opacity-50`}
+            className={`btn-command flex-1 ${config.buttonColor} px-4 py-2.5 text-sm font-semibold text-white`}
             aria-label={confirmText}
           >
             {isLoading ? 'Please wait...' : confirmText}

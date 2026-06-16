@@ -110,6 +110,30 @@ body::after {
   background: radial-gradient(circle, rgba(59, 130, 246, 0.16), transparent 72%);
 }
 
+@layer base {
+  button,
+  [role="button"],
+  a[role="button"] {
+    border-radius: 10px;
+    font-weight: 600;
+    letter-spacing: 0.01em;
+    transition: background-color 180ms ease, border-color 180ms ease, color 180ms ease, box-shadow 180ms ease, transform 180ms ease;
+  }
+
+  button:focus-visible,
+  [role="button"]:focus-visible,
+  a[role="button"]:focus-visible {
+    outline: 2px solid rgba(3, 105, 161, 0.45);
+    outline-offset: 2px;
+  }
+
+  button:disabled,
+  [role="button"][aria-disabled="true"] {
+    cursor: not-allowed;
+    opacity: 0.6;
+  }
+}
+
 h1,
 h2,
 h3,
@@ -168,10 +192,11 @@ h4 {
     @apply flex items-center justify-center font-semibold transition-all relative;
     background: var(--brand);
     color: white;
-    border: none;
-    border-radius: 8px;
-    padding: 0.75rem 1.5rem;
-    box-shadow: 0 4px 14px 0 rgba(3, 105, 161, 0.3);
+    border: 1px solid rgba(3, 105, 161, 0.2);
+    border-radius: 10px;
+    min-height: 40px;
+    padding: 0.65rem 1.2rem;
+    box-shadow: 0 8px 22px rgba(3, 105, 161, 0.24);
     letter-spacing: normal;
     text-transform: none;
     overflow: hidden;
@@ -194,13 +219,59 @@ h4 {
 
   .btn-command:hover {
     transform: translateY(-2px);
-    box-shadow: 0 8px 24px rgba(3, 105, 161, 0.45);
+    box-shadow: 0 12px 28px rgba(3, 105, 161, 0.34);
     background: var(--brand-dark);
   }
 
   .btn-command:active {
     transform: translateY(1px);
     box-shadow: 0 2px 6px rgba(3, 105, 161, 0.25);
+  }
+
+  .btn-secondary {
+    @apply inline-flex items-center justify-center;
+    min-height: 40px;
+    padding: 0.62rem 1rem;
+    background: rgba(255, 255, 255, 0.82);
+    color: var(--text-strong);
+    border: 1px solid rgba(15, 23, 42, 0.14);
+    box-shadow: 0 4px 10px rgba(15, 23, 42, 0.06);
+  }
+
+  .btn-secondary:hover {
+    background: rgba(255, 255, 255, 0.96);
+    border-color: rgba(3, 105, 161, 0.2);
+    color: var(--brand-dark);
+  }
+
+  .btn-danger {
+    @apply inline-flex items-center justify-center;
+    min-height: 40px;
+    padding: 0.62rem 1rem;
+    background: rgba(225, 29, 72, 0.08);
+    color: rgb(190, 18, 60);
+    border: 1px solid rgba(225, 29, 72, 0.25);
+    box-shadow: 0 4px 10px rgba(225, 29, 72, 0.1);
+  }
+
+  .btn-danger:hover {
+    background: rgba(225, 29, 72, 0.16);
+    border-color: rgba(225, 29, 72, 0.4);
+  }
+
+  .btn-ghost {
+    @apply inline-flex items-center justify-center;
+    min-height: 40px;
+    padding: 0.62rem 1rem;
+    background: transparent;
+    color: var(--text-muted);
+    border: 1px solid rgba(15, 23, 42, 0.14);
+  }
+
+  .btn-ghost:hover {
+    background: rgba(15, 23, 42, 0.05);
+    color: var(--text-strong);
+    border-color: rgba(15, 23, 42, 0.2);
   }
 
   /* ── Technical Input (Glass-milled) ── */

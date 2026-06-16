@@ -127,13 +127,6 @@ export default function HerdsmanView() {
     feedTaskMutation.mutate(feedTask);
   };
 
-  const handleNewCalfSubmit = (event) => {
-    event.preventDefault();
-    setSuccessMessage(`Recorded calf ${newCalf.earTag}${newCalf.name ? ` (${newCalf.name})` : ''}`);
-    setNewCalf({ earTag: '', name: '', mother: '' });
-    setIsCalfModalOpen(false);
-  };
-
   return (
     <div className="animate-reveal space-y-8 max-w-6xl mx-auto">
       {successMessage && (
@@ -176,6 +169,36 @@ export default function HerdsmanView() {
             <Clock size={16} /> Morning Milking
           </div>
           {/* Herd registry link removed to keep barn-floor UI focused */}
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+        <div className="rounded-2xl border border-ink/10 bg-surface/90 p-4 shadow-[0_10px_30px_rgba(15,23,42,0.06)]">
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <p className="text-[10px] font-bold uppercase tracking-widest text-ink-muted">Active alerts</p>
+              <p className="mt-2 text-3xl font-black text-ink">{priorityAlerts.length}</p>
+            </div>
+            <div className="rounded-2xl border border-white/60 bg-white/70 p-3 text-danger shadow-sm"><AlertTriangle size={18} /></div>
+          </div>
+        </div>
+        <div className="rounded-2xl border border-ink/10 bg-surface/90 p-4 shadow-[0_10px_30px_rgba(15,23,42,0.06)]">
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <p className="text-[10px] font-bold uppercase tracking-widest text-ink-muted">Feed tasks</p>
+              <p className="mt-2 text-3xl font-black text-ink">{feedInstructions.length}</p>
+            </div>
+            <div className="rounded-2xl border border-white/60 bg-white/70 p-3 text-brand shadow-sm"><Wheat size={18} /></div>
+          </div>
+        </div>
+        <div className="rounded-2xl border border-ink/10 bg-surface/90 p-4 shadow-[0_10px_30px_rgba(15,23,42,0.06)]">
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <p className="text-[10px] font-bold uppercase tracking-widest text-ink-muted">Undo queue</p>
+              <p className="mt-2 text-3xl font-black text-ink">{pendingDismissals.length}</p>
+            </div>
+            <div className="rounded-2xl border border-white/60 bg-white/70 p-3 text-success shadow-sm"><CheckCircle2 size={18} /></div>
+          </div>
         </div>
       </div>
 
@@ -332,7 +355,7 @@ export default function HerdsmanView() {
               <h4 className="font-bold text-brand text-base">Ready to Milk?</h4>
               <p className="text-sm text-ink-muted mt-1.5">Check the alerts above, then enter the milk amounts.</p>
             </div>
-            <Link to="/operations/yield" className="btn-command flex items-center justify-center gap-2 py-2.5">
+            <Link to="/operations/clerk" className="btn-command flex items-center justify-center gap-2 py-2.5">
               Record Milk <ArrowRight size={18} />
             </Link>
           </div>

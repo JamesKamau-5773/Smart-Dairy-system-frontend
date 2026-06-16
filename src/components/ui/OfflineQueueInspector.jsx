@@ -39,15 +39,15 @@ export default function OfflineQueueInspector({ isOpen, onClose } = {}) {
                 <div className="text-xs text-ink-muted">{new Date(it.createdAt).toLocaleString()}</div>
               </div>
               <div className="flex items-center gap-2">
-                <button onClick={() => handleRemove(it.id)} className="text-sm text-danger">Remove</button>
+                <button onClick={() => handleRemove(it.id)} className="btn-danger px-3 py-1 text-sm">Remove</button>
               </div>
             </div>
           ))}
         </div>
 
         <div className="flex justify-end gap-3">
-          <button onClick={onClose} className="btn-command bg-surface-raised text-ink">Close</button>
-          <button onClick={handleFlush} disabled={working || items.length===0} className="btn-command bg-brand text-surface">{working ? 'Flushing…' : 'Flush Now'}</button>
+          <button onClick={onClose} className="btn-secondary">Close</button>
+          <button onClick={handleFlush} disabled={working || items.length===0} className="btn-command">{working ? 'Flushing…' : 'Flush Now'}</button>
         </div>
       </div>
     </Modal>

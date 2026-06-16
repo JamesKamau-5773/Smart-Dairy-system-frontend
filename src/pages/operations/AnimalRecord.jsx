@@ -571,8 +571,8 @@ export default function AnimalPassport() {
                       totalCost: Number(totalCost.toFixed(2)),
                       horizonDays
                     });
-                  }} className="bg-brand text-surface px-6 py-2.5 rounded-lg font-bold hover:bg-brand-dark transition-colors flex-1 flex justify-center items-center gap-2"><Calculator size={18} /> Calculate</button>
-                  <button onClick={() => { setTargetYield(''); setPlannerResult(null); }} className="px-6 py-2.5 rounded-lg font-bold text-ink-muted border border-ink/20 hover:bg-ink/5 transition-colors">Reset</button>
+                  }} className="btn-command flex-1 justify-center gap-2 px-6 py-2.5"><Calculator size={18} /> Calculate</button>
+                  <button onClick={() => { setTargetYield(''); setPlannerResult(null); }} className="btn-secondary px-6 py-2.5">Reset</button>
                 </div>
               </div>
 
@@ -618,7 +618,7 @@ export default function AnimalPassport() {
           }}
         >
           <div>
-            <label className="mb-1 block text-xs font-bold uppercase tracking-wider text-ink-muted">Event Type</label>
+            <label className="mb-1 block text-xs font-bold uppercase tracking-wider text-ink-strong">Event Type</label>
             <select
               className="input-machined w-full"
               value={newEvent.type}
@@ -631,7 +631,7 @@ export default function AnimalPassport() {
           </div>
 
           <div>
-            <label className="mb-1 block text-xs font-bold uppercase tracking-wider text-ink-muted">Title</label>
+            <label className="mb-1 block text-xs font-bold uppercase tracking-wider text-ink-strong">Title</label>
             <input
               className="input-machined w-full"
               value={newEvent.title}
@@ -642,7 +642,7 @@ export default function AnimalPassport() {
           </div>
 
           <div>
-            <label className="mb-1 block text-xs font-bold uppercase tracking-wider text-ink-muted">Date</label>
+            <label className="mb-1 block text-xs font-bold uppercase tracking-wider text-ink-strong">Date</label>
             <input
               type="date"
               className="input-machined w-full"
@@ -652,7 +652,7 @@ export default function AnimalPassport() {
           </div>
 
           <div>
-            <label className="mb-1 block text-xs font-bold uppercase tracking-wider text-ink-muted">Description</label>
+            <label className="mb-1 block text-xs font-bold uppercase tracking-wider text-ink-strong">Description</label>
             <textarea
               className="input-machined w-full min-h-[110px]"
               value={newEvent.description}
@@ -666,7 +666,7 @@ export default function AnimalPassport() {
             <button
               type="button"
               onClick={() => setIsEventOpen(false)}
-              className="rounded-lg border border-ink/20 px-4 py-2 text-sm font-bold text-ink-muted transition-colors hover:bg-ink/5"
+              className="btn-secondary px-4 py-2 text-sm"
             >
               Cancel
             </button>

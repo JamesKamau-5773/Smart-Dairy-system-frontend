@@ -4,6 +4,7 @@ import {
   BookOpen,
   Calendar,
   ChevronDown,
+  ChevronUp,
   Filter,
   Scale,
   Search,
@@ -183,6 +184,7 @@ export default function HerdRegistry() {
   const [sortBy, setSortBy] = useState('age');
   const [statusFilter, setStatusFilter] = useState('All');
   const [herdSearch, setHerdSearch] = useState('');
+  const [controlsOpen, setControlsOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [herdState, setHerdState] = useState(INITIAL_HERD);
   const [isAddOpen, setIsAddOpen] = useState(false);
@@ -212,6 +214,7 @@ export default function HerdRegistry() {
   });
 
   const hasActiveFilters = statusFilter !== 'All' || herdSearch.trim() !== '';
+  const activeFilterCount = [herdSearch.trim(), statusFilter !== 'All'].filter(Boolean).length;
   const herdSummary = getHerdSummary(herdState);
 
   // Keyboard shortcuts
@@ -477,81 +480,100 @@ export default function HerdRegistry() {
         </div>
 
         {/* Controls */}
-        <div className="mb-6 flex flex-col gap-4 border-b border-ink/10 pb-4 lg:flex-row lg:items-center lg:justify-between">
-          <div className="flex items-center gap-2 text-ink-strong font-bold text-sm">
-            <Filter size={18} className="text-ink-strong" />
-            <span className="leading-none">Organize List</span>
-          </div>
-
-          <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
-            <div className="flex items-center gap-2 rounded-lg border border-ink/20 bg-surface/95 px-3 py-2 lg:min-w-[280px]">
-              <Search size={16} className="text-ink-muted" />
-              <input
-                ref={searchInputRef}
-                type="search"
-                value={herdSearch}
-                onChange={(event) => setHerdSearch(event.target.value)}
-                placeholder="Search herd... (Cmd+K)"
-                className="w-full bg-transparent text-sm font-semibold text-ink-strong outline-none placeholder:text-ink-muted"
-                aria-label="Search herd by ID, name, breed, or status"
-              />
-            </div>
-
-            <div className="flex items-center gap-2 rounded-lg border border-ink/20 bg-surface/95 px-3 py-2">
-              <Scale size={16} className="text-ink-strong" />
-              <label className="text-xs font-bold uppercase tracking-wider text-ink-strong" htmlFor="herd-sort">
-                Sort by
-              </label>
-              <select
-                id="herd-sort"
-                value={sortBy}
-                onChange={(event) => setSortBy(event.target.value)}
-                className="bg-transparent text-sm font-semibold text-ink-strong outline-none"
-                aria-label="Sort herd by"
-              >
-                <option value="age">Age</option>
-                <option value="breed">Breed</option>
-                <option value="status">Current Status</option>
-              </select>
-              <ChevronDown size={14} className="text-ink-strong" />
+        <div className="mb-6 rounded-2xl border border-ink/10 bg-surface/90 p-4 shadow-sm">
+          <div className="flex flex-col gap-3 border-b border-ink/10 pb-4 lg:flex-row lg:items-center lg:justify-between">
+            <div className="flex items-center gap-2 text-ink-strong font-bold text-sm">
+              <Filter size={18} className="text-ink-strong" />
+              <span className="leading-none">Organize List</span>
             </div>
 
             <div className="flex flex-wrap items-center gap-2">
-              {[
-                { label: 'All', count: herdState.length },
-                { label: 'Milking', count: herdState.filter((cow) => cow.status === 'Milking').length },
-                { label: 'Dry', count: herdState.filter((cow) => cow.status === 'Dry').length },
-              ].map((option) => (
-                <button
-                  key={option.label}
-                  type="button"
-                  onClick={() => setStatusFilter(option.label)}
-                  className={`rounded-lg border px-3 py-2 text-xs font-bold transition-colors ${
-                    statusFilter === option.label
-                      ? 'border-brand bg-brand text-surface'
-                      : 'border-ink/10 bg-surface-raised text-ink-muted hover:border-brand/20 hover:text-brand'
-                  }`}
-                  aria-pressed={statusFilter === option.label}
-                  aria-label={`Filter by ${option.label} status`}
-                >
-                  {option.label} <span className="ml-1 opacity-80">({option.count})</span>
-                </button>
-              ))}
-
+              <span className="rounded-full border border-ink/10 bg-surface-warm/60 px-3 py-1 text-[10px] font-bold uppercase tracking-widest text-ink-muted">
+                {activeFilterCount} active
+              </span>
               <button
                 type="button"
-                onClick={handleClearFilters}
-                className={`rounded-lg border px-3 py-2 text-xs font-bold transition-colors ${
-                  hasActiveFilters
-                    ? 'border-brand/20 bg-brand/5 text-brand hover:bg-brand/10'
-                    : 'border-ink/10 bg-surface-raised text-ink-muted'
-                }`}
-                aria-label="Clear all active filters"
+                onClick={() => setControlsOpen((current) => !current)}
+                aria-expanded={controlsOpen}
+                className="inline-flex items-center gap-1.5 rounded-lg border border-ink/10 bg-surface px-3 py-1.5 text-xs font-semibold text-ink shadow-sm transition-all hover:border-brand/20 hover:bg-brand/5 hover:text-brand"
               >
-                Clear filters
+                {controlsOpen ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
+                {controlsOpen ? 'Hide filters' : 'Show filters'}
               </button>
             </div>
           </div>
+
+          {controlsOpen && (
+            <div className="flex flex-col gap-3 pt-4 lg:flex-row lg:items-center">
+              <div className="flex items-center gap-2 rounded-lg border border-ink/20 bg-surface/95 px-3 py-2 lg:min-w-[280px]">
+                <Search size={16} className="text-ink-muted" />
+                <input
+                  ref={searchInputRef}
+                  type="search"
+                  value={herdSearch}
+                  onChange={(event) => setHerdSearch(event.target.value)}
+                  placeholder="Search herd... (Cmd+K)"
+                  className="w-full bg-transparent text-sm font-semibold text-ink-strong outline-none placeholder:text-ink-muted"
+                  aria-label="Search herd by ID, name, breed, or status"
+                />
+              </div>
+
+              <div className="flex items-center gap-2 rounded-lg border border-ink/20 bg-surface/95 px-3 py-2">
+                <Scale size={16} className="text-ink-strong" />
+                <label className="text-xs font-bold uppercase tracking-wider text-ink-strong" htmlFor="herd-sort">
+                  Sort by
+                </label>
+                <select
+                  id="herd-sort"
+                  value={sortBy}
+                  onChange={(event) => setSortBy(event.target.value)}
+                  className="bg-transparent text-sm font-semibold text-ink-strong outline-none"
+                  aria-label="Sort herd by"
+                >
+                  <option value="age">Age</option>
+                  <option value="breed">Breed</option>
+                  <option value="status">Current Status</option>
+                </select>
+                <ChevronDown size={14} className="text-ink-strong" />
+              </div>
+
+              <div className="flex flex-wrap items-center gap-2">
+                {[
+                  { label: 'All', count: herdState.length },
+                  { label: 'Milking', count: herdState.filter((cow) => cow.status === 'Milking').length },
+                  { label: 'Dry', count: herdState.filter((cow) => cow.status === 'Dry').length },
+                ].map((option) => (
+                  <button
+                    key={option.label}
+                    type="button"
+                    onClick={() => setStatusFilter(option.label)}
+                    className={`rounded-lg border px-3 py-2 text-xs font-bold transition-colors ${
+                      statusFilter === option.label
+                        ? 'border-brand bg-brand text-surface'
+                        : 'border-ink/10 bg-surface-raised text-ink-muted hover:border-brand/20 hover:text-brand'
+                    }`}
+                    aria-pressed={statusFilter === option.label}
+                    aria-label={`Filter by ${option.label} status`}
+                  >
+                    {option.label} <span className="ml-1 opacity-80">({option.count})</span>
+                  </button>
+                ))}
+
+                <button
+                  type="button"
+                  onClick={handleClearFilters}
+                  className={`rounded-lg border px-3 py-2 text-xs font-bold transition-colors ${
+                    hasActiveFilters
+                      ? 'border-brand/20 bg-brand/5 text-brand hover:bg-brand/10'
+                      : 'border-ink/10 bg-surface-raised text-ink-muted'
+                  }`}
+                  aria-label="Clear all active filters"
+                >
+                  Clear filters
+                </button>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Table */}
@@ -675,7 +697,7 @@ export default function HerdRegistry() {
                         <div className="flex items-center justify-end gap-2">
                           <Link
                             to={`/operations/animal/${cow.id}`}
-                            className="inline-flex items-center gap-2 rounded-lg bg-brand px-3 py-2 text-[11px] font-bold text-surface shadow-sm transition-colors hover:bg-brand-dark"
+                            className="btn-command gap-2 px-3 py-2 text-[11px]"
                             aria-label={`View record for ${cow.name}`}
                           >
                             View
@@ -683,7 +705,7 @@ export default function HerdRegistry() {
                           <button
                             type="button"
                             onClick={() => handleDeleteCow(cow.id, cow.name)}
-                            className="inline-flex items-center gap-1 rounded-lg border border-rose-200 px-2 py-2 text-[11px] font-bold text-rose-600 transition-colors hover:bg-rose-50"
+                            className="btn-danger gap-1 px-2 py-2 text-[11px]"
                             aria-label={`Delete ${cow.name}`}
                             title={`Delete ${cow.name} from herd`}
                           >
@@ -806,14 +828,14 @@ export default function HerdRegistry() {
               type="button"
               onClick={handleCloseModal}
               disabled={isSaving}
-              className="btn-command bg-surface-raised text-ink"
+              className="btn-secondary"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={isSaving}
-              className="btn-command bg-brand text-surface disabled:opacity-50"
+              className="btn-command disabled:opacity-50"
               aria-busy={isSaving}
             >
               {isSaving ? 'Saving...' : 'Save Animal'}
