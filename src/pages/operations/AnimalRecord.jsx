@@ -1,12 +1,15 @@
 import React, { useState } from 'react';
 import { 
   Activity, Syringe, Baby, Calendar, Droplets, 
-  HeartPulse, ShieldCheck, FileText, Filter, ArrowLeft, Download, Share2, Calculator, Plus
+  HeartPulse, ShieldCheck, FileText, Filter, ArrowLeft, Download, Share2, Calculator, Plus, AlertCircle
 } from 'lucide-react';
 import { Link, useParams } from 'react-router-dom';
 import { Skeleton } from '../../components/ui';
 import AlertBanner from '../../components/ui/AlertBanner';
 import Modal from '../../components/ui/Modal';
+import Confirmation, { useConfirmation } from '../../components/ui/Confirmation';
+import { validateForm, ValidationRules, getFirstErrorMessage } from '../../lib/validation';
+import { formatDateTime, getRelativeTime, createAuditEntry, logToAuditTrail } from '../../lib/audit';
 import LABELS from '../../lib/labels';
 import cowAvatar from '../../assets/cow-avatar.svg';
 
@@ -92,8 +95,13 @@ export default function AnimalPassport() {
   const [activeTab, setActiveTab] = useState('timeline');
   const [isLoading] = useState(false);
   const [successMessage, setSuccessMessage] = useState('');
+  const [errorMessage, setErrorMessage] = useState('');
+  const [showError, setShowError] = useState(false);
   const [isEventOpen, setIsEventOpen] = useState(false);
   const [newEvent, setNewEvent] = useState({ title: '', description: '', date: '', type: 'Health' });
+  const [formErrors, setFormErrors] = useState({});
+  const [isSaving, setIsSaving] = useState(false);
+  const confirmation = useConfirmation();
 
   // Nutrition planner state
   const [targetYield, setTargetYield] = useState('');
@@ -194,13 +202,53 @@ export default function AnimalPassport() {
     }
   ]);
 
-  const handleAddTimelineEvent = (event) => {
-    const timelineEvent = createTimelineEntry(event);
-    setEvents((current) => [timelineEvent, ...current]);
-    setActiveFilter('All');
-    setSuccessMessage(`Logged ${timelineEvent.type.toLowerCase()} event for ${animal.id}.`);
-    setIsEventOpen(false);
-    setNewEvent({ title: '', description: '', date: '', type: 'Health' });
+  const handleAddTimelineEvent = async (e) => {
+    e.preventDefault();
+    setFormErrors({});
+    setShowError(false);
+
+    // Validate
+    const validationSchema = {
+      title: [ValidationRules.required, ValidationRules.minLength(3)],
+      description: [ValidationRules.minLength(5)],
+    };
+
+    const errors = validateForm(newEvent, validationSchema);
+    if (Object.keys(errors).length > 0) {
+      setFormErrors(errors);
+      setErrorMessage(getFirstErrorMessage(errors));
+      setShowError(true);
+      return;
+    }
+
+    try {
+      setIsSaving(true);
+      await new Promise((resolve) => setTimeout(resolve, 300));
+
+      const timelineEvent = createTimelineEntry(newEvent);
+      setEvents((current) => [timelineEvent, ...current]);
+
+      logToAuditTrail(
+        createAuditEntry({
+          action: 'create',
+          recordType: 'timeline_event',
+          recordId: timelineEvent.id,
+          userName: 'You',
+          notes: `Added ${newEvent.type} event: ${newEvent.title}`,
+        })
+      );
+
+      setActiveFilter('All');
+      setSuccessMessage(`Logged ${newEvent.type.toLowerCase()} event for ${animal.id}.`);
+      setNewEvent({ title: '', description: '', date: '', type: 'Health' });
+      setIsEventOpen(false);
+    } catch (error) {
+      console.error('Error adding event:', error);
+      setErrorMessage('Failed to add event. Please try again.');
+      setShowError(true);
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const filteredEvents = events.filter(event => 
@@ -209,8 +257,30 @@ export default function AnimalPassport() {
 
   return (
     <div className="animate-reveal space-y-6 max-w-5xl mx-auto">
-      
-      {/* ── NAVIGATION HEADER ── */}
+      {/* ── ERROR & SUCCESS ALERTS ── */}
+      {showError && (
+        <div className="fixed top-4 right-4 z-50 w-[min(92vw,430px)]">
+          <AlertBanner
+            type="error"
+            title="Error"
+            message={errorMessage}
+            autoDismiss={4000}
+            onDismiss={() => setShowError(false)}
+          />
+        </div>
+      )}
+
+      {successMessage && (
+        <div className="fixed top-4 right-4 z-50 w-[min(92vw,430px)]">
+          <AlertBanner
+            type="success"
+            title="Success"
+            message={successMessage}
+            autoDismiss={2400}
+            onDismiss={() => setSuccessMessage('')}
+          />
+        </div>
+      )}
       <div className="flex items-center justify-between border-b border-ink/10 pb-4">
         <div className="flex items-center gap-4">
           <Link to="/operations/herd" className="p-2 hover:bg-surface-raised rounded-lg text-ink-muted transition-colors">
