@@ -26,58 +26,6 @@ function calculateDaysInMilk(lastCalved) {
   return Math.max(0, elapsedDays);
 }
 
-function getSummaryStats(animal) {
-  const daysInMilk = calculateDaysInMilk(animal.lastCalved);
-
-  return [
-    {
-      title: 'Identity',
-      items: [
-        { label: LABELS.BREED_PARENTS, value: animal.breed, helper: `Sire: ${animal.sire} | Dam: ${animal.dam}` },
-      ],
-    },
-    {
-      title: 'Demographics',
-      items: [
-        { label: 'Age', value: animal.age, helper: animal.status },
-      ],
-    },
-    {
-      title: 'Production',
-      items: [
-        { label: 'Days in Milk', value: daysInMilk === null ? 'N/A' : daysInMilk, helper: 'Since last calving' },
-        { label: '7-Day Avg.', value: animal.sevenDayAvg, helper: 'Rolling average yield' },
-      ],
-    },
-    {
-      title: 'Reproduction',
-      items: [
-        { label: 'Pregnancy Status', value: animal.pregnancyStatus, helper: animal.daysOpen === null ? 'Open days unavailable' : `${animal.daysOpen} Days Open` },
-      ],
-    },
-  ];
-}
-
-function SummarySection({ section, isLoading }) {
-  return (
-    <div className="space-y-3 rounded-2xl border border-ink/5 bg-surface-raised p-4 shadow-sm">
-      <div>
-        <span className="block text-[10px] font-bold uppercase tracking-widest text-brand/70">{section.title}</span>
-      </div>
-
-      <div className="space-y-4">
-        {section.items.map((item) => (
-          <div key={item.label} className="space-y-1">
-            <span className="block text-[10px] font-bold uppercase tracking-widest text-ink/50">{item.label}</span>
-            <div className="text-lg font-bold text-brand">{isLoading ? <Skeleton className="h-6 w-32" /> : item.value}</div>
-            <div className="text-xs text-ink-muted">{item.helper}</div>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
-
 function getTimelineTheme(type) {
   if (type === 'Health') {
     return {
@@ -150,9 +98,9 @@ export default function AnimalPassport() {
   // Nutrition planner state
   const [targetYield, setTargetYield] = useState('');
   const [horizonDays, setHorizonDays] = useState(30);
-  const [feedEfficiency, setFeedEfficiency] = useState(0.5); // kg extra feed per extra litre/day
-  const [feedPrice, setFeedPrice] = useState(60); // price per kg (local currency)
-  const [feedCurrency, setFeedCurrency] = useState('KES'); // 
+  const [feedEfficiency, setFeedEfficiency] = useState(0.5);
+  const [feedPrice, setFeedPrice] = useState(60); 
+  const [feedCurrency, setFeedCurrency] = useState('KES'); 
   const [plannerResult, setPlannerResult] = useState(null);
   const { id } = useParams();
 
@@ -166,27 +114,21 @@ export default function AnimalPassport() {
 
   const handleWhatsAppShare = () => {
     const publicVerifyLink = `https://jivu-dairy.com/verify/${animal.id}-TOKEN123`;
-
-    const text = `Hello, here is the official Certified Official Cow Record for ${animal.id} (${animal.name}).
-
-Breed: ${animal.breed}
-Best Daily Milk: ${animal.peakYield}
-
-View the verified medical passport here: ${publicVerifyLink}`;
-
+    const text = `Hello, here is the official Certified Cow Record for ${animal.id} (${animal.name}).\n\nBreed: ${animal.breed}\nView the verified medical passport here: ${publicVerifyLink}`;
     window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank');
   };
 
-  // Mock Data: Animal Profile
+  // Mock Data: Animal Profile (Updated with Yesterday's Yield & Farmer Vocabulary)
   const animal = {
     id: id || "C-101",
     name: "Luna",
     breed: "75% Friesian (Graded Up)",
     age: "3 Years, 2 Months",
     status: "Active Milker",
-    peakYield: "26.5 L/day",
-    sevenDayAvg: '24.8 L/day',
-    pregnancyStatus: 'Open - Action Required',
+    peakYield: "26.5 L/day", 
+    yesterdayYield: "18.2 L",
+    sevenDayAvg: '24.8 L',
+    pregnancyStatus: 'Not Pregnant',
     daysOpen: 84,
     lastCalved: '2025-03-02',
     photoUrl: cowAvatar,
@@ -261,7 +203,6 @@ View the verified medical passport here: ${publicVerifyLink}`;
     setNewEvent({ title: '', description: '', date: '', type: 'Health' });
   };
 
-  // Filter Logic
   const filteredEvents = events.filter(event => 
     activeFilter === 'All' || event.type === activeFilter
   );
@@ -269,10 +210,10 @@ View the verified medical passport here: ${publicVerifyLink}`;
   return (
     <div className="animate-reveal space-y-6 max-w-5xl mx-auto">
       
-      {/* NAVIGATION HEADER */}
+      {/* ── NAVIGATION HEADER ── */}
       <div className="flex items-center justify-between border-b border-ink/10 pb-4">
         <div className="flex items-center gap-4">
-          <Link to="/operations/records" className="p-2 hover:bg-surface-raised rounded-lg text-ink-muted transition-colors">
+          <Link to="/operations/herd" className="p-2 hover:bg-surface-raised rounded-lg text-ink-muted transition-colors">
             <ArrowLeft size={20} />
           </Link>
           <div>
@@ -302,49 +243,131 @@ View the verified medical passport here: ${publicVerifyLink}`;
         </div>
       </div>
 
-      {/* ANIMAL PROFILE HERO */}
-      <div className="card-machined grid grid-cols-1 gap-6 bg-surface p-6 md:grid-cols-4 xl:grid-cols-4">
-        {successMessage && (
-          <div className="fixed top-4 right-4 z-50 w-[min(92vw,430px)]">
-            <AlertBanner type="success" title="Done" message={successMessage} autoDismiss={2400} onDismiss={() => setSuccessMessage('')} />
-          </div>
-        )}
-        <div className="space-y-4">
-          <div className="flex items-start gap-4">
-            <div className="relative h-16 w-16 shrink-0 overflow-hidden rounded-full border border-brand/10 bg-gradient-to-br from-brand/15 via-accent/10 to-surface shadow-sm">
-              {isLoading ? (
-                <Skeleton className="h-full w-full rounded-full" />
-              ) : animal.photoUrl ? (
-                <img
-                  src={animal.photoUrl}
-                  alt={`${animal.name} profile`}
-                  className="h-full w-full object-cover"
-                />
-              ) : (
-                <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-brand/15 via-accent/20 to-surface text-xl font-black text-brand">
-                  {getAvatarLabel(animal)}
-                </div>
-              )}
-            </div>
+      {/* ── ALERTS ── */}
+      {successMessage && (
+        <div className="fixed top-4 right-4 z-50 w-[min(92vw,430px)]">
+          <AlertBanner type="success" title="Done" message={successMessage} autoDismiss={2400} onDismiss={() => setSuccessMessage('')} />
+        </div>
+      )}
 
-            <div className="min-w-0 flex-1">
-              <span className="block text-[10px] font-bold text-ink/50 uppercase tracking-widest">{LABELS.BREED_PARENTS}</span>
-              <div className="text-lg font-bold text-brand">{isLoading ? <Skeleton className="h-6 w-48" /> : animal.breed}</div>
-              <div className="mt-1 text-xs font-mono text-slate-500">{isLoading ? <Skeleton className="h-4 w-56" /> : `Sire: ${animal.sire} | Dam: ${animal.dam}`}</div>
+      {/* ── COW VITAL SIGNS (4-COLUMN SUMMARY GRID) ── */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+        
+        {/* 1. COW DETAILS */}
+        <div className="card-machined bg-surface p-6 rounded-2xl border border-ink/5 shadow-sm flex flex-col items-center text-center justify-center">
+          <div className="relative h-16 w-16 mb-4 shrink-0 overflow-hidden rounded-full border border-brand/10 bg-gradient-to-br from-brand/15 via-accent/10 to-surface shadow-sm flex items-center justify-center text-brand font-black text-xl">
+            {isLoading ? (
+              <Skeleton className="h-full w-full rounded-full" />
+            ) : animal.photoUrl ? (
+              <img src={animal.photoUrl} alt="Cow Avatar" className="w-full h-full object-cover" />
+            ) : (
+              getAvatarLabel(animal)
+            )}
+          </div>
+          <div className="text-[10px] font-bold uppercase tracking-widest text-ink-muted mb-1">
+            Breed & Parents
+          </div>
+          <div className="text-lg font-black text-brand mb-2">
+            {isLoading ? <Skeleton className="h-6 w-32 mx-auto" /> : animal.breed}
+          </div>
+          <div className="text-xs font-medium text-ink-muted leading-relaxed">
+            {isLoading ? <Skeleton className="h-4 w-40 mx-auto" /> : <>Sire: {animal.sire} <br /> Dam: {animal.dam}</>}
+          </div>
+        </div>
+
+        {/* 2. AGE & STATUS */}
+        <div className="card-machined bg-surface p-6 rounded-2xl border border-ink/5 shadow-sm flex flex-col justify-between">
+          <div>
+            <div className="text-[10px] font-bold uppercase tracking-widest text-brand mb-4">
+              Age & Status
+            </div>
+            <div className="mb-4">
+              <div className="text-[10px] font-bold uppercase tracking-wider text-ink-muted mb-1">Current Age</div>
+              <div className="text-xl font-black text-ink-strong">
+                {isLoading ? <Skeleton className="h-6 w-24" /> : animal.age}
+              </div>
+            </div>
+          </div>
+          <div className="border-t border-ink/10 pt-4">
+            <div className="text-[10px] font-bold uppercase tracking-wider text-ink-muted mb-1">Milking Status</div>
+            <div className="text-sm font-bold text-ink-strong">
+              {isLoading ? <Skeleton className="h-4 w-20" /> : animal.status}
             </div>
           </div>
         </div>
 
-        {getSummaryStats(animal).map((section) => (
-          <SummarySection key={section.title} section={section} isLoading={isLoading} />
-        ))}
+        {/* 3. MILK YIELD */}
+        <div className="card-machined bg-surface p-6 rounded-2xl border border-ink/5 shadow-sm flex flex-col justify-between">
+          <div>
+            <div className="text-[10px] font-bold uppercase tracking-widest text-brand mb-4">
+              Milk Yield
+            </div>
+            <div className="mb-4">
+              <div className="text-[10px] font-bold uppercase tracking-wider text-ink-muted mb-1">Days in Milk</div>
+              <div className="flex items-baseline gap-2">
+                {isLoading ? (
+                  <Skeleton className="h-6 w-12" />
+                ) : (
+                  <span className="text-xl font-black text-ink-strong">{calculateDaysInMilk(animal.lastCalved) ?? 'N/A'}</span>
+                )}
+                {!isLoading && <span className="text-xs font-bold text-ink-muted">Days</span>}
+              </div>
+              <div className="text-[11px] font-medium text-ink-muted mt-0.5">Since her last calf</div>
+            </div>
+          </div>
+          
+          <div className="border-t border-ink/10 pt-4 grid grid-cols-2 gap-4">
+            <div>
+              <div className="text-[10px] font-bold uppercase tracking-wider text-ink-muted mb-1">Yesterday</div>
+              <div className="text-lg font-black text-ink-strong">
+                {isLoading ? <Skeleton className="h-5 w-16" /> : animal.yesterdayYield}
+              </div>
+            </div>
+            <div>
+              <div className="text-[10px] font-bold uppercase tracking-wider text-ink-muted mb-1">7-Day Avg</div>
+              <div className="text-lg font-black text-brand">
+                {isLoading ? <Skeleton className="h-5 w-16" /> : animal.sevenDayAvg}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* 4. BREEDING STATUS */}
+        <div className="card-machined bg-surface p-6 rounded-2xl border border-ink/5 shadow-sm flex flex-col justify-between">
+          <div>
+            <div className="text-[10px] font-bold uppercase tracking-widest text-brand mb-4">
+              Breeding Status
+            </div>
+            <div className="mb-4">
+              <div className="text-[10px] font-bold uppercase tracking-wider text-ink-muted mb-1">Pregnancy Status</div>
+              <div className={`text-xl font-black ${animal.pregnancyStatus === 'Not Pregnant' ? 'text-danger' : 'text-brand'}`}>
+                {isLoading ? <Skeleton className="h-6 w-24" /> : animal.pregnancyStatus}
+              </div>
+              {!isLoading && animal.pregnancyStatus === 'Not Pregnant' && (
+                <div className="text-[11px] font-bold text-danger mt-0.5">Needs AI Session</div>
+              )}
+            </div>
+          </div>
+          <div className="border-t border-ink/10 pt-4">
+            <div className="text-[10px] font-bold uppercase tracking-wider text-ink-muted mb-1">Days Since Calving</div>
+            <div className="flex items-baseline gap-2">
+              {isLoading ? (
+                <Skeleton className="h-4 w-8" />
+              ) : (
+                <span className="text-sm font-bold text-ink-strong">{animal.daysOpen}</span>
+              )}
+              {!isLoading && <span className="text-xs font-bold text-ink-muted">Days</span>}
+            </div>
+          </div>
+        </div>
+
       </div>
 
-      {/* TIMELINE / NUTRITION PLANNER SECTION */}
+      {/* ── TIMELINE / NUTRITION PLANNER SECTION ── */}
       <div className="card-machined p-6 bg-surface-warm/30">
         <div className="flex items-center justify-between mb-6">
           <h3 className="font-bold text-brand flex items-center gap-2">
-            <Calendar size={18} /> {activeTab === 'timeline' ? LABELS.COW_HISTORY : LABELS.NUTRITION_PLANNER}
+            <Calendar size={18} /> {activeTab === 'timeline' ? "Cow History" : "Nutrition Planner"}
           </h3>
 
           <div className="flex items-center gap-2">
@@ -362,7 +385,7 @@ View the verified medical passport here: ${publicVerifyLink}`;
                 activeTab === 'nutrition' ? 'bg-brand text-surface shadow-sm' : 'text-ink-muted hover:bg-ink/5'
               }`}
             >
-              {LABELS.TARGET_FEED_CALCULATOR}
+              Target Feed Calculator
             </button>
             {activeTab === 'timeline' && (
               <button
@@ -377,7 +400,6 @@ View the verified medical passport here: ${publicVerifyLink}`;
 
         {activeTab === 'timeline' ? (
           <>
-            {/* Filters */}
             <div className="flex flex-wrap items-center justify-between mb-8 gap-4 border-b border-ink/10 pb-4">
               <div className="flex items-center gap-2 bg-surface-raised p-1 rounded-lg border border-ink/10">
                 <Filter size={14} className="text-ink-muted ml-2 mr-1" />
@@ -397,7 +419,6 @@ View the verified medical passport here: ${publicVerifyLink}`;
               </div>
             </div>
 
-            {/* Vertical Timeline */}
             <div className="relative space-y-8 pl-4 md:pl-8 before:absolute before:inset-y-0 before:left-4 before:w-px before:bg-gradient-to-b before:from-brand/25 before:via-brand/20 before:to-transparent md:before:left-8">
               {isLoading ? (
                 Array.from({ length: 3 }).map((_, idx) => (
@@ -517,6 +538,7 @@ View the verified medical passport here: ${publicVerifyLink}`;
         )}
       </div>
 
+      {/* ── LOG ACTION MODAL ── */}
       <Modal isOpen={isEventOpen} onClose={() => setIsEventOpen(false)} title="Log Action">
         <form
           className="space-y-4"

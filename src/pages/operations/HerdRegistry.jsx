@@ -5,7 +5,6 @@ import { Skeleton } from '../../components/ui';
 import Modal from '../../components/ui/Modal';
 import AlertBanner from '../../components/ui/AlertBanner';
 
-// Updated status: 'Active' is now 'Milking'
 const INITIAL_HERD = [
   { id: 'C-101', name: 'Luna', breed: 'Friesian', ageMonths: 38, status: 'Milking', lastCalved: '2025-03-02', milk: '26.5 L/day' },
   { id: 'C-102', name: 'Asha', breed: 'Ayrshire', ageMonths: 52, status: 'Dry', lastCalved: '2025-12-14', milk: '0.0 L/day' },
@@ -34,7 +33,6 @@ function statusTone(status) {
 export default function HerdRegistry() {
   const [sortBy, setSortBy] = useState('age');
   const [statusFilter, setStatusFilter] = useState('All');
-  // Toggle `isLoading` to true while hooking up remote data — keeps layout stable
   const [isLoading] = useState(false);
   const [herdState, setHerdState] = useState(INITIAL_HERD);
   const [isAddOpen, setIsAddOpen] = useState(false);
@@ -52,20 +50,21 @@ export default function HerdRegistry() {
 
   return (
     <div className="animate-reveal space-y-8">
+      {/* ── HEADER ── */}
       <div className="flex flex-col gap-4 border-b border-ink/10 pb-6 md:flex-row md:items-end md:justify-between">
         <div>
           <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-brand/10 bg-brand/5 px-3 py-1 text-[10px] font-bold uppercase tracking-widest text-brand">
-            <BookOpen size={12} /> My Cows
+            <BookOpen size={12} /> Herd List
           </div>
           <h2 className="m-0 font-sans text-3xl font-bold tracking-tight text-brand">
             My <span className="text-ink-muted">Herd</span>
           </h2>
-          <p className="mt-2 font-mono text-xs text-ink-muted">List of all cows in the boma and their records.</p>
+          <p className="mt-2 font-mono text-xs text-ink-muted">A complete list of all animals in your boma and their current status.</p>
         </div>
 
         <div className="grid grid-cols-3 gap-3 md:min-w-[360px]">
           <div className="card-machined bg-surface/80 p-3">
-            <div className="text-[10px] font-bold uppercase tracking-wider text-ink-muted">Total Cows</div>
+            <div className="text-[10px] font-bold uppercase tracking-wider text-ink-muted">Total Animals</div>
             <div className="text-2xl font-black text-ink-strong">{isLoading ? <Skeleton className="h-6 w-16" /> : '7'}</div>
           </div>
           <div className="card-machined bg-surface/80 p-3">
@@ -79,34 +78,35 @@ export default function HerdRegistry() {
         </div>
         <div className="flex items-center gap-3">
           <button type="button" onClick={() => setIsAddOpen(true)} className="btn-command flex items-center gap-2">
-            +Add Cow
+            + Add Animal
           </button>
         </div>
       </div>
 
+      {/* ── LIST & CONTROLS ── */}
       <div className="card-machined bg-surface/80 p-6">
         <div className="mb-6 flex flex-col gap-4 border-b border-ink/10 pb-4 lg:flex-row lg:items-center lg:justify-between">
-          <div className="flex items-center gap-2 text-brand font-semibold">
-            <Filter size={18} className="text-accent" /> Sort & Filter
+          <div className="flex items-center gap-2 text-ink-strong font-bold text-sm">
+            <Filter size={18} className="text-ink-strong" /> <span className="leading-none">Organize List</span>
           </div>
 
           <div className="flex flex-col gap-3 sm:flex-row">
-            <div className="flex items-center gap-2 rounded-lg border border-ink/10 bg-surface/70 px-3 py-2 backdrop-blur-sm">
-              <Scale size={16} className="text-ink-muted" />
-              <label className="text-xs font-bold uppercase tracking-wider text-ink-muted" htmlFor="herd-sort">
+            <div className="flex items-center gap-2 rounded-lg border border-ink/20 bg-surface/95 px-3 py-2">
+              <Scale size={16} className="text-ink-strong" />
+              <label className="text-xs font-bold uppercase tracking-wider text-ink-strong" htmlFor="herd-sort">
                 Sort by
               </label>
               <select
                 id="herd-sort"
                 value={sortBy}
                 onChange={(event) => setSortBy(event.target.value)}
-                className="bg-transparent text-sm font-semibold text-ink outline-none"
+                className="bg-transparent text-sm font-semibold text-ink-strong outline-none"
               >
                 <option value="age">Age</option>
                 <option value="breed">Breed</option>
-                <option value="status">Milking Status</option>
+                <option value="status">Current Status</option>
               </select>
-              <ChevronDown size={14} className="text-ink-muted" />
+              <ChevronDown size={14} className="text-ink-strong" />
             </div>
 
             <div className="flex flex-wrap gap-2">
@@ -131,13 +131,13 @@ export default function HerdRegistry() {
         <div className="card-machined overflow-hidden bg-surface/80">
           <table className="w-full border-collapse text-left">
             <thead>
-              <tr className="bg-brand text-surface">
-                <th className="p-4 text-[11px] font-bold uppercase tracking-wider">Tag No.</th>
-                <th className="p-4 text-[11px] font-bold uppercase tracking-wider">Name</th>
-                <th className="p-4 text-[11px] font-bold uppercase tracking-wider">Breed</th>
-                <th className="p-4 text-[11px] font-bold uppercase tracking-wider">Age</th>
-                <th className="p-4 text-[11px] font-bold uppercase tracking-wider">Status</th>
-                <th className="p-4 text-[11px] font-bold uppercase tracking-wider text-right">Cow File</th>
+              <tr className="bg-surface-raised border-b border-ink/10">
+                <th className="p-4 text-sm font-extrabold uppercase tracking-wider text-ink-strong">Ear Tag</th>
+                <th className="p-4 text-sm font-extrabold uppercase tracking-wider text-ink-strong">Name</th>
+                <th className="p-4 text-sm font-extrabold uppercase tracking-wider text-ink-strong">Breed</th>
+                <th className="p-4 text-sm font-extrabold uppercase tracking-wider text-ink-strong">Age</th>
+                <th className="p-4 text-sm font-extrabold uppercase tracking-wider text-ink-strong">Current Status</th>
+                <th className="p-4 text-sm font-extrabold uppercase tracking-wider text-ink-strong text-right">Cow Details</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-ink/5 bg-transparent">
@@ -175,7 +175,7 @@ export default function HerdRegistry() {
                     </td>
                     <td className="p-4 text-right">
                       <Link to={`/operations/animal/${cow.id}`} className="btn-command inline-flex items-center gap-2 text-xs">
-                        View Records
+                        View Record
                       </Link>
                     </td>
                   </tr>
@@ -186,7 +186,7 @@ export default function HerdRegistry() {
         </div>
 
         <div className="mt-4 text-xs text-ink-muted">
-          Showing {visibleHerd.length} of {herdState.length} cattle.
+          Showing {visibleHerd.length} of {herdState.length} animals.
         </div>
       </div>
 
@@ -196,12 +196,12 @@ export default function HerdRegistry() {
         </div>
       )}
 
-      <Modal isOpen={isAddOpen} onClose={() => setIsAddOpen(false)} title="Add Cow">
+      {/* ── ADD COW MODAL ── */}
+      <Modal isOpen={isAddOpen} onClose={() => setIsAddOpen(false)} title="Add New Animal">
         <form
           className="space-y-4"
           onSubmit={(e) => {
             e.preventDefault();
-            // compute ageMonths from DOB
             let ageMonths = 0;
             if (newCow.dob) {
               const dob = new Date(newCow.dob);
@@ -211,7 +211,6 @@ export default function HerdRegistry() {
               ageMonths = years * 12 + months;
             }
 
-            // categorize
             let status = 'Cow';
             if (newCow.hasCalved) status = 'Cow';
             else if (ageMonths < 6) status = 'Calf';
@@ -235,7 +234,7 @@ export default function HerdRegistry() {
           }}
         >
           <div>
-            <label className="block text-xs font-bold uppercase text-ink-muted mb-1">Ear Tag</label>
+            <label className="block text-xs font-bold uppercase text-ink-muted mb-1">Ear Tag Number</label>
             <input className="input-machined w-full" value={newCow.id} onChange={(e) => setNewCow({ ...newCow, id: e.target.value })} placeholder="e.g. C-108" required />
           </div>
 
@@ -256,12 +255,12 @@ export default function HerdRegistry() {
 
           <div className="flex items-center gap-3">
             <input id="hasCalved" type="checkbox" checked={newCow.hasCalved} onChange={(e) => setNewCow({ ...newCow, hasCalved: e.target.checked })} />
-            <label htmlFor="hasCalved" className="text-sm text-ink-muted">Has calved</label>
+            <label htmlFor="hasCalved" className="text-sm font-semibold text-ink-strong">Has had a calf before</label>
           </div>
 
           <div className="flex items-center justify-end gap-3 pt-2">
             <button type="button" onClick={() => setIsAddOpen(false)} className="btn-command bg-surface-raised text-ink">Cancel</button>
-            <button type="submit" className="btn-command bg-brand text-surface">Add Cow</button>
+            <button type="submit" className="btn-command bg-brand text-surface">Save Animal</button>
           </div>
         </form>
       </Modal>

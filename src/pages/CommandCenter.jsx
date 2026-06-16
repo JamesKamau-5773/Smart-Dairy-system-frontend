@@ -3,7 +3,9 @@ import { useTenant } from '../hooks/useTenant';
 import { QUERY_KEYS } from '../providers/QueryProvider';
 import apiClient from '../lib/apiClient';
 import { Activity, Droplets, TrendingUp, DollarSign, LineChart as ChartIcon } from 'lucide-react';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import React, { Suspense, lazy } from 'react';
+
+const MilkTrendChart = lazy(() => import('../components/dashboard/MilkTrendChart'));
 
 import Money from '../components/ui/Money';
 import { Skeleton } from '../components/ui';
@@ -220,43 +222,20 @@ export default function FarmDashboard() {
                 <Skeleton className="h-full w-full" />
               </div>
             </div>
-          ) : (
-            <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={320}>
-              <LineChart data={trend} margin={{ top: 5, right: 20, bottom: 5, left: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" vertical={false} />
-                <XAxis 
-                  dataKey="day" 
-                  tick={{ fontFamily: 'Inter', fontSize: 12, fill: '#6b7280', fontWeight: 600 }} 
-                  axisLine={{ stroke: '#e5e7eb', strokeWidth: 1 }}
-                  tickLine={false}
-                  dy={10}
-                />
-                <YAxis 
-                  tick={{ fontFamily: 'Inter', fontSize: 12, fill: '#6b7280', fontWeight: 600 }} 
-                  axisLine={false}
-                  tickLine={false}
-                  dx={-10}
-                />
-                <Tooltip 
-                  contentStyle={{ 
-                    backgroundColor: '#ffffff', 
-                    border: '1px solid #e5e7eb', 
-                    borderRadius: '8px',
-                    boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)',
-                    fontFamily: 'Inter',
-                    fontWeight: 'bold'
-                  }} 
-                />
-                <Line 
-                  type="monotone" 
-                  dataKey="yield" 
-                  stroke="#0369A1" 
-                  strokeWidth={3} 
-                  dot={{ r: 4, strokeWidth: 2, fill: '#ffffff', stroke: '#0369A1' }} 
-                  activeDot={{ r: 6, fill: '#0369A1', stroke: '#38BDF8', strokeWidth: 2 }} 
-                />
-              </LineChart>
-            </ResponsiveContainer>
+            ) : (
+            <Suspense fallback={(
+              <div className="h-full w-full space-y-4">
+                <div className="flex items-center justify-between">
+                  <Skeleton className="h-5 w-40" />
+                  <Skeleton className="h-5 w-14" />
+                </div>
+                <div className="grid h-[calc(100%-2.5rem)] gap-3 rounded-lg border border-dashed border-ink/15 bg-surface/50 p-4">
+                  <Skeleton className="h-full w-full" />
+                </div>
+              </div>
+            )}>
+              <MilkTrendChart data={trend} />
+            </Suspense>
           )}
         </div>
       </div>

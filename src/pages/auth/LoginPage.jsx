@@ -62,7 +62,7 @@ export default function LoginPage() {
       <div className="glass-panel w-full max-w-md p-6 sm:p-10 relative z-10 transform hover:scale-[1.01] transition-transform">
         <div className="absolute inset-0 pointer-events-none">
           <div className="glass-sheen absolute top-0 left-0 w-1/2 h-full bg-white/6 blur-sm mix-blend-screen opacity-60"></div>
-          <div className="glass-noise absolute inset-0 bg-[url('/assets/noise.png')] opacity-5 mix-blend-overlay"></div>
+          <div className="glass-noise absolute inset-0 bg-[url('/assets/noise.svg')] opacity-5 mix-blend-overlay"></div>
         </div>
         
         <header className="mb-10 text-center relative z-10 animate-reveal">
