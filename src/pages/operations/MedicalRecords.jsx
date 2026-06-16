@@ -1,9 +1,11 @@
 import React, { useState } from 'react';
-import { Plus } from 'lucide-react';
+import { Plus, X } from 'lucide-react';
 import LABELS from '../../lib/labels';
+import Modal from '../../components/ui/Modal';
 
 export default function VetRecords() {
   const [showForm, setShowForm] = useState(false);
+  const [selectedRecord, setSelectedRecord] = useState(null);
 
   // Mock Data - This will eventually come from an API
   const encounters = [
@@ -95,7 +97,54 @@ export default function VetRecords() {
                 <td className="p-4 font-bold text-brand">{visit.cow}</td>
                 <td className="p-4 text-sm text-ink-strong">{visit.diagnosis}</td>
                 <td className="p-4 text-sm text-ink-muted">{visit.meds}</td>
-                <td className="p-4 text-brand font-bold cursor-pointer">Open File →</td>
+                <td className="p-4 text-brand font-bold cursor-pointer hover:underline" onClick={() => setSelectedRecord(visit)}>Open File →</td>
+
+                    {/* RECORD DETAIL MODAL */}
+                    <Modal isOpen={!!selectedRecord} onClose={() => setSelectedRecord(null)} title="Medical Record Details">
+                      {selectedRecord && (
+                        <div className="space-y-6">
+                          <div className="grid grid-cols-2 gap-4">
+                            <div>
+                              <p className="text-xs font-bold uppercase text-ink-muted mb-1">Date</p>
+                              <p className="text-sm font-mono text-ink-strong">{selectedRecord.date}</p>
+                            </div>
+                            <div>
+                              <p className="text-xs font-bold uppercase text-ink-muted mb-1">Cow</p>
+                              <p className="text-sm font-bold text-brand">{selectedRecord.cow}</p>
+                            </div>
+                          </div>
+
+                          <div>
+                            <p className="text-xs font-bold uppercase text-ink-muted mb-1">Signs of Sickness</p>
+                            <p className="text-sm text-ink-strong">{selectedRecord.reason}</p>
+                          </div>
+
+                          <div>
+                            <p className="text-xs font-bold uppercase text-ink-muted mb-1">Diagnosis</p>
+                            <p className="text-sm text-ink-strong">{selectedRecord.diagnosis}</p>
+                          </div>
+
+                          <div>
+                            <p className="text-xs font-bold uppercase text-ink-muted mb-1">Medications Prescribed</p>
+                            <p className="text-sm text-ink-strong">{selectedRecord.meds}</p>
+                          </div>
+
+                          <div>
+                            <p className="text-xs font-bold uppercase text-ink-muted mb-1">Recommendations</p>
+                            <p className="text-sm text-ink-strong">{selectedRecord.recommendations}</p>
+                          </div>
+
+                          <div className="border-t border-ink/10 pt-4 flex justify-end gap-3">
+                            <button onClick={() => setSelectedRecord(null)} className="btn-command bg-surface-raised text-ink">
+                              Close
+                            </button>
+                            <button className="btn-command">
+                              Edit Record
+                            </button>
+                          </div>
+                        </div>
+                      )}
+                    </Modal>
               </tr>
             ))}
           </tbody>
