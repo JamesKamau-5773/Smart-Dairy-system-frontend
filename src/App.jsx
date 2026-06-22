@@ -23,7 +23,8 @@ const AnimalPassport = lazy(() => import('./pages/operations/AnimalRecord'));
 const MilkHistory = lazy(() => import('./pages/operations/MilkHistory'));
 const FeedFormulation = lazy(() => import('./pages/inventory/FeedFormulation'));
 const NutritionDashboard = lazy(() => import('./pages/nutrition/NutritionDashboard'));
-const UnitConversions = lazy(() => import('./pages/settings/UnitConversions'));
+// UPDATED: Pointing to the new correct location in the nutrition folder
+const UnitConversions = lazy(() => import('./pages/nutrition/UnitConversions'));
 const DailyRoutinePlanner = lazy(() => import('./pages/operations/DailyRoutinePlanner'));
 const FinancialLedger = lazy(() => import('./pages/finance/FinancialLedger'));
 const InventoryRegistry = lazy(() => import('./pages/inventory/InventoryRegistry'));
@@ -125,19 +126,25 @@ export default function App() {
           <Route path="operations/lab" element={renderLazyPage(MilkLab, 'Loading milk lab…')} />
           <Route path="operations/nutrition" element={renderLazyPage(NutritionDashboard, 'Loading nutrition dashboard…')} />
           <Route path="feed-nutrition" element={renderLazyPage(NutritionDashboard, 'Loading nutrition dashboard…')} />
+          
+          {/* UPDATED: Unit Conversions moved to operations layer to match sidebar UX */}
+          <Route path="operations/unit-conversions" element={renderLazyPage(UnitConversions, 'Loading unit conversions…')} />
+          {/* Redirect to catch any legacy links pointing to settings */}
+          <Route path="settings/unit-conversions" element={<Navigate to="/operations/unit-conversions" replace />} />
+
           <Route path="operations/routine" element={renderLazyPage(DailyRoutinePlanner, 'Loading routine planner…')} />
-          {/* <Route path="operations/veterinary" element={<VeterinaryControl />} /> */}
           <Route path="operations/safety" element={renderLazyPage(SafetyDashboard, 'Loading safety dashboard…')} />
           <Route path="operations/records" element={renderLazyPage(MedicalRecords, 'Loading medical records…')} />
           <Route path="operations/animal/:id/milk-history" element={renderLazyPage(MilkHistory, 'Loading milk history…')} />
           <Route path="operations/animal/:id" element={renderLazyPage(AnimalPassport, 'Loading animal record…')} />
+          
           {/* Capital & Inventory */}
           <Route path="finance/ledger" element={renderLazyPage(FinancialLedger, 'Loading financial ledger…')} />
           <Route path="operations/inventory" element={renderLazyPage(InventoryRegistry, 'Loading inventory…')} />
           <Route path="operations/feed-formulation" element={renderLazyPage(FeedFormulation, 'Loading feed formulation…')} />
           <Route path="feed-nutrition/mix" element={renderLazyPage(FeedFormulation, 'Loading feed formulation…')} />
           <Route path="operations/schedule-planner" element={<Navigate to="/operations/routine" replace />} />
-          <Route path="settings/unit-conversions" element={renderLazyPage(UnitConversions, 'Loading unit conversions…')} />
+          
           <Route path="finance/buyers" element={renderLazyPage(BuyersList, 'Loading buyers…')} />
           <Route path="finance/buyers/:buyerId" element={renderLazyPage(CustomerProfile, 'Loading customer profile…')} />
           <Route path="operations/buyers" element={<Navigate to="/finance/buyers" replace />} />

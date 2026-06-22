@@ -1,102 +1,96 @@
-import { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
-import { Link } from 'react-router-dom';
-import apiClient from '../../lib/apiClient';
-import { useTenant } from '../../hooks/useTenant';
-import MixBuilder from '../../components/nutrition/MixBuilder';
+import React, { useState } from 'react';
+import { Beaker, Tractor, Save } from 'lucide-react';
+import RecipeBuilder from '../nutrition/RecipeBuilder'; 
 
 export default function FeedFormulation() {
-  const { tenantId, farmId } = useTenant();
-  const { data: inventory = [], isLoading } = useQuery({
-    queryKey: ['inventory', tenantId, farmId],
-    queryFn: () => apiClient.get('/inventory/status').then((r) => r.data),
-  });
+  // Toggle between strategic modes
+  const [activeTab, setActiveTab] = useState('dairy_meal');
 
-  // Normalize API shape: some backends return { items: [...] } or { data: [...] }
-  const inventoryList = Array.isArray(inventory)
-    ? inventory
-    : (inventory && (Array.isArray(inventory.items) ? inventory.items : (Array.isArray(inventory.data) ? inventory.data : []))) || [];
+  // Starting template for High-Protein Concentrate
+  const dairyMealIngredients = [
+    { id: 'maize', name: 'Maize Germ', percentage: 50, proteinContent: 9.5, pricePerKg: 32 },
+    { id: 'bran', name: 'Wheat Bran', percentage: 30, proteinContent: 14.5, pricePerKg: 28 },
+    { id: 'sunflower', name: 'Sunflower Cake', percentage: 20, proteinContent: 28.0, pricePerKg: 45 }
+  ];
 
-  const savedBaseline = parseFloat(localStorage.getItem('baseline_herd_meal_kg') || '4.0');
-  const savedItem = localStorage.getItem('baseline_inventory_item_id') || '';
-
-  const [baseline, setBaseline] = useState(savedBaseline);
-  const [inventoryItemId, setInventoryItemId] = useState(savedItem);
-  const [message, setMessage] = useState('');
-
-  const handleSave = (event) => {
-    event.preventDefault();
-    localStorage.setItem('baseline_herd_meal_kg', String(baseline));
-    localStorage.setItem('baseline_inventory_item_id', inventoryItemId || '');
-    setMessage('Saved baseline ration. Milk Lab will use this value by default.');
-    setTimeout(() => setMessage(''), 3000);
-  };
+  // Starting template for the Total Mixed Ration (incorporating the Dairy Meal)
+  const mainMealIngredients = [
+    { id: 'silage', name: 'Silage', percentage: 60, proteinContent: 8.0, pricePerKg: 5 },
+    { id: 'dairy_meal', name: 'Dairy Meal (Formulated)', percentage: 30, proteinContent: 16.0, pricePerKg: 35 },
+    { id: 'lucerne', name: 'Lucerne Hay', percentage: 10, proteinContent: 18.0, pricePerKg: 25 }
+  ];
 
   return (
-    <div className="max-w-7xl mx-auto p-4 space-y-8 animate-reveal">
-      <div className="border-b border-ink/10 pb-4">
-        <h1 className="font-black text-3xl text-ink m-0">Feed Formulation</h1>
-        <p className="text-sm text-ink-muted mt-2">
-          Build feed batches by raw weight, snapshot ingredient prices, and keep Milk Lab aligned with the baseline ration.
+    <div className="animate-reveal space-y-8 max-w-5xl mx-auto p-4 md:p-8">
+      
+      {/* Page Header */}
+      <div className="border-b border-ink/10 pb-6">
+        <h1 className="text-3xl font-black tracking-tight text-ink">Nutrition Lab</h1>
+        <p className="mt-2 text-sm text-ink-muted max-w-2xl">
+          Design high-yield concentrates and balance the herd's daily Total Mixed Ration (TMR). Saved formulas can be quickly logged on the Feed Dashboard.
         </p>
       </div>
 
-      <div className="grid gap-6 xl:grid-cols-[minmax(0,1.45fr)_minmax(280px,0.55fr)]">
-        <MixBuilder inventoryItems={inventoryList} isLoading={isLoading} />
+      {/* Strategic Toggle Tabs */}
+      <div className="flex p-1.5 bg-surface-raised border border-ink/5 rounded-lg max-w-md shadow-sm">
+        <button
+          onClick={() => setActiveTab('dairy_meal')}
+          className={`flex-1 flex items-center justify-center gap-2 py-2.5 text-sm font-bold rounded-md transition-all ${
+            activeTab === 'dairy_meal' 
+              ? 'bg-white text-brand shadow-sm border border-ink/5' 
+              : 'text-ink-muted hover:text-ink-strong'
+          }`}
+        >
+          <Beaker size={18} /> Dairy Meal (Concentrate)
+        </button>
+        <button
+          onClick={() => setActiveTab('main_meal')}
+          className={`flex-1 flex items-center justify-center gap-2 py-2.5 text-sm font-bold rounded-md transition-all ${
+            activeTab === 'main_meal' 
+              ? 'bg-white text-brand shadow-sm border border-ink/5' 
+              : 'text-ink-muted hover:text-ink-strong'
+          }`}
+        >
+          <Tractor size={18} /> Main Meal (TMR)
+        </button>
+      </div>
 
+      {/* The Formulation Engine */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        
+        {/* Left Column: The Interactive Builder */}
+        <div className="lg:col-span-2">
+          {activeTab === 'dairy_meal' ? (
+            <div className="animate-in fade-in slide-in-from-bottom-4 duration-300">
+              <RecipeBuilder recipeType="dairy_meal" initialIngredients={dairyMealIngredients} />
+            </div>
+          ) : (
+            <div className="animate-in fade-in slide-in-from-bottom-4 duration-300">
+              <RecipeBuilder recipeType="main_meal" initialIngredients={mainMealIngredients} />
+            </div>
+          )}
+        </div>
+
+        {/* Right Column: Strategic Actions & Context */}
         <div className="space-y-6">
-          <div className="bg-surface p-6 rounded-2xl border border-ink/10 shadow-sm">
-            <h2 className="font-black text-2xl text-ink m-0">Baseline ration</h2>
-            <p className="text-sm text-ink-muted mt-2">Milk Lab still uses this as the default herd meal unless the farmer overrides it.</p>
-
-            <form onSubmit={handleSave} className="mt-5 space-y-4">
-              <div>
-                <label className="block text-sm font-bold text-ink-muted mb-2">Baseline herd meal (kg per cow)</label>
-                <input
-                  type="number"
-                  step="0.1"
-                  min="0"
-                  value={baseline}
-                  onChange={(event) => setBaseline(Number(event.target.value))}
-                  className="input-machined w-full"
-                />
-                <p className="text-xs text-ink-muted mt-2">This value will be used by the Milk Lab calculator unless you override it there.</p>
-              </div>
-
-              <div>
-                <label className="block text-sm font-bold text-ink-muted mb-2">Preferred concentrate item</label>
-                <select
-                  className="input-machined w-full"
-                  value={inventoryItemId}
-                  onChange={(event) => setInventoryItemId(event.target.value)}
-                >
-                  <option value="">-- Select from inventory --</option>
-                  {isLoading ? (
-                    <option>Loading…</option>
-                  ) : (
-                    inventoryList.map((item) => (
-                      <option key={item.id} value={item.id}>{item.name} — {item.unit}</option>
-                    ))
-                  )}
-                </select>
-                <p className="text-xs text-ink-muted mt-2">Optional: this is recorded as the default item for baseline rations.</p>
-              </div>
-
-              <div className="flex flex-wrap items-center gap-3">
-                <button type="submit" className="btn-command bg-brand text-surface">Save</button>
-                <Link to="/operations/lab" className="text-sm text-ink-muted underline">Open Milk Lab</Link>
-                {message && <span className="text-sm text-brand font-medium">{message}</span>}
-              </div>
-            </form>
+          <div className="bg-surface p-6 border border-ink/5 rounded-card shadow-sm">
+            <h4 className="text-sm font-black text-ink-strong mb-2">Save Formulation</h4>
+            <p className="text-xs text-ink-muted mb-6">
+              Lock in these percentages. This updates the baseline ration used by the Milk Lab to calculate profitability.
+            </p>
+            <button className="w-full bg-brand hover:bg-brand-dark text-white px-4 py-3 rounded-button font-bold text-sm transition-colors shadow-sm flex items-center justify-center gap-2">
+              <Save size={18} /> Save as Current Recipe
+            </button>
           </div>
 
-          <div className="bg-brand/5 border border-brand/15 rounded-2xl p-6 shadow-sm">
-            <p className="text-xs font-bold uppercase tracking-wider text-brand mb-3">Connected workflow</p>
-            <p className="text-sm text-ink-muted leading-6">
-              Save a feed batch here, then use the batch data to analyze milk yield, cost per liter, and future formula comparisons.
+          <div className="bg-brand/5 p-6 border border-brand/20 rounded-card">
+            <h4 className="text-sm font-black text-brand-dark mb-2">Did you know?</h4>
+            <p className="text-xs text-brand-dark/80 leading-relaxed">
+              When mixing a Total Mixed Ration (TMR), maintaining moisture around 45-50% prevents the cows from sorting and leaving behind the less palatable roughages.
             </p>
           </div>
         </div>
+
       </div>
     </div>
   );

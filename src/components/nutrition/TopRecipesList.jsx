@@ -1,61 +1,35 @@
-import React, { useMemo } from 'react';
-import { Trophy, FileStack } from 'lucide-react';
-import DashboardCard from '../ui/DashboardCard';
+import React from 'react';
+import { Trophy } from 'lucide-react';
 
 export default function TopRecipesList({ recipes }) {
-  const rankedRecipes = useMemo(() => {
-    if (!recipes || !Array.isArray(recipes)) return [];
-    return [...recipes].sort((a, b) => a.costPerLiter - b.costPerLiter);
-  }, [recipes]);
-
-  if (rankedRecipes.length === 0) {
-    return (
-      <DashboardCard flexCol>
-        <div className="flex items-center gap-2 text-brand">
-          <Trophy size={18} />
-          <span className="text-xs font-bold uppercase tracking-widest">Most Profitable Recipes</span>
-        </div>
-        <div className="mt-4 rounded-2xl border border-dashed border-ink/15 bg-surface-warm p-5 text-center">
-          <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-brand/10 text-brand">
-            <FileStack size={20} />
-          </div>
-          <h3 className="text-lg font-bold text-ink">No Recipes Found</h3>
-          <p className="mt-2 text-sm leading-6 text-ink-muted">
-            Save your feed formulations to build a library of your best performing mixes.
-          </p>
-        </div>
-      </DashboardCard>
-    );
-  }
-
   return (
-    <DashboardCard flexCol>
-      <div className="flex items-center gap-2 text-brand">
-        <Trophy size={18} />
-        <span className="text-xs font-bold uppercase tracking-widest">Most Profitable Recipes</span>
-      </div>
-
-      <p className="mt-4 text-sm leading-6 text-ink-muted">
-        Your past feed mixes that gave the most milk for the lowest cost.
+    <div className="card-machined bg-surface p-6 shadow-sm border border-ink/5 mt-8">
+      <h3 className="flex items-center gap-2 text-[10px] font-black uppercase tracking-normal text-brand-dark mb-2 drop-shadow-[0_1px_1px_rgba(0,0,0,0.1)]">
+        <Trophy size={16} /> Best Performing Feed Mixes
+      </h3>
+      <p className="text-xs font-medium text-ink-muted mb-6">
+        The feed mixes that gave you the most milk for the least amount of money.
       </p>
 
-      <div className="mt-6 space-y-3">
-        {rankedRecipes.slice(0, 5).map((recipe, index) => (
-          <div key={recipe.id ?? `${recipe.name}-${index}`} className="rounded-2xl border border-ink/10 bg-surface-warm p-4">
-            <div className="flex items-start justify-between gap-3">
-              <div className="min-w-0">
-                <div className="truncate text-sm font-black text-ink">
-                  {index + 1}. {recipe.name}
-                </div>
-                <div className="mt-1 text-xs text-ink-muted">Average Daily Milk: {recipe.yieldAvg.toFixed(1)} L</div>
+      <div className="space-y-3">
+        {recipes.map((mix, index) => (
+          <div key={mix.id} className="flex items-center justify-between bg-brand/5 border border-brand/10 rounded-lg p-4 hover:bg-brand/10 transition-colors">
+            <div className="flex items-center gap-4">
+              <div className="w-6 text-sm font-black text-brand/50">{index + 1}.</div>
+              <div>
+                <h4 className="text-sm font-bold text-ink-strong">{mix.name}</h4>
+                <p className="text-xs font-medium text-ink-muted mt-0.5">
+                  Average Daily Milk: {mix.yieldAvg.toFixed(1)} L
+                </p>
               </div>
-              <div className="rounded-full bg-brand/5 px-3 py-1 text-[10px] font-bold uppercase tracking-widest text-brand whitespace-nowrap">
-                KES {recipe.costPerLiter.toFixed(2)}/L
-              </div>
+            </div>
+            
+            <div className="bg-white px-3 py-1.5 rounded text-xs font-black text-brand shadow-sm border border-brand/10">
+              KES {mix.costPerLiter.toFixed(2)} / L
             </div>
           </div>
         ))}
       </div>
-    </DashboardCard>
+    </div>
   );
 }

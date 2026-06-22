@@ -1,12 +1,13 @@
 import React, { useMemo, useState } from 'react';
-import { PackagePlus } from 'lucide-react';
+import { PackagePlus, Wheat } from 'lucide-react';
 import CurrentMixCard from '../../components/nutrition/CurrentMixCard';
 import ProfitabilityChart from '../../components/nutrition/ProfitabilityChart';
-import TopRecipesList from '../../components/nutrition/TopRecipesList';
-import ReceiveStockModal from '../../components/nutrition/ReceiveStockModal';
+import TopRecipesList from './TopRecipesList';
+import AddFeedModal from './AddFeedModal';
 
+// Updated Mock Data with Farmer-Friendly Language
 const MOCK_CURRENT_MIX = {
-  name: 'High-Yield Lactation Mix',
+  name: 'Milking Cow Meal', // Simplified
   totalWeight: 500,
   consumedWeight: 380,
   remainingWeight: 120,
@@ -15,11 +16,11 @@ const MOCK_CURRENT_MIX = {
 };
 
 const MOCK_TRENDS = [
-  { week: 'Wk 18', cost: 15.2 },
-  { week: 'Wk 19', cost: 14.8 },
-  { week: 'Wk 20', cost: 12.5 },
-  { week: 'Wk 21', cost: 11.8 },
-  { week: 'Wk 22', cost: 11.2 },
+  { week: 'Wk 18', cost: 15.2, height: 'h-24' },
+  { week: 'Wk 19', cost: 14.8, height: 'h-20' },
+  { week: 'Wk 20', cost: 12.5, height: 'h-16' },
+  { week: 'Wk 21', cost: 11.8, height: 'h-12' },
+  { week: 'Wk 22', cost: 11.2, height: 'h-10', isCurrent: true },
 ];
 
 const MOCK_RECIPES = [
@@ -28,59 +29,49 @@ const MOCK_RECIPES = [
   { id: 3, name: 'Standard Commercial Meal', costPerLiter: 15.8, yieldAvg: 24.2 },
 ];
 
-const MOCK_STOCK = [
-  { id: 'maize_germ', name: 'Maize Germ', unit: 'KG' },
-  { id: 'wheat_bran', name: 'Wheat Bran', unit: 'KG' },
-  { id: 'sunflower_cake', name: 'Sunflower Cake', unit: 'KG' },
-];
-
 export default function NutritionDashboard() {
-  const [isDeliveryModalOpen, setIsDeliveryModalOpen] = useState(false);
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
   const currentMix = useMemo(() => MOCK_CURRENT_MIX, []);
   const trends = useMemo(() => MOCK_TRENDS, []);
   const recipes = useMemo(() => MOCK_RECIPES, []);
 
-  const handleReceiveStock = (delivery) => {
-    // Hook for future mutation wiring.
-    console.info('Received stock delivery', delivery);
-  };
-
   return (
     <div className="animate-reveal space-y-8 max-w-7xl mx-auto">
+      {/* ── HEADER ── */}
       <div className="flex flex-col gap-4 border-b border-ink/10 pb-6 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <div className="inline-flex items-center gap-2 rounded-full bg-brand/10 px-3 py-1 text-[10px] font-bold uppercase tracking-widest text-brand">
-            Feed & Profit Tracker
+            <Wheat size={12} /> Feed & Profit Tracker
           </div>
-          <h1 className="mt-3 text-3xl font-black tracking-tight text-ink">Feed Dashboard</h1>
+          <h1 className="mt-3 text-3xl font-black tracking-tight text-ink">Feed Store & Costs</h1>
           <p className="mt-2 max-w-2xl text-sm leading-7 text-ink-muted">
-            Track the active batch, profitability, and recipe performance from one place.
+            Keep track of what's in the store, how much it costs, and which mixes give you the most milk.
           </p>
         </div>
 
         <button
           type="button"
-          onClick={() => setIsDeliveryModalOpen(true)}
-          className="btn-command flex items-center gap-2"
+          onClick={() => setIsModalOpen(true)}
+          className="btn-command flex items-center gap-2 bg-brand text-surface shadow-md hover:bg-brand-dark transition-colors px-4 py-2.5 rounded-button font-bold text-sm"
         >
-          <PackagePlus size={18} /> Log Feed Delivery
+          <PackagePlus size={18} /> Add Feed to Store
         </button>
       </div>
 
+      {/* ── TOP GRID: STATUS & FINANCIALS ── */}
       <div className="grid gap-6 xl:grid-cols-2">
         <CurrentMixCard mix={currentMix} />
         <ProfitabilityChart trends={trends} />
       </div>
 
+      {/* ── BOTTOM SECTION: HISTORICAL PLAYBOOK ── */}
       <TopRecipesList recipes={recipes} />
 
-      <ReceiveStockModal
-        isOpen={isDeliveryModalOpen}
-        onClose={() => setIsDeliveryModalOpen(false)}
-        inventoryItems={MOCK_STOCK}
-        onReceive={handleReceiveStock}
-      />
+      {/* ── MODAL ── */}
+      {isModalOpen && (
+        <AddFeedModal onClose={() => setIsModalOpen(false)} />
+      )}
     </div>
   );
 }

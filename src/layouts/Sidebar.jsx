@@ -59,7 +59,8 @@ export default function Sidebar() {
     {
       title: LABELS.FEED_NUTRITION || 'Feed & Nutrition',
       items: [
-        { label: LABELS.FEED_DASHBOARD || LABELS.NUTRITION_PLANNER, to: '/feed-nutrition', icon: Wheat, visible: canViewFeedNutrition },
+        // FIX: Added `exact: true` to prevent the parent path from highlighting when on sub-paths
+        { label: LABELS.FEED_DASHBOARD || LABELS.NUTRITION_PLANNER, to: '/feed-nutrition', icon: Wheat, visible: canViewFeedNutrition, exact: true },
         { label: LABELS.FEED_FORMULATION, to: '/feed-nutrition/mix', icon: Dna, visible: canViewFeedNutrition },
         { label: LABELS.MILK_LAB, to: '/operations/lab', icon: Pill, visible: canViewFeedNutrition },
         { label: 'Unit Conversions', to: '/settings/unit-conversions', icon: BookOpen, visible: canViewFeedNutrition },
@@ -96,7 +97,12 @@ export default function Sidebar() {
     .filter((group) => group.items.length > 0);
 
   const activeGroupTitle = visibleGroups.find((group) =>
-    group.items.some((item) => location.pathname === item.to || location.pathname.startsWith(`${item.to}/`))
+    group.items.some((item) => {
+      // FIX: Apply exact matching logic to active group determination
+      return item.exact 
+        ? location.pathname === item.to 
+        : location.pathname === item.to || location.pathname.startsWith(`${item.to}/`);
+    })
   )?.title || null;
 
   const isGroupCollapsed = (groupTitle) =>
@@ -181,11 +187,17 @@ export default function Sidebar() {
             <div className={`flex-col gap-2 ${group.title && isGroupCollapsed(group.title) ? 'hidden md:flex' : 'flex'}`}>
               {group.items.map((item) => {
                 const Icon = item.icon;
-                const itemIsActive = location.pathname === item.to || location.pathname.startsWith(`${item.to}/`);
+                
+                // FIX: Update manual activity check to respect item.exact
+                const itemIsActive = item.exact 
+                  ? location.pathname === item.to 
+                  : location.pathname === item.to || location.pathname.startsWith(`${item.to}/`);
+
                 return (
                   <NavLink
                     key={item.to}
                     to={item.to}
+                    end={item.exact} // FIX: Pass end={true} to NavLink if exact is required
                     onClick={() => setMobileOpen(false)}
                     className={({ isActive }) => `flex items-center px-4 py-3 min-h-[44px] font-sans font-semibold text-sm transition-all duration-100 border-3 rounded-lg relative ${
                       isActive
