@@ -1,136 +1,223 @@
-import React from 'react';
-import { useQuery } from '@tanstack/react-query';
+import React, { useState, useMemo } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useTenant } from '../../hooks/useTenant';
 import { QUERY_KEYS } from '../../providers/QueryProvider';
 import apiClient from '../../lib/apiClient';
-import { Wallet, ArrowUpRight, ArrowDownLeft, Receipt, ShieldCheck, PieChart } from 'lucide-react';
-import Money from '../../components/ui/Money';
-import { Skeleton } from '../../components/ui';
+import { Wallet, ArrowUpRight, ArrowDownLeft, Receipt, ShieldCheck } from 'lucide-react';
+import ExpenseModal from '../../components/forms/ExpenseModal';
+import IncomeModal from '../../components/forms/IncomeModal';
+
+// Mock initial data for demonstration purposes
+const initialTransactions = [
+  {
+    id: 'txn_1',
+    type: 'income',
+    date: '2026-06-24',
+    reference: 'QJ12ABC345',
+    category: 'Milk Sale',
+    party: 'Rift Valley Cooperative',
+    status: 'CLEARED',
+    amount: 45250,
+  },
+  {
+    id: 'txn_2',
+    type: 'expense',
+    date: '2026-06-22',
+    reference: 'INV-8832',
+    category: 'Feed Purchase',
+    party: 'AgroVet Supply',
+    status: 'PAID',
+    amount: -18500,
+  },
+];
+
+const TransactionRow = ({ tx }) => (
+  <tr className="hover:bg-slate-50 transition-colors">
+    <td className="px-6 py-4 text-xs font-bold text-slate-500">{tx.date}</td>
+    <td className="px-6 py-4 font-mono bg-slate-50 border border-slate-100 rounded text-[11px] font-black text-ink">
+      {tx.reference || 'N/A'}
+    </td>
+    <td className="px-6 py-4">
+      <span className="text-[9px] font-black bg-slate-100 px-2 py-1 rounded text-slate-600">{tx.category}</span>
+    </td>
+    <td className="px-6 py-4 text-xs font-bold text-ink">{tx.party}</td>
+    <td className="px-6 py-4">
+      <span className={`text-[9px] font-bold px-2 py-1 rounded ${
+        tx.status === 'CLEARED' ? 'text-emerald-600 bg-emerald-50' : 'text-slate-600 bg-slate-100'
+      }`}>
+        {tx.status}
+      </span>
+    </td>
+    <td className={`px-6 py-4 text-right font-black ${tx.type === 'income' ? 'text-brand' : 'text-danger'}`}>
+      {tx.type === 'income' ? '+' : ''}{tx.amount.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+    </td>
+  </tr>
+);
 
 export default function FinancialLedger() {
-  const { tenantId, farmId } = useTenant();
+  const { tenantId, farmId, tenant } = useTenant();
+  const queryClient = useQueryClient();
+  const [isExpenseModalOpen, setIsExpenseModalOpen] = useState(false);
+  const [isIncomeModalOpen, setIsIncomeModalOpen] = useState(false);
 
-  const { data: finance, isLoading } = useQuery({
+  const isCoopMember = tenant?.isCoopMember || false;
+
+  const { data: finance } = useQuery({
     queryKey: QUERY_KEYS.UNIT_COST(tenantId, farmId),
     queryFn: () => apiClient.get('/finance/unit-cost').then(res => res.data),
     enabled: !!farmId,
   });
 
+  // For demonstration, we'll manage transactions in local state.
+  // In a real app, this would come from a useQuery hook.
+  const [transactions, setTransactions] = useState(initialTransactions);
+
+  // --- Mutations for adding transactions ---
+  const useTransactionMutation = (transactionType) => {
+    return useMutation({
+      mutationFn: async (newTransactionData) => {
+        // MOCK API CALL
+        return new Promise(resolve => {
+          setTimeout(() => {
+            const newTransaction = {
+              id: `txn_${Date.now()}`,
+              type: transactionType,
+              status: transactionType === 'income' ? 'CLEARED' : 'PAID',
+              party: newTransactionData.source || newTransactionData.paidTo,
+              amount: transactionType === 'income' ? parseFloat(newTransactionData.amount) : -Math.abs(parseFloat(newTransactionData.amount)),
+              ...newTransactionData,
+            };
+            resolve(newTransaction);
+          }, 500);
+        });
+      },
+      onSuccess: (newTransaction) => {
+        // Optimistically update the local state
+        setTransactions(prev => [newTransaction, ...prev].sort((a, b) => new Date(b.date) - new Date(a.date)));
+      },
+    });
+  };
+
+  const addIncomeMutation = useTransactionMutation('income');
+  const addExpenseMutation = useTransactionMutation('expense');
+
+  // --- Derived KPIs from transactions state ---
+  const kpis = useMemo(() => {
+    return transactions.reduce((acc, tx) => {
+      if (tx.type === 'income') {
+        acc.totalIncome += tx.amount;
+      } else {
+        acc.totalCosts += Math.abs(tx.amount);
+      }
+      return acc;
+    }, { totalIncome: 0, totalCosts: 0 });
+  }, [transactions]);
+
+  const totalProfit = kpis.totalIncome - kpis.totalCosts;
+
   return (
-    <div className="animate-reveal space-y-8">
-      <div className="flex justify-between items-end border-b border-ink/10 pb-6">
+    <div className="animate-reveal p-8">
+      {/* HEADER */}
+      <div className="flex justify-between items-end mb-8">
         <div>
-          <div className="inline-flex items-center gap-2 px-2 py-1 bg-brand/10 text-brand text-[10px] font-semibold tracking-normal mb-4 rounded-md border border-brand/20">
+          <div className="inline-flex items-center gap-2 px-2 py-1 bg-brand/5 text-brand text-[10px] font-black uppercase tracking-widest mb-3 rounded-md border border-brand/10">
             <Wallet size={12} /> Financial Registry
           </div>
-          <h2 className="font-display font-semibold text-4xl tracking-tight text-brand m-0">
-            Capital <span className="text-ink/30">Ledger</span>
-          </h2>
+          <h2 className="font-sans font-black text-3xl tracking-tight text-ink m-0">Capital Ledger</h2>
         </div>
-        <div className="flex gap-4">
-          <button className="btn-secondary">
-            <ArrowDownLeft size={18} className="mr-2 text-danger" /> Expense
+        <div className="flex gap-3">
+          <button onClick={() => setIsExpenseModalOpen(true)} className="flex items-center px-5 py-2.5 bg-white border border-slate-200 text-ink rounded-lg font-black text-xs uppercase hover:bg-slate-50 transition-all">
+            <ArrowDownLeft size={14} className="mr-2 text-danger" /> Log Expense
           </button>
-          <button className="btn-command">
-            <ArrowUpRight size={18} className="mr-2" /> Income
+          <button onClick={() => setIsIncomeModalOpen(true)} className="flex items-center px-5 py-2.5 bg-brand text-white rounded-lg font-black text-xs uppercase hover:bg-brand-dark transition-all">
+            <ArrowUpRight size={14} className="mr-2" /> Log Income
           </button>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 lg:gap-8">
-        <div className="card-machined bg-surface/80 p-6 text-ink-strong">
-          <div className="flex justify-between items-start">
-            <span className="billing-card__eyebrow">Net position</span>
-            <PieChart size={18} className="text-accent" />
-          </div>
-          <div className="mt-4">
-            <div className="text-4xl font-black tracking-tight">
-              {isLoading ? <Skeleton className="h-8 w-48" /> : <Money amount={124500} currency="KSh" />}
-            </div>
-            <p className="billing-card__muted mt-2">// Current cycle profit</p>
-          </div>
+      {/* KPI CARDS - Updated to 4-column layout */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+        
+        {/* Total Profit */}
+        <div className="bg-white p-6 rounded-xl border border-slate-100 shadow-sm">
+          <span className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Total Profit</span>
+          <div className="text-xl font-black text-ink mt-2">KSh {totalProfit.toLocaleString('en-US', { minimumFractionDigits: 2 })}</div>
+          <p className="text-[10px] font-bold text-slate-400 mt-2">// Profit this season</p>
         </div>
 
-        <div className="billing-card--soft">
-          <span className="billing-card__eyebrow">Co-op payout split</span>
-          <div className="mt-4 flex items-end justify-between">
-            <div className="text-3xl font-black text-brand tracking-tight">75/25%</div>
-            <div className="h-2 w-24 bg-surface-raised border border-ink overflow-hidden">
-               <div className="h-full bg-brand w-[75%]"></div>
-            </div>
-          </div>
-          <p className="billing-card__muted mt-2">// Automatic retention policy</p>
+        {/* Total Costs */}
+        <div className="bg-white p-6 rounded-xl border border-slate-100 shadow-sm">
+          <span className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Total Costs</span>
+          <div className="text-xl font-black text-danger mt-2">KSh {kpis.totalCosts.toLocaleString('en-US', { minimumFractionDigits: 2 })}</div>
+          <p className="text-[10px] font-bold text-slate-400 mt-2">// Money spent this season</p>
         </div>
 
-        <div className="billing-card--soft">
-          <span className="billing-card__eyebrow">Tax compliance</span>
+        {/* Dynamic Card (Payout/Sales) */}
+        {isCoopMember ? (
+          <div className="bg-white p-6 rounded-xl border border-slate-100 shadow-sm">
+            <span className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Payout Breakdown</span>
+            <div className="mt-4 space-y-3">
+              <div className="flex justify-between items-center"><span className="text-xs font-bold text-ink">Cash in hand</span><span className="text-xs font-black text-brand">75%</span></div>
+              <div className="h-2 w-full bg-slate-100 rounded-full flex overflow-hidden">
+                 <div className="h-full bg-brand w-[75%]"></div>
+                 <div className="h-full bg-slate-300 w-[25%]"></div>
+              </div>
+            </div>
+            <p className="text-[10px] font-bold text-slate-400 mt-3 italic">// 25% saved for you.</p>
+          </div>
+        ) : (
+          <div className="bg-white p-6 rounded-xl border border-slate-100 shadow-sm">
+            <span className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Total Income</span>
+            <div className="text-xl font-black text-brand mt-4">KSh {kpis.totalIncome.toLocaleString('en-US', { minimumFractionDigits: 2 })}</div>
+            <p className="text-[10px] font-bold text-slate-400 mt-2">// Total from all sales</p>
+          </div>
+        )}
+
+        {/* Tax Status */}
+        <div className="bg-white p-6 rounded-xl border border-slate-100 shadow-sm">
+          <span className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Tax Status</span>
           <div className="mt-4 flex items-center gap-3">
-             <div className="p-2 bg-accent/20 border border-accent text-brand">
-               <ShieldCheck size={20} />
-             </div>
-             <div className="font-display font-semibold text-brand">eTIMS sync active</div>
+             <div className="p-2 bg-emerald-50 border border-emerald-100 text-emerald-600 rounded-lg"> <ShieldCheck size={18} /> </div>
+             <div className="font-black text-xs text-ink">eTIMS sync active</div>
           </div>
-          <p className="billing-card__muted mt-2">// KRA node: Bahati_01</p>
+          <p className="text-[10px] font-bold text-slate-400 mt-2">// Linked to: Bahati_01</p>
         </div>
       </div>
 
-      <div className="space-y-4">
-        <h3 className="font-display font-semibold text-lg tracking-tight text-brand flex items-center gap-2">
-          <Receipt size={20} /> Transaction Matrix
-        </h3>
-
-        <div className="card-machined overflow-hidden !p-0 text-ink-strong bg-surface/80">
-          <table className="w-full text-left border-collapse">
-            <thead className="bg-brand/10 text-ink-muted">
-              <tr>
-                <th className="p-5 font-sans text-xs font-semibold uppercase tracking-[0.12em] text-ink-muted">Reference</th>
-                <th className="p-5 font-sans text-xs font-semibold uppercase tracking-[0.12em] text-ink-muted">Category</th>
-                <th className="p-5 font-sans text-xs font-semibold uppercase tracking-[0.12em] text-ink-muted">Counterparty</th>
-                <th className="p-5 font-sans text-xs font-semibold uppercase tracking-[0.12em] text-right text-ink-muted">Amount</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y-2 divide-ink/5">
-              {isLoading ? (
-                Array.from({ length: 3 }).map((_, idx) => (
-                  <tr key={idx} className="animate-stagger">
-                    <td className="p-5"><Skeleton className="h-4 w-40" /></td>
-                    <td className="p-5"><Skeleton className="h-4 w-32" /></td>
-                    <td className="p-5"><Skeleton className="h-4 w-56" /></td>
-                    <td className="p-5 text-right"><Skeleton className="h-4 w-20 mx-auto" /></td>
-                  </tr>
-                ))
-              ) : (
-                <>
-                  <tr style={{ animationDelay: '0.1s' }} className="animate-stagger hover:bg-surface-raised transition-colors cursor-pointer group">
-                    <td className="p-5 font-sans text-xs font-bold text-ink group-hover:text-brand transition-colors">TRX_2026_05_14_A</td>
-                    <td className="p-5">
-                      <span className="inline-block px-2 py-1 bg-brand/5 border border-brand/20 text-brand font-sans text-[10px] font-semibold rounded">
-                        Milk Sale
-                      </span>
-                    </td>
-                    <td className="p-5 font-sans font-semibold text-ink text-sm">Rift Valley Cooperative</td>
-                    <td className="p-5 text-right font-sans text-lg font-black text-brand tabular-nums">
-                      +45,250.00
-                    </td>
-                  </tr>
-                  <tr style={{ animationDelay: '0.2s' }} className="animate-stagger hover:bg-surface-raised transition-colors cursor-pointer group">
-                    <td className="p-5 font-sans text-xs font-bold text-ink group-hover:text-brand transition-colors">TRX_2026_05_13_B</td>
-                    <td className="p-5">
-                      <span className="inline-block px-2 py-1 bg-danger/5 border border-danger/20 text-danger font-sans text-[10px] font-semibold rounded">
-                        Vet Service
-                      </span>
-                    </td>
-                    <td className="p-5 font-sans font-semibold text-ink text-sm">AgroVet Supply Nakuru</td>
-                    <td className="p-5 text-right font-sans text-lg font-black text-danger tabular-nums">
-                      -3,500.00
-                    </td>
-                  </tr>
-                </>
-              )}
-            </tbody>
-          </table>
+      {/* TRANSACTION MATRIX */}
+      <div className="bg-white border border-slate-100 rounded-xl shadow-sm overflow-hidden">
+        <div className="flex items-center justify-between px-6 py-5 border-b border-slate-100">
+            <h3 className="font-black text-xs uppercase text-ink flex items-center gap-2 tracking-widest">
+              <Receipt size={14} /> Transaction Matrix
+            </h3>
         </div>
+        <table className="w-full text-left border-collapse">
+          <thead className="bg-slate-50 text-[10px] uppercase font-black text-slate-500">
+            <tr>
+              <th className="px-6 py-4">Date</th>
+              <th className="px-6 py-4">Ref (Code)</th>
+              <th className="px-6 py-4">Category</th>
+              <th className="px-6 py-4">Customer / Supplier</th>
+              <th className="px-6 py-4">Status</th>
+              <th className="px-6 py-4 text-right">Amount (KSh)</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-slate-100">
+            {transactions.map(tx => <TransactionRow key={tx.id} tx={tx} />)}
+          </tbody>
+        </table>
       </div>
+
+      <ExpenseModal 
+        isOpen={isExpenseModalOpen} 
+        onClose={() => setIsExpenseModalOpen(false)} 
+        onSave={(data) => addExpenseMutation.mutate(data)}
+      />
+      <IncomeModal 
+        isOpen={isIncomeModalOpen} 
+        onClose={() => setIsIncomeModalOpen(false)}
+        onSave={(data) => addIncomeMutation.mutate(data)}
+      />
     </div>
   );
 }

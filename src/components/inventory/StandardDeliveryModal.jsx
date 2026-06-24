@@ -1,134 +1,198 @@
-// src/components/inventory/StandardDeliveryModal.jsx
 import React, { useState, useEffect } from 'react';
-import { X, PackagePlus, Minus, Plus, Check } from 'lucide-react';
+import { X, ClipboardList, Search, Minus, Plus, CheckCircle2, PackageCheck } from 'lucide-react';
 
-export default function StandardDeliveryModal({ isOpen, onClose, item }) {
+export default function StandardDeliveryModal({ isOpen, onClose, item, onRestock }) {
   const [amount, setAmount] = useState(0);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedProduct, setSelectedProduct] = useState('');
 
-  // Reset amount whenever the modal opens with a new item
+  // Update selected product when the modal opens with a specific item
   useEffect(() => {
-    if (isOpen) setAmount(0);
-  }, [isOpen, item]);
+    if (item?.name) {
+      setSelectedProduct(item.name);
+      setSearchQuery(item.name);
+    } else {
+      setSelectedProduct('');
+      setSearchQuery('');
+    }
+    setAmount(0); // Reset amount on open
+  }, [item, isOpen]);
 
-  if (!isOpen || !item) return null;
+  if (!isOpen) return null;
 
-  const handleIncrement = () => setAmount(prev => prev + 1);
-  const handleDecrement = () => setAmount(prev => Math.max(0, prev - 1));
-  const handleQuickAdd = (val) => setAmount(prev => prev + val);
+  // Mock data for the quick-select cards (only used if no specific item was passed)
+  const quickSelectOptions = [
+    { name: 'Dairy Meal', stock: '120 KG' },
+    { name: 'Maize Germ', stock: '850 KG' },
+    { name: 'Silage', stock: '4500 KG' },
+  ];
 
   const handleConfirm = () => {
-    console.log(`Confirmed delivery of ${amount} ${item.unit} for ${item.name}`);
-    // Future: Trigger API call here
+    // If an onRestock callback is provided and we have a valid item and amount, call it.
+    if (onRestock && item && amount > 0) {
+      onRestock(item, amount);
+    } else {
+      console.log(`Logging standard batch: ${amount}kg of ${selectedProduct}`);
+    }
     onClose();
   };
 
+  const increaseAmount = (val) => setAmount((prev) => prev + val);
+  const decreaseAmount = () => setAmount((prev) => Math.max(0, prev - 1));
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-ink/20 backdrop-blur-sm animate-in fade-in duration-200">
-      
-      {/* Modal Container */}
-      <div className="bg-white rounded-[24px] w-full max-w-md shadow-2xl overflow-hidden flex flex-col">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-sm p-4">
+      <div className="bg-white rounded-2xl shadow-xl w-full max-w-2xl overflow-hidden animate-reveal">
         
-        {/* Header */}
-        <div className="flex items-center justify-between px-8 py-6 border-b border-slate-100 bg-[#F8FAFC]">
-          <div className="flex items-center gap-3">
-            <div className="bg-brand/10 p-2 rounded-[8px] text-brand">
-              <PackagePlus size={20} strokeWidth={2.5} />
-            </div>
-            <div>
-              <h3 className="font-black text-ink text-lg tracking-tight">Log Delivery</h3>
-              <p className="text-[11px] font-bold text-ink-muted uppercase tracking-widest mt-0.5">Standard Receipt</p>
-            </div>
-          </div>
-          <button 
-            onClick={onClose}
-            className="text-ink-muted hover:text-danger p-2 rounded-full hover:bg-danger/10 transition-colors"
-          >
-            <X size={20} strokeWidth={2.5} />
+        {/* HEADER */}
+        <div className="flex justify-between items-center p-6 border-b border-slate-100">
+          <h3 className="font-black text-lg text-slate-800 flex items-center gap-2">
+            <ClipboardList size={20} className="text-brand" /> 
+            {item ? 'Restock Resource' : 'Log Standard Batch'}
+          </h3>
+          <button onClick={onClose} className="text-slate-400 hover:text-slate-600 transition-colors">
+            <X size={20} />
           </button>
         </div>
-
-        {/* Body */}
-        <div className="p-8 space-y-8">
-          
-          {/* Target Item Context */}
-          <div>
-            <label className="text-[10px] font-black text-ink-muted uppercase tracking-widest mb-2 block">
-              1. Receiving Destination
-            </label>
-            <div className="border border-brand/20 bg-brand/5 rounded-[12px] p-4 flex justify-between items-center">
-              <div>
-                <p className="font-black text-ink-strong text-sm">{item.name}</p>
-                <p className="text-xs font-bold text-ink-muted mt-0.5">{item.sku}</p>
-              </div>
-              <div className="text-right">
-                <p className="text-[10px] font-black text-ink-muted uppercase tracking-widest">Current Stock</p>
-                <p className="font-black text-ink tabular-nums">{item.stock} {item.unit}</p>
-              </div>
-            </div>
-          </div>
-
-          {/* Amount Input */}
-          <div>
-            <label className="text-[10px] font-black text-ink-muted uppercase tracking-widest mb-3 block text-center">
-              2. How much arrived?
+        
+        <div className="p-8">
+          {/* SECTION 1: WHAT ARRIVED */}
+          <div className="mb-8">
+            <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-4">
+              1. What Arrived?
             </label>
             
-            <div className="flex items-center justify-center gap-6 mb-6">
+            {item ? (
+              /* TARGETED RESTOCK VIEW (User clicked a specific row) */
+              <div className="p-5 bg-brand/5 border border-brand/20 rounded-xl flex items-center justify-between">
+                <div>
+                  <div className="flex items-center gap-2 mb-1">
+                    <PackageCheck size={16} className="text-brand" />
+                    <span className="font-black text-brand text-lg">{item.name}</span>
+                  </div>
+                  <div className="text-[11px] font-bold text-slate-500 uppercase tracking-wider ml-6">
+                    SKU: {item.sku}
+                  </div>
+                </div>
+                <div className="text-right">
+                  <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Current Stock</div>
+                  <div className="font-black text-slate-700">{item.stock.value} {item.stock.unit}</div>
+                </div>
+              </div>
+            ) : (
+              /* GENERAL RESTOCK VIEW (User clicked "Add to Feedstore" at the top) */
+              <>
+                <div className="grid grid-cols-3 gap-4 mb-4">
+                  {quickSelectOptions.map((opt) => {
+                    const isSelected = selectedProduct.includes(opt.name);
+                    return (
+                      <button
+                        key={opt.name}
+                        type="button"
+                        onClick={() => {
+                          setSelectedProduct(opt.name);
+                          setSearchQuery(opt.name);
+                        }}
+                        className={`text-left p-4 rounded-xl border-2 transition-all ${
+                          isSelected 
+                            ? 'border-brand bg-brand/5' 
+                            : 'border-slate-100 hover:border-slate-200 bg-white'
+                        }`}
+                      >
+                        <div className={`font-black text-sm mb-2 ${isSelected ? 'text-brand' : 'text-slate-800'}`}>
+                          {opt.name}
+                        </div>
+                        <div className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
+                          Stock: {opt.stock}
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+                <div className="relative">
+                  <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
+                  <input 
+                    type="text"
+                    value={searchQuery}
+                    onChange={(e) => {
+                      setSearchQuery(e.target.value);
+                      setSelectedProduct(e.target.value);
+                    }}
+                    placeholder="Search resources..." 
+                    className="w-full pl-11 pr-4 py-3.5 border border-slate-200 rounded-xl text-sm font-bold text-slate-700 outline-none focus:border-brand/50 transition-all shadow-sm"
+                  />
+                </div>
+              </>
+            )}
+          </div>
+
+          {/* SECTION 2: HOW MUCH WAS DELIVERED */}
+          <div className="border border-slate-100 rounded-2xl p-8 flex flex-col items-center bg-slate-50/50">
+            <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-6">
+              2. How Much Was Delivered?
+            </label>
+            
+            <div className="flex items-center justify-center gap-8 mb-8">
               <button 
-                onClick={handleDecrement}
-                className="w-12 h-12 rounded-full border border-slate-200 flex items-center justify-center text-ink-muted hover:border-brand hover:text-brand transition-colors"
+                type="button"
+                onClick={decreaseAmount}
+                className="w-12 h-12 flex items-center justify-center rounded-full border border-slate-200 bg-white text-slate-400 hover:text-slate-600 hover:border-slate-300 transition-all shadow-sm"
               >
-                <Minus size={20} strokeWidth={3} />
+                <Minus size={20} />
               </button>
               
-              <div className="flex flex-col items-center min-w-[100px]">
-                <span className="text-4xl font-black text-ink tabular-nums tracking-tighter">
+              <div className="flex items-baseline gap-2 min-w-[100px] justify-center">
+                <span className="text-6xl font-black text-slate-800 tabular-nums tracking-tighter">
                   {amount}
                 </span>
-                <span className="text-xs font-bold text-ink-muted uppercase tracking-wider">
-                  {item.unit}
-                </span>
+                <span className="text-xl font-bold text-slate-400">{item?.stock?.unit || 'units'}</span>
               </div>
 
               <button 
-                onClick={handleIncrement}
-                className="w-12 h-12 rounded-full border border-slate-200 flex items-center justify-center text-ink-muted hover:border-brand hover:text-brand transition-colors"
+                type="button"
+                onClick={() => increaseAmount(1)}
+                className="w-12 h-12 flex items-center justify-center rounded-full border border-slate-200 bg-white text-slate-400 hover:text-slate-600 hover:border-slate-300 transition-all shadow-sm"
               >
-                <Plus size={20} strokeWidth={3} />
+                <Plus size={20} />
               </button>
             </div>
 
-            {/* Quick Add Chips (Dynamic based on item type) */}
-            <div className="flex justify-center gap-3">
-              {item.type === 'bulk' ? (
-                <>
-                  <button onClick={() => handleQuickAdd(50)} className="px-4 py-2 rounded-[8px] border border-slate-200 text-xs font-bold text-ink hover:bg-slate-50 transition-colors shadow-sm">+ 50 {item.unit}</button>
-                  <button onClick={() => handleQuickAdd(70)} className="px-4 py-2 rounded-[8px] border border-slate-200 text-xs font-bold text-ink hover:bg-slate-50 transition-colors shadow-sm">+ 70 {item.unit}</button>
-                </>
-              ) : (
-                <>
-                  <button onClick={() => handleQuickAdd(5)} className="px-4 py-2 rounded-[8px] border border-slate-200 text-xs font-bold text-ink hover:bg-slate-50 transition-colors shadow-sm">+ 5 {item.unit}</button>
-                  <button onClick={() => handleQuickAdd(10)} className="px-4 py-2 rounded-[8px] border border-slate-200 text-xs font-bold text-ink hover:bg-slate-50 transition-colors shadow-sm">+ 10 {item.unit}</button>
-                </>
-              )}
+            <div className="flex gap-3">
+              <button 
+                type="button"
+                onClick={() => increaseAmount(50)}
+                className="px-5 py-2.5 bg-white border border-slate-200 rounded-lg text-xs font-black text-slate-600 hover:bg-slate-50 transition-all shadow-sm"
+              >
+                + 50kg Bag
+              </button>
+              <button 
+                type="button"
+                onClick={() => increaseAmount(70)}
+                className="px-5 py-2.5 bg-white border border-slate-200 rounded-lg text-xs font-black text-slate-600 hover:bg-slate-50 transition-all shadow-sm"
+              >
+                + 70kg Bag
+              </button>
             </div>
           </div>
         </div>
 
-        {/* Footer Actions */}
-        <div className="p-6 bg-[#F8FAFC] border-t border-slate-100 flex gap-4">
+        {/* FOOTER ACTIONS */}
+        <div className="flex items-center justify-between p-6 bg-white border-t border-slate-100">
           <button 
+            type="button" 
             onClick={onClose}
-            className="flex-1 py-3.5 rounded-[12px] font-black text-xs uppercase tracking-wider text-ink-muted hover:bg-slate-100 transition-colors"
+            className="text-sm font-bold text-slate-500 hover:text-slate-700 transition-colors"
           >
             Cancel
           </button>
           <button 
+            type="button"
             onClick={handleConfirm}
-            disabled={amount <= 0}
-            className="flex-2 py-3.5 px-6 rounded-[12px] font-black text-xs uppercase tracking-wider bg-brand text-white hover:bg-[#1546b3] transition-colors shadow-sm flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+            disabled={amount === 0 || !selectedProduct}
+            className="flex items-center gap-2 px-6 py-3 rounded-xl font-black text-xs uppercase transition-all shadow-sm bg-brand text-white hover:bg-brand-dark disabled:bg-slate-200 disabled:text-slate-400 disabled:cursor-not-allowed"
           >
-            <Check size={16} strokeWidth={3} /> Confirm Delivery
+            <CheckCircle2 size={16} />
+            Confirm Delivery
           </button>
         </div>
 
