@@ -1,6 +1,10 @@
 import React, { useState } from 'react';
 import { NavLink, useLocation, useNavigate } from 'react-router-dom';
-import { LayoutDashboard, Beaker, Pill, Package, Wallet, LogOut, Menu, X, Users, Dna, Landmark, ShieldCheck, BookHeart, BookOpen, Activity, Wheat, ChevronRight, ChevronDown } from 'lucide-react';
+import { 
+  LayoutDashboard, Beaker, Pill, Package, Wallet, LogOut, Menu, X, 
+  Users, Dna, Landmark, ShieldCheck, BookHeart, BookOpen, Activity, 
+  Wheat, ChevronRight, ChevronDown, FileWarning 
+} from 'lucide-react';
 import LABELS from '../lib/labels';
 import { useAuth } from '../contexts/AuthContext';
 import { isPrimaryAdmin, hasRole } from '../lib/permissions';
@@ -54,12 +58,13 @@ export default function Sidebar() {
         { label: 'Herd Registry', to: '/operations/herd', icon: BookOpen, visible: true },
         { label: 'Breeding & Genetics', to: '/operations/breeding', icon: Dna, visible: canViewBreeding },
         { label: LABELS.MEDICAL_RECORDS, to: '/operations/records', icon: BookHeart, visible: true },
+        // NEW: Added Milk Drop Reports right under Medical Records
+        { label: 'Milk Drop Reports', to: '/operations/milk-drop-reports', icon: FileWarning, visible: true },
       ],
     },
     {
       title: LABELS.FEED_NUTRITION || 'Feed & Nutrition',
       items: [
-        // FIX: Added `exact: true` to prevent the parent path from highlighting when on sub-paths
         { label: LABELS.FEED_DASHBOARD || LABELS.NUTRITION_PLANNER, to: '/feed-nutrition', icon: Wheat, visible: canViewFeedNutrition, exact: true },
         { label: LABELS.FEED_FORMULATION, to: '/feed-nutrition/mix', icon: Dna, visible: canViewFeedNutrition },
         { label: LABELS.MILK_LAB, to: '/operations/lab', icon: Pill, visible: canViewFeedNutrition },
@@ -98,7 +103,6 @@ export default function Sidebar() {
 
   const activeGroupTitle = visibleGroups.find((group) =>
     group.items.some((item) => {
-      // FIX: Apply exact matching logic to active group determination
       return item.exact 
         ? location.pathname === item.to 
         : location.pathname === item.to || location.pathname.startsWith(`${item.to}/`);
@@ -188,7 +192,6 @@ export default function Sidebar() {
               {group.items.map((item) => {
                 const Icon = item.icon;
                 
-                // FIX: Update manual activity check to respect item.exact
                 const itemIsActive = item.exact 
                   ? location.pathname === item.to 
                   : location.pathname === item.to || location.pathname.startsWith(`${item.to}/`);
@@ -197,7 +200,7 @@ export default function Sidebar() {
                   <NavLink
                     key={item.to}
                     to={item.to}
-                    end={item.exact} // FIX: Pass end={true} to NavLink if exact is required
+                    end={item.exact}
                     onClick={() => setMobileOpen(false)}
                     className={({ isActive }) => `flex items-center px-4 py-3 min-h-[44px] font-sans font-semibold text-sm transition-all duration-100 border-3 rounded-lg relative ${
                       isActive

@@ -26,7 +26,12 @@ const FeedMixRow = ({ recipe, index, isExpanded, onToggle, onLoadToLab }) => {
   const name = recipe?.name || 'Unnamed Mix';
   const yieldAvg = recipe?.yieldAvg ?? 0;
   const costPerLiter = recipe?.costPerLiter ?? 0;
-  const ingredientsList = Array.isArray(recipe?.ingredients) ? recipe.ingredients : [];
+  
+  // Safely check for either 'ingredients' or 'formula' depending on the API/mock payload
+  const ingredientsList = Array.isArray(recipe?.ingredients) 
+    ? recipe.ingredients 
+    : (Array.isArray(recipe?.formula) ? recipe.formula : []);
+    
   const protein = recipe?.protein ?? '--';
   const lastUsed = recipe?.lastUsed || 'Not recorded';
 
@@ -102,7 +107,8 @@ const FeedMixRow = ({ recipe, index, isExpanded, onToggle, onLoadToLab }) => {
 
               <button 
                 type="button"
-                onClick={(e) => onLoadToLab(e, recipeId)}
+                // Pass the ENTIRE recipe object up to the handler
+                onClick={(e) => onLoadToLab(e, recipe)}
                 className="text-brand hover:text-brand/80 text-sm font-bold flex items-center gap-1.5 transition-colors group mt-2 w-fit"
               >
                 Load into Lab 
@@ -130,15 +136,22 @@ export default function TopRecipesList({ recipes }) {
     setExpandedId((prevId) => (prevId === id ? null : id));
   };
 
-  const handleLoadRecipe = (e, recipeId) => {
+  const handleLoadRecipe = (e, recipe) => {
     e.stopPropagation(); 
-    // Full-Stack awareness: Pass the specific ID in the router state
-    // so the Lab component knows exactly which recipe to fetch from Flask
-    navigate('/feed-nutrition/mix', { state: { loadRecipeId: recipeId } });
+    
+    // Pass the fully structured payload that the Nutrition Lab's draft mode expects
+    navigate('/feed-nutrition/mix', { 
+      state: { 
+        draftMixId: recipe.id,
+        draftType: recipe.type, 
+        draftFormula: recipe.formula || recipe.ingredients, 
+        isImportedDraft: true 
+      } 
+    });
   };
 
   return (
-    <div className="bg-surface p-6 md:p-8 rounded-card border border-ink/5 shadow-sm">
+    <div className="bg-surface p-6 md:p-8 rounded-card border border-ink/5 shadow-sm mt-8">
       <div className="flex items-center gap-2 mb-2">
         <Trophy size={18} className="text-brand" />
         <h3 className="text-[10px] font-black uppercase tracking-widest text-ink-strong">

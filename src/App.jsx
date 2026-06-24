@@ -14,6 +14,10 @@ const CommandCenter = lazy(() => import('./pages/CommandCenter'));
 const YieldLog = lazy(() => import('./pages/operations/productionLog'));
 const SafetyDashboard = lazy(() => import('./pages/operations/SafetyDashboard'));
 const MedicalRecords = lazy(() => import('./pages/operations/MedicalRecords'));
+
+// NEW: Added the Milk Drop Reports lazy import
+const MilkDropReports = lazy(() => import('./pages/operations/MilkDropReports'));
+
 const ClerkEntry = lazy(() => import('./pages/operations/ClerkEntry'));
 const HerdsmanView = lazy(() => import('./pages/operations/HerdsmanView'));
 const HerdRegistry = lazy(() => import('./pages/operations/HerdRegistry'));
@@ -121,6 +125,10 @@ export default function App() {
           <Route path="operations/herd" element={renderLazyPage(HerdRegistry, 'Loading herd registry…')} />
           <Route path="operations/breeding" element={renderLazyPage(BreedingHub, 'Loading breeding hub…')} />
           <Route path="operations/clerk" element={renderLazyPage(ClerkEntry, 'Loading clerk entry…')} />
+          
+          {/* NEW: Added the Milk Drop Reports route */}
+          <Route path="operations/milk-drop-reports" element={renderLazyPage(MilkDropReports, 'Loading milk drop reports…')} />
+
           <Route path="tasks" element={<HerdsmanOnlyRoute>{renderLazyPage(HerdsmanView, 'Loading herdsman view…')}</HerdsmanOnlyRoute>} />
           <Route path="operations/herdsman" element={<HerdsmanOnlyRoute>{renderLazyPage(HerdsmanView, 'Loading herdsman view…')}</HerdsmanOnlyRoute>} />
           <Route path="operations/lab" element={renderLazyPage(MilkLab, 'Loading milk lab…')} />

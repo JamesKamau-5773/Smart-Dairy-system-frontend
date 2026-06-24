@@ -1,16 +1,31 @@
 import React, { useState } from 'react';
-import { X, Beaker, ClipboardList, PackagePlus } from 'lucide-react';
+import { X, Beaker, ClipboardList, PackagePlus, Tractor } from 'lucide-react';
 import RecipeBuilder from './RecipeBuilder'; 
 import StandardBatchLog from './StandardBatchLog'; 
 
+const CUSTOM_FORMULATIONS = {
+  dairy_meal: {
+    label: 'Dairy Meal (Concentrate)',
+    ingredients: [
+      { id: 'maize', name: 'Maize Germ', percentage: 50, proteinContent: 9.5, pricePerKg: 32 },
+      { id: 'bran', name: 'Wheat Bran', percentage: 30, proteinContent: 14.5, pricePerKg: 28 },
+      { id: 'sunflower', name: 'Sunflower Cake', percentage: 20, proteinContent: 28.0, pricePerKg: 45 }
+    ],
+  },
+  main_meal: {
+    label: 'Main Meal (TMR)',
+    ingredients: [
+      { id: 'silage', name: 'Silage', percentage: 60, proteinContent: 8.0, pricePerKg: 5 },
+      { id: 'dairy_meal', name: 'Dairy Meal (Formulated)', percentage: 30, proteinContent: 16.0, pricePerKg: 35 },
+      { id: 'lucerne', name: 'Lucerne Hay', percentage: 10, proteinContent: 18.0, pricePerKg: 25 }
+    ],
+  },
+};
+
 export default function AddFeedModal({ onClose }) {
   const [view, setView] = useState('selection'); 
-
-  const mockInventory = [
-    { id: 'maize', name: 'Maize Germ', percentage: 50, proteinContent: 9.5, pricePerKg: 32 },
-    { id: 'bran', name: 'Wheat Bran', percentage: 30, proteinContent: 14.5, pricePerKg: 28 },
-    { id: 'sunflower', name: 'Sunflower Cake', percentage: 20, proteinContent: 28.0, pricePerKg: 45 }
-  ];
+  const [activeCustomTab, setActiveCustomTab] = useState('dairy_meal');
+  const currentFormulation = CUSTOM_FORMULATIONS[activeCustomTab];
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-ink-strong/40 backdrop-blur-sm transition-all">
@@ -61,7 +76,38 @@ export default function AddFeedModal({ onClose }) {
           {/* PATH 3: The Strategic Engine */}
           {view === 'custom' && (
             <div className="animate-in fade-in slide-in-from-bottom-4 duration-300">
-              <RecipeBuilder initialIngredients={mockInventory} />
+              <div className="mb-6 rounded-lg border border-ink/5 bg-surface-raised p-1.5 shadow-sm">
+                <div className="grid grid-cols-1 gap-1.5 sm:grid-cols-2">
+                  <button
+                    type="button"
+                    onClick={() => setActiveCustomTab('dairy_meal')}
+                    className={`flex items-center justify-center gap-2 rounded-md px-3 py-2.5 text-sm font-bold transition-all ${
+                      activeCustomTab === 'dairy_meal'
+                        ? 'bg-white text-brand shadow-sm border border-ink/5'
+                        : 'text-ink-muted hover:text-ink-strong'
+                    }`}
+                  >
+                    <Beaker size={18} /> {CUSTOM_FORMULATIONS.dairy_meal.label}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setActiveCustomTab('main_meal')}
+                    className={`flex items-center justify-center gap-2 rounded-md px-3 py-2.5 text-sm font-bold transition-all ${
+                      activeCustomTab === 'main_meal'
+                        ? 'bg-white text-brand shadow-sm border border-ink/5'
+                        : 'text-ink-muted hover:text-ink-strong'
+                    }`}
+                  >
+                    <Tractor size={18} /> {CUSTOM_FORMULATIONS.main_meal.label}
+                  </button>
+                </div>
+              </div>
+
+              <RecipeBuilder
+                key={activeCustomTab}
+                recipeType={activeCustomTab}
+                initialIngredients={currentFormulation.ingredients}
+              />
               <div className="flex justify-between items-center mt-6 pt-6 border-t border-ink/5">
                 <button onClick={() => setView('selection')} className="text-sm font-bold text-ink-muted hover:text-ink-strong transition-colors">
                   ← Back to Options

@@ -1,9 +1,9 @@
 import React, { useMemo, useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import { 
   Users, Search, ArrowRight, ChevronDown, ChevronUp, 
-  Plus, TrendingDown, CheckCircle2, AlertCircle, UserPlus 
+  Plus, TrendingDown, CheckCircle2, AlertCircle, FileSpreadsheet, Eye
 } from 'lucide-react';
 import { useTenant } from '../../hooks/useTenant';
 import apiClient from '../../lib/apiClient';
@@ -116,6 +116,7 @@ const BuyerRow = ({ buyer, isExpanded, onToggle }) => {
  */
 export default function BuyersList() {
   const { tenantId, farmId } = useTenant();
+  const queryClient = useQueryClient();
   const [searchTerm, setSearchTerm] = useState('');
   const [expandedCustomerId, setExpandedCustomerId] = useState(null);
   const [isAddPanelOpen, setIsAddPanelOpen] = useState(false);
@@ -148,6 +149,14 @@ export default function BuyersList() {
     setExpandedCustomerId((currentId) => (currentId === buyerId ? null : buyerId));
   };
 
+  // Helper to inject mock data visually without refreshing so the user can preview the layout
+  const handleLoadSampleData = () => {
+    queryClient.setQueryData(['finance-buyers', tenantId, farmId], [
+      { id: '101', name: 'Local Cafe', type: 'Commercial', contact: '0712 345 678', balance: 4500, rate_per_liter: 45 },
+      { id: '102', name: 'James Kamau', type: 'Individual', contact: '0722 987 654', balance: 0, rate_per_liter: 50 },
+    ]);
+  };
+
   return (
     <div className="min-h-[80vh] animate-reveal pb-12">
       
@@ -165,53 +174,58 @@ export default function BuyersList() {
           </p>
         </div>
         
-        {/* Primary Action */}
-        <button 
-          onClick={() => setIsAddPanelOpen(true)}
-          className="btn-command bg-brand text-white hover:bg-brand/90 px-6 py-2.5 rounded-xl font-bold flex items-center gap-2 shadow-sm transition-all w-full md:w-auto justify-center"
-        >
-          <Plus size={18} />
-          Add New Buyer
-        </button>
+        {/* IMPROVEMENT: Only show the top-right button if data exists */}
+        {safeBuyers.length > 0 && (
+          <button 
+            onClick={() => setIsAddPanelOpen(true)}
+            className="btn-command bg-brand text-white hover:bg-brand/90 px-6 py-2.5 rounded-xl font-bold flex items-center gap-2 shadow-sm transition-all w-full md:w-auto justify-center"
+          >
+            <Plus size={18} />
+            Add New Buyer
+          </button>
+        )}
       </div>
 
-      {/* KPI Dashboard */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6 mb-8">
-        <KPIWidget 
-          title="Total Buyers" 
-          value={safeBuyers.length} 
-          subtitle="Active customers in your registry."
-          icon={Users} 
-        />
-        <KPIWidget 
-          title="Total Outstanding" 
-          value={`KSh ${totalOutstanding.toLocaleString()}`} 
-          subtitle="Unpaid balances across all buyers."
-          icon={TrendingDown}
-          valueColor="text-danger" 
-        />
-        <KPIWidget 
-          title="Settled Accounts" 
-          value={settledBuyersCount} 
-          subtitle="Buyers with zero balance."
-          icon={CheckCircle2}
-          valueColor="text-brand" 
-        />
-      </div>
-
-      {/* List & Search Section */}
-      <div className="space-y-4">
-        {/* Persistent Search Bar */}
-        <div className="relative max-w-md">
-          <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-ink-muted/50" size={18} />
-          <input
-            type="text"
-            placeholder="Search by name, ID, or phone number..."
-            className="w-full bg-surface border border-ink/10 text-ink text-sm font-medium rounded-xl pl-11 pr-4 py-3 focus:outline-none focus:ring-2 focus:ring-brand/50 focus:border-brand transition-all placeholder:text-ink-muted/50 shadow-sm"
-            value={searchTerm}
-            onChange={(event) => setSearchTerm(event.target.value)}
+      {/* IMPROVEMENT: Wrap KPIs in a conditional check */}
+      {safeBuyers.length > 0 && (
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6 mb-8 animate-in slide-in-from-bottom-4">
+          <KPIWidget 
+            title="Total Buyers" 
+            value={safeBuyers.length} 
+            subtitle="Active customers in your registry."
+            icon={Users} 
+          />
+          <KPIWidget 
+            title="Total Outstanding" 
+            value={`KSh ${totalOutstanding.toLocaleString(undefined, { minimumFractionDigits: 2 })}`} 
+            subtitle="Unpaid balances across all buyers."
+            icon={TrendingDown}
+            valueColor="text-danger" 
+          />
+          <KPIWidget 
+            title="Settled Accounts" 
+            value={settledBuyersCount} 
+            subtitle="Buyers with zero balance."
+            icon={CheckCircle2}
+            valueColor="text-brand" 
           />
         </div>
+      )}
+
+      <div className="space-y-4">
+        {/* IMPROVEMENT: Hide Persistent Search Bar if empty */}
+        {safeBuyers.length > 0 && (
+          <div className="relative max-w-md animate-in fade-in">
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-ink-muted/50" size={18} />
+            <input
+              type="text"
+              placeholder="Search by name, ID, or phone number..."
+              className="w-full bg-surface border border-ink/10 text-ink text-sm font-medium rounded-xl pl-11 pr-4 py-3 focus:outline-none focus:ring-2 focus:ring-brand/50 focus:border-brand transition-all placeholder:text-ink-muted/50 shadow-sm"
+              value={searchTerm}
+              onChange={(event) => setSearchTerm(event.target.value)}
+            />
+          </div>
+        )}
 
         {/* Loading State */}
         {isLoading && (
@@ -241,28 +255,43 @@ export default function BuyersList() {
 
         {/* Empty Search State */}
         {!isLoading && safeBuyers.length > 0 && filteredBuyers.length === 0 && (
-          <div className="bg-surface border border-dashed border-ink/15 rounded-xl p-12 text-center">
+          <div className="bg-surface border border-dashed border-ink/15 rounded-xl p-12 text-center animate-in fade-in">
             <Search className="w-8 h-8 text-ink-muted/30 mx-auto mb-3" />
             <p className="text-ink font-bold text-sm">No customers found</p>
             <p className="text-ink-muted text-sm mt-1">We couldn't find anyone matching "{searchTerm}".</p>
           </div>
         )}
 
-        {/* Absolute Empty State (Zero buyers in database) */}
+        {/* IMPROVEMENT: Supercharged "Cold Start" Absolute Empty State */}
         {!isLoading && safeBuyers.length === 0 && (
-          <div className="bg-surface border border-dashed border-ink/15 rounded-xl p-12 flex flex-col items-center justify-center text-center">
-            <div className="bg-brand/5 p-4 rounded-full mb-4">
-              <UserPlus className="w-8 h-8 text-brand/60" />
+          <div className="bg-surface border border-ink/10 rounded-2xl p-12 flex flex-col items-center justify-center text-center shadow-sm max-w-3xl mx-auto mt-12 animate-fade-in">
+            <div className="bg-brand/5 p-4 rounded-full mb-6">
+              <Users size={40} className="text-brand opacity-80" />
             </div>
-            <h3 className="text-ink font-bold text-lg mb-1">No buyers yet</h3>
-            <p className="text-ink-muted text-sm max-w-sm mb-6">
-              You haven't added any milk buyers to your registry. Add your first customer to start tracking deliveries and balances.
+            
+            <h2 className="text-xl font-black text-ink mb-2">Set up your buyer registry</h2>
+            <p className="text-sm text-ink-muted max-w-md mb-8 leading-relaxed">
+              Add your milk buyers to automatically track daily deliveries, calculate running balances, and instantly generate digital statements.
             </p>
+
+            <div className="flex flex-col sm:flex-row items-center gap-4 w-full sm:w-auto">
+              <button 
+                onClick={() => setIsAddPanelOpen(true)}
+                className="w-full sm:w-auto flex items-center justify-center gap-2 bg-brand text-surface px-6 py-3 rounded-button font-bold text-sm shadow-md hover:bg-brand-dark transition-colors"
+              >
+                <Plus size={18} /> Add Your First Buyer
+              </button>
+              
+              <button className="w-full sm:w-auto flex items-center justify-center gap-2 bg-surface border border-ink/20 text-ink-strong px-6 py-3 rounded-button font-bold text-sm hover:bg-ink/5 transition-colors">
+                <FileSpreadsheet size={18} className="text-success" /> Import from Excel
+              </button>
+            </div>
+
             <button 
-              onClick={() => setIsAddPanelOpen(true)}
-              className="btn-command bg-brand text-white hover:bg-brand/90 px-6 py-2.5 rounded-xl font-bold flex items-center gap-2"
+              onClick={handleLoadSampleData}
+              className="mt-8 text-xs font-bold text-brand/70 hover:text-brand flex items-center gap-1 transition-colors"
             >
-              <Plus size={18} /> Add Your First Buyer
+              <Eye size={14} /> See how a populated registry looks
             </button>
           </div>
         )}

@@ -5,6 +5,11 @@ import { ArrowLeft, Activity, Calendar, Droplets, ShieldAlert, TrendingUp, Searc
 import apiClient from '../../lib/apiClient';
 
 export function filterMilkHistorySessions(sessions, filters) {
+  // GUARDRAIL: Safely return an empty array if sessions is undefined or not an array
+  if (!sessions || !Array.isArray(sessions)) {
+    return [];
+  }
+
   const searchValue = filters.search.trim().toLowerCase();
   return sessions.filter((entry) => {
     const matchesSearch = searchValue
@@ -68,14 +73,17 @@ export default function MilkHistory() {
   };
 
   const resolvedHistory = history || fallbackHistory;
+  
+  // Safely extract sessions to guarantee it is always an array
+  const safeSessions = Array.isArray(resolvedHistory.sessions) ? resolvedHistory.sessions : [];
 
   const filteredSessions = useMemo(
-    () => filterMilkHistorySessions(resolvedHistory.sessions, filters),
-    [filters, resolvedHistory.sessions],
+    () => filterMilkHistorySessions(safeSessions, filters),
+    [filters, safeSessions],
   );
 
-  const totalYield = filteredSessions.reduce((sum, entry) => sum + entry.liters, 0).toFixed(1);
-  const totalSessions = resolvedHistory.sessions.length;
+  const totalYield = filteredSessions.reduce((sum, entry) => sum + (entry.liters || 0), 0).toFixed(1);
+  const totalSessions = safeSessions.length;
 
   const clearFilters = () => setFilters({ search: '', date: '', status: 'all', session: 'all' });
 
@@ -190,7 +198,7 @@ export default function MilkHistory() {
 
             <div className="flex items-center gap-2 text-xs text-ink-muted">
               <Search size={14} />
-              Showing {filteredSessions.length} of {resolvedHistory.sessions.length} sessions
+              Showing {filteredSessions.length} of {totalSessions} sessions
             </div>
           </div>
         )}

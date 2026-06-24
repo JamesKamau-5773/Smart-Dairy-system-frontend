@@ -1,24 +1,76 @@
-import React, { useState } from 'react';
-import { Beaker, Tractor, Save } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { Beaker, Tractor, Save, AlertCircle, XCircle } from 'lucide-react';
 import RecipeBuilder from '../nutrition/RecipeBuilder'; 
 
+// 1. CRITICAL FIX: Define defaults OUTSIDE the component.
+// This ensures their memory reference never changes, preventing infinite loops in child components.
+const DEFAULT_DAIRY_MEAL = [
+  { id: 'maize', name: 'Maize Germ', percentage: 50, proteinContent: 9.5, pricePerKg: 32 },
+  { id: 'bran', name: 'Wheat Bran', percentage: 30, proteinContent: 14.5, pricePerKg: 28 },
+  { id: 'sunflower', name: 'Sunflower Cake', percentage: 20, proteinContent: 28.0, pricePerKg: 45 }
+];
+
+const DEFAULT_MAIN_MEAL = [
+  { id: 'silage', name: 'Silage', percentage: 60, proteinContent: 8.0, pricePerKg: 5 },
+  { id: 'dairy_meal', name: 'Dairy Meal (Formulated)', percentage: 30, proteinContent: 16.0, pricePerKg: 35 },
+  { id: 'lucerne', name: 'Lucerne Hay', percentage: 10, proteinContent: 18.0, pricePerKg: 25 }
+];
+
 export default function FeedFormulation() {
-  // Toggle between strategic modes
-  const [activeTab, setActiveTab] = useState('dairy_meal');
+  const location = useLocation();
+  const navigate = useNavigate();
+  const queryClient = useQueryClient();
 
-  // Starting template for High-Protein Concentrate
-  const dairyMealIngredients = [
-    { id: 'maize', name: 'Maize Germ', percentage: 50, proteinContent: 9.5, pricePerKg: 32 },
-    { id: 'bran', name: 'Wheat Bran', percentage: 30, proteinContent: 14.5, pricePerKg: 28 },
-    { id: 'sunflower', name: 'Sunflower Cake', percentage: 20, proteinContent: 28.0, pricePerKg: 45 }
-  ];
+  // 2. CRITICAL FIX: Ultra-safe router state extraction
+  // Handles cases where the user clicks the Sidebar link and location.state is completely null
+  const routerState = location.state || {};
+  const importedDraft = routerState.isImportedDraft ? routerState : null;
 
-  // Starting template for the Total Mixed Ration (incorporating the Dairy Meal)
-  const mainMealIngredients = [
-    { id: 'silage', name: 'Silage', percentage: 60, proteinContent: 8.0, pricePerKg: 5 },
-    { id: 'dairy_meal', name: 'Dairy Meal (Formulated)', percentage: 30, proteinContent: 16.0, pricePerKg: 35 },
-    { id: 'lucerne', name: 'Lucerne Hay', percentage: 10, proteinContent: 18.0, pricePerKg: 25 }
-  ];
+  // State initialization
+  const [activeTab, setActiveTab] = useState(importedDraft?.draftType || 'dairy_meal');
+
+  // Synchronize the tab if a new draft is loaded while the component is already open
+  useEffect(() => {
+    if (importedDraft?.draftType) {
+      setActiveTab(importedDraft.draftType);
+    }
+  }, [importedDraft?.draftType]);
+
+  // 3. CRITICAL FIX: Safe, explicit resolution of which ingredients to pass
+  let activeIngredients = activeTab === 'dairy_meal' ? DEFAULT_DAIRY_MEAL : DEFAULT_MAIN_MEAL;
+
+  if (importedDraft && importedDraft.draftType === activeTab) {
+    const draftData = importedDraft.draftFormula;
+    if (Array.isArray(draftData) && draftData.length > 0) {
+      activeIngredients = draftData;
+    }
+  }
+
+  // Mock Save Mutation
+  const saveRecipe = useMutation({
+    mutationFn: async (payload) => {
+      // Simulate API call to save the active formula
+      return new Promise(resolve => setTimeout(resolve, 800));
+    },
+    onSuccess: () => {
+      // Clear the draft state from the URL so a refresh doesn't reload it
+      if (importedDraft) {
+        navigate(location.pathname, { replace: true, state: {} });
+      }
+      // Safe object syntax for React Query v4/v5 compatibility
+      queryClient.invalidateQueries({ queryKey: ['active-feed-recipe'] });
+    }
+  });
+
+  const handleDiscardDraft = () => {
+    // Clear router state to exit draft mode
+    navigate(location.pathname, { replace: true, state: {} });
+  };
+
+  // Safe unique key to force remounts only when necessary
+  const builderKey = `${activeTab}-${location.key || 'static'}`;
 
   return (
     <div className="animate-reveal space-y-8 max-w-5xl mx-auto p-4 md:p-8">
@@ -30,6 +82,19 @@ export default function FeedFormulation() {
           Design high-yield concentrates and balance the herd's daily Total Mixed Ration (TMR). Saved formulas can be quickly logged on the Feed Dashboard.
         </p>
       </div>
+
+      {/* ⚠️ DRAFT WARNING BANNER */}
+      {importedDraft && (
+        <div className="bg-warning/10 border border-warning/20 p-4 rounded-xl flex items-start gap-3 animate-fade-in">
+          <AlertCircle className="text-warning-dark shrink-0 mt-0.5" size={20} />
+          <div>
+            <h4 className="font-bold text-warning-dark text-sm">Draft Mode Active</h4>
+            <p className="text-sm font-medium text-ink/70 mt-1">
+              You are editing an imported feed mix. These changes are in a sandbox and will not affect the herd until you click "Save as Current Recipe".
+            </p>
+          </div>
+        </div>
+      )}
 
       {/* Strategic Toggle Tabs */}
       <div className="flex p-1.5 bg-surface-raised border border-ink/5 rounded-lg max-w-md shadow-sm">
@@ -60,15 +125,12 @@ export default function FeedFormulation() {
         
         {/* Left Column: The Interactive Builder */}
         <div className="lg:col-span-2">
-          {activeTab === 'dairy_meal' ? (
-            <div className="animate-in fade-in slide-in-from-bottom-4 duration-300">
-              <RecipeBuilder recipeType="dairy_meal" initialIngredients={dairyMealIngredients} />
-            </div>
-          ) : (
-            <div className="animate-in fade-in slide-in-from-bottom-4 duration-300">
-              <RecipeBuilder recipeType="main_meal" initialIngredients={mainMealIngredients} />
-            </div>
-          )}
+          <div key={builderKey} className="animate-in fade-in slide-in-from-bottom-4 duration-300">
+            <RecipeBuilder 
+              recipeType={activeTab} 
+              initialIngredients={activeIngredients} 
+            />
+          </div>
         </div>
 
         {/* Right Column: Strategic Actions & Context */}
@@ -78,9 +140,26 @@ export default function FeedFormulation() {
             <p className="text-xs text-ink-muted mb-6">
               Lock in these percentages. This updates the baseline ration used by the Milk Lab to calculate profitability.
             </p>
-            <button className="w-full bg-brand hover:bg-brand-dark text-white px-4 py-3 rounded-button font-bold text-sm transition-colors shadow-sm flex items-center justify-center gap-2">
-              <Save size={18} /> Save as Current Recipe
-            </button>
+            
+            <div className="space-y-3">
+              <button 
+                onClick={() => saveRecipe.mutate()}
+                disabled={saveRecipe.isPending}
+                className="w-full bg-brand hover:bg-brand-dark text-white px-4 py-3 rounded-button font-bold text-sm transition-colors shadow-sm flex items-center justify-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed"
+              >
+                <Save size={18} /> 
+                {saveRecipe.isPending ? 'Saving...' : 'Save as Current Recipe'}
+              </button>
+
+              {importedDraft && (
+                <button 
+                  onClick={handleDiscardDraft}
+                  className="w-full bg-surface-raised hover:bg-ink/5 text-ink-strong px-4 py-3 rounded-button font-bold text-sm transition-colors flex items-center justify-center gap-2"
+                >
+                  <XCircle size={18} className="text-danger" /> Discard Draft
+                </button>
+              )}
+            </div>
           </div>
 
           <div className="bg-brand/5 p-6 border border-brand/20 rounded-card">

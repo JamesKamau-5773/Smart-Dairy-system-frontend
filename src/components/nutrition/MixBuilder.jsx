@@ -1,5 +1,5 @@
-import React, { useMemo, useState } from 'react';
-import { Plus, Trash2, Save, Scale, Coins, BarChart3, CheckCircle2, Copy, FolderHeart } from 'lucide-react';
+import React, { useMemo, useState, useRef } from 'react';
+import { Plus, Trash2, Save, Scale, Coins, BarChart3, CheckCircle2, Copy, FolderHeart, Wheat, Zap } from 'lucide-react';
 
 const FALLBACK_INVENTORY = [
   { id: 'maize_germ', name: 'Maize Germ', costPerKg: 28, color: '#fbbf24' },
@@ -17,6 +17,7 @@ const DEFAULT_TEMPLATES = [
   {
     id: 'tpl_high_yield',
     name: 'High-Yield Lactation Mix',
+    proteinTarget: '18',
     ingredients: [
       { ingredientId: 'maize_germ', ingredientName: 'Maize Germ', weight: '120' },
       { ingredientId: 'sunflower_cake', ingredientName: 'Sunflower Cake', weight: '50' },
@@ -28,6 +29,7 @@ const DEFAULT_TEMPLATES = [
   {
     id: 'tpl_dry_cow',
     name: 'Dry Cow Transition Mix',
+    proteinTarget: '14',
     ingredients: [
       { ingredientId: 'wheat_bran', ingredientName: 'Wheat Bran', weight: '80' },
       { ingredientId: 'cottonseed_cake', ingredientName: 'Cottonseed Cake', weight: '20' },
@@ -93,19 +95,158 @@ const readSavedTemplates = () => {
   }
 };
 
+const calculateMixMetrics = (rows, inventory) => {
+  let totalWeight = 0;
+  let totalCost = 0;
+
+  const processedRows = rows.map((row) => {
+    const item = inventory.find((entry) => entry.id === row.ingredientId);
+    const weight = Number(row.weight) || 0;
+    const costPerKg = item?.costPerKg || 0;
+    const cost = weight * costPerKg;
+
+    totalWeight += weight;
+    totalCost += cost;
+
+    return {
+      ...row,
+      item,
+      weight,
+      cost,
+      costPerKg,
+    };
+  });
+
+  const finalizedRows = processedRows.map((row) => ({
+    ...row,
+    percentage: totalWeight > 0 ? (row.weight / totalWeight) * 100 : 0,
+  }));
+
+  return {
+    rows: finalizedRows,
+    totalWeight,
+    totalCost,
+    costPerKg: totalWeight > 0 ? totalCost / totalWeight : 0,
+  };
+};
+
+const createBatchPayload = ({
+  mixType,
+  templateName,
+  saveAsTemplate,
+  activeTemplateId,
+  proteinTarget,
+  metrics,
+  activeRows,
+}) => {
+  const name = templateName.trim() || 'Custom Quick Mix';
+
+  return {
+    id: makeId(),
+    mixType,
+    savedAt: new Date().toISOString(),
+    batchName: name,
+    isSavedAsTemplate: saveAsTemplate,
+    templateId: activeTemplateId || null,
+    proteinTarget,
+    templateName: name,
+    totalWeight: metrics.totalWeight,
+    totalCost: metrics.totalCost,
+    costPerKg: metrics.costPerKg,
+    ingredients: activeRows.map((row) => ({
+      ingredientId: row.ingredientId,
+      ingredientName: row.item?.name || row.ingredientId,
+      weight: row.weight,
+      percentage: row.percentage,
+      lockedPrice: row.item?.costPerKg || 0,
+    })),
+  };
+};
+
+const createTemplateSnapshot = ({
+  activeTemplateId,
+  templateName,
+  proteinTarget,
+  activeRows,
+  templates,
+  batchName,
+}) => {
+  const now = new Date().toISOString();
+
+  return {
+    id: activeTemplateId || `tpl_${makeId()}`,
+    name: templateName.trim() || 'Untitled Template',
+    proteinTarget,
+    ingredients: activeRows.map((row) => ({
+      ingredientId: row.ingredientId,
+      ingredientName: row.item?.name || row.ingredientName || row.ingredientId,
+      weight: String(row.weight),
+      lockedPrice: row.item?.costPerKg || 0,
+    })),
+    batchName,
+    updatedAt: now,
+    createdAt: templates.find((template) => template.id === activeTemplateId)?.createdAt || now,
+  };
+};
+
+function SummaryCard({ icon: Icon, label, value, unit }) {
+  return (
+    <div className="rounded-2xl border border-ink/10 bg-surface-warm p-3">
+      <div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-wider text-ink-muted">
+        <Icon size={12} /> {label}
+      </div>
+      <div className="mt-2 text-2xl font-black text-brand">{value}</div>
+      <div className="text-xs text-ink-muted">{unit}</div>
+    </div>
+  );
+}
+
 export default function MixBuilder({ inventoryItems = [], isLoading = false, onSave }) {
   const inventory = useMemo(() => {
     const normalized = normalizeInventory(inventoryItems);
     return normalized.length > 0 ? normalized : FALLBACK_INVENTORY;
   }, [inventoryItems]);
 
-  const [rows, setRows] = useState([createRow()]);
-  const [statusMessage, setStatusMessage] = useState('');
-  const [history, setHistory] = useState(() => readHistory());
+  const [mixType, setMixType] = useState('concentrate'); // 'concentrate' or 'tmr'
+
+  // Component state for the active mix type
+  const [rows, setRows] = useState(() => [createRow()]);
   const [templateName, setTemplateName] = useState('');
   const [saveAsTemplate, setSaveAsTemplate] = useState(false);
   const [activeTemplateId, setActiveTemplateId] = useState('');
+  const [proteinTarget, setProteinTarget] = useState('16');
+
+  // Backing store for inactive tab's state
+  const mixTypeStates = useRef({
+    concentrate: {
+      rows: [createRow()],
+      templateName: '',
+      saveAsTemplate: false,
+      activeTemplateId: '',
+      proteinTarget: '16',
+    },
+    tmr: {
+      rows: [createRow()],
+      templateName: '',
+      saveAsTemplate: false,
+      activeTemplateId: '',
+      proteinTarget: '14',
+    },
+  });
+
+  const [statusMessage, setStatusMessage] = useState('');
+  const [history, setHistory] = useState(() => readHistory());
   const [savedTemplates, setSavedTemplates] = useState(() => readSavedTemplates());
+
+  const handleMixTypeChange = (newType) => {
+    if (newType === mixType) return;
+    // Save current UI state to the ref
+    mixTypeStates.current[mixType] = { rows, templateName, saveAsTemplate, activeTemplateId, proteinTarget };
+    // Load new state from ref into UI state
+    const nextState = mixTypeStates.current[newType];
+    setRows(nextState.rows); setTemplateName(nextState.templateName); setSaveAsTemplate(nextState.saveAsTemplate); setActiveTemplateId(nextState.activeTemplateId); setProteinTarget(nextState.proteinTarget);
+    setMixType(newType);
+  };
 
   const templates = useMemo(() => {
     const merged = [...DEFAULT_TEMPLATES, ...savedTemplates];
@@ -118,40 +259,7 @@ export default function MixBuilder({ inventoryItems = [], isLoading = false, onS
     return Array.from(byId.values()).sort((left, right) => left.name.localeCompare(right.name));
   }, [savedTemplates]);
 
-  const metrics = useMemo(() => {
-    let totalWeight = 0;
-    let totalCost = 0;
-
-    const processedRows = rows.map((row) => {
-      const item = inventory.find((entry) => entry.id === row.ingredientId);
-      const weight = Number(row.weight) || 0;
-      const costPerKg = item?.costPerKg || 0;
-      const cost = weight * costPerKg;
-
-      totalWeight += weight;
-      totalCost += cost;
-
-      return {
-        ...row,
-        item,
-        weight,
-        cost,
-        costPerKg,
-      };
-    });
-
-    const finalizedRows = processedRows.map((row) => ({
-      ...row,
-      percentage: totalWeight > 0 ? (row.weight / totalWeight) * 100 : 0,
-    }));
-
-    return {
-      rows: finalizedRows,
-      totalWeight,
-      totalCost,
-      costPerKg: totalWeight > 0 ? totalCost / totalWeight : 0,
-    };
-  }, [rows, inventory]);
+  const metrics = useMemo(() => calculateMixMetrics(rows, inventory), [rows, inventory]);
 
   const activeRows = metrics.rows.filter((row) => row.item && row.weight > 0);
   const missingRows = metrics.rows.filter((row) => row.ingredientId && !row.item);
@@ -191,6 +299,7 @@ export default function MixBuilder({ inventoryItems = [], isLoading = false, onS
 
     setRows(templateRows.length > 0 ? templateRows : [createRow()]);
     setTemplateName(selectedTemplate.name);
+    setProteinTarget(selectedTemplate.proteinTarget || '');
     setSaveAsTemplate(true);
     setStatusMessage(`Loaded template "${selectedTemplate.name}".`);
   };
@@ -240,40 +349,25 @@ export default function MixBuilder({ inventoryItems = [], isLoading = false, onS
       return;
     }
 
-    const payload = {
-      id: makeId(),
-      savedAt: new Date().toISOString(),
-      batchName: templateName.trim() || 'Custom Quick Mix',
-      isSavedAsTemplate: saveAsTemplate,
-      templateId: activeTemplateId || null,
-      templateName: templateName.trim() || 'Custom Quick Mix',
-      totalWeight: metrics.totalWeight,
-      totalCost: metrics.totalCost,
-      costPerKg: metrics.costPerKg,
-      ingredients: activeRows.map((row) => ({
-        ingredientId: row.ingredientId,
-        ingredientName: row.item?.name || row.ingredientId,
-        weight: row.weight,
-        percentage: row.percentage,
-        lockedPrice: row.item?.costPerKg || 0,
-      })),
-    };
+    const payload = createBatchPayload({
+      mixType,
+      templateName,
+      saveAsTemplate,
+      activeTemplateId,
+      proteinTarget,
+      metrics,
+      activeRows,
+    });
 
     if (saveAsTemplate) {
-      const now = new Date().toISOString();
-      const nextTemplate = {
-        id: activeTemplateId || `tpl_${makeId()}`,
-        name: templateName.trim() || 'Untitled Template',
-        ingredients: activeRows.map((row) => ({
-          ingredientId: row.ingredientId,
-          ingredientName: row.item?.name || row.ingredientName || row.ingredientId,
-          weight: String(row.weight),
-          lockedPrice: row.item?.costPerKg || 0,
-        })),
+      const nextTemplate = createTemplateSnapshot({
+        activeTemplateId,
+        templateName,
+        proteinTarget,
+        activeRows,
+        templates,
         batchName: payload.batchName,
-        updatedAt: now,
-        createdAt: templates.find((template) => template.id === activeTemplateId)?.createdAt || now,
-      };
+      });
 
       const nextTemplates = [
         nextTemplate,
@@ -314,26 +408,43 @@ export default function MixBuilder({ inventoryItems = [], isLoading = false, onS
         </div>
 
         <div className="grid grid-cols-3 gap-3 min-w-[240px]">
-          <div className="rounded-2xl border border-ink/10 bg-surface-warm p-3">
-            <div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-wider text-ink-muted">
-              <Scale size={12} /> Total
+          <SummaryCard icon={Scale} label="Total" value={metrics.totalWeight.toFixed(1)} unit="kg" />
+          <SummaryCard icon={Coins} label="Cost" value={`KES ${metrics.totalCost.toFixed(0)}`} unit="batch" />
+          <SummaryCard icon={BarChart3} label="Unit" value={`KES ${metrics.costPerKg.toFixed(2)}`} unit="per kg" />
+        </div>
+      </div>
+
+      {/* Mix Type Selector */}
+      <div className="rounded-2xl border border-ink/10 bg-surface-warm/70 p-4 shadow-sm">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-[1fr_auto]">
+          <div>
+            <label className="mb-2 block text-[11px] font-bold uppercase tracking-wider text-ink-muted">Mix Type</label>
+            <div className="flex items-center gap-2 rounded-xl bg-surface p-1.5 border border-ink/10">
+              <button
+                type="button"
+                onClick={() => handleMixTypeChange('concentrate')}
+                className={`flex-1 flex items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-bold transition-colors ${mixType === 'concentrate' ? 'bg-brand text-white shadow-sm' : 'text-ink-muted hover:bg-ink/5'}`}
+              >
+                <Zap size={16} /> Concentrate
+              </button>
+              <button
+                type="button"
+                onClick={() => handleMixTypeChange('tmr')}
+                className={`flex-1 flex items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-bold transition-colors ${mixType === 'tmr' ? 'bg-brand text-white shadow-sm' : 'text-ink-muted hover:bg-ink/5'}`}
+              >
+                <Wheat size={16} /> Main Meal (TMR)
+              </button>
             </div>
-            <div className="mt-2 text-2xl font-black text-brand">{metrics.totalWeight.toFixed(1)}</div>
-            <div className="text-xs text-ink-muted">kg</div>
           </div>
-          <div className="rounded-2xl border border-ink/10 bg-surface-warm p-3">
-            <div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-wider text-ink-muted">
-              <Coins size={12} /> Cost
-            </div>
-            <div className="mt-2 text-2xl font-black text-brand">KES {metrics.totalCost.toFixed(0)}</div>
-            <div className="text-xs text-ink-muted">batch</div>
-          </div>
-          <div className="rounded-2xl border border-ink/10 bg-surface-warm p-3">
-            <div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-wider text-ink-muted">
-              <BarChart3 size={12} /> Unit
-            </div>
-            <div className="mt-2 text-2xl font-black text-brand">KES {metrics.costPerKg.toFixed(2)}</div>
-            <div className="text-xs text-ink-muted">per kg</div>
+          <div>
+            <label className="mb-2 block text-[11px] font-bold uppercase tracking-wider text-ink-muted">Protein Target (%)</label>
+            <input
+              type="number"
+              value={proteinTarget}
+              onChange={(e) => setProteinTarget(e.target.value)}
+              placeholder="e.g. 16"
+              className="w-full sm:w-32 rounded-xl border border-ink/10 bg-white p-3 text-center text-lg font-bold text-ink focus:border-brand focus:outline-none"
+            />
           </div>
         </div>
       </div>

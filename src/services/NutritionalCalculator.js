@@ -1,20 +1,39 @@
 export const calculateRecipeMetrics = (ingredients, batchSizeKg) => {
+  const safeBatchSize = Math.max(0, Number(batchSizeKg) || 0);
+
   // Always return the full schema, even if data is missing
   if (!ingredients || ingredients.length === 0) {
-    return { averageProtein: 0, totalCost: 0, totalWeight: batchSizeKg || 0 };
+    return { averageProtein: 0, totalCost: 0, totalWeight: safeBatchSize, ingredients: [] };
   }
 
-  const totals = ingredients.reduce((acc, ing) => {
-    const amount = (parseFloat(ing.percentage) / 100) * batchSizeKg;
-    acc.protein += amount * (parseFloat(ing.proteinContent) / 100);
-    acc.cost += amount * parseFloat(ing.pricePerKg);
+  const ingredientDetails = ingredients.map((ing) => {
+    const percentage = Math.max(0, Number.parseFloat(ing.percentage) || 0);
+    const proteinContent = Math.max(0, Number.parseFloat(ing.proteinContent) || 0);
+    const pricePerKg = Math.max(0, Number.parseFloat(ing.pricePerKg) || 0);
+    const weightKg = (percentage / 100) * safeBatchSize;
+    const cost = weightKg * pricePerKg;
+
+    return {
+      ...ing,
+      percentage,
+      weightKg,
+      cost,
+      pricePerKg,
+      proteinKg: weightKg * (proteinContent / 100),
+    };
+  });
+
+  const totals = ingredientDetails.reduce((acc, ing) => {
+    acc.protein += ing.proteinKg;
+    acc.cost += ing.cost;
     return acc;
   }, { protein: 0, cost: 0 });
 
   return {
-    averageProtein: (totals.protein / batchSizeKg) * 100,
+    averageProtein: safeBatchSize > 0 ? (totals.protein / safeBatchSize) * 100 : 0,
     totalCost: totals.cost,
-    totalWeight: batchSizeKg 
+    totalWeight: safeBatchSize,
+    ingredients: ingredientDetails,
   };
 };
 

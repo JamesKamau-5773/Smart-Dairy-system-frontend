@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useTenant } from '../../hooks/useTenant';
-import apiClient from '../../lib/apiClient';
+// import apiClient from '../../lib/apiClient'; // Commented out until backend is ready
 import { Loader2, ArrowRight } from 'lucide-react';
 
 const COUNTRY_CODES = [
@@ -26,16 +26,28 @@ export default function AddBuyerForm({ onSuccess, onCancel }) {
 
   const mutation = useMutation({
     mutationFn: async (newBuyer) => {
-      const response = await apiClient.post('/finance/buyers', {
-        ...newBuyer,
-        tenant_id: tenantId,
-        farm_id: farmId,
+      // ─── MOCKED API CALL ───
+      // Fakes an 800ms network delay to prevent the 404 error
+      return new Promise((resolve) => {
+        setTimeout(() => {
+          const fakeId = `10${Math.floor(Math.random() * 900)}`;
+          resolve({
+            ...newBuyer,
+            id: fakeId,
+            tenant_id: tenantId,
+            farm_id: farmId,
+          });
+        }, 800);
       });
-      return response.data;
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries(['finance-buyers', tenantId, farmId]);
-      onSuccess(); 
+    onSuccess: (newlyCreatedBuyer) => {
+      // Optimistically inject the new buyer into the list cache
+      queryClient.setQueryData(['finance-buyers', tenantId, farmId], (oldData) => {
+        const currentList = Array.isArray(oldData) ? oldData : [];
+        return [...currentList, newlyCreatedBuyer];
+      });
+      
+      if (onSuccess) onSuccess(); 
     },
   });
 
