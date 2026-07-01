@@ -8,6 +8,7 @@ The backend has already defined these concrete routes. Where both singular and p
 
 ### Auth
 
+- `POST /api/auth/register`
 - `POST /api/auth/login`
 - `POST /api/auth/logout`
 - `GET /api/auth/me`
@@ -132,9 +133,38 @@ The backend has already defined these concrete routes. Where both singular and p
 
 - `GET /health`
 
+### Frontend-Requested Coverage
+
+The backend also exposes the additional frontend-requested routes below. These are now covered and should be treated as supported contract paths.
+
+#### Safety and hardlocks
+
+- `GET /api/safety/dashboard`
+- `GET /api/veterinary/hardlocks/active`
+- `PUT /api/clinical/cows/:cow_id/hardlock`
+- `POST /api/clinical/cows/:cow_id/medical`
+- `GET /api/medical/records`
+- `POST /api/medical/records`
+
+#### Herd and animal flows
+
+- `GET /api/operations/api/herd`
+- `POST /api/operations/api/herd`
+- `GET /api/operations/api/herd/:cow_id`
+- `PATCH /api/operations/api/herd/:cow_id`
+- `DELETE /api/operations/api/herd/:cow_id`
+- `GET /api/operations/api/animals/:cow_id`
+- `PATCH /api/operations/api/animals/:cow_id`
+- `GET /api/operations/api/animals/:cow_id/milk-history`
+
+#### Milk-drop alerts
+
+- `GET /api/operations/api/production/milk-drop-alerts`
+- `POST /api/operations/api/production/milk-drop-alerts/:alert_id/investigate`
+
 ## Build-Wide Notes
 
-The backend now exposes the canonical build-wide routes for auth/session hydration, dashboard production totals, herd and animal detail, inventory registry, nutrition screens, safety dashboard, and finance customers/ledger. The frontend should prefer the canonical paths listed above and keep the `api/v1` prefixed routes as aliases where they still exist.
+The backend now exposes the canonical build-wide routes for auth/session hydration, dashboard production totals, herd and animal detail, inventory registry, nutrition screens, safety dashboard, finance customers/ledger, and the frontend-requested safety/hardlock, herd/animal, and milk-drop alert routes. The frontend should prefer the canonical paths listed above and keep the `api/v1` prefixed routes as aliases where they still exist.
 
 ## Transport Rules
 
