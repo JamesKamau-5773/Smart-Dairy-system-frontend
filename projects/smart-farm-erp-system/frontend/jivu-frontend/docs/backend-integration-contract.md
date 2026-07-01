@@ -174,6 +174,8 @@ The backend may map those paths differently, but it must provide equivalent farm
 
 For a route-by-route breakdown, see [backend-endpoint-map.md](backend-endpoint-map.md).
 
+If the backend prefers the exact route inventory already supplied by the server team, the frontend can treat singular/plural resource names as aliases as long as the response shapes stay identical.
+
 ## Backend Rules the Frontend Depends On
 
 - `ACTIVE` is the default working state.

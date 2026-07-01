@@ -2,6 +2,140 @@
 
 This map translates the routed `jivu-frontend` build into backend responsibilities. It is intentionally build-wide, not HR-only.
 
+## Backend-Provided Route Inventory
+
+The backend has already defined these concrete routes. Where both singular and plural resource names exist, the frontend should treat them as equivalent aliases if the payload shape is the same.
+
+### Auth
+
+- `POST /api/auth/login`
+- `POST /api/auth/logout`
+- `GET /api/auth/me`
+- `POST /api/auth/switch-farm`
+- `GET /api/auth/status`
+
+### Tenant
+
+- `GET /api/tenant/profile`
+
+### HR
+
+- `POST /api/hr/staff`
+- `POST /api/hr/employees`
+- `GET /api/hr/staff`
+- `GET /api/hr/employees`
+- `GET /api/hr/staff/<staff_id>`
+- `GET /api/hr/employees/<staff_id>`
+- `PATCH /api/hr/staff/<staff_id>`
+- `PATCH /api/hr/employees/<staff_id>`
+- `POST /api/hr/staff/<staff_id>/verify-return`
+- `POST /api/hr/employees/<staff_id>/verify-return`
+- `POST /api/hr/payroll`
+- `POST /api/hr/payroll-records`
+- `GET /api/hr/payroll`
+- `GET /api/hr/payroll-records`
+- `POST /api/hr/payroll/runs`
+
+### Dashboard
+
+- `GET /api/v1/dashboard/summary`
+- `GET /api/production/summary`
+
+### Herd and Animals
+
+- `GET /api/herd`
+- `POST /api/herd`
+- `GET /api/herd/:id`
+- `PATCH /api/herd/:id`
+- `GET /api/animals/:id`
+- `PATCH /api/animals/:id`
+- `GET /api/animals/:id/milk-history`
+
+### Operations
+
+- `POST /api/operations/cows/<cow_id>/milk`
+- `POST /api/operations/livestock/<cow_id>/milk`
+- `POST /api/operations/semen-inventory`
+- `GET /api/operations/semen-inventory`
+- `POST /api/operations/breeding-logs`
+- `PUT /api/operations/breeding-logs/<log_id>/status`
+- `GET /api/operations/breeding/performance`
+
+### Clinical
+
+- `POST /api/clinical/cows/<cow_id>/medical`
+- `POST /api/clinical/livestock/<cow_id>/medical`
+- `PUT /api/clinical/cows/<cow_id>/hardlock`
+- `PUT /api/clinical/livestock/<cow_id>/hardlock`
+- `POST /api/clinical/vet-visits`
+- `GET /api/clinical/vet-visits`
+- `PUT /api/clinical/vet-visits/<visit_id>/follow-up/schedule`
+- `PUT /api/clinical/vet-visits/<visit_id>/follow-up/complete`
+- `GET /api/clinical/vet-visits/follow-ups/pending`
+
+### Inventory
+
+- `POST /api/v1/inventory/deduct`
+- `GET /api/inventory/items`
+- `POST /api/inventory/items`
+- `PATCH /api/inventory/items/:id`
+- `DELETE /api/inventory/items/:id`
+- `GET /api/inventory/movements`
+- `POST /api/inventory/movements`
+- `GET /api/inventory/stock`
+
+### Finance
+
+- `GET /api/finance/unit-cost`
+- `GET /api/finance/customers`
+- `POST /api/finance/customers`
+- `GET /api/finance/customers/:id`
+- `POST /api/finance/billing/stk-push`
+- `POST /api/finance/mpesa/callback`
+- `GET /api/finance/ledger`
+- `POST /api/finance/ledger`
+- `GET /api/finance/buyers`
+- `POST /api/finance/buyers`
+- `GET /api/finance/buyers/:buyerId`
+- `PATCH /api/finance/buyers/:buyerId`
+- `GET /api/finance/statements/:token`
+
+### Export
+
+- `GET /api/v1/export/animal/<animal_id>/pdf`
+
+### Feed
+
+- `POST /api/v1/feed/calculate-schedule`
+- `GET /api/feed/recipes`
+- `POST /api/feed/recipes`
+- `PATCH /api/feed/recipes/:id`
+- `DELETE /api/feed/recipes/:id`
+- `POST /api/feed/formulate`
+- `GET /api/units/conversions`
+- `POST /api/units/conversions`
+- `GET /api/feed/costing`
+
+### Nutrition
+
+- `POST /api/v1/nutrition/batches`
+- `POST /api/v1/nutrition/batches/<batch_id>/consumption-events`
+- `GET /api/v1/nutrition/analytics/feed-cost-efficiency`
+- `GET /api/v1/nutrition/analytics/active-batch-roi-trend-weekly`
+- `GET /api/nutrition/dashboard`
+
+### Herdsman
+
+- `POST /api/v1/tasks/<routine_id>/complete`
+
+### Health
+
+- `GET /health`
+
+## Build-Wide Notes
+
+The backend now exposes the canonical build-wide routes for auth/session hydration, dashboard production totals, herd and animal detail, inventory registry, nutrition screens, safety dashboard, and finance customers/ledger. The frontend should prefer the canonical paths listed above and keep the `api/v1` prefixed routes as aliases where they still exist.
+
 ## Transport Rules
 
 - `Authorization: Bearer <token>` is required for protected routes.
