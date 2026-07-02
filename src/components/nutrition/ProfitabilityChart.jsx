@@ -2,6 +2,19 @@ import React from 'react';
 import { TrendingDown } from 'lucide-react';
 
 export default function ProfitabilityChart({ trends }) {
+  if (!Array.isArray(trends) || trends.length === 0) {
+    return (
+      <div className="card-machined bg-surface p-6 shadow-sm border border-ink/5 flex flex-col">
+        <h3 className="flex items-center gap-2 text-[10px] font-black uppercase tracking-normal text-brand-dark mb-2 drop-shadow-[0_1px_1px_rgba(0,0,0,0.1)]">
+          <TrendingDown size={16} /> Feed Cost Per Liter of Milk
+        </h3>
+        <p className="text-xs font-medium text-ink-muted">
+          No profitability trend data is available yet.
+        </p>
+      </div>
+    );
+  }
+
   return (
     <div className="card-machined bg-surface p-6 shadow-sm border border-ink/5 flex flex-col">
       <h3 className="flex items-center gap-2 text-[10px] font-black uppercase tracking-normal text-brand-dark mb-2 drop-shadow-[0_1px_1px_rgba(0,0,0,0.1)]">

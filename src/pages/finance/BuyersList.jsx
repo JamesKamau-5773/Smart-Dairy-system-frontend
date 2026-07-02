@@ -1,12 +1,12 @@
 import React, { useMemo, useState } from 'react';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import { 
   Users, Search, ArrowRight, ChevronDown, ChevronUp, 
-  Plus, TrendingDown, CheckCircle2, AlertCircle, FileSpreadsheet, Eye
+  Plus, TrendingDown, CheckCircle2, AlertCircle, FileSpreadsheet
 } from 'lucide-react';
 import { useTenant } from '../../hooks/useTenant';
-import apiClient from '../../lib/apiClient';
+import { financeApi } from '../../lib/backendApi';
 import { Skeleton } from '../../components/ui';
 import SlidePanel from '../../components/ui/SlidePanel';
 import AddBuyerForm from './AddBuyerForm';
@@ -116,7 +116,6 @@ const BuyerRow = ({ buyer, isExpanded, onToggle }) => {
  */
 export default function BuyersList() {
   const { tenantId, farmId } = useTenant();
-  const queryClient = useQueryClient();
   const [searchTerm, setSearchTerm] = useState('');
   const [expandedCustomerId, setExpandedCustomerId] = useState(null);
   const [isAddPanelOpen, setIsAddPanelOpen] = useState(false);
@@ -124,7 +123,7 @@ export default function BuyersList() {
   // Data Fetching
   const { data: buyers, isLoading } = useQuery({
     queryKey: ['finance-buyers', tenantId, farmId],
-    queryFn: () => apiClient.get('/finance/buyers').then((res) => res.data),
+    queryFn: () => financeApi.listBuyers(),
     enabled: !!farmId,
   });
 
@@ -149,12 +148,9 @@ export default function BuyersList() {
     setExpandedCustomerId((currentId) => (currentId === buyerId ? null : buyerId));
   };
 
-  // Helper to inject mock data visually without refreshing so the user can preview the layout
-  const handleLoadSampleData = () => {
-    queryClient.setQueryData(['finance-buyers', tenantId, farmId], [
-      { id: '101', name: 'Local Cafe', type: 'Commercial', contact: '0712 345 678', balance: 4500, rate_per_liter: 45 },
-      { id: '102', name: 'James Kamau', type: 'Individual', contact: '0722 987 654', balance: 0, rate_per_liter: 50 },
-    ]);
+  const handleImport = () => {
+    console.log('TODO: Implement Excel import functionality.');
+    alert('Excel import is not yet implemented.');
   };
 
   return (
@@ -282,17 +278,11 @@ export default function BuyersList() {
                 <Plus size={18} /> Add Your First Buyer
               </button>
               
-              <button className="w-full sm:w-auto flex items-center justify-center gap-2 bg-surface border border-ink/20 text-ink-strong px-6 py-3 rounded-button font-bold text-sm hover:bg-ink/5 transition-colors">
+              <button onClick={handleImport} className="w-full sm:w-auto flex items-center justify-center gap-2 bg-surface border border-ink/20 text-ink-strong px-6 py-3 rounded-button font-bold text-sm hover:bg-ink/5 transition-colors">
                 <FileSpreadsheet size={18} className="text-success" /> Import from Excel
               </button>
             </div>
 
-            <button 
-              onClick={handleLoadSampleData}
-              className="mt-8 text-xs font-bold text-brand/70 hover:text-brand flex items-center gap-1 transition-colors"
-            >
-              <Eye size={14} /> See how a populated registry looks
-            </button>
           </div>
         )}
       </div>

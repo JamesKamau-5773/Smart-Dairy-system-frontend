@@ -1,16 +1,30 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Clock, Save, CheckSquare } from 'lucide-react';
 import { loadScheduleTasks, saveScheduleTasks } from '../../lib/schedule';
+import { routineApi } from '../../lib/backendApi';
 
 function loadInitialTasks() {
   return loadScheduleTasks();
 }
 
 export default function DailyRoutinePlanner() {
+  const queryClient = useQueryClient();
   const initialTasks = loadInitialTasks();
+  const { data: backendTasks } = useQuery({
+    queryKey: ['routine-plans'],
+    queryFn: () => routineApi.listPlans(),
+  });
   const [tasks, setTasks] = useState(initialTasks);
-  const [activeTaskId, setActiveTaskId] = useState(initialTasks[0]?.id ?? 1);
+  const [activeTaskId, setActiveTaskId] = useState(initialTasks[0]?.id ?? null);
   const [lastSavedAt, setLastSavedAt] = useState(null);
+
+  useEffect(() => {
+    if (Array.isArray(backendTasks) && backendTasks.length > 0) {
+      setTasks(backendTasks);
+      setActiveTaskId((currentId) => backendTasks.some((task) => task.id === currentId) ? currentId : backendTasks[0]?.id ?? null);
+    }
+  }, [backendTasks]);
 
   const activeTask = tasks.find((task) => task.id === activeTaskId) || tasks[0] || null;
 
@@ -33,9 +47,17 @@ export default function DailyRoutinePlanner() {
     ));
   };
 
+  const saveRoutine = useMutation({
+    mutationFn: (payload) => routineApi.savePlans(payload),
+    onSuccess: () => {
+      saveScheduleTasks(tasks);
+      queryClient.invalidateQueries({ queryKey: ['routine-plans'] });
+      setLastSavedAt(new Date());
+    },
+  });
+
   const handleSave = () => {
-    saveScheduleTasks(tasks);
-    setLastSavedAt(new Date());
+    saveRoutine.mutate(tasks);
   };
 
   const checklistSteps = (activeTask?.checklist || activeTask?.notes || '')
@@ -78,6 +100,11 @@ export default function DailyRoutinePlanner() {
           </div>
 
           <div className="space-y-3">
+            {tasks.length === 0 && (
+              <div className="rounded-xl border border-dashed border-ink/10 bg-surface-warm/60 p-5 text-sm text-ink-muted">
+                No routine tasks saved yet. Add tasks in the planner and save them to load a working schedule.
+              </div>
+            )}
             {tasks.map((task) => (
               <button
                 key={task.id}

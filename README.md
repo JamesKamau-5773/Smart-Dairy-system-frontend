@@ -26,6 +26,11 @@
 - Hot module reloading with Vite
 - SRP component architecture
 
+### Backend Integration
+- Full frontend build integration contract: [docs/backend-integration-contract.md](docs/backend-integration-contract.md)
+- Endpoint map by routed module: [docs/backend-endpoint-map.md](docs/backend-endpoint-map.md)
+- Shared API client attaches auth plus tenant/farm isolation headers for every protected request
+
 ---
 
 ## Quick Start
@@ -154,7 +159,7 @@ Realistic development endpoints:
 Create `.env.local` in project root (excluded from git):
 
 ```env
-VITE_API_BASE_URL=http://localhost:3000/api
+VITE_API_BASE_URL=http://localhost:5000/api
 VITE_APP_NAME=Smart Dairy ERP
 VITE_LOG_LEVEL=debug
 ```

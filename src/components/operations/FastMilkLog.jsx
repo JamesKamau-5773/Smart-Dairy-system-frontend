@@ -4,18 +4,10 @@ import { useMutation, useQuery } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import { useTenant } from '../../hooks/useTenant';
 import { QUERY_KEYS } from '../../providers/QueryProvider';
-import apiClient from '../../lib/apiClient';
+import { herdApi, productionApi, safetyApi } from '../../lib/backendApi';
 import AlertBanner from '../../components/ui/AlertBanner';
 import offlineQueue from '../../lib/offlineQueue';
 import { ArrowLeft, Droplets, CheckCircle2, AlertOctagon, Trash2, X } from 'lucide-react';
-
-const mockHerd = [
-  { id: 'C-101', name: 'Luna' },
-  { id: 'C-102', name: 'Asha' },
-  { id: 'C-103', name: 'Nia' },
-  { id: 'C-104', name: 'Daisy' },
-  { id: 'C-105', name: 'Bella' },
-];
 
 const normalizeFormData = (record) => ({
   cowId: record?.cowId || '',
@@ -46,7 +38,6 @@ const FastMilkUI = ({
   onDismissMessage,
   mode,
 }) => {
-  const isDemoData = displayHerd !== herd;
   const isEditMode = mode === 'edit';
 
   if (saveStatus === 'success') {
@@ -94,11 +85,6 @@ const FastMilkUI = ({
         <p className="text-ink-muted text-sm mt-1 font-medium">
           {isEditMode ? 'Update the milk entry details' : 'Record the milk in litres'}
         </p>
-        {isDemoData && (
-          <p className="mt-2 inline-flex items-center rounded-full border border-brand/20 bg-brand/5 px-3 py-1 text-[11px] font-semibold uppercase tracking-widest text-brand">
-            Demo data active
-          </p>
-        )}
       </div>
 
       <form onSubmit={onSubmit} className="p-8 space-y-6 bg-surface-warm/30">
@@ -193,7 +179,7 @@ export default function FastMilkLog({ onClose, onSaveSuccess, onDeleteSuccess, m
   // Herd fetch (scoped by tenant/farm)
   const { data: cowsRaw } = useQuery({
     queryKey: QUERY_KEYS.COWS(tenantId, farmId),
-    queryFn: () => apiClient.get('/cows').then(r => r.data),
+    queryFn: () => herdApi.list(),
     enabled: !!farmId,
   });
 
@@ -205,12 +191,12 @@ export default function FastMilkLog({ onClose, onSaveSuccess, onDeleteSuccess, m
         ? cowsRaw.data
         : [];
 
-  const displayHerd = herd.length > 0 ? herd : (import.meta.env.DEV ? mockHerd : herd);
+  const displayHerd = herd;
 
   // Hardlocks
   const { data: hardlocksRaw } = useQuery({
     queryKey: ['hardlocks', tenantId, farmId],
-    queryFn: () => apiClient.get('/veterinary/hardlocks/active').then(r => r.data),
+    queryFn: () => safetyApi.activeHardlocks(),
     enabled: !!farmId,
   });
 
@@ -237,10 +223,9 @@ export default function FastMilkLog({ onClose, onSaveSuccess, onDeleteSuccess, m
     mutationFn: async (payload) => {
       const date = payload.milkingDate || new Date().toISOString().slice(0, 10);
       const idempotencyKey = `fastlog:${payload.cowId}:${date}:${payload.session || 'morning'}`;
-      const res = isEditMode
-        ? await apiClient.patch(`/production/yield/${record.id}`, payload, { headers: { 'Idempotency-Key': idempotencyKey } })
-        : await apiClient.post('/production/yield', payload, { headers: { 'Idempotency-Key': idempotencyKey } });
-      return res.data;
+      return isEditMode
+        ? productionApi.updateYield(record.id, payload, { headers: { 'Idempotency-Key': idempotencyKey } })
+        : productionApi.createYield(payload, { headers: { 'Idempotency-Key': idempotencyKey } });
     },
     onSuccess: (data) => {
       const savedRecord = data?.received || data?.updated || data;
@@ -329,7 +314,7 @@ export default function FastMilkLog({ onClose, onSaveSuccess, onDeleteSuccess, m
 
     setIsDeleting(true);
     try {
-      await apiClient.delete(`/production/yield/${record.id}`);
+      await productionApi.deleteYield(record.id);
       setMessageType('success');
       setMessage('Deleted');
       if (onDeleteSuccess) onDeleteSuccess(record);

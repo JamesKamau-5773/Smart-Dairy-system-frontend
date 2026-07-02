@@ -1,26 +1,20 @@
 import { useState } from 'react';
 import { useNavigate, Link  } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
-import { canAccessHerdsmanView } from '../../lib/permissions';
 import AlertBanner from '../../components/ui/AlertBanner';
 import { Eye, EyeOff } from 'lucide-react';
+import { getDefaultLandingPath } from '../../lib/roles';
 
 const resolveLandingPath = (user) => {
-  if (canAccessHerdsmanView(user)) {
-    return '/tasks';
-  }
-
-  return '/dashboard';
+  return getDefaultLandingPath(user);
 };
 
 
 export default function LoginPage() {
-  const [identifier, setIdentifier] = useState('');
+  const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
-  
-  // New state for the password visibility toggle
   const [showPassword, setShowPassword] = useState(false);
   
   const { login } = useAuth();
@@ -31,7 +25,7 @@ export default function LoginPage() {
     setError('');
     setIsSubmitting(true);
 
-    const result = await login({ identifier, password });
+    const result = await login({ username, password });
 
     if (result.success) {
       const savedUser = sessionStorage.getItem('jivu_user');
@@ -41,11 +35,6 @@ export default function LoginPage() {
       setError(result.error);
       setIsSubmitting(false);
     }
-  };
-
-  const autofill = (phone) => {
-    setIdentifier(phone);
-    setPassword('password123'); // Standard mock password
   };
 
   return (
@@ -83,17 +72,16 @@ export default function LoginPage() {
         <form onSubmit={handleSubmit} className="space-y-6">
           <div className="animate-stagger" style={{animationDelay: '0.15s'}}>
             <label className="block font-sans font-medium text-xs tracking-normal text-ink-normal mb-2">
-              Phone number
+              Username
             </label>
             <input
-              aria-label="Phone number"
-              type="tel"
-              pattern="[0-9+\s\-]*"
-              title="Please enter a valid phone number containing only numbers, spaces, or certain symbols (+, -)."
+              aria-label="Username"
+              type="text"
               className="glass-input w-full rounded-md py-3 px-4 bg-surface/30 border border-white/10 backdrop-blur-md text-ink-normal placeholder:text-ink-muted focus:outline-none focus:ring-2 focus:ring-accent/30"
-              placeholder="e.g. 0712345678"
-              value={identifier}
-              onChange={(e) => setIdentifier(e.target.value)}
+              placeholder="Enter your username"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              autoComplete="username"
               required
             />
           </div>
@@ -144,29 +132,6 @@ export default function LoginPage() {
               Register New Farm
             </Link>
           </p>
-        </div>
-
-        {/* Development Helper - Remove in Production */}
-        <div className="mt-8 pt-6 border-t-2 border-brand/20 border-dashed relative z-10">
-          <p className="font-sans text-[11px] text-ink-normal mb-3 font-medium tracking-normal">
-            Dev quick login:
-          </p>
-          <div className="flex gap-2">
-            <button 
-              type="button" 
-              onClick={() => autofill('0712345678')}
-              className="btn-secondary px-2 py-1 text-[11px]"
-            >
-              Single Farm
-            </button>
-            <button 
-              type="button" 
-              onClick={() => autofill('0787654321')}
-              className="btn-secondary px-2 py-1 text-[11px]"
-            >
-              Cooperative
-            </button>
-          </div>
         </div>
 
       </div>

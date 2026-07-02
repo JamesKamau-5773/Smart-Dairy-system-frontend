@@ -2,15 +2,16 @@ import React from 'react';
 import { NavLink } from 'react-router-dom';
 import { Activity, LayoutDashboard } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
-import { isPrimaryAdmin, hasRole } from '../lib/permissions';
+import { getDefaultLandingPath } from '../lib/roles';
 
 void React;
 
 export default function MobileBottomNav() {
   const { currentUser } = useAuth();
+  const homePath = getDefaultLandingPath(currentUser);
 
-  const canViewTasks = isPrimaryAdmin(currentUser) || hasRole(currentUser, 'FARMER') || hasRole(currentUser, 'Herdsman');
-  const taskLabel = hasRole(currentUser, 'Herdsman') ? 'My Tasks' : 'Herdsman View';
+  const canViewTasks = true;
+  const taskLabel = 'Herdsman View';
 
   return (
     <nav
@@ -19,7 +20,7 @@ export default function MobileBottomNav() {
     >
       <div className="grid grid-cols-2 gap-2 px-3 py-2">
         <NavLink
-          to="/dashboard"
+          to={homePath}
           className={({ isActive }) =>
             `min-h-[56px] rounded-xl border px-3 py-2 flex items-center justify-center gap-2 text-xs font-semibold transition-colors ${
               isActive

@@ -2,10 +2,9 @@ import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useMutation } from '@tanstack/react-query';
 import { Loader2, AlertCircle, Calculator, ArrowRight, Droplets, Wheat, Clock, Beaker } from 'lucide-react';
-import apiClient from '../../lib/apiClient';
+import { feedApi } from '../../lib/backendApi';
 import { Skeleton } from '../../components/ui';
 import LABELS from '../../lib/labels';
-import { calculateFeedFallback } from '../../lib/feedCalculator';
 
 /**
  * SRP: Handles ONLY the empty state before a farmer calculates a target.
@@ -98,15 +97,10 @@ export default function MilkLab() {
   const calcMutation = useMutation({
     mutationFn: async (liters) => {
       const baseline = parseFloat(localStorage.getItem('baseline_herd_meal_kg') || '4.0');
-      try {
-        const response = await apiClient.post('/v1/feed/calculate-schedule', {
-          target_liters: parseFloat(liters),
-          baseline_herd_meal_kg: baseline,
-        });
-        return response.data;
-      } catch {
-        return calculateFeedFallback({ target_liters: parseFloat(liters), baseline_herd_meal_kg: baseline });
-      }
+      return feedApi.calculateSchedule({
+        target_liters: parseFloat(liters),
+        baseline_herd_meal_kg: baseline,
+      });
     },
   });
 

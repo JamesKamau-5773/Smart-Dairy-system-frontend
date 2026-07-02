@@ -1,21 +1,36 @@
 import React from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { AlertTriangle, Settings } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { safetyApi } from '../../lib/backendApi';
+import { useTenant } from '../../hooks/useTenant';
 
 export default function ManagerInboxWidget() {
-  // Mock data - In a real app, this comes from your useQuery(QUERY_KEYS.ALERTS)
-  const activeAlerts = [
-    {
-      id: 1,
-      title: 'Herd Target Discrepancy',
-      message: 'Current Dairy Meal yields 14.7% Protein, but the Herd Target requires 16.0%.',
-      time: 'Today, 02:00 AM',
-      actionLink: '/feed-nutrition/mix',
-      actionText: 'Adjust Formula',
-      icon: AlertTriangle,
-      status: 'Action Required'
+  const { tenantId, farmId } = useTenant();
+  const { data } = useQuery({
+    queryKey: ['safety-dashboard', tenantId, farmId],
+    queryFn: () => safetyApi.dashboard(),
+    enabled: !!tenantId && !!farmId,
+  });
+
+  const activeAlerts = React.useMemo(() => {
+    const alerts = data?.alerts ?? data?.activeAlerts ?? data?.operational_alerts ?? data?.operationalAlerts ?? [];
+
+    if (!Array.isArray(alerts)) {
+      return [];
     }
-  ];
+
+    return alerts.map((alert, index) => ({
+      id: alert.id ?? alert.alert_id ?? index,
+      title: alert.title ?? alert.name ?? 'Operational alert',
+      message: alert.message ?? alert.description ?? '',
+      time: alert.time ?? alert.createdAt ?? alert.updatedAt ?? 'Recent',
+      actionLink: alert.actionLink ?? alert.link ?? '/operations/safety',
+      actionText: alert.actionText ?? 'Review',
+      icon: AlertTriangle,
+      status: alert.status ?? 'Attention required',
+    }));
+  }, [data]);
 
   if (activeAlerts.length === 0) return null;
 

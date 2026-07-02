@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useTenant } from '../../hooks/useTenant';
-// import apiClient from '../../lib/apiClient'; // Commented out until backend is ready
+import { financeApi } from '../../lib/backendApi';
 import { Loader2, ArrowRight } from 'lucide-react';
 
 const COUNTRY_CODES = [
@@ -26,18 +26,10 @@ export default function AddBuyerForm({ onSuccess, onCancel }) {
 
   const mutation = useMutation({
     mutationFn: async (newBuyer) => {
-      // ─── MOCKED API CALL ───
-      // Fakes an 800ms network delay to prevent the 404 error
-      return new Promise((resolve) => {
-        setTimeout(() => {
-          const fakeId = `10${Math.floor(Math.random() * 900)}`;
-          resolve({
-            ...newBuyer,
-            id: fakeId,
-            tenant_id: tenantId,
-            farm_id: farmId,
-          });
-        }, 800);
+      return financeApi.createBuyer({
+        ...newBuyer,
+        tenant_id: tenantId,
+        farm_id: farmId,
       });
     },
     onSuccess: (newlyCreatedBuyer) => {
@@ -48,6 +40,10 @@ export default function AddBuyerForm({ onSuccess, onCancel }) {
       });
       
       if (onSuccess) onSuccess(); 
+    },
+    onError: (error) => {
+      console.error("Failed to add buyer:", error);
+      // A user-facing notification could be added here.
     },
   });
 

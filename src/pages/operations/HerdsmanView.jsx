@@ -3,7 +3,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import { useTenant } from '../../hooks/useTenant';
 import { QUERY_KEYS } from '../../providers/QueryProvider';
-import apiClient from '../../lib/apiClient';
+import { inventoryApi } from '../../lib/backendApi';
 import { useAuth } from '../../contexts/AuthContext';
 import { Activity, AlertTriangle, ArrowRight, Clock, CheckCircle2, Droplets, Flame, Wheat, Baby, Loader2, ClipboardList } from 'lucide-react';
 import { convertKgToLocal } from '../../lib/units';
@@ -37,11 +37,7 @@ export default function HerdsmanView() {
   };
 
   // Alerts from the farm system (Barn Floor Language)
-  const [priorityAlerts, setPriorityAlerts] = useState([
-    { id: 1, type: 'heat', cow: 'C-102 (Luna)', message: 'Watch for signs of heat. Separate her for the vet.', time: '06:00 AM', icon: <Flame size={18} /> },
-    { id: 2, type: 'vet', cow: 'C-105 (Bella)', message: 'Medicine period is over. Safe to put milk in the main tank.', time: 'Morning Milking', icon: <AlertTriangle size={18} /> },
-    { id: 3, type: 'dry', cow: 'C-104 (Daisy)', message: 'Pregnant. Stop milking her starting today.', time: 'Action Required', icon: <Droplets size={18} className="opacity-50" /> },
-  ]);
+  const [priorityAlerts, setPriorityAlerts] = useState([]);
 
   // Undoable optimistic dismiss for priority alerts: remove from UI immediately, show snackbar,
   // and only persist after the undo window closes.
@@ -84,10 +80,7 @@ export default function HerdsmanView() {
   };
 
   // Feed plan for the herd (Barn Floor Language for roughage)
-  const [feedInstructions, setFeedInstructions] = useState([
-    { cow: 'C-101', status: 'High producer', concentrate: '4.5 kg', numeric_quantity: 4.5, inventory_item_id: 'uuid-dairymeal-0001', forage: 'As much as she wants' },
-    { cow: 'C-104', status: 'Drying Off', concentrate: '0 kg', numeric_quantity: 0, inventory_item_id: 'uuid-dairymeal-0002', forage: 'Strictly Dry Fodder' },
-  ]);
+  const [feedInstructions, setFeedInstructions] = useState([]);
 
   const { currentUser } = useAuth();
   const { tenantId, farmId } = useTenant();
@@ -101,8 +94,8 @@ export default function HerdsmanView() {
         logged_by: currentUser?.id || null,
       };
 
-      const response = await apiClient.post('/v1/inventory/deduct', payload);
-      return { response: response.data, feedTask };
+      const response = await inventoryApi.deduct(payload);
+      return { response, feedTask };
     },
     onSuccess: ({ response, feedTask }) => {
       setFeedInstructions((prev) => prev.filter((f) => f.cow !== feedTask.cow));
@@ -215,6 +208,11 @@ export default function HerdsmanView() {
               Shift instructions from the manager. Review these objectives before starting and complete tasks in chronological order.
             </p>
             <div className="space-y-4 max-h-[600px] overflow-y-auto pr-2">
+              {readOnlySchedule.length === 0 && (
+                <div className="rounded-lg border border-dashed border-ink/10 bg-surface-warm p-4 text-sm text-ink-muted">
+                  No routine tasks are saved yet.
+                </div>
+              )}
               {readOnlySchedule.map((task) => (
                 <div key={task.id} className="rounded-lg border border-ink/5 bg-surface-warm p-4">
                   <div className="flex items-start justify-between gap-3">

@@ -1,8 +1,8 @@
 import React, { createContext, useState, useEffect, useContext } from 'react';
 import { useAuth } from './AuthContext';
-import axios from 'axios';
 import { tenantRef } from '../lib/tenantRef';
 import { queryClient } from '../providers/QueryProvider';
+import { authApi } from '../lib/backendApi';
 
 export const TenantContext = createContext();
 
@@ -12,9 +12,10 @@ export function TenantProvider({ children }) {
   const [isSwitching, setIsSwitching] = useState(false);
 
   useEffect(() => {
-    if (currentUser && currentUser.tenant_id) {
+    const scopedTenantId = currentUser?.tenant_id ?? currentUser?.cooperative_id;
+    if (currentUser && scopedTenantId) {
       // 1. Sync the non-React Axios interceptor ref
-      tenantRef.tenantId = currentUser.tenant_id;
+      tenantRef.tenantId = scopedTenantId;
       tenantRef.farmId = currentUser.farm_id;
       
       // 2. Set the React UI state
@@ -34,13 +35,14 @@ export function TenantProvider({ children }) {
     
     setIsSwitching(true);
     try {
-      const response = await axios.post('/api/auth/switch-farm', { farm_id: newFarmId });
+      const response = await authApi.switchFarm(newFarmId);
       
       const updatedUser = {
         ...currentUser,
-        farm_id: response.data.user.farm_id,
-        farm_name: response.data.user.farm_name,
-        token: response.data.token 
+        ...response,
+        farm_id: response.farm_id,
+        farm_name: response.farm_name,
+        token: response.token 
       };
 
       // Wipe the TanStack cache to guarantee zero data bleed between farms
@@ -58,11 +60,13 @@ export function TenantProvider({ children }) {
 
   return (
     <TenantContext.Provider value={{
-      tenantId: currentUser?.tenant_id,
+      tenantId: currentUser?.tenant_id ?? currentUser?.cooperative_id,
+      cooperativeId: currentUser?.cooperative_id ?? currentUser?.tenant_id,
+      cooperativeName: currentUser?.cooperative_name ?? currentUser?.tenant_name,
       tenantType: currentUser?.tenant_type,
       activeFarm,
       availableFarms: currentUser?.available_farms || [],
-      isCooperative: currentUser?.tenant_type === 'cooperative',
+      isCooperative: currentUser?.tenant_type === 'cooperative' || Boolean(currentUser?.cooperative_id),
       switchFarm,
       isSwitching
     }}>

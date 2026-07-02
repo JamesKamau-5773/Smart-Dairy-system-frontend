@@ -5,14 +5,7 @@ import MobileBottomNav from './MobileBottomNav';
 
 export default function DashboardLayout() {
   return (
-    <div className="h-dvh w-full bg-white relative overflow-hidden isolate">
-      <div
-        className="absolute inset-0 z-0 pointer-events-none"
-        style={{
-          backgroundImage: 'radial-gradient(125% 125% at 50% 90%, #ffffff 40%, #14b8a6 100%)',
-          backgroundSize: '100% 100%',
-        }}
-      />
+    <div className="relative isolate h-dvh w-full overflow-hidden bg-[#f9f8f6]">
 
       <div className="relative z-10 flex h-dvh flex-col md:flex-row">
       <Sidebar />

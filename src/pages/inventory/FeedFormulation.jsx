@@ -1,8 +1,9 @@
-import React, { useState, useEffect } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
+import React, { useState, useEffect, useMemo } from 'react';
+import { useLocation, useNavigate, } from 'react-router-dom';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Beaker, Tractor, Save, AlertCircle, XCircle } from 'lucide-react';
 import RecipeBuilder from '../nutrition/RecipeBuilder'; 
+import { nutritionApi } from '../../lib/backendApi';
 
 // 1. CRITICAL FIX: Define defaults OUTSIDE the component.
 // This ensures their memory reference never changes, preventing infinite loops in child components.
@@ -31,6 +32,9 @@ export default function FeedFormulation() {
   // State initialization
   const [activeTab, setActiveTab] = useState(importedDraft?.draftType || 'dairy_meal');
 
+  // State for the recipe currently being built. This makes RecipeBuilder a controlled component.
+  const [recipe, setRecipe] = useState([]);
+
   // Synchronize the tab if a new draft is loaded while the component is already open
   useEffect(() => {
     if (importedDraft?.draftType) {
@@ -39,20 +43,30 @@ export default function FeedFormulation() {
   }, [importedDraft?.draftType]);
 
   // 3. CRITICAL FIX: Safe, explicit resolution of which ingredients to pass
-  let activeIngredients = activeTab === 'dairy_meal' ? DEFAULT_DAIRY_MEAL : DEFAULT_MAIN_MEAL;
-
-  if (importedDraft && importedDraft.draftType === activeTab) {
-    const draftData = importedDraft.draftFormula;
-    if (Array.isArray(draftData) && draftData.length > 0) {
-      activeIngredients = draftData;
+  const activeIngredients = useMemo(() => {
+    const defaultIngredients = activeTab === 'dairy_meal' ? DEFAULT_DAIRY_MEAL : DEFAULT_MAIN_MEAL;
+    
+    if (importedDraft && importedDraft.draftType === activeTab) {
+      const draftData = importedDraft.draftFormula;
+      if (Array.isArray(draftData) && draftData.length > 0) {
+        return draftData;
+      }
     }
-  }
+    return defaultIngredients;
+  }, [activeTab, importedDraft]);
 
-  // Mock Save Mutation
+  // This effect synchronizes the recipe state when the source changes (e.g., tab switch or new draft).
+  // By making RecipeBuilder controlled, we ensure the parent always has the latest data.
+  useEffect(() => {
+    setRecipe(activeIngredients);
+  }, [activeIngredients]); // This dependency is safe as the source arrays are stable.
+
   const saveRecipe = useMutation({
     mutationFn: async (payload) => {
-      // Simulate API call to save the active formula
-      return new Promise(resolve => setTimeout(resolve, 800));
+      return nutritionApi.createRecipe({
+        recipeType: activeTab,
+        ingredients: payload,
+      });
     },
     onSuccess: () => {
       // Clear the draft state from the URL so a refresh doesn't reload it
@@ -61,6 +75,10 @@ export default function FeedFormulation() {
       }
       // Safe object syntax for React Query v4/v5 compatibility
       queryClient.invalidateQueries({ queryKey: ['active-feed-recipe'] });
+      queryClient.invalidateQueries({ queryKey: ['feed-recipes'] });
+    },
+    onError: (error, payload) => {
+      console.error("Failed to save recipe:", { error, payload });
     }
   });
 
@@ -68,9 +86,6 @@ export default function FeedFormulation() {
     // Clear router state to exit draft mode
     navigate(location.pathname, { replace: true, state: {} });
   };
-
-  // Safe unique key to force remounts only when necessary
-  const builderKey = `${activeTab}-${location.key || 'static'}`;
 
   return (
     <div className="animate-reveal space-y-8 max-w-5xl mx-auto p-4 md:p-8">
@@ -125,10 +140,13 @@ export default function FeedFormulation() {
         
         {/* Left Column: The Interactive Builder */}
         <div className="lg:col-span-2">
-          <div key={builderKey} className="animate-in fade-in slide-in-from-bottom-4 duration-300">
+          <div className="animate-in fade-in slide-in-from-bottom-4 duration-300">
+            {/* NOTE: RecipeBuilder must be refactored to be a controlled component.
+                It should accept `ingredients` and `onIngredientsChange` props instead of `initialIngredients`. */}
             <RecipeBuilder 
               recipeType={activeTab} 
-              initialIngredients={activeIngredients} 
+              ingredients={recipe}
+              onIngredientsChange={setRecipe}
             />
           </div>
         </div>
@@ -143,7 +161,7 @@ export default function FeedFormulation() {
             
             <div className="space-y-3">
               <button 
-                onClick={() => saveRecipe.mutate()}
+                onClick={() => saveRecipe.mutate(recipe)}
                 disabled={saveRecipe.isPending}
                 className="w-full bg-brand hover:bg-brand-dark text-white px-4 py-3 rounded-button font-bold text-sm transition-colors shadow-sm flex items-center justify-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed"
               >

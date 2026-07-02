@@ -1,11 +1,37 @@
 import React from 'react';
 import { render, screen } from '@testing-library/react';
-import { describe, it, expect, beforeEach } from 'vitest';
+import { waitFor } from '@testing-library/react';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import FastMilkLog from '../FastMilkLog';
 import { MemoryRouter } from 'react-router-dom';
 import { AuthProvider } from '../../../contexts/AuthContext';
 import { TenantProvider } from '../../../contexts/TenantContext';
 import { QueryProvider } from '../../../providers/QueryProvider';
+
+vi.mock('../../../hooks/useTenant', () => ({
+  useTenant: () => ({ tenantId: 'tnt_riftvalley_01', farmId: 'frm_rvd_main' }),
+}));
+
+vi.mock('../../../lib/apiClient', () => ({
+  default: {
+    get: vi.fn().mockResolvedValue({ data: [] }),
+    post: vi.fn(),
+    patch: vi.fn(),
+    delete: vi.fn(),
+  },
+}));
+
+vi.mock('../../../lib/backendApi', async (importOriginal) => {
+  const actual = await importOriginal();
+
+  return {
+    ...actual,
+    safetyApi: {
+      ...actual.safetyApi,
+      activeHardlocks: vi.fn().mockResolvedValue([]),
+    },
+  };
+});
 
 function renderWithProviders(ui) {
   return render(
@@ -31,12 +57,12 @@ describe('FastMilkLog', () => {
     expect(save.disabled).toBeTruthy();
   });
 
-  it('shows mock herd options when live cow data is unavailable', () => {
+  it('renders without demo herd options when live cow data is unavailable', async () => {
     renderWithProviders(<FastMilkLog />);
 
-    expect(screen.getAllByText(/Demo data active/i).length).toBeGreaterThan(0);
-    expect(screen.getAllByRole('option', { name: /C-101 \(Luna\)/i }).length).toBeGreaterThan(0);
-    expect(screen.getAllByRole('option', { name: /C-105 \(Bella\)/i }).length).toBeGreaterThan(0);
+    await waitFor(() => {
+      expect(screen.getAllByRole('option').every((option) => option.textContent === 'Choose cow...')).toBe(true);
+    });
   });
 
   it('renders edit actions when opened with an existing record', () => {

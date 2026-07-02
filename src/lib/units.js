@@ -1,22 +1,13 @@
-// Simple farm unit conversion utilities backed by localStorage when backend is not present.
+// Simple farm unit conversion utilities backed by localStorage.
 const STORAGE_KEY = 'unit_conversions';
-const DEFAULT_CONVERSIONS = [
-  {
-    id: 'default-dairy-meal-kasuku',
-    context: 'Dairy Meal',
-    unitName: 'Kasukus',
-    baseUnit: 'kg',
-    factor: 2,
-  },
-];
 
 export function getAllConversions() {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     const stored = raw ? JSON.parse(raw) : [];
-    return Array.isArray(stored) && stored.length > 0 ? stored : DEFAULT_CONVERSIONS;
+    return Array.isArray(stored) ? stored : [];
   } catch {
-    return DEFAULT_CONVERSIONS;
+    return [];
   }
 }
 

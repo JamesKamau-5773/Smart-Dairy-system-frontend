@@ -1,70 +1,59 @@
 import React, { useMemo, useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { PackagePlus, Wheat } from 'lucide-react';
 import CurrentMixCard from '../../components/nutrition/CurrentMixCard';
 import ProfitabilityChart from '../../components/nutrition/ProfitabilityChart';
 import TopRecipesList from './TopRecipesList';
 import AddFeedModal from './AddFeedModal';
-
-// Updated Mock Data with Farmer-Friendly Language
-const MOCK_CURRENT_MIX = {
-  name: 'Milking Cow Meal', // Simplified
-  totalWeight: 500,
-  consumedWeight: 380,
-  remainingWeight: 120,
-  dailyFeedingRate: 40,
-  mixedOn: '2026-06-05',
-};
-
-const MOCK_TRENDS = [
-  { week: 'Wk 18', cost: 15.2, height: 'h-24' },
-  { week: 'Wk 19', cost: 14.8, height: 'h-20' },
-  { week: 'Wk 20', cost: 12.5, height: 'h-16' },
-  { week: 'Wk 21', cost: 11.8, height: 'h-12' },
-  { week: 'Wk 22', cost: 11.2, height: 'h-10', isCurrent: true },
-];
-
-// Added 'type' and 'formula' payloads to fuel the Nutrition Lab draft state
-const MOCK_RECIPES = [
-  { 
-    id: 1, 
-    name: 'Dry Season High-Energy', 
-    costPerLiter: 11.2, 
-    yieldAvg: 28.5,
-    type: 'dairy_meal',
-    formula: null // Matches the screenshot: "No formula data available for this mix."
-  },
-  { 
-    id: 2, 
-    name: 'Wet Season Grass Balancer', 
-    costPerLiter: 12.45, 
-    yieldAvg: 26.0,
-    type: 'main_meal',
-    formula: [
-      { id: 'silage', name: 'Silage', percentage: 55, proteinContent: 8.0, pricePerKg: 5 },
-      { id: 'lucerne', name: 'Lucerne Hay', percentage: 15, proteinContent: 18.0, pricePerKg: 25 },
-      { id: 'dairy_meal', name: 'Dairy Meal (Formulated)', percentage: 30, proteinContent: 16.0, pricePerKg: 35 }
-    ]
-  },
-  { 
-    id: 3, 
-    name: 'Standard Commercial Meal', 
-    costPerLiter: 15.8, 
-    yieldAvg: 24.2,
-    type: 'dairy_meal',
-    formula: [
-      { id: 'maize', name: 'Maize Germ', percentage: 50, proteinContent: 9.5, pricePerKg: 32 },
-      { id: 'bran', name: 'Wheat Bran', percentage: 30, proteinContent: 14.5, pricePerKg: 28 },
-      { id: 'sunflower', name: 'Sunflower Cake', percentage: 20, proteinContent: 28.0, pricePerKg: 45 }
-    ]
-  },
-];
+import { nutritionApi } from '../../lib/backendApi';
 
 export default function NutritionDashboard() {
   const [isModalOpen, setIsModalOpen] = useState(false);
 
-  const currentMix = useMemo(() => MOCK_CURRENT_MIX, []);
-  const trends = useMemo(() => MOCK_TRENDS, []);
-  const recipes = useMemo(() => MOCK_RECIPES, []);
+  const { data: feedCostEfficiency } = useQuery({
+    queryKey: ['nutrition-feed-cost-efficiency'],
+    queryFn: () => nutritionApi.feedCostEfficiency(),
+  });
+
+  const { data: recipesData } = useQuery({
+    queryKey: ['nutrition-recipes'],
+    queryFn: () => nutritionApi.listRecipes(),
+  });
+
+  const { data: roiTrend } = useQuery({
+    queryKey: ['nutrition-active-batch-roi-trend-weekly'],
+    queryFn: () => nutritionApi.activeBatchRoiTrendWeekly(),
+  });
+
+  const currentMix = useMemo(() => {
+    if (!feedCostEfficiency) {
+      return null;
+    }
+
+    return {
+      name: feedCostEfficiency.name ?? feedCostEfficiency.mixName ?? 'Feed mix',
+      totalWeight: Number(feedCostEfficiency.totalWeight ?? feedCostEfficiency.total_weight ?? 0),
+      consumedWeight: Number(feedCostEfficiency.consumedWeight ?? feedCostEfficiency.consumed_weight ?? 0),
+      remainingWeight: Number(feedCostEfficiency.remainingWeight ?? feedCostEfficiency.remaining_weight ?? 0),
+      dailyFeedingRate: Number(feedCostEfficiency.dailyFeedingRate ?? feedCostEfficiency.daily_feeding_rate ?? 0),
+      mixedOn: feedCostEfficiency.mixedOn ?? feedCostEfficiency.mixed_on ?? null,
+    };
+  }, [feedCostEfficiency]);
+
+  const trends = useMemo(() => {
+    if (!Array.isArray(roiTrend) || roiTrend.length === 0) {
+      return [];
+    }
+
+    return roiTrend.map((point, index) => ({
+      week: point.week || point.label || `Wk ${index + 1}`,
+      cost: Number(point.costPerLiter ?? point.cost ?? 0),
+      height: point.height || ['h-24', 'h-20', 'h-16', 'h-12', 'h-10'][Math.min(index, 4)],
+      isCurrent: Boolean(point.isCurrent),
+    }));
+  }, [roiTrend]);
+
+  const recipes = useMemo(() => (Array.isArray(recipesData) ? recipesData : []), [recipesData]);
 
   return (
     <div className="animate-reveal space-y-8 max-w-7xl mx-auto">

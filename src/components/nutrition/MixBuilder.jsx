@@ -1,43 +1,8 @@
 import React, { useMemo, useState, useRef } from 'react';
 import { Plus, Trash2, Save, Scale, Coins, BarChart3, CheckCircle2, Copy, FolderHeart, Wheat, Zap } from 'lucide-react';
 
-const FALLBACK_INVENTORY = [
-  { id: 'maize_germ', name: 'Maize Germ', costPerKg: 28, color: '#fbbf24' },
-  { id: 'wheat_bran', name: 'Wheat Bran', costPerKg: 22, color: '#fdba74' },
-  { id: 'sunflower_cake', name: 'Sunflower Cake', costPerKg: 45, color: '#ca8a04' },
-  { id: 'cottonseed_cake', name: 'Cottonseed Cake', costPerKg: 50, color: '#78716c' },
-  { id: 'mineral_premix', name: 'Dairy Mineral Premix', costPerKg: 120, color: '#94a3b8' },
-  { id: 'molasses', name: 'Molasses', costPerKg: 15, color: '#78350f' },
-];
-
 const HISTORY_KEY = 'feed_mix_batches';
 const TEMPLATE_KEY = 'feed_mix_templates';
-
-const DEFAULT_TEMPLATES = [
-  {
-    id: 'tpl_high_yield',
-    name: 'High-Yield Lactation Mix',
-    proteinTarget: '18',
-    ingredients: [
-      { ingredientId: 'maize_germ', ingredientName: 'Maize Germ', weight: '120' },
-      { ingredientId: 'sunflower_cake', ingredientName: 'Sunflower Cake', weight: '50' },
-      { ingredientId: 'mineral_premix', ingredientName: 'Dairy Mineral Premix', weight: '5' },
-    ],
-    updatedAt: new Date().toISOString(),
-    createdAt: new Date().toISOString(),
-  },
-  {
-    id: 'tpl_dry_cow',
-    name: 'Dry Cow Transition Mix',
-    proteinTarget: '14',
-    ingredients: [
-      { ingredientId: 'wheat_bran', ingredientName: 'Wheat Bran', weight: '80' },
-      { ingredientId: 'cottonseed_cake', ingredientName: 'Cottonseed Cake', weight: '20' },
-    ],
-    updatedAt: new Date().toISOString(),
-    createdAt: new Date().toISOString(),
-  },
-];
 
 const makeId = () => {
   if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
@@ -56,17 +21,12 @@ const createRow = () => ({
 const normalizeInventory = (inventoryItems = []) => {
   const source = Array.isArray(inventoryItems) ? inventoryItems : [];
 
-  return source.map((item, index) => {
-    const fallback = FALLBACK_INVENTORY.find((entry) => entry.id === item.id) || FALLBACK_INVENTORY[index % FALLBACK_INVENTORY.length];
-
-    return {
-      ...fallback,
-      ...item,
-      unit: item.unit || 'KG',
-      costPerKg: Number(item.costPerKg ?? item.cost_per_kg ?? fallback.costPerKg ?? 0),
-      color: item.color || fallback.color,
-    };
-  });
+  return source.map((item) => ({
+    ...item,
+    unit: item.unit || 'KG',
+    costPerKg: Number(item.costPerKg ?? item.cost_per_kg ?? 0),
+    color: item.color || '#a8a29e',
+  }));
 };
 
 const readHistory = () => {
@@ -204,7 +164,7 @@ function SummaryCard({ icon: Icon, label, value, unit }) {
 export default function MixBuilder({ inventoryItems = [], isLoading = false, onSave }) {
   const inventory = useMemo(() => {
     const normalized = normalizeInventory(inventoryItems);
-    return normalized.length > 0 ? normalized : FALLBACK_INVENTORY;
+    return normalized;
   }, [inventoryItems]);
 
   const [mixType, setMixType] = useState('concentrate'); // 'concentrate' or 'tmr'
@@ -249,10 +209,9 @@ export default function MixBuilder({ inventoryItems = [], isLoading = false, onS
   };
 
   const templates = useMemo(() => {
-    const merged = [...DEFAULT_TEMPLATES, ...savedTemplates];
     const byId = new Map();
 
-    merged.forEach((template) => {
+    savedTemplates.forEach((template) => {
       byId.set(template.id, template);
     });
 
@@ -514,6 +473,11 @@ export default function MixBuilder({ inventoryItems = [], isLoading = false, onS
             <FolderHeart size={12} /> Template library
           </div>
           <div className="mt-3 space-y-3">
+            {templates.length === 0 && (
+              <div className="rounded-2xl border border-dashed border-ink/15 bg-white/70 p-4 text-sm text-ink-muted">
+                No saved templates yet. Build a mix and save it as a reusable template.
+              </div>
+            )}
             {templates.slice(0, 4).map((template) => (
               <button
                 key={template.id}
@@ -621,6 +585,11 @@ export default function MixBuilder({ inventoryItems = [], isLoading = false, onS
                         {row.ingredientId && !inventory.some((entry) => entry.id === row.ingredientId) && (
                           <option value={row.ingredientId}>
                             {row.ingredientName || row.ingredientId} (missing)
+                          </option>
+                        )}
+                        {inventory.length === 0 && (
+                          <option value="" disabled>
+                            No inventory loaded
                           </option>
                         )}
                         {inventory.map((item) => (

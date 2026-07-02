@@ -5,8 +5,8 @@ export default function EditResourceModal({ isOpen, onClose, item, onSave }) {
   const [formData, setFormData] = useState({
     name: '',
     sku: '',
-    category: '',
-    status: ''
+    category: ''
+    // reorderLevel will be added by useEffect
   });
 
   // Pre-fill the form whenever the modal opens with a selected item
@@ -16,7 +16,7 @@ export default function EditResourceModal({ isOpen, onClose, item, onSave }) {
         name: item.name || '',
         sku: item.sku || '',
         category: item.category || 'Bulk Feed',
-        status: item.status || 'HEALTHY'
+        reorderLevel: item.reorderLevel === undefined ? 0 : item.reorderLevel
       });
     }
   }, [item, isOpen]);
@@ -92,16 +92,15 @@ export default function EditResourceModal({ isOpen, onClose, item, onSave }) {
                 </select>
               </div>
               <div>
-                <label className="block text-[10px] font-black text-ink-muted uppercase tracking-widest mb-2">System Status</label>
-                <select 
-                  value={formData.status}
-                  onChange={(e) => setFormData({...formData, status: e.target.value})}
-                  className="w-full p-3 border border-slate-200 rounded-lg text-sm font-bold focus:ring-2 focus:ring-brand/20 focus:border-brand outline-none transition-all bg-white"
-                >
-                  <option value="HEALTHY">HEALTHY</option>
-                  <option value="CRITICAL">CRITICAL</option>
-                  <option value="INACTIVE">INACTIVE</option>
-                </select>
+                <label className="block text-[10px] font-black text-ink-muted uppercase tracking-widest mb-2">Re-order Level</label>
+                <input
+                  required
+                  type="number"
+                  min="0"
+                  value={formData.reorderLevel}
+                  onChange={(e) => setFormData({...formData, reorderLevel: parseInt(e.target.value, 10) || 0})}
+                  className="w-full p-3 border border-slate-200 rounded-lg text-sm font-bold focus:ring-2 focus:ring-brand/20 focus:border-brand outline-none transition-all"
+                />
               </div>
             </div>
 

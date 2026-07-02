@@ -6,33 +6,29 @@ import './index.css';
 import { QueryProvider } from './providers/QueryProvider';
 import { AuthProvider } from './contexts/AuthContext';
 import { TenantProvider } from './contexts/TenantContext';
+import { ThemeProvider } from './providers/ThemeProvider';
 
-// Initialize MSW (Mock Service Worker) for development
-async function enableMocking() {
-  if (!import.meta.env.DEV) {
-    return;
-  }
-  const { worker } = await import('./mocks/browser');
-  return worker.start({ onUnhandledRequest: 'bypass' });
-}
-
-// Initialize theme from localStorage before rendering
+// Initialize theme from localStorage before React renders to prevent flash of wrong theme.
+// This logic should match the one in ThemeProvider.
 try {
-  const t = localStorage.getItem('typographyTone');
-  if (t) document.documentElement.dataset.theme = t;
-  else document.documentElement.dataset.theme = 'soft';
+  const theme = localStorage.getItem('color-theme');
+  if (theme) {
+    document.documentElement.dataset.theme = theme;
+  } else {
+    document.documentElement.dataset.theme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+  }
 } catch {}
 
-enableMocking().then(() => {
-  ReactDOM.createRoot(document.getElementById('root')).render(
-    <React.StrictMode>
-      <QueryProvider>
+ReactDOM.createRoot(document.getElementById('root')).render(
+  <React.StrictMode>
+    <QueryProvider>
+      <ThemeProvider>
         <AuthProvider>
           <TenantProvider>
             <App />
           </TenantProvider>
         </AuthProvider>
-      </QueryProvider>
-    </React.StrictMode>
-  );
-});
+      </ThemeProvider>
+    </QueryProvider>
+  </React.StrictMode>
+);

@@ -2,6 +2,19 @@ import React from 'react';
 import { PackageCheck, AlertCircle } from 'lucide-react';
 
 export default function CurrentMixCard({ mix }) {
+  if (!mix || !mix.totalWeight || mix.totalWeight <= 0) {
+    return (
+      <div className="card-machined bg-surface p-6 shadow-sm border border-ink/5 flex flex-col justify-center min-h-[240px] text-center">
+        <h3 className="flex items-center justify-center gap-2 text-[10px] font-black uppercase tracking-normal text-brand-dark mb-4 drop-shadow-[0_1px_1px_rgba(0,0,0,0.1)]">
+          <PackageCheck size={16} /> What We're Feeding Now
+        </h3>
+        <p className="text-sm text-ink-muted">
+          No feed mix data is available yet.
+        </p>
+      </div>
+    );
+  }
+
   const stockPercentage = Math.round((mix.remainingWeight / mix.totalWeight) * 100);
   const daysLeft = Math.floor(mix.remainingWeight / mix.dailyFeedingRate);
   const isLowStock = daysLeft <= 3;

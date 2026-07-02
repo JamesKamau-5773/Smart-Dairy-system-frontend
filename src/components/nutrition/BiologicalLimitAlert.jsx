@@ -3,6 +3,8 @@ import { AlertOctagon } from 'lucide-react';
 
 export default function BiologicalLimitAlert({ feedTarget, naturalLimit }) {
   const safeTarget = feedTarget || 0;
+  if (naturalLimit == null || Number.isNaN(Number(naturalLimit))) return null;
+
   const safeLimit = naturalLimit || 0;
 
   // Only show if we are feeding for MORE milk than the cow can naturally produce today

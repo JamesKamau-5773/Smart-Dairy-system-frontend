@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { FileWarning, Download, Filter, AlertCircle, ChevronRight, Stethoscope, Wheat, ThermometerSun, Settings, X } from 'lucide-react';
+import { productionApi } from '../../lib/backendApi';
 
 const DIAGNOSTIC_CATEGORIES = [
   { id: 'clinical', label: 'Cow Health & Sickness', icon: Stethoscope, options: ['Signs of Mastitis (clots, swelling)', 'Lame or sore hooves', 'Metabolic sickness (Milk fever, etc.)', 'Not eating / Looks weak'] },
@@ -17,15 +18,21 @@ export default function MilkDropReports() {
   const [selectedReasons, setSelectedReasons] = useState([]);
   const [managerNotes, setManagerNotes] = useState('');
 
-  const { data: reportsData, isLoading, isError } = useQuery({
-    queryKey: ['milk-drop-reports', 'mock'], 
-    queryFn: () => new Promise((resolve) => setTimeout(() => resolve([
-      { id: 1, date_time: new Date().toISOString(), cow_tag: 'Bessie (Tag: 402)', missing_milk: 2.5, primary_reason: '', status: 'Pending' },
-      { id: 2, date_time: new Date(Date.now() - 86400000).toISOString(), cow_tag: 'Daisy (Tag: 118)', missing_milk: 3.0, primary_reason: 'No clean water / Trough empty', status: 'Resolved' },
-    ]), 500)),
+  const { data: reportsData } = useQuery({
+    queryKey: ['milk-drop-reports'], 
+    queryFn: () => productionApi.listMilkDropAlerts(),
   });
 
-  const reports = Array.isArray(reportsData) ? reportsData : [];
+  const reports = Array.isArray(reportsData)
+    ? reportsData.map((report, index) => ({
+      id: report.id ?? report.alert_id ?? report.alertId ?? `alert-${index}`,
+        date_time: report.date_time ?? report.createdAt ?? report.created_at ?? new Date().toISOString(),
+        cow_tag: report.cow_tag ?? report.cowTag ?? report.cow_id ?? report.cowId ?? 'Unknown',
+        missing_milk: Number(report.missing_milk ?? report.missingMilk ?? report.delta_liters ?? report.deltaLiters ?? 0),
+        status: report.status ?? 'Pending',
+        ...report,
+      }))
+    : [];
 
   const { data: suggestion, isLoading: isSuggesting } = useQuery({
     queryKey: ['diagnostic-suggestion', investigateModal.log?.id],
@@ -39,8 +46,11 @@ export default function MilkDropReports() {
   });
 
   const saveInvestigation = useMutation({
-    mutationFn: (payload) => new Promise((resolve) => setTimeout(resolve, 800)),
-    onSuccess: () => closeModal(),
+    mutationFn: ({ alertId, ...payload }) => productionApi.investigateMilkDropAlert(alertId, payload),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['milk-drop-reports'] });
+      closeModal();
+    },
   });
 
   const openInvestigateModal = (log) => {
@@ -58,7 +68,11 @@ export default function MilkDropReports() {
   };
 
   const handleSubmit = () => {
-    saveInvestigation.mutate({ reasons: selectedReasons, manager_notes: managerNotes });
+    saveInvestigation.mutate({
+      alertId: investigateModal.log?.id,
+      reasons: selectedReasons,
+      manager_notes: managerNotes,
+    });
   };
 
   return (

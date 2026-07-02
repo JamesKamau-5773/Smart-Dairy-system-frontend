@@ -1,21 +1,34 @@
 import React, { useMemo, useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { 
   Database, AlertOctagon, PackagePlus, ArrowDownRight, 
   ArrowUpRight, Wheat, Syringe, HeartPulse, Search, ChevronDown, ChevronUp
 } from 'lucide-react';
+import { inventoryApi } from '../../lib/backendApi';
 
 export default function StockRegistry() {
-  // Mock Data: Inventory Items (Categories simplified)
-  const [inventory, setInventory] = useState([
-    { id: 1, name: "Premium Dairy Meal", category: "Feed", unit: "Bags (70kg)", qty: 2.5, threshold: 5, icon: <Wheat size={16} /> },
-    { id: 2, name: "Maclick Super Mineral", category: "Minerals", unit: "Kgs", qty: 12, threshold: 10, icon: <Database size={16} /> },
-    { id: 3, name: "Friesian AI Straws (FR-889)", category: "Breeding", unit: "Straws", qty: 4, threshold: 3, icon: <Syringe size={16} /> },
-    { id: 4, name: "Penstrep Antibiotic", category: "Medicine", unit: "Vials (100ml)", qty: 5, threshold: 2, icon: <HeartPulse size={16} /> },
-    { id: 5, name: "Boma Rhodes Hay", category: "Feed", unit: "Bales", qty: 45, threshold: 20, icon: <Wheat size={16} /> }
-  ]);
+  const [inventory, setInventory] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('All');
   const [controlsOpen, setControlsOpen] = useState(false);
+
+  const { data: stockData } = useQuery({
+    queryKey: ['stock-registry'],
+    queryFn: () => inventoryApi.listStock(),
+  });
+
+  React.useEffect(() => {
+    if (Array.isArray(stockData)) {
+      setInventory(stockData.map((item) => ({
+        id: item.id ?? item.itemId ?? `stock-${Date.now()}`,
+        name: item.name ?? item.item_name ?? 'Unnamed Item',
+        category: item.category ?? item.type ?? 'All',
+        unit: item.unit ?? item.uom ?? '',
+        qty: Number(item.qty ?? item.quantity ?? item.balance ?? 0),
+        threshold: Number(item.threshold ?? item.minimum ?? 0),
+      })));
+    }
+  }, [stockData]);
 
   const visibleInventory = useMemo(() => {
     const normalizedSearch = searchTerm.trim().toLowerCase();

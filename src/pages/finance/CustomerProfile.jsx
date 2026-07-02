@@ -8,6 +8,7 @@ import {
 import { useTenant } from '../../hooks/useTenant';
 import { buildWhatsAppInvoiceMessage, formatMoney } from '../../lib/billing';
 import { Skeleton } from '../../components/ui';
+import { financeApi } from '../../lib/backendApi';
 
 function openWhatsApp(phoneNumber, message) {
   const url = `https://wa.me/${phoneNumber}?text=${encodeURIComponent(message)}`;
@@ -23,37 +24,7 @@ export default function CustomerProfile() {
 
   const { data: profile, isLoading, isError } = useQuery({
     queryKey: ['finance-buyer-profile', tenantId, farmId, buyerId],
-    queryFn: async () => {
-      // Mocked fetch for enterprise UI preview
-      return new Promise((resolve) => {
-        setTimeout(() => {
-          resolve({
-            buyer: {
-              id: buyerId,
-              name: buyerId === '101' ? 'Local Cafe' : 'James Kamau',
-              type: buyerId === '101' ? 'Commercial' : 'Individual',
-              contact: '0712 345 678',
-              whatsapp: '+254712345678',
-              rate_per_liter: 45,
-              billing_cycle: 'Weekly',
-            },
-            summary: {
-              outstanding_balance: 4500,
-              invoice_total: 12500,
-              payments_received: 8000,
-              liters_delivered: 250,
-            },
-            consumption_breakdown: [
-              { date: '2026-06-23', shift: 'Morning', liters: 15, amount: 675 },
-              { date: '2026-06-22', shift: 'Evening', liters: 12, amount: 540 },
-            ],
-            payment_history: [
-              { id: 'pay_1', method: 'M-PESA', date: '2026-06-20', note: 'Weekly Settlement', amount: 8000 },
-            ]
-          });
-        }, 500);
-      });
-    },
+    queryFn: () => financeApi.getBuyerProfile(buyerId),
     enabled: !!buyerId,
   });
 
@@ -62,6 +33,10 @@ export default function CustomerProfile() {
       const message = buildWhatsAppInvoiceMessage(profile);
       openWhatsApp(profile.buyer.whatsapp, message);
       return message;
+    },
+    onError: (error) => {
+      console.error("Failed to generate or share WhatsApp invoice:", error);
+      // A user-facing notification could be added here.
     },
   });
 
@@ -167,4 +142,4 @@ export default function CustomerProfile() {
       </div>
     </div>
   );
-}p
+}

@@ -27,7 +27,7 @@ const FeedMixRow = ({ recipe, index, isExpanded, onToggle, onLoadToLab }) => {
   const yieldAvg = recipe?.yieldAvg ?? 0;
   const costPerLiter = recipe?.costPerLiter ?? 0;
   
-  // Safely check for either 'ingredients' or 'formula' depending on the API/mock payload
+  // Safely check for either 'ingredients' or 'formula' depending on the payload shape
   const ingredientsList = Array.isArray(recipe?.ingredients) 
     ? recipe.ingredients 
     : (Array.isArray(recipe?.formula) ? recipe.formula : []);

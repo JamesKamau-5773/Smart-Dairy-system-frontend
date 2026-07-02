@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import {
   BookOpen,
@@ -19,94 +20,8 @@ import AlertBanner from '../../components/ui/AlertBanner';
 import Confirmation, { useConfirmation } from '../../components/ui/Confirmation';
 import { validateForm, ValidationRules, getFirstErrorMessage } from '../../lib/validation';
 import { formatDateTime, getRelativeTime, createAuditEntry, logToAuditTrail } from '../../lib/audit';
-
-// Mock data with audit timestamps
-const INITIAL_HERD = [
-  {
-    id: 'C-101',
-    name: 'Luna',
-    breed: 'Friesian',
-    ageMonths: 38,
-    status: 'Milking',
-    lastCalved: '2025-03-02',
-    milk: '26.5 L/day',
-    createdAt: '2025-01-15T10:30:00Z',
-    updatedAt: '2026-06-14T14:20:00Z',
-    updatedBy: 'James K.',
-  },
-  {
-    id: 'C-102',
-    name: 'Asha',
-    breed: 'Ayrshire',
-    ageMonths: 52,
-    status: 'Dry',
-    lastCalved: '2025-12-14',
-    milk: '0.0 L/day',
-    createdAt: '2024-11-20T09:15:00Z',
-    updatedAt: '2026-06-12T11:45:00Z',
-    updatedBy: 'System',
-  },
-  {
-    id: 'C-103',
-    name: 'Nia',
-    breed: 'Jersey',
-    ageMonths: 29,
-    status: 'Milking',
-    lastCalved: '2025-04-18',
-    milk: '21.8 L/day',
-    createdAt: '2025-03-10T08:00:00Z',
-    updatedAt: '2026-06-15T09:30:00Z',
-    updatedBy: 'James K.',
-  },
-  {
-    id: 'C-104',
-    name: 'Daisy',
-    breed: 'Friesian',
-    ageMonths: 46,
-    status: 'Milking',
-    lastCalved: '2025-02-10',
-    milk: '24.1 L/day',
-    createdAt: '2024-12-05T11:20:00Z',
-    updatedAt: '2026-06-13T15:10:00Z',
-    updatedBy: 'System',
-  },
-  {
-    id: 'C-105',
-    name: 'Bella',
-    breed: 'Friesian',
-    ageMonths: 61,
-    status: 'Dry',
-    lastCalved: '2025-12-01',
-    milk: '0.0 L/day',
-    createdAt: '2024-10-01T13:45:00Z',
-    updatedAt: '2026-06-10T12:00:00Z',
-    updatedBy: 'James K.',
-  },
-  {
-    id: 'C-106',
-    name: 'Mimi',
-    breed: 'Ayrshire',
-    ageMonths: 33,
-    status: 'Milking',
-    lastCalved: '2025-05-22',
-    milk: '22.7 L/day',
-    createdAt: '2025-02-14T10:00:00Z',
-    updatedAt: '2026-06-14T16:25:00Z',
-    updatedBy: 'James K.',
-  },
-  {
-    id: 'C-107',
-    name: 'Zuri',
-    breed: 'Jersey',
-    ageMonths: 24,
-    status: 'Milking',
-    lastCalved: '2025-06-09',
-    milk: '19.6 L/day',
-    createdAt: '2025-04-20T14:30:00Z',
-    updatedAt: '2026-06-15T10:15:00Z',
-    updatedBy: 'System',
-  },
-];
+import { herdApi } from '../../lib/backendApi';
+const INITIAL_HERD = [];
 
 // ─────────────────────────────────────────────────────────────────────────
 // HELPER FUNCTIONS
@@ -132,6 +47,24 @@ function statusTone(status) {
   if (status === 'Heifer') return 'bg-surface-raised text-ink border-ink/10';
   if (status === 'Cow') return 'bg-accent/20 text-brand-dark border-accent/30';
   return 'bg-surface-raised text-ink border-ink/10';
+}
+
+function normalizeHerdCow(cow = {}, fallback = {}) {
+  const ageMonths = Number(cow.ageMonths ?? cow.age_months ?? fallback.ageMonths ?? 0);
+  const status = cow.status ?? cow.lactation_status ?? fallback.status ?? 'Cow';
+
+  return {
+    id: cow.id ?? cow.cow_id ?? cow.ear_tag ?? fallback.id ?? '',
+    name: cow.name ?? cow.cow_name ?? fallback.name ?? 'Unnamed',
+    breed: cow.breed ?? cow.breed_name ?? fallback.breed ?? 'Unknown',
+    ageMonths,
+    status,
+    lastCalved: cow.lastCalved ?? cow.last_calved ?? fallback.lastCalved ?? null,
+    milk: cow.milk ?? cow.daily_milk ?? fallback.milk ?? '0.0 L/day',
+    createdAt: cow.createdAt ?? cow.created_at ?? fallback.createdAt ?? new Date().toISOString(),
+    updatedAt: cow.updatedAt ?? cow.updated_at ?? fallback.updatedAt ?? new Date().toISOString(),
+    updatedBy: cow.updatedBy ?? cow.updated_by ?? fallback.updatedBy ?? 'You',
+  };
 }
 
 function getFilteredHerd(herd, statusFilter, searchTerm) {
@@ -185,7 +118,6 @@ export default function HerdRegistry() {
   const [statusFilter, setStatusFilter] = useState('All');
   const [herdSearch, setHerdSearch] = useState('');
   const [controlsOpen, setControlsOpen] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
   const [herdState, setHerdState] = useState(INITIAL_HERD);
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [successMessage, setSuccessMessage] = useState('');
@@ -195,6 +127,17 @@ export default function HerdRegistry() {
   const [isSaving, setIsSaving] = useState(false);
   const searchInputRef = useRef(null);
   const confirmation = useConfirmation();
+
+  const { data: herdData, isLoading } = useQuery({
+    queryKey: ['herd-registry'],
+    queryFn: () => herdApi.list(),
+  });
+
+  useEffect(() => {
+    if (Array.isArray(herdData)) {
+      setHerdState(herdData.map((cow) => normalizeHerdCow(cow)));
+    }
+  }, [herdData]);
 
   // Form state
   const [newCow, setNewCow] = useState({
@@ -259,9 +202,6 @@ export default function HerdRegistry() {
     try {
       setIsSaving(true);
 
-      // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 300));
-
       let ageMonths = 0;
       if (newCow.dob) {
         const dob = new Date(newCow.dob);
@@ -289,7 +229,6 @@ export default function HerdRegistry() {
         updatedBy: 'You',
       };
 
-      // Check for duplicate ID
       if (herdState.some((c) => c.id === cow.id)) {
         setErrorMessage(`Animal with ID ${cow.id} already exists`);
         setShowError(true);
@@ -297,21 +236,29 @@ export default function HerdRegistry() {
         return;
       }
 
-      setHerdState((prev) => [cow, ...prev]);
+      const savedCow = normalizeHerdCow(await herdApi.create({
+        id: cow.id,
+        name: cow.name,
+        breed: cow.breed,
+        dob: newCow.dob,
+        hasCalved: newCow.hasCalved,
+      }), cow);
+
+      setHerdState((prev) => [savedCow, ...prev]);
 
       // Log audit entry
       logToAuditTrail(
         createAuditEntry({
           action: 'create',
           recordType: 'cow',
-          recordId: cow.id,
+          recordId: savedCow.id,
           userName: 'You',
-          changes: { name: { before: '', after: cow.name } },
-          notes: `Added new animal: ${cow.name} (${cow.id})`,
+          changes: { name: { before: '', after: savedCow.name } },
+          notes: `Added new animal: ${savedCow.name} (${savedCow.id})`,
         })
       );
 
-      setSuccessMessage(`Successfully added ${cow.id} — ${cow.name}`);
+      setSuccessMessage(`Successfully added ${savedCow.id} — ${savedCow.name}`);
       handleCloseModal();
     } catch (error) {
       console.error('Error adding cow:', error);
@@ -336,8 +283,7 @@ export default function HerdRegistry() {
     try {
       confirmation.setLoading(true);
 
-      // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 300));
+      await herdApi.delete(cowId);
 
       setHerdState((prev) => prev.filter((cow) => cow.id !== cowId));
 

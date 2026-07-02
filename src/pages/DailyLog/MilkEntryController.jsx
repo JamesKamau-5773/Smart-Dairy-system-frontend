@@ -5,23 +5,12 @@ import BiologicalLimitAlert from '../../components/nutrition/BiologicalLimitAler
 export default function MilkEntryController({ cow }) {
   const [actualMilk, setActualMilk] = useState('');
   const [expectedMilk, setExpectedMilk] = useState(25.0); 
-  const [naturalLimit, setNaturalLimit] = useState(0);
+  const [naturalLimit, setNaturalLimit] = useState(null);
   const [showChecklist, setShowChecklist] = useState(false);
 
   useEffect(() => {
     if (cow?.id) {
-      const fetchLimit = async () => {
-        try {
-          // Replace with real API call
-          // const res = await fetch(`/api/cows/${cow.id}/limit`);
-          // const data = await res.json();
-          // setNaturalLimit(data.natural_limit);
-          setNaturalLimit(22.5); // Mocked response
-        } catch (error) {
-          console.error("Failed to fetch limit:", error);
-        }
-      };
-      fetchLimit();
+      setNaturalLimit(null);
     }
   }, [cow?.id]);
 

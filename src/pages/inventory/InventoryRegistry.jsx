@@ -1,10 +1,13 @@
-import React, { useState, useMemo } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Search, Plus, Filter, Edit2, Package, Trash2, ChevronDown } from 'lucide-react';
 import RegisterResourceModal from '../../components/inventory/RegisterResourceModal';
 import StandardDeliveryModal from '../../components/inventory/StandardDeliveryModal';
 import EditResourceModal from '../../components/inventory/EditResourceModal';
+import { inventoryApi } from '../../lib/backendApi';
 
 export default function InventoryRegistry() {
+  const queryClient = useQueryClient();
   const [isRegisterModalOpen, setIsRegisterModalOpen] = useState(false);
   const [isRestockModalOpen, setIsRestockModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -12,26 +15,92 @@ export default function InventoryRegistry() {
   const [searchTerm, setSearchTerm] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('All');
 
+  const { data: backendInventory } = useQuery({
+    queryKey: ['inventory-items'],
+    queryFn: () => inventoryApi.listItems(),
+  });
+
   // Initialized as state so the UI updates immediately when editing or deleting
-  const [inventoryData, setInventoryData] = useState([
-    { name: 'Dairy Meal (Premium)', sku: 'FD-001', category: 'Bulk Feed', stock: { value: 850, unit: 'KG' }, status: 'HEALTHY' },
-    { name: 'Silage Reserve', sku: 'FD-002', category: 'Bulk Feed', stock: { value: 120, unit: 'KG' }, status: 'CRITICAL' },
-    { name: 'Penicillin V', sku: 'MED-001', category: 'Medical Vault', stock: { value: 12, unit: 'UNITS' }, status: 'HEALTHY' },
-    { name: 'Dewormer (Albendazole)', sku: 'MED-002', category: 'Medical Vault', stock: { value: 1, unit: 'UNIT' }, status: 'CRITICAL' },
-    { name: 'Milking Machine Liners', sku: 'EQ-104', category: 'Equipment', stock: { value: 45, unit: 'PCS' }, status: 'HEALTHY' },
-    { name: 'Calf Pellets', sku: 'FD-005', category: 'Bulk Feed', stock: { value: 400, unit: 'KG' }, status: 'HEALTHY' },
-  ]);
+  const [inventoryData, setInventoryData] = useState([]);
+
+  useEffect(() => {
+    if (Array.isArray(backendInventory)) {
+      setInventoryData(backendInventory);
+    }
+  }, [backendInventory]);
+
+  const upsertLocalItem = (item) => {
+    setInventoryData((current) => {
+      const nextItem = {
+        ...item,
+        stock: item.stock || { value: 0, unit: 'units' },
+      };
+
+      const existingIndex = current.findIndex((entry) => entry.sku === nextItem.sku);
+      if (existingIndex === -1) {
+        return [nextItem, ...current];
+      }
+
+      const next = [...current];
+      next[existingIndex] = { ...next[existingIndex], ...nextItem };
+      return next;
+    });
+  };
+
+  const createItemMutation = useMutation({
+    mutationFn: (payload) => inventoryApi.createItem(payload),
+    onSuccess: (item) => {
+      upsertLocalItem(item);
+      queryClient.invalidateQueries({ queryKey: ['inventory-items'] });
+      queryClient.invalidateQueries({ queryKey: ['inventory-stock'] });
+    },
+  });
+
+  const updateItemMutation = useMutation({
+    mutationFn: ({ itemId, payload }) => inventoryApi.updateItem(itemId, payload),
+    onSuccess: (item) => {
+      upsertLocalItem(item);
+      queryClient.invalidateQueries({ queryKey: ['inventory-items'] });
+      queryClient.invalidateQueries({ queryKey: ['inventory-stock'] });
+    },
+  });
+
+  const restockMutation = useMutation({
+    mutationFn: ({ item, amount }) => inventoryApi.createMovement({
+      item_id: item.id || item.sku,
+      quantity: amount,
+      movement_type: 'restock',
+      reference_note: `Restock for ${item.sku}`,
+    }),
+    onSuccess: (_, variables) => {
+      setInventoryData((current) => current.map((entry) => {
+        if (entry.sku !== variables.item.sku) {
+          return entry;
+        }
+
+        return {
+          ...entry,
+          stock: {
+            ...entry.stock,
+            value: Number(entry.stock?.value || 0) + Number(variables.amount || 0),
+          },
+        };
+      }));
+      queryClient.invalidateQueries({ queryKey: ['inventory-items'] });
+      queryClient.invalidateQueries({ queryKey: ['inventory-movements'] });
+      queryClient.invalidateQueries({ queryKey: ['inventory-stock'] });
+    },
+  });
 
   // Add new resource to the inventory list
   const handleRegisterResource = (newResourceData) => {
-    const newResource = {
+    createItemMutation.mutate({
       name: newResourceData.name,
       sku: newResourceData.sku,
       category: newResourceData.category,
-      stock: { value: newResourceData.initialStock, unit: newResourceData.unit },
-      status: 'HEALTHY', // Default status for new items
-    };
-    setInventoryData(prevData => [newResource, ...prevData]);
+      stock: { value: parseInt(newResourceData.initialStock, 10) || 0, unit: newResourceData.unit },
+      reorderLevel: parseInt(newResourceData.reorderLevel, 10) || 0,
+    });
   };
 
   const categories = useMemo(() => {
@@ -39,6 +108,12 @@ export default function InventoryRegistry() {
     // Return a unique list of categories, with "All" at the beginning
     return ['All', ...new Set(allCategories)];
   }, [inventoryData]);
+
+  // Dynamically determine item status based on stock and reorder levels
+  const getItemStatus = (item) => {
+    if (item.stock.value <= item.reorderLevel) return 'CRITICAL';
+    return 'HEALTHY';
+  };
 
   const handleRestock = (item) => {
     setSelectedItem(item);
@@ -59,22 +134,15 @@ export default function InventoryRegistry() {
 
   // Edit function to save updated data back to state
   const handleSaveEdit = (updatedItem) => {
-    setInventoryData(prevData => 
-      prevData.map(item => item.sku === updatedItem.sku ? updatedItem : item)
-    );
+    updateItemMutation.mutate({
+      itemId: updatedItem.id || updatedItem.sku,
+      payload: updatedItem,
+    });
   };
 
   // Restock function to update stock quantity in state
   const handleConfirmRestock = (itemToRestock, amount) => {
-    setInventoryData(prevData =>
-      prevData.map(item => {
-        if (item.sku === itemToRestock.sku) {
-          const newStockValue = item.stock.value + amount;
-          return { ...item, stock: { ...item.stock, value: newStockValue } };
-        }
-        return item;
-      })
-    );
+    restockMutation.mutate({ item: itemToRestock, amount });
   };
 
   // Filter data based on search term
@@ -142,6 +210,11 @@ export default function InventoryRegistry() {
 
       {/* STOCK TABLE */}
       <div className="bg-white border border-slate-100 rounded-xl shadow-sm overflow-hidden">
+        {filteredInventoryData.length === 0 ? (
+          <div className="p-8 text-center text-sm text-slate-500">
+            No inventory items are available yet.
+          </div>
+        ) : (
         <table className="w-full text-left border-collapse">
           <thead className="bg-slate-50 text-[10px] uppercase font-black text-slate-500">
             <tr>
@@ -164,13 +237,17 @@ export default function InventoryRegistry() {
                   {item.stock.value} <span className="text-slate-400">{item.stock.unit}</span>
                 </td>
                 <td className="px-6 py-4">
-                  <span className={`text-[9px] font-black px-2 py-1 rounded border ${
-                    item.status === 'HEALTHY' 
-                    ? 'bg-emerald-50 text-emerald-600 border-emerald-100' 
-                    : 'bg-red-50 text-red-600 border-red-100'
-                  }`}>
-                    {item.status}
-                  </span>
+                  {(() => {
+                    const status = getItemStatus(item);
+                    const statusClass = status === 'HEALTHY'
+                      ? 'bg-emerald-50 text-emerald-600 border-emerald-100'
+                      : 'bg-red-50 text-red-600 border-red-100';
+                    return (
+                      <span className={`text-[9px] font-black px-2 py-1 rounded border ${statusClass}`}>
+                        {status}
+                      </span>
+                    );
+                  })()}
                 </td>
                 <td className="px-6 py-4 text-right space-x-1 flex justify-end items-center">
                   <button 
@@ -198,6 +275,7 @@ export default function InventoryRegistry() {
             ))}
           </tbody>
         </table>
+        )}
       </div>
 
       {/* MODALS SECTION */}

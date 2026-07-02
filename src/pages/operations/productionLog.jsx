@@ -1,44 +1,11 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTenant } from "../../hooks/useTenant";
 import { QUERY_KEYS } from "../../providers/QueryProvider";
-import apiClient from "../../lib/apiClient";
+import { financeApi, productionApi, safetyApi } from "../../lib/backendApi";
 import { Plus, Beaker, AlertTriangle, ShieldCheck, Search, Filter, RotateCcw, ChevronDown, Pencil, Trash2 } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import FastMilkLog from "../../components/operations/FastMilkLog";
 import { Link } from "react-router-dom";
-
-export const DEFAULT_MILK_ROWS = [
-  {
-    id: 'milk-1',
-    date: '2026-06-09',
-    time: '06:45 AM',
-    milker: 'MWANGI',
-    cowId: 'C-102',
-    cowName: 'LUNA',
-    amount: '14.5',
-    status: 'Verified',
-  },
-  {
-    id: 'milk-2',
-    date: '2026-06-09',
-    time: '11:30 AM',
-    milker: 'A. KIPRUTO',
-    cowId: 'C-214',
-    cowName: 'NALA',
-    amount: '11.2',
-    status: 'Pending',
-  },
-  {
-    id: 'milk-3',
-    date: '2026-06-08',
-    time: '05:50 PM',
-    milker: 'MWANGI',
-    cowId: 'C-311',
-    cowName: 'ZURI',
-    amount: '9.8',
-    status: 'Flagged',
-  },
-];
 
 export function filterMilkRows(rows, filters) {
   return rows.filter((row) => {
@@ -60,7 +27,7 @@ export default function YieldLog() {
   const [showFastLog, setShowFastLog] = useState(false);
   const [selectedRecord, setSelectedRecord] = useState(null);
   const [fastLogMode, setFastLogMode] = useState('create');
-  const [milkRows, setMilkRows] = useState(() => DEFAULT_MILK_ROWS);
+  const [milkRows, setMilkRows] = useState([]);
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [filters, setFilters] = useState({
     date: "",
@@ -69,6 +36,29 @@ export default function YieldLog() {
     minAmount: "",
     maxAmount: "",
   });
+
+  const { data: yieldRowsRaw } = useQuery({
+    queryKey: ['production-yield-rows', tenantId, farmId],
+    queryFn: () => productionApi.listYield(),
+    enabled: !!farmId,
+  });
+
+  const normalizeYieldRow = (row) => ({
+    id: row?.id ?? row?.yield_id ?? row?.recordId ?? `milk-${Date.now()}`,
+    date: row?.date ?? row?.milkingDate ?? row?.created_at ?? new Date().toISOString().slice(0, 10),
+    time: row?.time ?? (row?.createdAt ? new Date(row.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })),
+    milker: row?.milker ?? row?.created_by ?? 'SYSTEM',
+    cowId: row?.cowId ?? row?.cow_id ?? row?.animal_id ?? '',
+    cowName: row?.cowName ?? row?.animal_name ?? row?.name ?? '',
+    amount: Number(row?.amount ?? row?.volume ?? row?.liters ?? 0).toFixed(1),
+    status: row?.status ?? 'Pending',
+  });
+
+  useEffect(() => {
+    if (Array.isArray(yieldRowsRaw)) {
+      setMilkRows(yieldRowsRaw.map(normalizeYieldRow));
+    }
+  }, [yieldRowsRaw]);
 
   const filteredMilkRows = useMemo(() => {
     return filterMilkRows(milkRows, filters);
@@ -106,8 +96,7 @@ export default function YieldLog() {
   // Integrated Safety Check: Fetching active medical withdrawals
   const { data: hardlocksRaw } = useQuery({
     queryKey: QUERY_KEYS.HARDLOCKS(tenantId, farmId),
-    queryFn: () =>
-      apiClient.get("/veterinary/hardlocks/active").then((res) => res.data),
+    queryFn: () => safetyApi.activeHardlocks(),
     enabled: !!farmId,
   });
 
@@ -122,6 +111,7 @@ export default function YieldLog() {
   const handleFastLogSaved = () => {
     queryClient.invalidateQueries({ queryKey: QUERY_KEYS.YIELD_SUMMARY(tenantId, farmId) });
     queryClient.invalidateQueries({ queryKey: QUERY_KEYS.YIELD_TREND(tenantId, farmId) });
+    queryClient.invalidateQueries({ queryKey: ['production-yield-rows', tenantId, farmId] });
   };
 
   const openCreateLog = () => {
@@ -161,6 +151,18 @@ export default function YieldLog() {
   const handleLogDelete = (deletedRecord) => {
     handleFastLogSaved();
     setMilkRows((prev) => prev.filter((row) => row.id !== (deletedRecord?.id || selectedRecord?.id)));
+  };
+
+  const handleDeleteFromTable = async (row) => {
+    if (!window.confirm(`Delete milk record for ${row.cowId}?`)) return;
+
+    try {
+      await productionApi.deleteYield(row.id);
+      handleFastLogSaved();
+      setMilkRows((prev) => prev.filter((entry) => entry.id !== row.id));
+    } catch (error) {
+      console.error('Failed to delete milk record', error);
+    }
   };
 
   return (
@@ -317,7 +319,7 @@ export default function YieldLog() {
 
             <div className="flex items-center gap-2 text-xs text-ink-muted">
               <Search size={14} />
-              Showing {filteredMilkRows.length} of {DEFAULT_MILK_ROWS.length} records
+              Showing {filteredMilkRows.length} of {milkRows.length} records
             </div>
           </div>
         )}
@@ -377,7 +379,7 @@ export default function YieldLog() {
                     </button>
                     <button
                       type="button"
-                      onClick={() => setMilkRows((prev) => prev.filter((entry) => entry.id !== row.id))}
+                      onClick={() => handleDeleteFromTable(row)}
                       className="btn-danger gap-1 px-3 py-2 text-xs"
                     >
                       <Trash2 size={12} /> Delete

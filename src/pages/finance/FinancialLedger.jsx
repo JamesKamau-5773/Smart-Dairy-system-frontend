@@ -3,33 +3,11 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useTenant } from '../../hooks/useTenant';
 import { QUERY_KEYS } from '../../providers/QueryProvider';
 import apiClient from '../../lib/apiClient';
-import { Wallet, ArrowUpRight, ArrowDownLeft, Receipt, ShieldCheck } from 'lucide-react';
+import { financeApi } from '../../lib/backendApi';
+import { Wallet, ArrowUpRight, ArrowDownLeft, Receipt, ShieldCheck, Sun, Moon } from 'lucide-react';
 import ExpenseModal from '../../components/forms/ExpenseModal';
 import IncomeModal from '../../components/forms/IncomeModal';
-
-// Mock initial data for demonstration purposes
-const initialTransactions = [
-  {
-    id: 'txn_1',
-    type: 'income',
-    date: '2026-06-24',
-    reference: 'QJ12ABC345',
-    category: 'Milk Sale',
-    party: 'Rift Valley Cooperative',
-    status: 'CLEARED',
-    amount: 45250,
-  },
-  {
-    id: 'txn_2',
-    type: 'expense',
-    date: '2026-06-22',
-    reference: 'INV-8832',
-    category: 'Feed Purchase',
-    party: 'AgroVet Supply',
-    status: 'PAID',
-    amount: -18500,
-  },
-];
+import { useTheme } from '../../providers/ThemeProvider';
 
 const TransactionRow = ({ tx }) => (
   <tr className="hover:bg-slate-50 transition-colors">
@@ -59,41 +37,37 @@ export default function FinancialLedger() {
   const queryClient = useQueryClient();
   const [isExpenseModalOpen, setIsExpenseModalOpen] = useState(false);
   const [isIncomeModalOpen, setIsIncomeModalOpen] = useState(false);
+  const { theme, toggleTheme } = useTheme();
 
   const isCoopMember = tenant?.isCoopMember || false;
 
   const { data: finance } = useQuery({
     queryKey: QUERY_KEYS.UNIT_COST(tenantId, farmId),
-    queryFn: () => apiClient.get('/finance/unit-cost').then(res => res.data),
+    queryFn: () => financeApi.unitCost(),
     enabled: !!farmId,
   });
 
-  // For demonstration, we'll manage transactions in local state.
-  // In a real app, this would come from a useQuery hook.
-  const [transactions, setTransactions] = useState(initialTransactions);
+  const [transactions, setTransactions] = useState([]);
 
-  // --- Mutations for adding transactions ---
   const useTransactionMutation = (transactionType) => {
     return useMutation({
       mutationFn: async (newTransactionData) => {
-        // MOCK API CALL
-        return new Promise(resolve => {
-          setTimeout(() => {
-            const newTransaction = {
-              id: `txn_${Date.now()}`,
-              type: transactionType,
-              status: transactionType === 'income' ? 'CLEARED' : 'PAID',
-              party: newTransactionData.source || newTransactionData.paidTo,
-              amount: transactionType === 'income' ? parseFloat(newTransactionData.amount) : -Math.abs(parseFloat(newTransactionData.amount)),
-              ...newTransactionData,
-            };
-            resolve(newTransaction);
-          }, 500);
+        return financeApi.createLedgerEntry({
+          ...newTransactionData,
+          type: transactionType,
+          status: transactionType === 'income' ? 'CLEARED' : 'PAID',
+          party: transactionType === 'income' ? newTransactionData.source : newTransactionData.paidTo,
+          amount: transactionType === 'income'
+            ? parseFloat(newTransactionData.amount)
+            : -Math.abs(parseFloat(newTransactionData.amount)),
         });
       },
       onSuccess: (newTransaction) => {
         // Optimistically update the local state
         setTransactions(prev => [newTransaction, ...prev].sort((a, b) => new Date(b.date) - new Date(a.date)));
+      },
+      onError: (error) => {
+        console.error(`Failed to add ${transactionType}:`, error);
       },
     });
   };
@@ -101,7 +75,6 @@ export default function FinancialLedger() {
   const addIncomeMutation = useTransactionMutation('income');
   const addExpenseMutation = useTransactionMutation('expense');
 
-  // --- Derived KPIs from transactions state ---
   const kpis = useMemo(() => {
     return transactions.reduce((acc, tx) => {
       if (tx.type === 'income') {
@@ -125,7 +98,14 @@ export default function FinancialLedger() {
           </div>
           <h2 className="font-sans font-black text-3xl tracking-tight text-ink m-0">Capital Ledger</h2>
         </div>
-        <div className="flex gap-3">
+        <div className="flex items-center gap-3">
+          <button 
+            onClick={toggleTheme}
+            className="flex items-center p-2.5 bg-white border border-slate-200 text-ink rounded-lg hover:bg-slate-50 transition-all"
+            aria-label="Toggle theme"
+          >
+            {theme === 'light' ? <Moon size={14} /> : <Sun size={14} />}
+          </button>
           <button onClick={() => setIsExpenseModalOpen(true)} className="flex items-center px-5 py-2.5 bg-white border border-slate-200 text-ink rounded-lg font-black text-xs uppercase hover:bg-slate-50 transition-all">
             <ArrowDownLeft size={14} className="mr-2 text-danger" /> Log Expense
           </button>

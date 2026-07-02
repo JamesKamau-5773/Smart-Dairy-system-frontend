@@ -1,8 +1,21 @@
-import React from 'react';
+import React, { useState } from 'react';
 
 export default function VeterinaryForm({ onSubmit }) {
+  const [patientId, setPatientId] = useState('C-102 (Luna)');
+  const [treatment, setTreatment] = useState('');
+  const [withdrawalDays, setWithdrawalDays] = useState('');
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    onSubmit({
+      patientId,
+      treatment,
+      withdrawalDays: parseInt(withdrawalDays, 10) || 0,
+    });
+  };
+
   return (
-    <form className="space-y-6" onSubmit={(e) => { e.preventDefault(); onSubmit(); }}>
+    <form className="space-y-6" onSubmit={handleSubmit}>
       <div className="rounded-2xl border border-ink/10 bg-[linear-gradient(135deg,rgba(255,247,237,0.96),rgba(255,255,255,0.98))] p-4 shadow-[0_10px_30px_rgba(15,23,42,0.05)]">
         <p className="text-[10px] font-bold uppercase tracking-widest text-danger">Veterinary record</p>
         <p className="mt-1 text-sm leading-6 text-ink-muted">Document treatment details and withdrawal periods in a clear, audit-friendly layout.</p>
@@ -10,7 +23,7 @@ export default function VeterinaryForm({ onSubmit }) {
 
       <div className="space-y-2">
         <label className="text-[10px] font-bold uppercase tracking-widest text-ink-muted">Patient ID</label>
-        <select className="input-machined w-full font-medium text-sm">
+        <select value={patientId} onChange={(e) => setPatientId(e.target.value)} className="input-machined w-full font-medium text-sm">
           <option>C-102 (Luna)</option>
           <option>K-201 (Calf Alpha)</option>
         </select>
@@ -19,11 +32,11 @@ export default function VeterinaryForm({ onSubmit }) {
       <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
         <div className="space-y-2">
           <label className="text-[10px] font-bold uppercase tracking-widest text-ink-muted">Medicine / treatment</label>
-          <input type="text" className="input-machined w-full text-sm" placeholder="e.g. Penicillin" />
+          <input type="text" value={treatment} onChange={(e) => setTreatment(e.target.value)} required className="input-machined w-full text-sm" placeholder="e.g. Penicillin" />
         </div>
         <div className="space-y-2">
           <label className="text-[10px] font-bold uppercase tracking-widest text-ink-muted">Withdrawal (days)</label>
-          <input type="number" className="input-machined w-full font-medium text-sm" placeholder="0" />
+          <input type="number" value={withdrawalDays} onChange={(e) => setWithdrawalDays(e.target.value)} required min="0" className="input-machined w-full font-medium text-sm" placeholder="0" />
         </div>
       </div>
 

@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Scale, Info, Plus, Trash2, ArrowRight } from 'lucide-react';
+import { nutritionApi } from '../../lib/backendApi';
 
 /**
  * SRP: Renders the informative banner explaining how the data is stored.
@@ -56,6 +58,7 @@ const ConversionRow = ({ conversion, onRemove }) => {
  * Main Page Component
  */
 export default function UnitConversions() {
+  const queryClient = useQueryClient();
   const [material, setMaterial] = useState('');
   const [localUnit, setLocalUnit] = useState('');
   const [baseUnit, setBaseUnit] = useState('kg');
@@ -71,6 +74,28 @@ export default function UnitConversions() {
     }
   });
 
+  const { data: backendConversions } = useQuery({
+    queryKey: ['unit-conversions'],
+    queryFn: () => nutritionApi.listConversions(),
+  });
+
+  useEffect(() => {
+    if (Array.isArray(backendConversions) && backendConversions.length > 0) {
+      setConversions(backendConversions);
+    }
+  }, [backendConversions]);
+
+  const saveConversion = useMutation({
+    mutationFn: (payload) => nutritionApi.saveConversion(payload),
+    onSuccess: (savedConversion) => {
+      setConversions((current) => [...current, savedConversion]);
+      queryClient.invalidateQueries({ queryKey: ['unit-conversions'] });
+      setMaterial('');
+      setLocalUnit('');
+      setRatio('');
+    },
+  });
+
   // Persist to localStorage whenever conversions change
   useEffect(() => {
     localStorage.setItem('jivu_unit_conversions', JSON.stringify(conversions));
@@ -84,20 +109,12 @@ export default function UnitConversions() {
       return;
     }
 
-    const newConversion = {
-      id: crypto.randomUUID(),
+    saveConversion.mutate({
       material: material.trim(),
       localUnit: localUnit.trim(),
       baseUnit,
       ratio: parseFloat(ratio),
-    };
-
-    setConversions((prev) => [...prev, newConversion]);
-
-    // Reset form fields
-    setMaterial('');
-    setLocalUnit('');
-    setRatio('');
+    });
   };
 
   const handleRemove = (idToRemove) => {

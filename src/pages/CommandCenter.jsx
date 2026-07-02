@@ -2,6 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 import { useTenant } from '../hooks/useTenant';
 import { QUERY_KEYS } from '../providers/QueryProvider';
 import apiClient from '../lib/apiClient';
+import { financeApi } from '../lib/backendApi';
 import { Activity, Droplets, TrendingUp, DollarSign, LineChart as ChartIcon } from 'lucide-react';
 import React, { Suspense, lazy } from 'react';
 
@@ -57,28 +58,15 @@ export default function FarmDashboard() {
     queryKey: QUERY_KEYS.YIELD_SUMMARY(tenantId, farmId),
     queryFn: () => apiClient.get('/production/summary').then(res => res.data),
     enabled: !!farmId,
-    initialData: { total_liters_today: 485, cows_milked: 44, average_yield_per_cow: 11.0, variance_from_yesterday: "+3.2%" }
   });
 
-  // 2. Trend Data (MOCKED to match MilkTrendChart keys)
-  const { data: trend } = useQuery({
-    queryKey: QUERY_KEYS.YIELD_TREND(tenantId, farmId),
-    queryFn: () => Promise.resolve([
-      { date: 'Jun 19', value: 420 },
-      { date: 'Jun 20', value: 440 },
-      { date: 'Jun 21', value: 435 },
-      { date: 'Jun 22', value: 470 },
-      { date: 'Jun 23', value: 485 },
-    ]),
-    enabled: !!farmId,
-  });
+  const trend = [];
 
   // 3. Finance
   const { data: finance } = useQuery({
     queryKey: QUERY_KEYS.UNIT_COST(tenantId, farmId),
-    queryFn: () => apiClient.get('/finance/unit-cost').then(res => res.data),
+    queryFn: () => financeApi.unitCost(),
     enabled: !!farmId,
-    initialData: { margin: 24.50, currency: 'KES' }
   });
 
   // 4. Dashboard Summary
@@ -86,7 +74,6 @@ export default function FarmDashboard() {
     queryKey: QUERY_KEYS.DASHBOARD_SUMMARY(tenantId, farmId),
     queryFn: () => apiClient.get('/v1/dashboard/summary').then((res) => res.data),
     enabled: !!farmId,
-    initialData: { today_revenue_kes: 24250, today_feed_cost_kes: 7800, net_margin_kes: 16450 }
   });
 
   return (
@@ -106,23 +93,23 @@ export default function FarmDashboard() {
       <section className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <div className="card-machined bg-surface p-5 border border-ink/5">
           <p className="text-xs font-bold text-ink-muted uppercase tracking-wider">Today's Milk Sales</p>
-          <h3 className="text-2xl font-black text-brand mt-2">KES {dashboardSummary.today_revenue_kes.toLocaleString()}</h3>
+          <h3 className="text-2xl font-black text-brand mt-2">KES {(dashboardSummary?.today_revenue_kes ?? 0).toLocaleString()}</h3>
         </div>
         <div className="card-machined bg-surface p-5 border border-ink/5">
           <p className="text-xs font-bold text-ink-muted uppercase tracking-wider">Today's Feed Cost</p>
-          <h3 className="text-2xl font-black text-ink mt-2">KES {dashboardSummary.today_feed_cost_kes.toLocaleString()}</h3>
+          <h3 className="text-2xl font-black text-ink mt-2">KES {(dashboardSummary?.today_feed_cost_kes ?? 0).toLocaleString()}</h3>
         </div>
         <div className="card-machined bg-brand/5 p-5 border-2 border-brand/20 shadow-sm">
           <p className="text-xs font-bold text-brand uppercase tracking-wider">Daily Profit</p>
-          <h3 className="text-2xl font-black text-brand mt-2">KES {dashboardSummary.net_margin_kes.toLocaleString()}</h3>
+          <h3 className="text-2xl font-black text-brand mt-2">KES {(dashboardSummary?.net_margin_kes ?? 0).toLocaleString()}</h3>
         </div>
       </section>
 
       <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <SummaryCard title="Total Milk (Today)" value={summary.total_liters_today} unit="Liters" icon={Droplets} trend={summary.variance_from_yesterday} />
-        <SummaryCard title="Cows Milked" value={summary.cows_milked} unit="Cows" icon={Activity} />
-        <SummaryCard title="Avg. per Cow" value={summary.average_yield_per_cow} unit="L/cow" icon={TrendingUp} />
-        <SummaryCard title="Profit per Liter" value={<Money amount={finance.margin} currency={finance.currency} />} icon={DollarSign} />
+        <SummaryCard title="Total Milk (Today)" value={summary?.total_liters_today ?? 0} unit="Liters" icon={Droplets} trend={summary?.variance_from_yesterday} />
+        <SummaryCard title="Cows Milked" value={summary?.cows_milked ?? 0} unit="Cows" icon={Activity} />
+        <SummaryCard title="Avg. per Cow" value={summary?.average_yield_per_cow ?? 0} unit="L/cow" icon={TrendingUp} />
+        <SummaryCard title="Profit per Liter" value={<Money amount={finance?.margin ?? 0} currency={finance?.currency ?? 'KES'} />} icon={DollarSign} />
       </section>
 
       <div className="card-machined bg-surface p-8 border border-ink/10">

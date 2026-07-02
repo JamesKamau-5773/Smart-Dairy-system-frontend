@@ -20,7 +20,6 @@ export default function StandardDeliveryModal({ isOpen, onClose, item, onRestock
 
   if (!isOpen) return null;
 
-  // Mock data for the quick-select cards (only used if no specific item was passed)
   const quickSelectOptions = [
     { name: 'Dairy Meal', stock: '120 KG' },
     { name: 'Maize Germ', stock: '850 KG' },

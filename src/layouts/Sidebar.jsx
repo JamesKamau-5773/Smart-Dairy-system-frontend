@@ -7,8 +7,8 @@ import {
 } from 'lucide-react';
 import LABELS from '../lib/labels';
 import { useAuth } from '../contexts/AuthContext';
-import { isPrimaryAdmin, hasRole } from '../lib/permissions';
 import FarmSwitcher from './FarmSwitcher';
+import { canAccessCommandCenter, canViewAdminControls, isCooperativeAdmin, isSuperAdmin } from '../lib/roles';
 
 export default function Sidebar() {
   const { currentUser, logout } = useAuth();
@@ -30,18 +30,34 @@ export default function Sidebar() {
     navigate('/login');
   };
 
-  const canViewBreeding = isPrimaryAdmin(currentUser) || hasRole(currentUser, 'Herdsman') || hasRole(currentUser, 'FARMER');
-  const canViewBuyers = isPrimaryAdmin(currentUser) || hasRole(currentUser, 'FARMER');
-  const canViewHR = isPrimaryAdmin(currentUser) || hasRole(currentUser, 'FARMER');
-  const canViewHerdsmanView = isPrimaryAdmin(currentUser) || hasRole(currentUser, 'FARMER') || hasRole(currentUser, 'Herdsman');
-  const canViewFeedNutrition = isPrimaryAdmin(currentUser) || hasRole(currentUser, 'FARMER');
-  const herdsmanViewLabel = hasRole(currentUser, 'Herdsman') ? 'My Tasks' : 'Herdsman View';
+  const showAdminControls = canViewAdminControls(currentUser);
+  const canViewBreeding = true;
+  const canViewBuyers = showAdminControls;
+  const canViewHR = showAdminControls;
+  const canViewHerdsmanView = true;
+  const canViewFeedNutrition = showAdminControls || Boolean(currentUser);
+  const herdsmanViewLabel = 'Herdsman View';
+  const isPlatformAdmin = isSuperAdmin(currentUser);
+  const isCoopAdmin = isCooperativeAdmin(currentUser);
+  const showCommandCenter = canAccessCommandCenter(currentUser);
 
   const navGroups = [
     {
+      title: 'Platform',
+      items: [
+        { label: 'System Admin Dashboard', to: '/system-admin/dashboard', icon: LayoutDashboard, visible: isPlatformAdmin },
+      ],
+    },
+    {
+      title: 'Cooperative Admin',
+      items: [
+        { label: 'Member Onboarding', to: '/cooperative-admin/members', icon: Users, visible: isCoopAdmin },
+      ],
+    },
+    {
       title: null,
       items: [
-        { label: LABELS.COMMAND_CENTER, to: '/dashboard', icon: LayoutDashboard, visible: true },
+        { label: LABELS.COMMAND_CENTER, to: '/dashboard', icon: LayoutDashboard, visible: showCommandCenter },
       ],
     },
     {
@@ -75,8 +91,8 @@ export default function Sidebar() {
       title: 'Finance & Supply',
       items: [
         { label: LABELS.CUSTOMER_BILLING, to: '/finance/buyers', icon: Users, visible: canViewBuyers },
-        { label: 'Inventory', to: '/operations/inventory', icon: Package, visible: true },
-        { label: 'Ledger', to: '/finance/ledger', icon: Wallet, visible: true },
+        { label: 'Inventory', to: '/operations/inventory', icon: Package, visible: showAdminControls },
+        { label: 'Ledger', to: '/finance/ledger', icon: Wallet, visible: showAdminControls },
       ],
     },
     {
@@ -154,14 +170,14 @@ export default function Sidebar() {
         transition-transform duration-300  
         fixed md:fixed md:inset-y-0 md:left-0 
         w-64 md:w-60 xl:w-64 h-screen md:h-screen 
-        bg-surface border-r border-ink/10 
+        bg-white border-r border-gray-200 
         flex flex-col overflow-hidden
         z-[25] md:z-20
       `}>
       
       {/* Logo Block */}
-      <div className="h-16 flex items-center px-6 border-b border-ink/10 bg-brand">
-        <h1 className="text-surface font-display font-semibold text-lg m-0 leading-tight">
+      <div className="h-16 flex items-center px-6 border-b border-gray-200 bg-slate-900">
+        <h1 className="text-white font-display font-semibold text-lg m-0 leading-tight">
           Jivu Smart Dairy
         </h1>
       </div>
@@ -177,7 +193,7 @@ export default function Sidebar() {
                 <button
                   type="button"
                   onClick={() => mobileOpen && toggleGroup(group.title)}
-                  className={`w-full px-2 py-1.5 flex items-center justify-between text-xs font-bold tracking-wider uppercase rounded-md md:px-4 md:py-0 md:cursor-default transition-colors ${activeGroupTitle === group.title ? 'text-brand' : 'text-ink/50'}`}
+                  className={`w-full px-2 py-1.5 flex items-center justify-between text-xs font-bold tracking-wider uppercase rounded-md md:px-4 md:py-0 md:cursor-default transition-colors ${activeGroupTitle === group.title ? 'text-slate-700' : 'text-gray-400'}`}
                   aria-expanded={mobileOpen ? !isGroupCollapsed(group.title) : true}
                   aria-label={`Toggle ${group.title} section`}
                 >
@@ -202,14 +218,13 @@ export default function Sidebar() {
                     to={item.to}
                     end={item.exact}
                     onClick={() => setMobileOpen(false)}
-                    className={({ isActive }) => `flex items-center px-4 py-3 min-h-[44px] font-sans font-semibold text-sm transition-all duration-100 border-3 rounded-lg relative ${
+                    className={({ isActive }) => `flex items-center px-4 py-3 min-h-[44px] font-sans font-semibold text-sm transition-colors duration-100 border-l-2 rounded-md relative ${
                       isActive
-                        ? 'bg-brand text-surface border-brand/20 shadow-[0_10px_20px_rgba(2,132,199,0.24)] pl-5'
-                        : `border-transparent text-ink hover:border-ink/10 hover:bg-surface-raised ${itemIsActive ? 'ring-2 ring-brand/20 bg-brand/5' : ''}`
+                        ? 'bg-gray-50 text-gray-900 border-slate-900 pl-4'
+                        : `border-transparent text-gray-700 hover:border-gray-200 hover:bg-gray-50 ${itemIsActive ? 'bg-gray-50 text-gray-900' : ''}`
                     }`}
                   >
-                    <span className={`absolute left-2 top-1/2 h-5 w-1 -translate-y-1/2 rounded-full ${itemIsActive ? 'bg-brand' : 'bg-transparent'}`} />
-                    <Icon size={18} className="mr-3 shrink-0" /> {item.label}
+                    <Icon size={18} className="mr-3 shrink-0 text-slate-500" /> {item.label}
                   </NavLink>
                 );
               })}
@@ -219,13 +234,13 @@ export default function Sidebar() {
       </nav>
 
       {/* Bottom Operator Info */}
-      <div className="p-4 border-t border-ink/10 bg-surface-raised">
-        <p className="text-ink font-sans text-xs font-medium mb-3 truncate">
+      <div className="p-4 border-t border-gray-200 bg-gray-50">
+        <p className="text-gray-700 font-sans text-xs font-medium mb-3 truncate">
           Operator: {currentUser?.name || 'Unknown'}
         </p>
         <button 
           onClick={handleLogout}
-          className="btn-command w-full min-h-[44px] bg-danger text-surface hover:bg-danger/90 flex items-center justify-center text-xs py-2 rounded-md font-semibold"
+          className="btn-command w-full min-h-[44px] bg-red-600 text-white hover:bg-red-700 flex items-center justify-center text-xs py-2 rounded-md font-semibold"
         >
           <LogOut size={14} className="mr-2 shrink-0" /> Sign out
         </button>

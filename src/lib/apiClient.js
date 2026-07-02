@@ -1,8 +1,10 @@
 import axios from 'axios';
 import { tenantRef } from './tenantRef';
 
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
+
 const apiClient = axios.create({
-  baseURL: '/api',
+  baseURL: API_BASE_URL,
   timeout: 10000, 
 });
 
@@ -12,6 +14,16 @@ apiClient.interceptors.request.use((config) => {
   if (sessionStr) {
     const session = JSON.parse(sessionStr);
     config.headers['Authorization'] = `Bearer ${session.token}`;
+
+    const sessionTenantId = session.tenant_id ?? session.cooperative_id;
+
+    if (!tenantRef.tenantId && sessionTenantId) {
+      tenantRef.tenantId = sessionTenantId;
+    }
+
+    if (!tenantRef.farmId && session.farm_id) {
+      tenantRef.farmId = session.farm_id;
+    }
   }
 
   // Inject Isolation Headers

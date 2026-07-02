@@ -70,6 +70,7 @@ export default function ExpenseModal({ isOpen, onClose, onSave }) {
                 value={formData.category}
                 onChange={handleChange}
                 className="w-full px-3 py-2 border border-slate-300 rounded-lg text-xs font-bold bg-white">
+                <option value="Salary Advance">Salary Advance</option>
                 <option value="Feed Purchase">Feed Purchase</option>
                 <option value="Vet Services">Vet Services</option>
                 <option value="Labor / Wages">Labor / Wages</option>

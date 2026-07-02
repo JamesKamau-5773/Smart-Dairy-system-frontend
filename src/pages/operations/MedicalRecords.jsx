@@ -1,4 +1,5 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   AlertCircle,
   CalendarDays,
@@ -22,73 +23,7 @@ import AlertBanner from '../../components/ui/AlertBanner';
 import Modal from '../../components/ui/Modal';
 import { createAuditEntry, getRelativeTime, logToAuditTrail } from '../../lib/audit';
 import { formatValidationErrors, getFirstErrorMessage, validateForm } from '../../lib/validation';
-
-const INITIAL_RECORDS = [
-  {
-    id: 'enc_001',
-    date: '2026-05-20',
-    cow: 'C-101 (Luna)',
-    reason: 'Swollen udder and reduced appetite',
-    diagnosis: 'Mild Mastitis',
-    meds: 'Antibiotics (3 days)',
-    recommendations: 'Hand-milk for 48hrs, isolate from bulk tank, monitor temperature twice daily.',
-    status: 'Under Treatment',
-    severity: 'Medium',
-    vet: 'Dr. Amina K.',
-    followUp: '2026-05-23',
-    createdAt: '2026-05-20T08:45:00Z',
-    updatedAt: '2026-05-20T09:30:00Z',
-    updatedBy: 'Dr. Amina K.',
-  },
-  {
-    id: 'enc_002',
-    date: '2026-05-18',
-    cow: 'C-84 (Bessie)',
-    reason: 'Routine checkup and body condition review',
-    diagnosis: 'Healthy',
-    meds: 'None',
-    recommendations: 'Monitor diet and maintain routine vaccination schedule.',
-    status: 'Closed',
-    severity: 'Low',
-    vet: 'Nurse Grace',
-    followUp: '2026-06-18',
-    createdAt: '2026-05-18T10:10:00Z',
-    updatedAt: '2026-05-18T11:05:00Z',
-    updatedBy: 'Nurse Grace',
-  },
-  {
-    id: 'enc_003',
-    date: '2026-06-15',
-    cow: 'C-115 (Maya)',
-    reason: 'Loss of appetite and reduced milk yield',
-    diagnosis: 'Suspected Ketosis',
-    meds: 'Energy tonic and electrolytes',
-    recommendations: 'Review ration balance, check water intake, and reassess within 24 hours.',
-    status: 'Follow-up Due',
-    severity: 'High',
-    vet: 'Dr. Amina K.',
-    followUp: '2026-06-16',
-    createdAt: '2026-06-15T14:20:00Z',
-    updatedAt: '2026-06-15T16:05:00Z',
-    updatedBy: 'Dr. Amina K.',
-  },
-  {
-    id: 'enc_004',
-    date: '2026-06-14',
-    cow: 'C-29 (Toto)',
-    reason: 'Limping on rear left hoof',
-    diagnosis: 'Hoof Abscess',
-    meds: 'Hoof wrap and anti-inflammatory',
-    recommendations: 'Keep in dry pen, inspect wound daily, and review in 3 days.',
-    status: 'Under Treatment',
-    severity: 'High',
-    vet: 'Dr. Peter O.',
-    followUp: '2026-06-18',
-    createdAt: '2026-06-14T07:15:00Z',
-    updatedAt: '2026-06-14T08:00:00Z',
-    updatedBy: 'Dr. Peter O.',
-  },
-];
+import { medicalApi } from '../../lib/backendApi';
 
 const EMPTY_FORM = {
   cowTag: '',
@@ -116,13 +51,14 @@ const STATUS_STYLES = {
 };
 
 export default function VetRecords() {
+  const queryClient = useQueryClient();
   const [showForm, setShowForm] = useState(false);
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [selectedRecord, setSelectedRecord] = useState(null);
   const [query, setQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('All');
   const [severityFilter, setSeverityFilter] = useState('All');
-  const [records, setRecords] = useState(INITIAL_RECORDS);
+  const [records, setRecords] = useState([]);
   const [form, setForm] = useState(EMPTY_FORM);
   const [formErrors, setFormErrors] = useState({});
   const [isSaving, setIsSaving] = useState(false);
@@ -130,6 +66,39 @@ export default function VetRecords() {
   const [showSuccess, setShowSuccess] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
+  const { data: backendRecords } = useQuery({
+    queryKey: ['medical-records'],
+    queryFn: () => medicalApi.listRecords(),
+  });
+
+  const createRecordMutation = useMutation({
+    mutationFn: (payload) => medicalApi.createRecord(payload),
+    onSuccess: (record) => {
+      setRecords((current) => [record, ...current.filter((entry) => entry.id !== record.id)]);
+      queryClient.invalidateQueries({ queryKey: ['medical-records'] });
+      setSelectedRecord(record);
+      setShowForm(false);
+      setForm(EMPTY_FORM);
+      setFormErrors({});
+      setErrorMessage('');
+      setShowError(false);
+      setSuccessMessage(`Medical record saved for ${record.cow || form.cowTag}.`);
+      setShowSuccess(true);
+    },
+    onError: () => {
+      setErrorMessage('Failed to save the medical record. Please try again.');
+      setShowError(true);
+    },
+    onSettled: () => {
+      setIsSaving(false);
+    },
+  });
+
+  useEffect(() => {
+    if (Array.isArray(backendRecords)) {
+      setRecords(backendRecords);
+    }
+  }, [backendRecords]);
 
   const stats = useMemo(() => {
     const open = records.filter((record) => record.status !== 'Closed').length;
@@ -194,7 +163,6 @@ export default function VetRecords() {
     setIsSaving(true);
 
     const nextRecord = {
-      id: `enc_${String(records.length + 1).padStart(3, '0')}`,
       date: form.date,
       cow: form.cowTag,
       reason: form.symptoms,
@@ -210,19 +178,11 @@ export default function VetRecords() {
       updatedBy: form.vet,
     };
 
-    window.setTimeout(() => {
-      setRecords((current) => [nextRecord, ...current]);
-      logToAuditTrail(createAuditEntry('create', 'medical-record', nextRecord, form.vet));
-      setSelectedRecord(nextRecord);
-      setShowForm(false);
-      setForm(EMPTY_FORM);
-      setFormErrors({});
-      setErrorMessage('');
-      setShowError(false);
-      setSuccessMessage(`Medical record saved for ${form.cowTag}.`);
-      setShowSuccess(true);
-      setIsSaving(false);
-    }, 350);
+    createRecordMutation.mutate(nextRecord, {
+      onSuccess: (savedRecord) => {
+        logToAuditTrail(createAuditEntry('create', 'medical-record', savedRecord, form.vet));
+      },
+    });
   };
 
   const clearFilters = () => {

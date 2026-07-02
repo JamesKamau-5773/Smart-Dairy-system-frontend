@@ -62,20 +62,10 @@ export default function MilkHistory() {
     enabled: !!id,
   });
 
-  const fallbackHistory = {
-    cowId: id,
-    name: 'Unknown Cow',
-    breed: 'Not available',
-    average: '0.0 L/day',
-    peak: '0.0 L/day',
-    lastYield: '0.0 L',
-    sessions: [],
-  };
-
-  const resolvedHistory = history || fallbackHistory;
+  const resolvedHistory = history || null;
   
   // Safely extract sessions to guarantee it is always an array
-  const safeSessions = Array.isArray(resolvedHistory.sessions) ? resolvedHistory.sessions : [];
+  const safeSessions = Array.isArray(resolvedHistory?.sessions) ? resolvedHistory.sessions : [];
 
   const filteredSessions = useMemo(
     () => filterMilkHistorySessions(safeSessions, filters),
@@ -86,6 +76,16 @@ export default function MilkHistory() {
   const totalSessions = safeSessions.length;
 
   const clearFilters = () => setFilters({ search: '', date: '', status: 'all', session: 'all' });
+
+  if (!isLoading && !resolvedHistory) {
+    return (
+      <div className="animate-reveal space-y-6 max-w-6xl mx-auto">
+        <div className="rounded-2xl border border-dashed border-ink/10 bg-surface p-6 text-sm text-ink-muted">
+          No milk history is available for this animal yet.
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="animate-reveal space-y-6 max-w-6xl mx-auto">
@@ -100,7 +100,7 @@ export default function MilkHistory() {
               <Activity size={12} /> Milk Production History
             </div>
             <h2 className="font-sans font-bold text-2xl tracking-tight text-brand m-0 truncate">
-              {id} <span className="text-ink-muted">({resolvedHistory.name})</span>
+              {id} <span className="text-ink-muted">({resolvedHistory?.name || 'Unknown Cow'})</span>
             </h2>
             <p className="text-sm text-ink-muted mt-1">Detailed yield history for the selected animal.</p>
           </div>
@@ -113,9 +113,9 @@ export default function MilkHistory() {
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
-        <MetricCard label="Cow" value={resolvedHistory.name} icon={Droplets} />
-        <MetricCard label="Average Yield" value={resolvedHistory.average} icon={TrendingUp} />
-        <MetricCard label="Peak Yield" value={resolvedHistory.peak} icon={Calendar} />
+        <MetricCard label="Cow" value={resolvedHistory?.name || 'Unknown Cow'} icon={Droplets} />
+        <MetricCard label="Average Yield" value={resolvedHistory?.average || '0.0 L/day'} icon={TrendingUp} />
+        <MetricCard label="Peak Yield" value={resolvedHistory?.peak || '0.0 L/day'} icon={Calendar} />
         <MetricCard label="Total Logged" value={`${totalYield} L`} icon={ShieldAlert} tone="accent" />
       </div>
 
@@ -210,7 +210,7 @@ export default function MilkHistory() {
             <h3 className="font-bold text-brand text-lg m-0">Milk Session Records</h3>
             <p className="text-sm text-ink-muted">Most recent milking sessions first.</p>
           </div>
-          <div className="text-xs font-bold uppercase tracking-widest text-ink-muted">{resolvedHistory.breed}</div>
+          <div className="text-xs font-bold uppercase tracking-widest text-ink-muted">{resolvedHistory?.breed || 'Not available'}</div>
         </div>
 
         {isLoading ? (

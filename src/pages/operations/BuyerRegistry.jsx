@@ -1,7 +1,9 @@
 import React, { useMemo, useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { Users, Search, Building2, Link as LinkIcon, FileText, CheckCircle2, AlertCircle, Plus, Filter, ArrowRight, BadgeDollarSign, CreditCard, X } from 'lucide-react';
 import AlertBanner from '../../components/ui/AlertBanner';
 import Modal from '../../components/ui/Modal';
+import { financeApi } from '../../lib/backendApi';
 
 export default function BuyerRegistry() {
   const [searchTerm, setSearchTerm] = useState('');
@@ -9,39 +11,23 @@ export default function BuyerRegistry() {
   const [banner, setBanner] = useState(null);
   const [selectedBuyer, setSelectedBuyer] = useState(null);
 
-  // Mock CRM Data: In production, fetch from /api/buyers
-  const buyers = [
-    {
-      id: "B-101",
-      name: "Rift Valley Cooperative",
-      type: "Cooperative",
-      contact: "0722 123 456",
-      outstanding: 142500.00,
-      lastDelivery: "May 25, 2026",
-      status: "Active",
-      contract: "Monthly (Net 30)"
-    },
-    {
-      id: "B-102",
-      name: "Highland Processors Ltd",
-      type: "Commercial",
-      contact: "0733 987 654",
-      outstanding: 45000.00,
-      lastDelivery: "May 22, 2026",
-      status: "Active",
-      contract: "Weekly"
-    },
-    {
-      id: "B-103",
-      name: "Bahati Local Market",
-      type: "Direct Retail",
-      contact: "0711 555 444",
-      outstanding: 0.00,
-      lastDelivery: "May 25, 2026",
-      status: "Cash Only",
-      contract: "Daily"
-    }
-  ];
+  const { data: buyersData = [] } = useQuery({
+    queryKey: ['finance', 'buyers'],
+    queryFn: async () => financeApi.listBuyers(),
+  });
+
+  const buyers = Array.isArray(buyersData)
+    ? buyersData.map((buyer) => ({
+        id: buyer.id ?? buyer.buyerId ?? buyer.buyer_id ?? '',
+        name: buyer.name ?? buyer.businessName ?? buyer.business_name ?? 'Unnamed Buyer',
+        type: buyer.type ?? buyer.customerType ?? buyer.customer_type ?? 'Buyer',
+        contact: buyer.contact ?? buyer.phone ?? buyer.phoneNumber ?? '',
+        outstanding: Number(buyer.outstanding ?? buyer.balance ?? buyer.amountDue ?? 0),
+        lastDelivery: buyer.lastDelivery ?? buyer.last_delivery ?? buyer.updatedAt ?? 'Not recorded',
+        status: buyer.status ?? 'Active',
+        contract: buyer.contract ?? buyer.paymentPlan ?? buyer.payment_plan ?? 'Not set',
+      }))
+    : [];
 
   const filteredBuyers = useMemo(() => {
     const normalizedSearch = searchTerm.trim().toLowerCase();
@@ -178,6 +164,13 @@ export default function BuyerRegistry() {
               </tr>
             </thead>
             <tbody className="divide-y divide-ink/5">
+              {filteredBuyers.length === 0 && (
+                <tr>
+                  <td className="p-8 text-center text-sm text-ink-muted" colSpan={4}>
+                    No buyers found. Connect the backend buyers endpoint to show customer records here.
+                  </td>
+                </tr>
+              )}
               {filteredBuyers.map((buyer) => (
                 <tr key={buyer.id} className="hover:bg-surface-warm/30 transition-colors group">
                   

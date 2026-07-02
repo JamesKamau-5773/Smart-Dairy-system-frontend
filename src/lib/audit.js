@@ -11,7 +11,7 @@
 export function formatDateTime(date, includeTime = true) {
   const dateObj = typeof date === 'string' ? new Date(date) : date;
 
-  if (Number.isNaN(dateObj.getTime())) {
+  if (!dateObj || typeof dateObj.getTime !== 'function' || Number.isNaN(dateObj.getTime())) {
     return 'Unknown';
   }
 
@@ -37,7 +37,7 @@ export function formatDateTime(date, includeTime = true) {
 export function getRelativeTime(date) {
   const dateObj = typeof date === 'string' ? new Date(date) : date;
 
-  if (Number.isNaN(dateObj.getTime())) {
+  if (!dateObj || typeof dateObj.getTime !== 'function' || Number.isNaN(dateObj.getTime())) {
     return 'Unknown';
   }
 
@@ -183,15 +183,12 @@ export function getChangedFields(before, after) {
 }
 
 /**
- * Log action to audit trail (mock implementation)
- * In production, this would send to backend logging service
+ * Log action to audit trail using session storage for local recovery
  * @param {Object} auditEntry - Audit entry to log
  */
 export function logToAuditTrail(auditEntry) {
-  // In production, send to backend API
   console.info('[AUDIT]', auditEntry);
 
-  // Store in browser session (would be cleared on page reload)
   const auditLog = sessionStorage.getItem('auditLog');
   const log = auditLog ? JSON.parse(auditLog) : [];
   log.push(auditEntry);
