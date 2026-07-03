@@ -1,11 +1,43 @@
-import React, { useState, useMemo, useEffect } from 'react';
-import { hrApi } from '../../lib/backendApi';
+import React, { useState, useMemo } from 'react';
 import { Calendar, CheckCircle, Clock, Users, Banknote, CalendarClock, History } from 'lucide-react';
 import { useStaff } from '../../providers/StaffProvider';
 import SlidePanel from '../../components/ui/SlidePanel';
 import { buildPayrollRun, toPayrollRow } from '../../lib/payroll';
 
 const formatMoney = (value) => Number(value || 0).toLocaleString();
+
+// A more complete mock data structure to represent all payroll runs.
+// This acts as our single source of truth.
+const initialPayrollRuns = [
+    {
+        id: 'run_2026_06',
+        date: '2026-06-30',
+        period: 'June 2026',
+        totalDisbursed: 138450,
+        employees: 4,
+        details: [
+            { staffId: 'staff_01', name: 'John Doe', role: 'Farm Hand', base: 30000, leaveDeduction: 0, grossPay: 30000, advanceDeduction: 1500, deductions: 1500, net: 28500, status: 'PAID' },
+            { staffId: 'staff_02', name: 'Jane Smith', role: 'Herdsman', base: 45000, leaveDeduction: 0, grossPay: 45000, advanceDeduction: 2250, deductions: 2250, net: 42750, status: 'PAID' },
+            { staffId: 'staff_03', name: 'Sam Wilson', role: 'Veterinarian', base: 75000, leaveDeduction: 4500, grossPay: 70500, advanceDeduction: 3750, deductions: 8250, net: 66750, status: 'PAID' },
+            { staffId: 'staff_04', name: 'Emily White', role: 'Farm Hand', base: 32000, leaveDeduction: 0, grossPay: 32000, advanceDeduction: 0, deductions: 0, net: 32000, status: 'PENDING' },
+        ]
+    },
+    { id: 'run_2026_05', period: 'May 2026', totalDisbursed: 136950, date: '2026-05-30', employees: 3, details: [
+        { staffId: 'staff_01', name: 'John Doe', role: 'Farm Hand', base: 30000, leaveDeduction: 1500, grossPay: 28500, advanceDeduction: 0, deductions: 1500, net: 28500, status: 'PAID' },
+        { staffId: 'staff_02', name: 'Jane Smith', role: 'Herdsman', base: 45000, leaveDeduction: 0, grossPay: 45000, advanceDeduction: 2250, deductions: 2250, net: 42750, status: 'PAID' },
+        { staffId: 'staff_03', name: 'Sam Wilson', role: 'Veterinarian', base: 75000, leaveDeduction: 3750, grossPay: 71250, advanceDeduction: 3750, deductions: 7500, net: 67500, status: 'PAID' },
+    ]},
+    { id: 'run_2026_04', period: 'April 2026', totalDisbursed: 136950, date: '2026-04-30', employees: 3, details: [
+        { staffId: 'staff_01', name: 'John Doe', role: 'Farm Hand', base: 30000, leaveDeduction: 1500, grossPay: 28500, advanceDeduction: 0, deductions: 1500, net: 28500, status: 'PAID' },
+        { staffId: 'staff_02', name: 'Jane Smith', role: 'Herdsman', base: 45000, leaveDeduction: 0, grossPay: 45000, advanceDeduction: 2250, deductions: 2250, net: 42750, status: 'PAID' },
+        { staffId: 'staff_03', name: 'Sam Wilson', role: 'Veterinarian', base: 75000, leaveDeduction: 3750, grossPay: 71250, advanceDeduction: 3750, deductions: 7500, net: 67500, status: 'PAID' },
+    ]},
+    { id: 'run_2026_03', period: 'March 2026', totalDisbursed: 136950, date: '2026-03-31', employees: 3, details: [
+        { staffId: 'staff_01', name: 'John Doe', role: 'Farm Hand', base: 30000, leaveDeduction: 1500, grossPay: 28500, advanceDeduction: 0, deductions: 1500, net: 28500, status: 'PAID' },
+        { staffId: 'staff_02', name: 'Jane Smith', role: 'Herdsman', base: 45000, leaveDeduction: 0, grossPay: 45000, advanceDeduction: 2250, deductions: 2250, net: 42750, status: 'PAID' },
+        { staffId: 'staff_03', name: 'Sam Wilson', role: 'Veterinarian', base: 75000, leaveDeduction: 3750, grossPay: 71250, advanceDeduction: 3750, deductions: 7500, net: 67500, status: 'PAID' },
+    ]},
+];
 
 const PayrollActions = ({ onRunPayroll, nextPayrollPeriod }) => (
   <div className="flex flex-col gap-4 border-b border-gray-200 pb-5 lg:flex-row lg:items-end lg:justify-between">
@@ -138,43 +170,13 @@ const PayrollTable = ({ run, onMarkAsPaid }) => {
 
 export default function Payroll() {
   const { staff, reduceLoanBalance } = useStaff();
-  const [allRuns, setAllRuns] = useState([]);
-  const [activeRunId, setActiveRunId] = useState(null);
+  const [allRuns, setAllRuns] = useState(initialPayrollRuns);
+  const [activeRunId, setActiveRunId] = useState(initialPayrollRuns[0].id);
   const [historyOpen, setHistoryOpen] = useState(false);
 
-  useEffect(() => {
-    let cancelled = false;
-
-    const loadRuns = async () => {
-      try {
-        const records = await hrApi.listPayrollRuns();
-
-        if (cancelled) {
-          return;
-        }
-
-        const normalizedRuns = Array.isArray(records) ? records : [];
-        setAllRuns(normalizedRuns);
-        setActiveRunId((current) => current ?? normalizedRuns[0]?.id ?? null);
-      } catch (error) {
-        if (!cancelled) {
-          console.warn('Failed to load payroll runs.', error);
-          setAllRuns([]);
-          setActiveRunId(null);
-        }
-      }
-    };
-
-    loadRuns();
-
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-
   // Derive active run and history from state
-  const activeRun = useMemo(() => allRuns.find((r) => r.id === activeRunId) || allRuns[0] || null, [allRuns, activeRunId]);
-  const payrollHistory = useMemo(() => (activeRun ? allRuns.filter((r) => r.id !== activeRun.id) : allRuns), [allRuns, activeRun]);
+  const activeRun = useMemo(() => allRuns.find(r => r.id === activeRunId) || allRuns[0], [allRuns, activeRunId]);
+  const payrollHistory = useMemo(() => allRuns.filter(r => r.id !== activeRun.id), [allRuns, activeRun.id]);
 
   const getNextPayrollPeriod = (latestRun) => {
       const [monthStr, yearStr] = latestRun.period.split(' ');
@@ -221,7 +223,7 @@ export default function Payroll() {
   };
 
   const nextPayrollInfo = useMemo(() => {
-    if (!allRuns.length) return { period: 'Next run', displayDate: 'No payroll runs available yet' };
+    if (!allRuns.length) return { period: "January 2027", date: "January 31, 2027" };
     const { period, date } = getNextPayrollPeriod(allRuns[0]);
     const lastDay = new Date(date.getFullYear(), date.getMonth() + 1, 0).getDate();
     return {
@@ -229,16 +231,6 @@ export default function Payroll() {
         displayDate: `${date.toLocaleString('default', { month: 'long' })} ${lastDay}, ${date.getFullYear()}`
     };
   }, [allRuns]);
-
-  if (!activeRun) {
-    return (
-      <div className="animate-reveal min-h-full bg-[#F7F6F3] px-4 py-6 sm:px-6 lg:px-8">
-        <div className="mx-auto max-w-[1600px] rounded-md border border-gray-200 bg-white p-8 text-sm text-gray-600">
-          No payroll runs are available yet.
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="animate-reveal min-h-full bg-[#F7F6F3] px-4 py-6 sm:px-6 lg:px-8">
