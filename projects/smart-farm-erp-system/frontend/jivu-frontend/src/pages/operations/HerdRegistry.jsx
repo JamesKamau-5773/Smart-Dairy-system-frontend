@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import {
   BookOpen,
@@ -20,7 +20,7 @@ import AlertBanner from '../../components/ui/AlertBanner';
 import Confirmation, { useConfirmation } from '../../components/ui/Confirmation';
 import { validateForm, ValidationRules, getFirstErrorMessage } from '../../lib/validation';
 import { formatDateTime, getRelativeTime, createAuditEntry, logToAuditTrail } from '../../lib/audit';
-import { herdApi } from '../../lib/backendApi';
+import { getApiErrorMessage, herdApi } from '../../lib/backendApi';
 import { useTenant } from '../../hooks/useTenant';
 const INITIAL_HERD = [];
 
@@ -52,12 +52,12 @@ function statusTone(status) {
 
 function normalizeHerdCow(cow = {}, fallback = {}) {
   const ageMonths = Number(cow.ageMonths ?? cow.age_months ?? fallback.ageMonths ?? 0);
-  const status = cow.status ?? cow.lactation_status ?? fallback.status ?? 'Cow';
+  const status = cow.current_status ?? cow.currentStatus ?? cow.status ?? cow.lactation_status ?? fallback.status ?? 'Cow';
 
   return {
-    id: cow.id ?? cow.cow_id ?? cow.ear_tag ?? fallback.id ?? '',
+    id: cow.id ?? cow.tag_number ?? cow.tagNumber ?? cow.tag ?? cow.cow_id ?? cow.ear_tag ?? fallback.id ?? '',
     name: cow.name ?? cow.cow_name ?? fallback.name ?? 'Unnamed',
-    breed: cow.breed ?? cow.breed_name ?? fallback.breed ?? 'Unknown',
+    breed: cow.breed ?? cow.breed_status ?? cow.breed_name ?? fallback.breed ?? 'Foundation',
     ageMonths,
     status,
     lastCalved: cow.lastCalved ?? cow.last_calved ?? fallback.lastCalved ?? null,
@@ -115,6 +115,7 @@ function getHerdSummary(herd) {
 
 export default function HerdRegistry() {
   const { tenantId, farmId } = useTenant();
+  const queryClient = useQueryClient();
   // State
   const [sortBy, setSortBy] = useState('age');
   const [statusFilter, setStatusFilter] = useState('All');
@@ -133,7 +134,7 @@ export default function HerdRegistry() {
   const { data: herdData, isLoading } = useQuery({
     queryKey: ['herd-registry', tenantId, farmId],
     queryFn: () => herdApi.list(),
-    enabled: !!tenantId && !!farmId,
+    enabled: !!tenantId,
   });
 
   useEffect(() => {
@@ -144,10 +145,10 @@ export default function HerdRegistry() {
 
   // Form state
   const [newCow, setNewCow] = useState({
-    id: '',
+    tagNumber: '',
     name: '',
     breed: '',
-    dob: '',
+    dateOfBirth: '',
     hasCalved: false,
   });
 
@@ -183,8 +184,8 @@ export default function HerdRegistry() {
 
   // Validation schema
   const validationSchema = {
-    id: [ValidationRules.required, ValidationRules.minLength(3)],
-    breed: [ValidationRules.required],
+    tagNumber: [ValidationRules.required, ValidationRules.minLength(3)],
+    dateOfBirth: [ValidationRules.required, ValidationRules.pastDate],
   };
 
   // Handlers
@@ -206,8 +207,8 @@ export default function HerdRegistry() {
       setIsSaving(true);
 
       let ageMonths = 0;
-      if (newCow.dob) {
-        const dob = new Date(newCow.dob);
+      if (newCow.dateOfBirth) {
+        const dob = new Date(newCow.dateOfBirth);
         const now = new Date();
         const years = now.getFullYear() - dob.getFullYear();
         const months = now.getMonth() - dob.getMonth();
@@ -219,13 +220,15 @@ export default function HerdRegistry() {
       else if (!newCow.hasCalved && ageMonths >= 6 && ageMonths <= 15) status = 'Heifer';
       else status = 'Cow';
 
+      const tagNumber = newCow.tagNumber.trim().toUpperCase();
+
       const cow = {
-        id: newCow.id.toUpperCase() || `C-${Math.floor(Math.random() * 900) + 100}`,
+        id: tagNumber || `C-${Math.floor(Math.random() * 900) + 100}`,
         name: newCow.name || 'Unnamed',
-        breed: newCow.breed || 'Unknown',
+        breed: newCow.breed || 'Foundation',
         ageMonths,
         status: newCow.hasCalved ? 'Milking' : status,
-        lastCalved: newCow.hasCalved ? newCow.dob : null,
+        lastCalved: newCow.hasCalved ? newCow.dateOfBirth : null,
         milk: '0.0 L/day',
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
@@ -233,21 +236,21 @@ export default function HerdRegistry() {
       };
 
       if (herdState.some((c) => c.id === cow.id)) {
-        setErrorMessage(`Animal with ID ${cow.id} already exists`);
+        setErrorMessage(`Animal with tag ${cow.id} already exists for this tenant`);
         setShowError(true);
         setIsSaving(false);
         return;
       }
 
       const savedCow = normalizeHerdCow(await herdApi.create({
-        id: cow.id,
+        tagNumber: cow.id,
         name: cow.name,
         breed: cow.breed,
-        dob: newCow.dob,
+        dateOfBirth: newCow.dateOfBirth,
         hasCalved: newCow.hasCalved,
       }), cow);
 
-      setHerdState((prev) => [savedCow, ...prev]);
+      await queryClient.invalidateQueries({ queryKey: ['herd-registry', tenantId, farmId] });
 
       // Log audit entry
       logToAuditTrail(
@@ -265,7 +268,7 @@ export default function HerdRegistry() {
       handleCloseModal();
     } catch (error) {
       console.error('Error adding cow:', error);
-      setErrorMessage('Failed to add animal. Please try again.');
+      setErrorMessage(getApiErrorMessage(error, 'Failed to add animal. Please try again.'));
       setShowError(true);
     } finally {
       setIsSaving(false);
@@ -288,7 +291,7 @@ export default function HerdRegistry() {
 
       await herdApi.delete(cowId);
 
-      setHerdState((prev) => prev.filter((cow) => cow.id !== cowId));
+      await queryClient.invalidateQueries({ queryKey: ['herd-registry', tenantId, farmId] });
 
       // Log audit entry
       logToAuditTrail(
@@ -314,7 +317,7 @@ export default function HerdRegistry() {
 
   const handleCloseModal = () => {
     setIsAddOpen(false);
-    setNewCow({ id: '', name: '', breed: '', dob: '', hasCalved: false });
+    setNewCow({ tagNumber: '', name: '', breed: '', dateOfBirth: '', hasCalved: false });
     setFormErrors({});
     setShowError(false);
   };
@@ -688,20 +691,20 @@ export default function HerdRegistry() {
             </label>
             <input
               type="text"
-              className={`input-machined w-full ${formErrors.id ? 'border-rose-300 bg-rose-50' : ''}`}
-              value={newCow.id}
+              className={`input-machined w-full ${formErrors.tagNumber ? 'border-rose-300 bg-rose-50' : ''}`}
+              value={newCow.tagNumber}
               onChange={(e) => {
-                setNewCow({ ...newCow, id: e.target.value });
-                if (formErrors.id) setFormErrors({ ...formErrors, id: null });
+                setNewCow({ ...newCow, tagNumber: e.target.value });
+                if (formErrors.tagNumber) setFormErrors({ ...formErrors, tagNumber: null });
               }}
               placeholder="e.g. C-108"
               aria-label="Ear tag number"
-              aria-invalid={!!formErrors.id}
-              aria-describedby={formErrors.id ? 'id-error' : undefined}
+              aria-invalid={!!formErrors.tagNumber}
+              aria-describedby={formErrors.tagNumber ? 'tag-number-error' : undefined}
             />
-            {formErrors.id && (
-              <p id="id-error" className="mt-1 text-xs text-rose-600 flex items-center gap-1">
-                <AlertCircle size={12} /> {formErrors.id}
+            {formErrors.tagNumber && (
+              <p id="tag-number-error" className="mt-1 text-xs text-rose-600 flex items-center gap-1">
+                <AlertCircle size={12} /> {formErrors.tagNumber}
               </p>
             )}
           </div>
@@ -722,38 +725,38 @@ export default function HerdRegistry() {
           {/* Breed Field */}
           <div>
             <label className="block text-xs font-bold uppercase text-ink-muted mb-1">
-              Breed *
+              Breed
             </label>
             <input
               type="text"
-              className={`input-machined w-full ${formErrors.breed ? 'border-rose-300 bg-rose-50' : ''}`}
+              className="input-machined w-full"
               value={newCow.breed}
-              onChange={(e) => {
-                setNewCow({ ...newCow, breed: e.target.value });
-                if (formErrors.breed) setFormErrors({ ...formErrors, breed: null });
-              }}
-              placeholder="e.g. Friesian"
+              onChange={(e) => setNewCow({ ...newCow, breed: e.target.value })}
+              placeholder="Optional (e.g. Friesian)"
               aria-label="Breed"
-              aria-invalid={!!formErrors.breed}
-              aria-describedby={formErrors.breed ? 'breed-error' : undefined}
             />
-            {formErrors.breed && (
-              <p id="breed-error" className="mt-1 text-xs text-rose-600 flex items-center gap-1">
-                <AlertCircle size={12} /> {formErrors.breed}
-              </p>
-            )}
           </div>
 
           {/* DOB Field */}
           <div>
-            <label className="block text-xs font-bold uppercase text-ink-muted mb-1">Date of Birth</label>
+            <label className="block text-xs font-bold uppercase text-ink-muted mb-1">Date of Birth *</label>
             <input
               type="date"
-              className="input-machined w-full"
-              value={newCow.dob}
-              onChange={(e) => setNewCow({ ...newCow, dob: e.target.value })}
+              className={`input-machined w-full ${formErrors.dateOfBirth ? 'border-rose-300 bg-rose-50' : ''}`}
+              value={newCow.dateOfBirth}
+              onChange={(e) => {
+                setNewCow({ ...newCow, dateOfBirth: e.target.value });
+                if (formErrors.dateOfBirth) setFormErrors({ ...formErrors, dateOfBirth: null });
+              }}
               aria-label="Date of birth"
+              aria-invalid={!!formErrors.dateOfBirth}
+              aria-describedby={formErrors.dateOfBirth ? 'date-of-birth-error' : undefined}
             />
+            {formErrors.dateOfBirth && (
+              <p id="date-of-birth-error" className="mt-1 text-xs text-rose-600 flex items-center gap-1">
+                <AlertCircle size={12} /> {formErrors.dateOfBirth}
+              </p>
+            )}
           </div>
 
           {/* Checkbox */}

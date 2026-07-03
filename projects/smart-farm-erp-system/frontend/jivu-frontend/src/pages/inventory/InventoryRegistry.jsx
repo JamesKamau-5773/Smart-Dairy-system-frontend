@@ -1,10 +1,11 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Search, Plus, Filter, Edit2, Package, Trash2, ChevronDown } from 'lucide-react';
+import AlertBanner from '../../components/ui/AlertBanner';
 import RegisterResourceModal from '../../components/inventory/RegisterResourceModal';
 import StandardDeliveryModal from '../../components/inventory/StandardDeliveryModal';
 import EditResourceModal from '../../components/inventory/EditResourceModal';
-import { inventoryApi } from '../../lib/backendApi';
+import { getApiErrorMessage, inventoryApi } from '../../lib/backendApi';
 import { useTenant } from '../../hooks/useTenant';
 
 export default function InventoryRegistry() {
@@ -16,6 +17,8 @@ export default function InventoryRegistry() {
   const [selectedItem, setSelectedItem] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('All');
+  const [showError, setShowError] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
 
   const { data: backendInventory } = useQuery({
     queryKey: ['inventory-items', tenantId, farmId],
@@ -57,6 +60,10 @@ export default function InventoryRegistry() {
       queryClient.invalidateQueries({ queryKey: ['inventory-items', tenantId, farmId] });
       queryClient.invalidateQueries({ queryKey: ['inventory-stock', tenantId, farmId] });
     },
+    onError: (error) => {
+      setErrorMessage(getApiErrorMessage(error, 'Failed to add inventory item. Please try again.'));
+      setShowError(true);
+    },
   });
 
   const updateItemMutation = useMutation({
@@ -65,6 +72,10 @@ export default function InventoryRegistry() {
       upsertLocalItem(item);
       queryClient.invalidateQueries({ queryKey: ['inventory-items', tenantId, farmId] });
       queryClient.invalidateQueries({ queryKey: ['inventory-stock', tenantId, farmId] });
+    },
+    onError: (error) => {
+      setErrorMessage(getApiErrorMessage(error, 'Failed to save inventory item. Please try again.'));
+      setShowError(true);
     },
   });
 
@@ -101,7 +112,8 @@ export default function InventoryRegistry() {
       name: newResourceData.name,
       sku: newResourceData.sku,
       category: newResourceData.category,
-      stock: { value: parseInt(newResourceData.initialStock, 10) || 0, unit: newResourceData.unit },
+      unit: newResourceData.unit,
+      currentStock: parseInt(newResourceData.currentStock, 10) || 0,
       reorderLevel: parseInt(newResourceData.reorderLevel, 10) || 0,
     });
   };
@@ -168,6 +180,17 @@ export default function InventoryRegistry() {
 
   return (
     <div className="animate-reveal p-8">
+      {showError && (
+        <div className="mb-6">
+          <AlertBanner
+            type="danger"
+            title="Inventory update failed"
+            message={errorMessage}
+            onDismiss={() => setShowError(false)}
+          />
+        </div>
+      )}
+
       {/* HEADER SECTION */}
       <div className="flex justify-between items-start mb-8">
         <div>

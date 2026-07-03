@@ -222,10 +222,21 @@ export default function FastMilkLog({ onClose, onSaveSuccess, onDeleteSuccess, m
   const mutation = useMutation({
     mutationFn: async (payload) => {
       const date = payload.milkingDate || new Date().toISOString().slice(0, 10);
-      const idempotencyKey = `fastlog:${payload.cowId}:${date}:${payload.session || 'morning'}`;
-      return isEditMode
-        ? productionApi.updateYield(record.id, payload, { headers: { 'Idempotency-Key': idempotencyKey } })
-        : productionApi.createYield(payload, { headers: { 'Idempotency-Key': idempotencyKey } });
+      const requestPayload = {
+        cow_id: payload.cowId,
+        amount: Number(payload.volume ?? payload.amount ?? 0),
+        session: payload.session || 'morning',
+        milkingDate: date,
+      };
+      const idempotencyKey = isEditMode
+        ? `fastlog-edit:${record.id}:${requestPayload.cow_id}:${date}:${requestPayload.session}`
+        : `fastlog:${requestPayload.cow_id}:${date}:${requestPayload.session}`;
+
+      if (isEditMode) {
+        await productionApi.deleteYield(record.id);
+      }
+
+      return productionApi.createYield(requestPayload, { headers: { 'Idempotency-Key': idempotencyKey } });
     },
     onSuccess: (data) => {
       const savedRecord = data?.received || data?.updated || data;
@@ -266,7 +277,12 @@ export default function FastMilkLog({ onClose, onSaveSuccess, onDeleteSuccess, m
       const isNetwork = !err?.response && !isEditMode;
       if (isNetwork) {
         try {
-          offlineQueue.enqueue(variables);
+          offlineQueue.enqueue({
+            cow_id: variables.cowId,
+            amount: Number(variables.volume ?? variables.amount ?? 0),
+            session: variables.session || 'morning',
+            milkingDate: variables.milkingDate || new Date().toISOString().slice(0, 10),
+          });
           setMessageType('info');
           setMessage('Saved to device. Will sync when internet returns.');
           setSaveStatus('success');

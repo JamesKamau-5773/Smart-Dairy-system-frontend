@@ -43,16 +43,33 @@ export default function YieldLog() {
     enabled: !!farmId,
   });
 
-  const normalizeYieldRow = (row) => ({
-    id: row?.id ?? row?.yield_id ?? row?.recordId ?? `milk-${Date.now()}`,
-    date: row?.date ?? row?.milkingDate ?? row?.created_at ?? new Date().toISOString().slice(0, 10),
-    time: row?.time ?? (row?.createdAt ? new Date(row.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })),
-    milker: row?.milker ?? row?.created_by ?? 'SYSTEM',
-    cowId: row?.cowId ?? row?.cow_id ?? row?.animal_id ?? '',
-    cowName: row?.cowName ?? row?.animal_name ?? row?.name ?? '',
-    amount: Number(row?.amount ?? row?.volume ?? row?.liters ?? 0).toFixed(1),
-    status: row?.status ?? 'Pending',
-  });
+  const normalizeYieldRow = (row) => {
+    const rawAmount = row?.amount
+      ?? row?.volume
+      ?? row?.liters
+      ?? row?.milk_volume
+      ?? row?.milkVolume
+      ?? row?.yield_amount
+      ?? row?.yieldAmount
+      ?? row?.volume_liters
+      ?? row?.volumeLiters
+      ?? row?.quantity
+      ?? row?.qty
+      ?? 0;
+
+    const parsedAmount = Number.parseFloat(rawAmount);
+
+    return {
+      id: row?.id ?? row?.yield_id ?? row?.recordId ?? `milk-${Date.now()}`,
+      date: row?.date ?? row?.milkingDate ?? row?.created_at ?? new Date().toISOString().slice(0, 10),
+      time: row?.time ?? (row?.createdAt ? new Date(row.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })),
+      milker: row?.milker ?? row?.created_by ?? 'SYSTEM',
+      cowId: row?.cowId ?? row?.cow_id ?? row?.animal_id ?? '',
+      cowName: row?.cowName ?? row?.animal_name ?? row?.animalName ?? row?.name ?? '',
+      amount: Number.isFinite(parsedAmount) ? parsedAmount.toFixed(1) : '0.0',
+      status: row?.status ?? 'Pending',
+    };
+  };
 
   useEffect(() => {
     if (Array.isArray(yieldRowsRaw)) {

@@ -2,7 +2,7 @@ import React, { useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Link, useParams } from 'react-router-dom';
 import { ArrowLeft, Activity, Calendar, Droplets, ShieldAlert, TrendingUp, Search, Filter, RotateCcw, ChevronDown } from 'lucide-react';
-import apiClient from '../../lib/apiClient';
+import { animalsApi } from '../../lib/backendApi';
 import { useTenant } from '../../hooks/useTenant';
 
 export function filterMilkHistorySessions(sessions, filters) {
@@ -47,6 +47,27 @@ function MetricCard({ label, value, icon: Icon, tone = 'brand' }) {
   );
 }
 
+function normalizeMilkHistorySession(entry = {}) {
+  const rawLiters = entry.liters
+    ?? entry.amount
+    ?? entry.volume
+    ?? entry.milk_volume
+    ?? entry.milkVolume
+    ?? entry.yield_amount
+    ?? entry.yieldAmount
+    ?? 0;
+
+  const parsedLiters = Number.parseFloat(rawLiters);
+
+  return {
+    date: entry.date ?? entry.milkingDate ?? entry.created_at ?? entry.createdAt ?? '',
+    session: entry.session ?? entry.milking_session ?? entry.shift ?? 'Unknown',
+    milker: entry.milker ?? entry.created_by ?? entry.createdBy ?? 'SYSTEM',
+    liters: Number.isFinite(parsedLiters) ? parsedLiters.toFixed(1) : '0.0',
+    status: entry.status ?? 'Pending',
+  };
+}
+
 export default function MilkHistory() {
   const { id } = useParams();
   const { tenantId, farmId } = useTenant();
@@ -60,7 +81,17 @@ export default function MilkHistory() {
 
   const { data: history, isLoading } = useQuery({
     queryKey: ['milk-history', tenantId, farmId, id],
-    queryFn: () => apiClient.get(`/production/history/${id}`).then((res) => res.data),
+    queryFn: async () => {
+      const [animal, sessions] = await Promise.all([
+        animalsApi.get(id).catch(() => null),
+        animalsApi.milkHistory(id).catch(() => []),
+      ]);
+
+      return {
+        animal,
+        sessions: Array.isArray(sessions) ? sessions.map(normalizeMilkHistorySession) : [],
+      };
+    },
     enabled: !!tenantId && !!farmId && !!id,
   });
 
@@ -74,7 +105,7 @@ export default function MilkHistory() {
     [filters, safeSessions],
   );
 
-  const totalYield = filteredSessions.reduce((sum, entry) => sum + (entry.liters || 0), 0).toFixed(1);
+  const totalYield = filteredSessions.reduce((sum, entry) => sum + Number(entry.liters || 0), 0).toFixed(1);
   const totalSessions = safeSessions.length;
 
   const clearFilters = () => setFilters({ search: '', date: '', status: 'all', session: 'all' });
@@ -102,7 +133,7 @@ export default function MilkHistory() {
               <Activity size={12} /> Milk Production History
             </div>
             <h2 className="font-sans font-bold text-2xl tracking-tight text-brand m-0 truncate">
-              {id} <span className="text-ink-muted">({resolvedHistory?.name || 'Unknown Cow'})</span>
+              {id} <span className="text-ink-muted">({resolvedHistory?.animal?.name || resolvedHistory?.name || 'Unknown Cow'})</span>
             </h2>
             <p className="text-sm text-ink-muted mt-1">Detailed yield history for the selected animal.</p>
           </div>
@@ -115,9 +146,9 @@ export default function MilkHistory() {
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
-        <MetricCard label="Cow" value={resolvedHistory?.name || 'Unknown Cow'} icon={Droplets} />
-        <MetricCard label="Average Yield" value={resolvedHistory?.average || '0.0 L/day'} icon={TrendingUp} />
-        <MetricCard label="Peak Yield" value={resolvedHistory?.peak || '0.0 L/day'} icon={Calendar} />
+        <MetricCard label="Cow" value={resolvedHistory?.animal?.name || resolvedHistory?.name || 'Unknown Cow'} icon={Droplets} />
+        <MetricCard label="Average Yield" value={resolvedHistory?.animal?.average || resolvedHistory?.average || '0.0 L/day'} icon={TrendingUp} />
+        <MetricCard label="Peak Yield" value={resolvedHistory?.animal?.peak || resolvedHistory?.peak || '0.0 L/day'} icon={Calendar} />
         <MetricCard label="Total Logged" value={`${totalYield} L`} icon={ShieldAlert} tone="accent" />
       </div>
 
@@ -212,7 +243,7 @@ export default function MilkHistory() {
             <h3 className="font-bold text-brand text-lg m-0">Milk Session Records</h3>
             <p className="text-sm text-ink-muted">Most recent milking sessions first.</p>
           </div>
-          <div className="text-xs font-bold uppercase tracking-widest text-ink-muted">{resolvedHistory?.breed || 'Not available'}</div>
+          <div className="text-xs font-bold uppercase tracking-widest text-ink-muted">{resolvedHistory?.animal?.breed || resolvedHistory?.breed || 'Not available'}</div>
         </div>
 
         {isLoading ? (

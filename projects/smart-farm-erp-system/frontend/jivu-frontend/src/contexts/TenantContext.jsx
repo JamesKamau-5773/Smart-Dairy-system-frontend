@@ -104,6 +104,8 @@ export function TenantProvider({ children }) {
   return (
     <TenantContext.Provider value={{
       tenantId: currentUser?.tenant_id ?? currentUser?.cooperative_id,
+      farmId: activeFarm?.id ?? currentUser?.farm_id ?? null,
+      farmName: activeFarm?.name ?? currentUser?.farm_name ?? null,
       cooperativeId: currentUser?.cooperative_id ?? currentUser?.tenant_id,
       cooperativeName: currentUser?.cooperative_name ?? currentUser?.tenant_name,
       tenantType: currentUser?.tenant_type,

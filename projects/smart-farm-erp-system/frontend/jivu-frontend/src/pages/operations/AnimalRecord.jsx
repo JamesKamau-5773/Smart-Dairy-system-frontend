@@ -95,7 +95,7 @@ function normalizeTimelineEvent(entry = {}, animalId = '') {
     eventData: entry.event_data ?? entry.eventData ?? null,
     createdBy: entry.created_by ?? entry.createdBy ?? null,
     createdAt: entry.created_at ?? entry.createdAt ?? null,
-    icon: displayType === 'Health' ? <HeartPulse size={16} /> : displayType === 'Breeding' ? <Syringe size={16} /> : <FileText size={16} />,
+    iconKey: normalizedType,
   };
 }
 
@@ -134,13 +134,13 @@ export default function AnimalPassport() {
   const { data: animalData, isLoading } = useQuery({
     queryKey: ['animal-passport', tenantId, farmId, id],
     queryFn: () => animalsApi.get(id),
-    enabled: !!tenantId && !!farmId && !!id,
+    enabled: !!tenantId && !!id,
   });
 
   const { data: timelineResponse, isLoading: isTimelineLoading } = useQuery({
     queryKey: ['animal-passport-events', tenantId, farmId, id, timelinePage, timelinePerPage],
     queryFn: async () => normalizeTimelineResponse(await animalsApi.listEvents(id, { page: timelinePage, per_page: timelinePerPage }), id),
-    enabled: !!tenantId && !!farmId && !!id,
+    enabled: !!tenantId && !!id,
   });
 
   const [successMessage, setSuccessMessage] = useState('');
@@ -161,6 +161,11 @@ export default function AnimalPassport() {
   const [plannerResult, setPlannerResult] = useState(null);
 
   const animal = animalData ? normalizeAnimal(animalData, id) : null;
+  const resolvedAnimal = animal ?? {
+    id: id ?? 'Loading…',
+    name: 'Loading…',
+    breed: 'Unknown',
+  };
   const timelineEvents = timelineResponse?.items ?? [];
   const timelineMeta = timelineResponse?.meta ?? { page: 1, per_page: timelinePerPage, total: 0, pages: 1 };
 
@@ -180,21 +185,25 @@ export default function AnimalPassport() {
   }
 
   const handleGenerateCertificate = async () => {
+    if (!animal) return;
+
     try {
-      setSuccessMessage(`Generating Certified Biological Record for ${animal.id}...`);
+      setSuccessMessage(`Generating Certified Biological Record for ${resolvedAnimal.id}...`);
     } catch (error) {
       console.error('Failed to generate PDF', error);
     }
   };
 
   const handleWhatsAppShare = () => {
-    const publicVerifyLink = `https://jivu-dairy.com/verify/${animal.id}-TOKEN123`;
-    const text = `Hello, here is the official Certified Cow Record for ${animal.id} (${animal.name}).\n\nBreed: ${animal.breed}\nView the verified medical passport here: ${publicVerifyLink}`;
+    if (!animal) return;
+
+    const publicVerifyLink = `https://jivu-dairy.com/verify/${resolvedAnimal.id}-TOKEN123`;
+    const text = `Hello, here is the official Certified Cow Record for ${resolvedAnimal.id} (${resolvedAnimal.name}).\n\nBreed: ${resolvedAnimal.breed}\nView the verified medical passport here: ${publicVerifyLink}`;
     window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank');
   };
 
-  const handleAddTimelineEvent = async (e) => {
-    e.preventDefault();
+  const handleAddTimelineEvent = async (event) => {
+    event?.preventDefault?.();
     setFormErrors({});
     setShowError(false);
 
@@ -238,7 +247,7 @@ export default function AnimalPassport() {
       );
 
       setActiveFilter('All');
-      setSuccessMessage(`Logged ${normalizedCreatedEvent.type.toLowerCase()} event for ${animal.id}.`);
+      setSuccessMessage(`Logged ${normalizedCreatedEvent.type.toLowerCase()} event for ${resolvedAnimal.id}.`);
       setNewEvent({ title: '', description: '', date: '', type: 'Health' });
       setIsEventOpen(false);
     } catch (error) {
@@ -290,7 +299,7 @@ export default function AnimalPassport() {
               <Activity size={12} /> Cow Record
             </div>
             <h2 className="font-sans font-bold text-2xl tracking-tight text-brand m-0">
-              {animal.id} <span className="text-ink-muted">({animal.name})</span>
+              {resolvedAnimal.id} <span className="text-ink-muted">({resolvedAnimal.name})</span>
             </h2>
           </div>
         </div>
@@ -366,10 +375,7 @@ export default function AnimalPassport() {
       <Modal isOpen={isEventOpen} onClose={() => setIsEventOpen(false)} title="Log Action">
         <form
           className="space-y-4"
-          onSubmit={(event) => {
-            event.preventDefault();
-            handleAddTimelineEvent(newEvent);
-          }}
+          onSubmit={handleAddTimelineEvent}
         >
           <div>
             <label className="mb-1 block text-xs font-bold uppercase tracking-wider text-ink-strong">Event Type</label>

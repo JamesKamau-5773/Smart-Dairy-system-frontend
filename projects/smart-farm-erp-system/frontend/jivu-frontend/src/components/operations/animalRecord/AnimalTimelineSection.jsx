@@ -24,11 +24,12 @@ function getTimelineTheme(type) {
 
 function TimelineEventCard({ event }) {
   const theme = getTimelineTheme(event.type);
+  const Icon = event.type === 'Health' ? HeartPulse : event.type === 'Breeding' ? Syringe : FileText;
 
   return (
     <div className="group relative flex items-start">
       <div className={`absolute left-[-22px] z-10 flex h-8 w-8 items-center justify-center rounded-full border-2 bg-surface transition-transform group-hover:scale-110 md:left-[-34px] ${theme.badgeClass}`}>
-        {event.icon}
+        <Icon size={16} />
       </div>
 
       <div className="ml-6 w-full md:ml-4">

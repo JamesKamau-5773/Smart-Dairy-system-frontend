@@ -1,5 +1,6 @@
 // Offline queue supporting localforage (preferred), IndexedDB fallback, and in-memory fallback.
 import apiClient from './apiClient';
+import { buildProductionYieldPayload } from './backendApi';
 
 let backend = null; // { type: 'localforage'|'idb'|'memory', lib? }
 let memoryQueue = [];
@@ -138,9 +139,9 @@ async function flush() {
 
   for (const entry of entries) {
     try {
-      const payload = entry.item;
+      const payload = buildProductionYieldPayload(entry.item);
       const date = payload.milkingDate || new Date().toISOString().slice(0, 10);
-      const idempotencyKey = `fastlog:${payload.cowId}:${date}:${payload.session}`;
+      const idempotencyKey = `fastlog:${payload.cow_id}:${date}:${payload.session}`;
       const res = await apiClient.post('/production/yield', payload, { headers: { 'Idempotency-Key': idempotencyKey } });
       if (res?.data) {
         await remove(entry.id);
