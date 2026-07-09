@@ -4,7 +4,6 @@ import AddEmployeeModal from '../../components/forms/AddEmployeeModal';
 import EmployeeDrawer from '../../components/forms/EmployeeDrawer';
 import VerifyReturnModal from '../../components/forms/VerifyReturnModal';
 import { useStaff } from '../../providers/StaffProvider';
-import { getOperationalStatus } from '../../lib/staffLeave';
 
 export default function StaffRegistry() {
   const { staff, addEmployee, issueAdvance, editEmployee, verifyReturn, toggleEmployeeStatus } = useStaff();
@@ -133,7 +132,7 @@ export default function StaffRegistry() {
           </thead>
           <tbody className="divide-y divide-slate-100">
             {filteredStaff.map((staffMember) => {
-              const displayStatus = getOperationalStatus(staffMember);
+              const displayStatus = staffMember.status ?? 'INACTIVE';
 
               return (
                 <tr key={staffMember.id} className={`transition-colors hover:bg-slate-50/50 ${displayStatus !== 'ACTIVE' ? 'bg-slate-50' : ''}`}>

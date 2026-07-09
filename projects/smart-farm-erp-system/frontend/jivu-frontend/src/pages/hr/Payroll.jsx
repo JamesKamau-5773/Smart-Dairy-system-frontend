@@ -3,7 +3,7 @@ import { hrApi } from '../../lib/backendApi';
 import { Calendar, CheckCircle, Clock, Users, Banknote, CalendarClock, History } from 'lucide-react';
 import { useStaff } from '../../providers/StaffProvider';
 import SlidePanel from '../../components/ui/SlidePanel';
-import { buildPayrollRun, toPayrollRow } from '../../lib/payroll';
+ 
 
 const formatMoney = (value) => Number(value || 0).toLocaleString();
 
@@ -36,7 +36,24 @@ const PayrollKPI = ({ title, value, icon: Icon }) => (
 
 const PayrollTable = ({ run, onMarkAsPaid }) => {
   const summary = useMemo(() => {
-    const rows = run.details.map(toPayrollRow);
+    const rows = Array.isArray(run.lineItems)
+      ? run.lineItems
+      : Array.isArray(run.details)
+        ? run.details
+        : [];
+    const backendSummary = run.summary;
+
+    if (backendSummary) {
+      return {
+        totalBase: Number(backendSummary.totalBase ?? 0),
+        totalLeave: Number(backendSummary.totalLeave ?? 0),
+        totalGross: Number(backendSummary.totalGross ?? 0),
+        totalDeductions: Number(backendSummary.totalDeductions ?? 0),
+        totalNet: Number(backendSummary.totalNet ?? 0),
+        rows,
+      };
+    }
+
     return {
       totalBase: rows.reduce((acc, row) => acc + row.base, 0),
       totalLeave: rows.reduce((acc, row) => acc + row.leaveDeduction, 0),
@@ -45,7 +62,7 @@ const PayrollTable = ({ run, onMarkAsPaid }) => {
       totalNet: rows.reduce((acc, row) => acc + row.net, 0),
       rows,
     };
-  }, [run.details]);
+  }, [run.lineItems, run.details, run.summary]);
 
   return (
   <div className="overflow-hidden rounded-md border border-gray-200 bg-white shadow-sm">
@@ -57,7 +74,7 @@ const PayrollTable = ({ run, onMarkAsPaid }) => {
         <p className="mt-1 text-xs font-medium uppercase tracking-[0.18em] text-gray-500">Accounting flow: base salary → leave adjustment → gross pay → deductions → net pay</p>
       </div>
       <span className="inline-flex items-center gap-2 rounded-md border border-gray-200 bg-gray-50 px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.18em] text-gray-600">
-        <History size={12} /> {run.details.length} employees
+        <History size={12} /> {summary.rows.length} employees
       </span>
     </div>
 
@@ -137,7 +154,7 @@ const PayrollTable = ({ run, onMarkAsPaid }) => {
 };
 
 export default function Payroll() {
-  const { staff, reduceLoanBalance } = useStaff();
+  const { reduceLoanBalance } = useStaff();
   const [allRuns, setAllRuns] = useState([]);
   const [activeRunId, setActiveRunId] = useState(null);
   const [historyOpen, setHistoryOpen] = useState(false);
@@ -186,15 +203,17 @@ export default function Payroll() {
   };
 
   const handleRunPayroll = () => {
-    const latestRun = allRuns[0];
-    const { period: nextPeriod, date: nextDate } = getNextPayrollPeriod(latestRun);
-    const [month, year] = nextPeriod.split(' ');
+    const runFromBackend = async () => {
+      try {
+        const newRun = await hrApi.runPayroll();
+        setAllRuns((prevRuns) => [newRun, ...prevRuns.filter((run) => run.id !== newRun.id)]);
+        setActiveRunId(newRun.id);
+      } catch (error) {
+        console.warn('Failed to run payroll from backend.', error);
+      }
+    };
 
-    const payrollStaff = staff.filter(s => s.status !== 'INACTIVE');
-    const newRun = buildPayrollRun(payrollStaff, nextPeriod, new Date(year, nextDate.getMonth() + 1, 0).toISOString().split('T')[0]);
-
-    setAllRuns(prevRuns => [newRun, ...prevRuns]);
-    setActiveRunId(newRun.id);
+    runFromBackend();
   };
 
   const handleMarkAsPaid = (staffIdToPay) => {
