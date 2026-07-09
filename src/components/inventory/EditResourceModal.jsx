@@ -1,25 +1,65 @@
 import React, { useState, useEffect } from 'react';
 import { X, Save, Edit2 } from 'lucide-react';
+import { resolveIngredientStandards } from '../../lib/feedNutritionStandards';
 
 export default function EditResourceModal({ isOpen, onClose, item, onSave }) {
+  const [defaultSource, setDefaultSource] = useState('');
   const [formData, setFormData] = useState({
     name: '',
     sku: '',
-    category: ''
-    // reorderLevel will be added by useEffect
+    category: '',
+    reorderLevel: 0,
+    proteinGramsPerKg: 0,
+    energyMjPerKg: 0,
+    fiberGramsPerKg: 0,
+    costPerKg: 0,
   });
 
   // Pre-fill the form whenever the modal opens with a selected item
   useEffect(() => {
     if (item && isOpen) {
+      const standards = resolveIngredientStandards({
+        name: item.name || '',
+        category: item.category || 'Bulk Feed',
+      });
       setFormData({
         name: item.name || '',
         sku: item.sku || '',
         category: item.category || 'Bulk Feed',
-        reorderLevel: item.reorderLevel === undefined ? 0 : item.reorderLevel
+        reorderLevel: item.reorderLevel === undefined ? 0 : item.reorderLevel,
+        proteinGramsPerKg: item.protein_grams_per_kg ?? item.proteinGramsPerKg ?? standards?.values?.proteinGramsPerKg ?? 0,
+        energyMjPerKg: item.energy_mj_per_kg ?? item.energyMjPerKg ?? standards?.values?.energyMjPerKg ?? 0,
+        fiberGramsPerKg: item.fiber_grams_per_kg ?? item.fiberGramsPerKg ?? standards?.values?.fiberGramsPerKg ?? 0,
+        costPerKg: item.cost_per_kg ?? item.costPerKg ?? standards?.values?.costPerKg ?? 0,
       });
+      setDefaultSource(standards?.source || '');
     }
   }, [item, isOpen]);
+
+  const handleFieldChange = (name, value) => {
+    setFormData((prev) => {
+      const next = { ...prev, [name]: value };
+
+      if (name === 'name' || name === 'category') {
+        const standards = resolveIngredientStandards({
+          name: name === 'name' ? value : next.name,
+          category: name === 'category' ? value : next.category,
+        });
+
+        if (standards) {
+          next.proteinGramsPerKg = standards.values.proteinGramsPerKg;
+          next.energyMjPerKg = standards.values.energyMjPerKg;
+          next.fiberGramsPerKg = standards.values.fiberGramsPerKg;
+          next.costPerKg = standards.values.costPerKg;
+          setDefaultSource(standards.source);
+        } else {
+          setDefaultSource('');
+        }
+      }
+
+      return next;
+    });
+  };
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -63,7 +103,7 @@ export default function EditResourceModal({ isOpen, onClose, item, onSave }) {
                 <input 
                   required 
                   value={formData.name}
-                  onChange={(e) => setFormData({...formData, name: e.target.value})}
+                  onChange={(e) => handleFieldChange('name', e.target.value)}
                   className="w-full p-3 border border-slate-200 rounded-lg text-sm font-bold focus:ring-2 focus:ring-brand/20 focus:border-brand outline-none transition-all" 
                 />
               </div>
@@ -83,7 +123,7 @@ export default function EditResourceModal({ isOpen, onClose, item, onSave }) {
                 <label className="block text-[10px] font-black text-ink-muted uppercase tracking-widest mb-2">Category</label>
                 <select 
                   value={formData.category}
-                  onChange={(e) => setFormData({...formData, category: e.target.value})}
+                  onChange={(e) => handleFieldChange('category', e.target.value)}
                   className="w-full p-3 border border-slate-200 rounded-lg text-sm font-bold focus:ring-2 focus:ring-brand/20 focus:border-brand outline-none transition-all bg-white"
                 >
                   <option value="Bulk Feed">Bulk Feed</option>
@@ -103,6 +143,62 @@ export default function EditResourceModal({ isOpen, onClose, item, onSave }) {
                 />
               </div>
             </div>
+
+            <div className="grid grid-cols-2 gap-5">
+              <div>
+                <label className="block text-[10px] font-black text-ink-muted uppercase tracking-widest mb-2">Protein (g/kg)</label>
+                <input
+                  type="number"
+                  min="0"
+                  step="0.1"
+                  value={formData.proteinGramsPerKg}
+                  onChange={(e) => setFormData({ ...formData, proteinGramsPerKg: Number(e.target.value) || 0 })}
+                  className="w-full p-3 border border-slate-200 rounded-lg text-sm font-bold focus:ring-2 focus:ring-brand/20 focus:border-brand outline-none transition-all"
+                />
+              </div>
+              <div>
+                <label className="block text-[10px] font-black text-ink-muted uppercase tracking-widest mb-2">Energy (MJ/kg)</label>
+                <input
+                  type="number"
+                  min="0"
+                  step="0.1"
+                  value={formData.energyMjPerKg}
+                  onChange={(e) => setFormData({ ...formData, energyMjPerKg: Number(e.target.value) || 0 })}
+                  className="w-full p-3 border border-slate-200 rounded-lg text-sm font-bold focus:ring-2 focus:ring-brand/20 focus:border-brand outline-none transition-all"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-5">
+              <div>
+                <label className="block text-[10px] font-black text-ink-muted uppercase tracking-widest mb-2">Fiber (g/kg)</label>
+                <input
+                  type="number"
+                  min="0"
+                  step="0.1"
+                  value={formData.fiberGramsPerKg}
+                  onChange={(e) => setFormData({ ...formData, fiberGramsPerKg: Number(e.target.value) || 0 })}
+                  className="w-full p-3 border border-slate-200 rounded-lg text-sm font-bold focus:ring-2 focus:ring-brand/20 focus:border-brand outline-none transition-all"
+                />
+              </div>
+              <div>
+                <label className="block text-[10px] font-black text-ink-muted uppercase tracking-widest mb-2">Cost (KES/kg)</label>
+                <input
+                  type="number"
+                  min="0"
+                  step="0.1"
+                  value={formData.costPerKg}
+                  onChange={(e) => setFormData({ ...formData, costPerKg: Number(e.target.value) || 0 })}
+                  className="w-full p-3 border border-slate-200 rounded-lg text-sm font-bold focus:ring-2 focus:ring-brand/20 focus:border-brand outline-none transition-all"
+                />
+              </div>
+            </div>
+
+            {defaultSource && (
+              <p className="text-[10px] text-slate-500 font-semibold">
+                Defaults applied from {defaultSource.startsWith('ingredient:') ? 'ingredient standard' : 'category baseline'} ({defaultSource.replace('ingredient:', '').replace('category:', '')}).
+              </p>
+            )}
 
             {/* Note about stock */}
             <div className="bg-blue-50 border border-blue-100 rounded-lg p-4 mt-2">
