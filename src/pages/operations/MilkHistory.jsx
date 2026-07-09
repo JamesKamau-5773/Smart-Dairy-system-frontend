@@ -2,7 +2,8 @@ import React, { useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Link, useParams } from 'react-router-dom';
 import { ArrowLeft, Activity, Calendar, Droplets, ShieldAlert, TrendingUp, Search, Filter, RotateCcw, ChevronDown } from 'lucide-react';
-import apiClient from '../../lib/apiClient';
+import { animalsApi } from '../../lib/backendApi';
+import { useTenant } from '../../hooks/useTenant';
 
 export function filterMilkHistorySessions(sessions, filters) {
   // GUARDRAIL: Safely return an empty array if sessions is undefined or not an array
@@ -23,6 +24,60 @@ export function filterMilkHistorySessions(sessions, filters) {
     const matchesSession = filters.session === 'all' ? true : entry.session.toLowerCase() === filters.session.toLowerCase();
     return matchesSearch && matchesDate && matchesStatus && matchesSession;
   });
+}
+
+function toNormalizedSessionLabel(value) {
+  const normalized = String(value || '').trim().toLowerCase();
+
+  if (!normalized) return 'Unknown';
+  if (normalized === 'midday') return 'Afternoon';
+  if (normalized === 'morning') return 'Morning';
+  if (normalized === 'afternoon') return 'Afternoon';
+  if (normalized === 'evening') return 'Evening';
+
+  return normalized.charAt(0).toUpperCase() + normalized.slice(1);
+}
+
+export function deriveMilkSessionFromLoggedAt(entry = {}) {
+  const rawTimestamp = entry.created_at
+    ?? entry.createdAt
+    ?? entry.logged_at
+    ?? entry.loggedAt
+    ?? entry.recorded_at
+    ?? entry.recordedAt
+    ?? entry.timestamp
+    ?? entry.milkingDate
+    ?? null;
+
+  if (!rawTimestamp) return null;
+
+  // Only derive by clock time when the payload includes an actual time component.
+  const rawString = String(rawTimestamp);
+  const hasTime = /T\d{1,2}:\d{2}|\s\d{1,2}:\d{2}/.test(rawString);
+  if (!hasTime) return null;
+
+  // Parse clock time directly from the source string to avoid timezone shifts.
+  const timeMatch = rawString.match(/(?:T|\s)(\d{1,2}):(\d{2})/);
+  if (timeMatch) {
+    const hours = Number.parseInt(timeMatch[1], 10);
+    const minutes = Number.parseInt(timeMatch[2], 10);
+
+    if (Number.isFinite(hours) && Number.isFinite(minutes)) {
+      const totalMinutesFromString = (hours * 60) + minutes;
+      if (totalMinutesFromString < 12 * 60) return 'Morning';
+      if (totalMinutesFromString <= 16 * 60) return 'Afternoon';
+      return 'Evening';
+    }
+  }
+
+  const parsedTime = new Date(rawTimestamp);
+  if (Number.isNaN(parsedTime.getTime())) return null;
+
+  const totalMinutes = (parsedTime.getHours() * 60) + parsedTime.getMinutes();
+
+  if (totalMinutes < 12 * 60) return 'Morning';
+  if (totalMinutes <= 16 * 60) return 'Afternoon';
+  return 'Evening';
 }
 
 function MetricCard({ label, value, icon: Icon, tone = 'brand' }) {
@@ -46,8 +101,32 @@ function MetricCard({ label, value, icon: Icon, tone = 'brand' }) {
   );
 }
 
+export function normalizeMilkHistorySession(entry = {}) {
+  const rawLiters = entry.liters
+    ?? entry.amount
+    ?? entry.volume
+    ?? entry.milk_volume
+    ?? entry.milkVolume
+    ?? entry.yield_amount
+    ?? entry.yieldAmount
+    ?? 0;
+
+  const parsedLiters = Number.parseFloat(rawLiters);
+  const derivedSession = deriveMilkSessionFromLoggedAt(entry);
+  const fallbackSession = entry.session ?? entry.milking_session ?? entry.shift ?? 'Unknown';
+
+  return {
+    date: entry.date ?? entry.milkingDate ?? entry.created_at ?? entry.createdAt ?? '',
+    session: derivedSession ?? toNormalizedSessionLabel(fallbackSession),
+    milker: entry.milker ?? entry.created_by ?? entry.createdBy ?? 'SYSTEM',
+    liters: Number.isFinite(parsedLiters) ? parsedLiters.toFixed(1) : '0.0',
+    status: entry.status ?? 'Pending',
+  };
+}
+
 export default function MilkHistory() {
   const { id } = useParams();
+  const { tenantId, farmId } = useTenant();
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [filters, setFilters] = useState({
     search: '',
@@ -57,9 +136,20 @@ export default function MilkHistory() {
   });
 
   const { data: history, isLoading } = useQuery({
-    queryKey: ['milk-history', id],
-    queryFn: () => apiClient.get(`/production/history/${id}`).then((res) => res.data),
-    enabled: !!id,
+    queryKey: ['milk-history', tenantId, farmId, id],
+    queryFn: async () => {
+      const [animal, sessions] = await Promise.all([
+        animalsApi.get(id).catch(() => null),
+        animalsApi.milkHistory(id).catch(() => []),
+      ]);
+
+      return {
+        animal,
+        sessions: Array.isArray(sessions?.sessions) ? sessions.sessions.map(normalizeMilkHistorySession) : [],
+        stats: sessions?.stats ?? null,
+      };
+    },
+    enabled: !!tenantId && !!farmId && !!id,
   });
 
   const resolvedHistory = history || null;
@@ -72,8 +162,36 @@ export default function MilkHistory() {
     [filters, safeSessions],
   );
 
-  const totalYield = filteredSessions.reduce((sum, entry) => sum + (entry.liters || 0), 0).toFixed(1);
+  const totalYield = filteredSessions.reduce((sum, entry) => sum + Number(entry.liters || 0), 0).toFixed(1);
   const totalSessions = safeSessions.length;
+
+  const { averageYield, peakYield } = useMemo(() => {
+    const backendStats = resolvedHistory?.stats;
+
+    // Prefer backend-computed stats (source of truth).
+    if (backendStats?.average_yield != null && backendStats?.peak_yield != null) {
+      return {
+        averageYield: `${Number(backendStats.average_yield).toFixed(1)} L/day`,
+        peakYield: `${Number(backendStats.peak_yield).toFixed(1)} L/day`,
+      };
+    }
+
+    // Fallback: derive client-side during the backend migration window.
+    if (safeSessions.length === 0) return { averageYield: '0.0 L/day', peakYield: '0.0 L/day' };
+
+    const dailyTotals = safeSessions.reduce((acc, entry) => {
+      const day = entry.date ? String(entry.date).slice(0, 10) : 'unknown';
+      acc[day] = (acc[day] || 0) + Number(entry.liters || 0);
+      return acc;
+    }, {});
+
+    const dailyValues = Object.values(dailyTotals);
+    const totalAllLiters = dailyValues.reduce((s, v) => s + v, 0);
+    const avg = (totalAllLiters / dailyValues.length).toFixed(1);
+    const peak = Math.max(...dailyValues).toFixed(1);
+
+    return { averageYield: `${avg} L/day`, peakYield: `${peak} L/day` };
+  }, [resolvedHistory?.stats, safeSessions]);
 
   const clearFilters = () => setFilters({ search: '', date: '', status: 'all', session: 'all' });
 
@@ -100,7 +218,7 @@ export default function MilkHistory() {
               <Activity size={12} /> Milk Production History
             </div>
             <h2 className="font-sans font-bold text-2xl tracking-tight text-brand m-0 truncate">
-              {id} <span className="text-ink-muted">({resolvedHistory?.name || 'Unknown Cow'})</span>
+              {id} <span className="text-ink-muted">({resolvedHistory?.animal?.name || resolvedHistory?.name || 'Unknown Cow'})</span>
             </h2>
             <p className="text-sm text-ink-muted mt-1">Detailed yield history for the selected animal.</p>
           </div>
@@ -113,9 +231,9 @@ export default function MilkHistory() {
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
-        <MetricCard label="Cow" value={resolvedHistory?.name || 'Unknown Cow'} icon={Droplets} />
-        <MetricCard label="Average Yield" value={resolvedHistory?.average || '0.0 L/day'} icon={TrendingUp} />
-        <MetricCard label="Peak Yield" value={resolvedHistory?.peak || '0.0 L/day'} icon={Calendar} />
+        <MetricCard label="Cow" value={resolvedHistory?.animal?.name || resolvedHistory?.name || 'Unknown Cow'} icon={Droplets} />
+        <MetricCard label="Average Yield" value={averageYield} icon={TrendingUp} />
+        <MetricCard label="Peak Yield" value={peakYield} icon={Calendar} />
         <MetricCard label="Total Logged" value={`${totalYield} L`} icon={ShieldAlert} tone="accent" />
       </div>
 
@@ -190,7 +308,7 @@ export default function MilkHistory() {
                 >
                   <option value="all">All</option>
                   <option value="morning">Morning</option>
-                  <option value="midday">Midday</option>
+                  <option value="afternoon">Afternoon</option>
                   <option value="evening">Evening</option>
                 </select>
               </label>
@@ -210,7 +328,7 @@ export default function MilkHistory() {
             <h3 className="font-bold text-brand text-lg m-0">Milk Session Records</h3>
             <p className="text-sm text-ink-muted">Most recent milking sessions first.</p>
           </div>
-          <div className="text-xs font-bold uppercase tracking-widest text-ink-muted">{resolvedHistory?.breed || 'Not available'}</div>
+          <div className="text-xs font-bold uppercase tracking-widest text-ink-muted">{resolvedHistory?.animal?.breed || resolvedHistory?.breed || 'Not available'}</div>
         </div>
 
         {isLoading ? (

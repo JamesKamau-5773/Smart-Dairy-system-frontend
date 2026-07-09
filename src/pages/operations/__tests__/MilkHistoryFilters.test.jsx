@@ -1,11 +1,11 @@
 import { describe, it, expect } from 'vitest';
-import { filterMilkHistorySessions } from '../MilkHistory';
+import { deriveMilkSessionFromLoggedAt, filterMilkHistorySessions } from '../MilkHistory';
 
 describe('milk history filters', () => {
   const sessions = [
     { date: '2026-06-09', session: 'Morning', milker: 'MWANGI', liters: 14.5, status: 'Verified' },
     { date: '2026-06-09', session: 'Evening', milker: 'A. KIPRUTO', liters: 11.2, status: 'Pending' },
-    { date: '2026-06-08', session: 'Midday', milker: 'MWANGI', liters: 9.8, status: 'Flagged' },
+    { date: '2026-06-08', session: 'Afternoon', milker: 'MWANGI', liters: 9.8, status: 'Flagged' },
   ];
 
   it('filters by search and dropdown values', () => {
@@ -29,5 +29,18 @@ describe('milk history filters', () => {
     });
 
     expect(result).toHaveLength(3);
+  });
+
+  it('derives morning for records logged before noon', () => {
+    expect(deriveMilkSessionFromLoggedAt({ created_at: '2026-07-06T11:59:00Z' })).toBe('Morning');
+  });
+
+  it('derives afternoon for records logged between noon and 4:00 PM', () => {
+    expect(deriveMilkSessionFromLoggedAt({ created_at: '2026-07-06T12:01:00Z' })).toBe('Afternoon');
+    expect(deriveMilkSessionFromLoggedAt({ created_at: '2026-07-06T16:00:00Z' })).toBe('Afternoon');
+  });
+
+  it('derives evening for records logged after 4:00 PM', () => {
+    expect(deriveMilkSessionFromLoggedAt({ created_at: '2026-07-06T16:01:00Z' })).toBe('Evening');
   });
 });
