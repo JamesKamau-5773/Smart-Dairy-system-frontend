@@ -1,10 +1,10 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { 
   Activity, Syringe, Baby, Calendar, Droplets, 
   HeartPulse, ShieldCheck, FileText, Filter, ArrowLeft, Download, Share2, Calculator, Plus, AlertCircle
 } from 'lucide-react';
-import { Link, useParams } from 'react-router-dom';
+import { Link, useLocation, useParams } from 'react-router-dom';
 import { Skeleton } from '../../components/ui';
 import AlertBanner from '../../components/ui/AlertBanner';
 import Modal from '../../components/ui/Modal';
@@ -13,6 +13,7 @@ import { validateForm, ValidationRules, getFirstErrorMessage } from '../../lib/v
 import { formatDateTime, getRelativeTime, createAuditEntry, logToAuditTrail } from '../../lib/audit';
 import LABELS from '../../lib/labels';
 import { animalsApi } from '../../lib/backendApi';
+import { useTenant } from '../../hooks/useTenant';
 import cowAvatar from '../../assets/cow-avatar.svg';
 import AnimalSummaryCards from '../../components/operations/animalRecord/AnimalSummaryCards';
 import AnimalTimelineSection from '../../components/operations/animalRecord/AnimalTimelineSection';
@@ -94,7 +95,7 @@ function normalizeTimelineEvent(entry = {}, animalId = '') {
     eventData: entry.event_data ?? entry.eventData ?? null,
     createdBy: entry.created_by ?? entry.createdBy ?? null,
     createdAt: entry.created_at ?? entry.createdAt ?? null,
-    icon: displayType === 'Health' ? <HeartPulse size={16} /> : displayType === 'Breeding' ? <Syringe size={16} /> : <FileText size={16} />,
+    iconKey: normalizedType,
   };
 }
 
@@ -115,7 +116,8 @@ function normalizeAnimal(animal = {}, id = '') {
     name: animal.name ?? animal.cow_name ?? 'Unnamed',
     breed: animal.breed ?? animal.breed_name ?? 'Unknown',
     ageMonths,
-    status: animal.status ?? animal.lactation_status ?? 'Cow',
+    status: animal.status ?? animal.current_status ?? animal.currentStatus ?? animal.lactation_status ?? 'Cow',
+    current_status: animal.current_status ?? animal.currentStatus ?? animal.status ?? animal.lactation_status ?? 'Cow',
     lastCalved: animal.lastCalved ?? animal.last_calved ?? null,
     milk: animal.milk ?? animal.daily_milk ?? '0.0 L/day',
   };
@@ -123,6 +125,8 @@ function normalizeAnimal(animal = {}, id = '') {
 
 export default function AnimalPassport() {
   const queryClient = useQueryClient();
+  const { tenantId, farmId } = useTenant();
+  const location = useLocation();
   const [activeFilter, setActiveFilter] = useState('All');
   const [activeTab, setActiveTab] = useState('timeline');
   const { id } = useParams();
@@ -130,15 +134,15 @@ export default function AnimalPassport() {
   const timelinePerPage = 20;
 
   const { data: animalData, isLoading } = useQuery({
-    queryKey: ['animal-passport', id],
+    queryKey: ['animal-passport', tenantId, farmId, id],
     queryFn: () => animalsApi.get(id),
-    enabled: !!id,
+    enabled: !!tenantId && !!id,
   });
 
   const { data: timelineResponse, isLoading: isTimelineLoading } = useQuery({
-    queryKey: ['animal-passport-events', id, timelinePage, timelinePerPage],
+    queryKey: ['animal-passport-events', tenantId, farmId, id, timelinePage, timelinePerPage],
     queryFn: async () => normalizeTimelineResponse(await animalsApi.listEvents(id, { page: timelinePage, per_page: timelinePerPage }), id),
-    enabled: !!id,
+    enabled: !!tenantId && !!id,
   });
 
   const [successMessage, setSuccessMessage] = useState('');
@@ -150,24 +154,32 @@ export default function AnimalPassport() {
   const [isSaving, setIsSaving] = useState(false);
   const confirmation = useConfirmation();
 
-  // Nutrition planner state
-  const [targetYield, setTargetYield] = useState('');
-  const [horizonDays, setHorizonDays] = useState(30);
-  const [feedEfficiency, setFeedEfficiency] = useState(0.5);
-  const [feedPrice, setFeedPrice] = useState(60); 
-  const [feedCurrency, setFeedCurrency] = useState('KES'); 
-  const [plannerResult, setPlannerResult] = useState(null);
-
   const animal = animalData ? normalizeAnimal(animalData, id) : null;
+  const resolvedAnimal = animal ?? {
+    id: id ?? 'Loading…',
+    name: 'Loading…',
+    breed: 'Unknown',
+  };
   const timelineEvents = timelineResponse?.items ?? [];
   const timelineMeta = timelineResponse?.meta ?? { page: 1, per_page: timelinePerPage, total: 0, pages: 1 };
 
   const createEventMutation = useMutation({
     mutationFn: (payload) => animalsApi.createEvent(id, payload),
     onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ['animal-passport-events', id] });
+      await queryClient.invalidateQueries({ queryKey: ['animal-passport-events', tenantId, farmId, id] });
     },
   });
+
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const tabFromQuery = params.get('tab');
+    const tabFromHash = location.hash.replace('#', '').trim();
+    const desiredTab = tabFromQuery || tabFromHash;
+
+    if (desiredTab === 'nutrition' || desiredTab === 'timeline') {
+      setActiveTab(desiredTab);
+    }
+  }, [location.search, location.hash]);
 
   if (!animal && !isLoading) {
     return (
@@ -178,21 +190,25 @@ export default function AnimalPassport() {
   }
 
   const handleGenerateCertificate = async () => {
+    if (!animal) return;
+
     try {
-      setSuccessMessage(`Generating Certified Biological Record for ${animal.id}...`);
+      setSuccessMessage(`Generating Certified Biological Record for ${resolvedAnimal.id}...`);
     } catch (error) {
       console.error('Failed to generate PDF', error);
     }
   };
 
   const handleWhatsAppShare = () => {
-    const publicVerifyLink = `https://jivu-dairy.com/verify/${animal.id}-TOKEN123`;
-    const text = `Hello, here is the official Certified Cow Record for ${animal.id} (${animal.name}).\n\nBreed: ${animal.breed}\nView the verified medical passport here: ${publicVerifyLink}`;
+    if (!animal) return;
+
+    const publicVerifyLink = `https://jivu-dairy.com/verify/${resolvedAnimal.id}-TOKEN123`;
+    const text = `Hello, here is the official Certified Cow Record for ${resolvedAnimal.id} (${resolvedAnimal.name}).\n\nBreed: ${resolvedAnimal.breed}\nView the verified medical passport here: ${publicVerifyLink}`;
     window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank');
   };
 
-  const handleAddTimelineEvent = async (e) => {
-    e.preventDefault();
+  const handleAddTimelineEvent = async (event) => {
+    event?.preventDefault?.();
     setFormErrors({});
     setShowError(false);
 
@@ -236,7 +252,7 @@ export default function AnimalPassport() {
       );
 
       setActiveFilter('All');
-      setSuccessMessage(`Logged ${normalizedCreatedEvent.type.toLowerCase()} event for ${animal.id}.`);
+      setSuccessMessage(`Logged ${normalizedCreatedEvent.type.toLowerCase()} event for ${resolvedAnimal.id}.`);
       setNewEvent({ title: '', description: '', date: '', type: 'Health' });
       setIsEventOpen(false);
     } catch (error) {
@@ -288,7 +304,7 @@ export default function AnimalPassport() {
               <Activity size={12} /> Cow Record
             </div>
             <h2 className="font-sans font-bold text-2xl tracking-tight text-brand m-0">
-              {animal.id} <span className="text-ink-muted">({animal.name})</span>
+              {resolvedAnimal.id} <span className="text-ink-muted">({resolvedAnimal.name})</span>
             </h2>
           </div>
         </div>
@@ -357,17 +373,14 @@ export default function AnimalPassport() {
           isPaginating={isTimelineLoading}
         />
       ) : (
-        <AnimalNutritionPlanner animal={animal} />
+        <AnimalNutritionPlanner animal={animal} tenantId={tenantId} farmId={farmId} />
       )}
 
       {/* ── LOG ACTION MODAL ── */}
       <Modal isOpen={isEventOpen} onClose={() => setIsEventOpen(false)} title="Log Action">
         <form
           className="space-y-4"
-          onSubmit={(event) => {
-            event.preventDefault();
-            handleAddTimelineEvent(newEvent);
-          }}
+          onSubmit={handleAddTimelineEvent}
         >
           <div>
             <label className="mb-1 block text-xs font-bold uppercase tracking-wider text-ink-strong">Event Type</label>
