@@ -1,25 +1,48 @@
 # Backend Endpoint Map
 
-This map translates the routed `jivu-frontend` build into backend responsibilities. It is intentionally build-wide, not HR-only.
+This is the current backend contract for the frontend integration.
 
-## Backend-Provided Route Inventory
+## Access Model
 
-The backend has already defined these concrete routes. Where both singular and plural resource names exist, the frontend should treat them as equivalent aliases if the payload shape is the same.
+- Protected routes require `Authorization: Bearer <token>`.
+- Role parity is enabled for elevated users: `FARMER`, `ADMIN`, and `SUPER_ADMIN` are treated as equivalent for endpoint authorization.
+- Tenant and farm are read from JWT claims. The backend does not rely on `X-Tenant-ID` or `X-Farm-ID` headers for request scoping.
 
-### Auth
+## Mutation Semantics
 
-- `POST /api/auth/register`
+- `400` means the request body is missing required fields or contains malformed values.
+- `404` means a referenced tenant-scoped record does not exist.
+- `409` means the create or update hits a tenant-scoped uniqueness conflict.
+- Frontend create flows should treat `409` as a business conflict and allow the user to retry with new data.
+
+## Pagination And Filters
+
+List endpoints now support pagination using:
+
+- `page` (default `1`)
+- `per_page` (default `20`, max `200`)
+
+Where implemented, filtering supports `q` and route-specific keys such as `status`, `category`, `movement_type`, and `flag`.
+
+## Auth
+
 - `POST /api/auth/login`
+- `POST /api/auth/register`
+- `POST /api/auth/register` request body:
+	- `farm_name` (required)
+	- `phone_number` (required)
+	- `password` (required, min 8 chars)
+	- `username` (optional; defaults to `phone_number`)
+	- `tenant_name` (optional)
+	- `name` (optional)
+	- `tenant_type` (`single` or `cooperative`, optional)
+	- `role` (optional; defaults to `FARMER`)
+- `POST /api/auth/switch-farm`
 - `POST /api/auth/logout`
 - `GET /api/auth/me`
-- `POST /api/auth/switch-farm`
 - `GET /api/auth/status`
 
-### Tenant
-
-- `GET /api/tenant/profile`
-
-### HR
+## HR
 
 - `POST /api/hr/staff`
 - `POST /api/hr/employees`
@@ -36,23 +59,108 @@ The backend has already defined these concrete routes. Where both singular and p
 - `GET /api/hr/payroll`
 - `GET /api/hr/payroll-records`
 - `POST /api/hr/payroll/runs`
+- `GET /api/hr/payroll/runs`
+- `GET /api/hr/payroll/runs/<run_id>`
 
-### Dashboard
-
-- `GET /api/v1/dashboard/summary`
-- `GET /api/production/summary`
-
-### Herd and Animals
+## Frontend-Critical Livestock/Operations Routes
 
 - `GET /api/herd`
 - `POST /api/herd`
-- `GET /api/herd/:id`
-- `PATCH /api/herd/:id`
-- `GET /api/animals/:id`
-- `PATCH /api/animals/:id`
-- `GET /api/animals/:id/milk-history`
+- `GET /api/herd/<cow_id>`
+- `PATCH /api/herd/<cow_id>`
+- `DELETE /api/herd/<cow_id>`
+- `GET /api/animals/<cow_id>`
+- `PATCH /api/animals/<cow_id>`
+- `GET /api/animals/<cow_id>/milk-history`
+- `GET /api/animals/<cow_id>/events`
 
-### Operations
+### `GET /api/animals/<cow_id>/milk-history` response shape
+
+Must return an envelope object (not a bare array):
+
+```json
+{
+  "sessions": [
+    {
+      "date": "2026-07-09",
+      "session": "Morning",
+      "milker": 2,
+      "liters": 13.0,
+      "status": "RECORDED"
+    }
+  ],
+  "stats": {
+    "average_yield": 8.8,
+    "peak_yield": 13.0,
+    "total_logged": 26.5,
+    "session_count": 4
+  }
+}
+```
+
+- `average_yield` — total litres divided by number of unique milking days (L/day)
+- `peak_yield` — highest single-day total across all sessions (L/day)
+- `total_logged` — sum of all session litres
+- `session_count` — total number of individual milking sessions
+
+All four stat fields are required. The frontend falls back to client-side calculation only when `stats` is absent (backward-compat window).
+- `POST /api/animals/<cow_id>/events`
+- `GET /api/production/milk-drop-alerts`
+- `POST /api/production/milk-drop-alerts/<alert_id>/investigate`
+
+`POST /api/herd` accepts `tag_number` and `date_of_birth` as the canonical fields. For frontend compatibility, the backend also accepts `id`/`tag`/`tagNumber` for the tag and `dob`/`dateOfBirth` for the birth date.
+
+### Herd create schema
+
+Request body:
+
+```json
+{
+	"tag_number": "C-002",
+	"name": "Ruby",
+	"breed_status": "Foundation",
+	"date_of_birth": "2026-07-01"
+}
+```
+
+Frontend aliases accepted by the backend:
+
+- `id`, `tag`, `tagNumber` -> `tag_number`
+- `dob`, `dateOfBirth` -> `date_of_birth`
+
+Response body:
+
+```json
+{
+	"id": 7,
+	"tag": "C-002",
+	"tag_number": "C-002",
+	"name": "Ruby",
+	"dob": "2026-07-01",
+	"date_of_birth": "2026-07-01",
+	"current_status": "Lactating"
+}
+```
+
+Conflict behavior:
+
+- `409` when `tag_number` already exists for the tenant
+- `400` when `tag_number` or `date_of_birth` is missing/invalid
+
+The browser payload `{ id, name, breed, dob, hasCalved }` is accepted because `id` maps to `tag_number` and `dob` maps to `date_of_birth`. `breed` is treated as an alias for `breed_status`; if omitted, the backend defaults to `Foundation`.
+
+## Frontend-Critical Clinical/Safety Routes
+
+- `POST /api/clinical/cows/<cow_id>/medical`
+- `POST /api/clinical/livestock/<cow_id>/medical`
+- `PUT /api/clinical/cows/<cow_id>/hardlock`
+- `PUT /api/clinical/livestock/<cow_id>/hardlock`
+- `GET /api/safety/dashboard`
+- `GET /api/veterinary/hardlocks/active`
+- `GET /api/medical/records`
+- `POST /api/medical/records`
+
+## Other Operations Routes
 
 - `POST /api/operations/cows/<cow_id>/milk`
 - `POST /api/operations/livestock/<cow_id>/milk`
@@ -61,267 +169,269 @@ The backend has already defined these concrete routes. Where both singular and p
 - `POST /api/operations/breeding-logs`
 - `PUT /api/operations/breeding-logs/<log_id>/status`
 - `GET /api/operations/breeding/performance`
-
-### Clinical
-
-- `POST /api/clinical/cows/<cow_id>/medical`
-- `POST /api/clinical/livestock/<cow_id>/medical`
-- `PUT /api/clinical/cows/<cow_id>/hardlock`
-- `PUT /api/clinical/livestock/<cow_id>/hardlock`
-- `POST /api/clinical/vet-visits`
-- `GET /api/clinical/vet-visits`
-- `PUT /api/clinical/vet-visits/<visit_id>/follow-up/schedule`
-- `PUT /api/clinical/vet-visits/<visit_id>/follow-up/complete`
-- `GET /api/clinical/vet-visits/follow-ups/pending`
-
-### Inventory
-
-- `POST /api/v1/inventory/deduct`
-- `GET /api/inventory/items`
-- `POST /api/inventory/items`
-- `PATCH /api/inventory/items/:id`
-- `DELETE /api/inventory/items/:id`
-- `GET /api/inventory/movements`
-- `POST /api/inventory/movements`
-- `GET /api/inventory/stock`
-
-### Finance
-
-- `GET /api/finance/unit-cost`
-- `GET /api/finance/customers`
-- `POST /api/finance/customers`
-- `GET /api/finance/customers/:id`
-- `POST /api/finance/billing/stk-push`
-- `POST /api/finance/mpesa/callback`
-- `GET /api/finance/ledger`
-- `POST /api/finance/ledger`
-- `GET /api/finance/buyers`
-- `POST /api/finance/buyers`
-- `GET /api/finance/buyers/:buyerId`
-- `PATCH /api/finance/buyers/:buyerId`
-- `GET /api/finance/statements/:token`
-
-### Export
-
-- `GET /api/v1/export/animal/<animal_id>/pdf`
-
-### Feed
-
-- `POST /api/v1/feed/calculate-schedule`
-- `GET /api/feed/recipes`
-- `POST /api/feed/recipes`
-- `PATCH /api/feed/recipes/:id`
-- `DELETE /api/feed/recipes/:id`
-- `POST /api/feed/formulate`
-- `GET /api/units/conversions`
-- `POST /api/units/conversions`
-- `GET /api/feed/costing`
-
-### Nutrition
-
-- `POST /api/v1/nutrition/batches`
-- `POST /api/v1/nutrition/batches/<batch_id>/consumption-events`
-- `GET /api/v1/nutrition/analytics/feed-cost-efficiency`
-- `GET /api/v1/nutrition/analytics/active-batch-roi-trend-weekly`
-- `GET /api/nutrition/dashboard`
-
-### Herdsman
-
-- `POST /api/v1/tasks/<routine_id>/complete`
-
-### Health
-
-- `GET /health`
-
-### Frontend-Requested Coverage
-
-The backend also exposes the additional frontend-requested routes below. These are now covered and should be treated as supported contract paths.
-
-#### Safety and hardlocks
-
-- `GET /api/safety/dashboard`
-- `GET /api/veterinary/hardlocks/active`
-- `PUT /api/clinical/cows/:cow_id/hardlock`
-- `POST /api/clinical/cows/:cow_id/medical`
-- `GET /api/medical/records`
-- `POST /api/medical/records`
-
-#### Herd and animal flows
-
-- `GET /api/operations/api/herd`
-- `POST /api/operations/api/herd`
-- `GET /api/operations/api/herd/:cow_id`
-- `PATCH /api/operations/api/herd/:cow_id`
-- `DELETE /api/operations/api/herd/:cow_id`
-- `GET /api/operations/api/animals/:cow_id`
-- `PATCH /api/operations/api/animals/:cow_id`
-- `GET /api/operations/api/animals/:cow_id/milk-history`
-
-#### Milk-drop alerts
-
-- `GET /api/operations/api/production/milk-drop-alerts`
-- `POST /api/operations/api/production/milk-drop-alerts/:alert_id/investigate`
-
-## Build-Wide Notes
-
-The backend now exposes the canonical build-wide routes for auth/session hydration, dashboard production totals, herd and animal detail, inventory registry, nutrition screens, safety dashboard, finance customers/ledger, and the frontend-requested safety/hardlock, herd/animal, and milk-drop alert routes. The frontend should prefer the canonical paths listed above and keep the `api/v1` prefixed routes as aliases where they still exist.
-
-## Transport Rules
-
-- `Authorization: Bearer <token>` is required for protected routes.
-- `X-Tenant-ID` and `X-Farm-ID` must scope every tenant-aware request.
-- Mutations should be replay-safe because the frontend uses an offline queue.
-
-## 1. Auth and Session
-
-### `POST /api/auth/login`
-
-Returns the user session, role, and tenant/farm scope.
-
-### `POST /api/auth/logout`
-
-Invalidates the session token.
-
-### `GET /api/auth/me`
-
-Returns the active user, permissions, and current scope.
-
-## 2. Dashboard
-
-### `GET /api/v1/dashboard/summary`
-
-Returns the top-level business summary for the active farm.
-
-Expected fields:
-
-- production totals
-- revenue totals
-- feed cost totals
-- net margin
-- operational alerts
-
-### `GET /api/production/summary`
-
-Returns production KPI data for the dashboard cards.
-
-### `GET /api/finance/unit-cost`
-
-Returns the unit cost and margin inputs used by the dashboard.
-
-## 3. Operations
-
-### Production
-
 - `GET /api/production/yield`
 - `POST /api/production/yield`
-- `GET /api/production/yield/:id`
-- `DELETE /api/production/yield/:id`
-
-### Herd and Animal Records
-
-- `GET /api/herd`
-- `GET /api/herd/:id`
-- `POST /api/herd`
-- `PATCH /api/herd/:id`
-- `GET /api/animals/:id`
-- `PATCH /api/animals/:id`
-- `GET /api/animals/:id/milk-history`
-
-### Breeding
-
+- `GET /api/production/yield/<log_id>`
+- `DELETE /api/production/yield/<log_id>`
+- `GET /api/production/summary`
 - `GET /api/breeding`
 - `POST /api/breeding`
-- `PATCH /api/breeding/:id`
-
-### Milk Lab and Clerk Entry
-
+- `PATCH /api/breeding/<log_id>`
 - `GET /api/lab/entries`
 - `POST /api/lab/entries`
 - `GET /api/clerk/entries`
 - `POST /api/clerk/entries`
 
-### Safety, Medical, and Routine
+Legacy compatibility:
 
-- `GET /api/safety/dashboard`
-- `GET /api/medical/records`
-- `POST /api/medical/records`
-- `GET /api/routine/plans`
-- `POST /api/routine/plans`
+- Existing prefixed paths under `/api/operations/api/*` are still active for backward compatibility.
 
-## 4. Nutrition
+## Inventory
 
-### Feed Dashboard and Formulation
-
-- `GET /api/nutrition/dashboard`
-- `GET /api/feed/recipes`
-- `POST /api/feed/recipes`
-- `PATCH /api/feed/recipes/:id`
-- `DELETE /api/feed/recipes/:id`
-- `POST /api/feed/formulate`
-
-### Units and Cost Inputs
-
-- `GET /api/units/conversions`
-- `POST /api/units/conversions`
-- `GET /api/feed/costing`
-
-The backend should own conversion and costing rules so the frontend does not infer them locally.
-
-## 5. Inventory
-
-### Registry and Stock Flows
-
+- `POST /api/v1/inventory/deduct`
 - `GET /api/inventory/items`
 - `POST /api/inventory/items`
-- `PATCH /api/inventory/items/:id`
+- `PATCH /api/inventory/items/<item_id>`
+- `DELETE /api/inventory/items/<item_id>`
 - `GET /api/inventory/movements`
 - `POST /api/inventory/movements`
 - `GET /api/inventory/stock`
 
-## 6. Finance
+### Inventory item create schema
 
-### Ledger and Buyers
+Request body:
 
+```json
+{
+	"name": "hay",
+	"sku": "h-001",
+	"category": "Bulk Feed",
+	"unit": "KG",
+	"currentStock": 164,
+	"reorderLevel": 10,
+	"energy_mj_per_kg": 0,
+	"protein_grams_per_kg": 0,
+	"fiber_grams_per_kg": 0,
+	"cost_per_kg": 0
+}
+```
+
+Accepted aliases:
+
+- `current_qty` -> `currentStock`
+- `minimum_threshold` -> `reorderLevel`
+
+Response body:
+
+```json
+{
+	"id": 1,
+	"name": "hay",
+	"sku": "h-001",
+	"category": "Bulk Feed",
+	"unit": "KG",
+	"reorderLevel": 10.0,
+	"currentStock": 164.0
+}
+```
+
+Conflict behavior:
+
+- `409` when `name` or `sku` already exists for the tenant
+- `400` when `name`, `category`, or `unit` is missing
+
+Frontend should treat `409` as a duplicate-item conflict, not a transport failure.
+
+## Finance
+
+- `GET /api/finance/unit-cost`
+- `GET /api/finance/customers`
+- `POST /api/finance/customers`
+- `GET /api/finance/customers/<customer_id>`
 - `GET /api/finance/ledger`
 - `POST /api/finance/ledger`
 - `GET /api/finance/buyers`
 - `POST /api/finance/buyers`
-- `GET /api/finance/buyers/:buyerId`
-- `PATCH /api/finance/buyers/:buyerId`
+- `GET /api/finance/buyers/<buyer_id>`
+- `PATCH /api/finance/buyers/<buyer_id>`
+- `GET /api/finance/statements/<token>`
+- `POST /api/finance/billing/stk-push`
+- `POST /api/finance/mpesa/callback`
 
-### Customer Profiles and Statements
+### Finance create schemas
 
-- `GET /api/finance/customers`
-- `GET /api/finance/customers/:id`
-- `GET /api/finance/statements/:token`
+Buyer create request:
 
-The statement route must be token-safe and read-only for the external portal.
+```json
+{
+	"name": "Kisii Dairy",
+	"agreed_rate_per_liter": 55,
+	"is_active": true
+}
+```
 
-## 7. Human Resources
+Buyer response:
 
-### Staff Registry
+```json
+{
+	"id": 3,
+	"name": "Kisii Dairy"
+}
+```
 
-- `GET /api/hr/staff`
-- `GET /api/hr/staff/:id`
-- `POST /api/hr/staff`
-- `PATCH /api/hr/staff/:id`
-- `DELETE /api/hr/staff/:id` if supported by policy
+Conflict behavior:
 
-### Verification
+- `409` when buyer name already exists for the tenant
 
-- `POST /api/hr/staff/:id/verify-return`
+Customer create request:
 
-### Payroll
+```json
+{
+	"name": "Mary",
+	"phone_number": "254712345678",
+	"account_balance": 0,
+	"daily_contract_liters": 0,
+	"is_active": true
+}
+```
 
-- `POST /api/hr/payroll/runs`
-- `GET /api/hr/payroll/runs`
-- `GET /api/hr/payroll/runs/:id`
+Customer response:
 
-## 8. Cross-Cutting Backend Expectations
+```json
+{
+	"id": 5,
+	"name": "Mary",
+	"phone_number": "254712345678",
+	"account_balance": 0.0,
+	"daily_contract_liters": 0.0,
+	"is_active": true
+}
+```
 
-- Every route should enforce tenant and farm isolation.
-- Every mutable action should return a stable, typed response shape.
-- Validation errors should be structured and field-specific.
-- The backend should support paging and filtering on list endpoints.
-- Audit events should be recorded for state changes that affect operations, finance, and compliance.
-- Where the UI expects computed metrics, the backend should return the final numbers rather than leaving them to client-side inference.
+Conflict behavior:
+
+- `409` when phone number already exists for the tenant
+
+Ledger entry create request:
+
+```json
+{
+	"transaction_type": "Expense",
+	"category": "Feed Purchase",
+	"amount": 1000,
+	"reference_code": "REF-123",
+	"description": "Morning feed",
+	"customer_id": null
+}
+```
+
+## Dashboard
+
+- `GET /api/v1/dashboard/summary`
+- `GET /api/production/summary`
+
+## Breeding Alias
+
+- `PATCH /api/v1/breeding/insemination/<log_id>/outcome`
+
+## Nutrition And Feed
+
+- `POST /api/v1/feed/calculate-schedule`
+- `POST /api/v1/nutrition/batches`
+- `POST /api/v1/nutrition/batches/<batch_id>/consumption-events`
+- `GET /api/v1/nutrition/analytics/feed-cost-efficiency`
+- `GET /api/v1/nutrition/analytics/active-batch-roi-trend-weekly`
+- `GET /api/v1/nutrition/dashboard`
+- `GET /api/nutrition/dashboard`
+- `GET /api/v1/nutrition/recipes`
+- `POST /api/v1/nutrition/recipes`
+- `PATCH /api/v1/nutrition/recipes/<recipe_id>`
+- `DELETE /api/v1/nutrition/recipes/<recipe_id>`
+- `GET /api/feed/recipes`
+- `POST /api/feed/recipes`
+- `PATCH /api/feed/recipes/<recipe_id>`
+- `DELETE /api/feed/recipes/<recipe_id>`
+- `POST /api/v1/nutrition/feed/formulate`
+- `POST /api/feed/formulate`
+- `GET /api/v1/nutrition/units/conversions`
+- `POST /api/v1/nutrition/units/conversions`
+- `GET /api/units/conversions`
+- `POST /api/units/conversions`
+- `GET /api/v1/nutrition/feed/costing`
+- `GET /api/feed/costing`
+
+### Nutrition create schemas
+
+Recipe create request:
+
+```json
+{
+	"name": "Winter Mix",
+	"target_protein_percentage": 18,
+	"is_active": true,
+	"ingredients": [
+		{
+			"inventory_item_id": 1,
+			"inclusion_percentage": 100
+		}
+	]
+}
+```
+
+Conflict / validation behavior:
+
+- `404` when an ingredient `inventory_item_id` does not exist for the tenant
+- `409` when the recipe insert hits a tenant-scoped uniqueness conflict
+
+Unit conversion create request:
+
+```json
+{
+	"item_id": 1,
+	"unit_name": "Bag",
+	"kg_equivalent": 50
+}
+```
+
+Conflict behavior:
+
+- `409` when the unit conversion already exists for the tenant
+
+Batch create request:
+
+```json
+{
+	"batchName": "June Feed Mix A",
+	"formulaId": null,
+	"isSavedAsTemplate": false,
+	"formulaName": "June Feed Mix A",
+	"totalWeight": 100,
+	"totalCost": 6200,
+	"costPerKg": 62,
+	"ingredients": [
+		{
+			"ingredientId": 1,
+			"weight": 60,
+			"percentage": 60,
+			"lockedCostPerKg": 55
+		}
+	]
+}
+```
+
+Validation behavior:
+
+- `400` for malformed totals or ingredient data
+- `404` when `formulaId` or ingredient references are invalid for the tenant
+- `409` when a tenant-scoped uniqueness violation occurs during save
+
+## Tenant, Export, Tasking
+
+- `GET /api/tenant/profile`
+- `POST /api/tenant/cooperatives`
+- `POST /api/tenant/cooperatives/<cooperative_id>/members`
+- `POST /api/tenant/cooperatives/<cooperative_id>/members/bulk`
+- `GET /api/v1/export/animal/<animal_id>/pdf`
+- `POST /api/v1/tasks/<routine_id>/complete`
+- `GET /api/routine/plans`
+- `POST /api/routine/plans`
