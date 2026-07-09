@@ -1,5 +1,6 @@
 import axios from 'axios';
 import apiClient from './apiClient';
+import { httpClientConfig } from './httpClientConfig';
 import { getPermissionSet, getRoleSet, normalizeRole } from './roles';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
@@ -8,6 +9,7 @@ const HEALTH_BASE_URL = API_BASE_URL.replace(/\/api\/?$/, '');
 const authClient = axios.create({
   baseURL: API_BASE_URL,
   timeout: 10000,
+  ...httpClientConfig,
 });
 
 authClient.interceptors.request.use((config) => {
@@ -36,6 +38,7 @@ authClient.interceptors.request.use((config) => {
 const healthClient = axios.create({
   baseURL: HEALTH_BASE_URL,
   timeout: 10000,
+  ...httpClientConfig,
 });
 
 const ALIASABLE_STATUSES = new Set([404, 405, 501]);
@@ -231,22 +234,43 @@ export function normalizePayrollRow(row = {}) {
 }
 
 export function normalizePayrollRun(run = {}) {
-  const details = toArray(run.details).map(normalizePayrollRow);
+  const lineItems = toArray(run.lineItems ?? run.line_items ?? run.details).map(normalizePayrollRow);
+  const backendSummary = run.summary ?? run.payroll_summary ?? run.payrollSummary ?? null;
+  const summary = backendSummary
+    ? {
+        totalBase: Number(backendSummary.totalBase ?? backendSummary.total_base ?? 0),
+        totalLeave: Number(backendSummary.totalLeave ?? backendSummary.total_leave ?? 0),
+        totalGross: Number(backendSummary.totalGross ?? backendSummary.total_gross ?? 0),
+        totalDeductions: Number(backendSummary.totalDeductions ?? backendSummary.total_deductions ?? 0),
+        totalNet: Number(backendSummary.totalNet ?? backendSummary.total_net ?? backendSummary.netPay ?? backendSummary.net_pay ?? 0),
+      }
+    : null;
+  const employees = Number(run.employees ?? run.employeeCount ?? lineItems.length);
+  const totalDisbursed = Number(
+    run.totalDisbursed
+      ?? run.total_disbursed
+      ?? summary?.totalNet
+      ?? lineItems.reduce((acc, row) => acc + Number(row.net || 0), 0)
+  );
 
   return {
     ...run,
     id: run.id ?? run.runId ?? run.payrollRunId ?? `run_${Date.now()}`,
     date: run.date ?? run.runDate ?? run.payrollDate ?? null,
     period: run.period ?? run.payPeriod ?? run.label ?? '',
-    employees: Number(run.employees ?? run.employeeCount ?? details.length),
-    totalDisbursed: Number(run.totalDisbursed ?? run.total_disbursed ?? details.reduce((acc, row) => acc + Number(row.net || 0), 0)),
-    details,
+    employees,
+    totalDisbursed,
+    summary,
+    lineItems,
+    details: lineItems,
   };
 }
 
 export function normalizeInventoryItem(item = {}) {
-  const stockValue = item.stock?.value ?? item.stock ?? item.currentStock ?? item.quantity ?? item.qty ?? 0;
-  const stockUnit = item.stock?.unit ?? item.stockUnit ?? item.unit ?? 'units';
+  const stockValue = item.currentStock ?? item.current_qty ?? item.stock?.value ?? item.stock ?? item.quantity ?? item.qty ?? 0;
+  const stockUnit = item.unit ?? item.stock?.unit ?? item.stockUnit ?? 'units';
+  const reorderLevel = Number(item.reorderLevel ?? item.minimum_threshold ?? item.reorder_level ?? item.threshold ?? 0);
+  const currentStock = Number(stockValue);
 
   return {
     ...item,
@@ -254,12 +278,38 @@ export function normalizeInventoryItem(item = {}) {
     name: item.name ?? item.item_name ?? '',
     sku: item.sku ?? item.code ?? item.item_code ?? '',
     category: item.category ?? item.group ?? 'Uncategorized',
+    unit: stockUnit,
+    currentStock,
+    current_qty: item.current_qty ?? currentStock,
     stock: {
-      value: Number(stockValue),
+      value: currentStock,
       unit: stockUnit,
     },
-    reorderLevel: Number(item.reorderLevel ?? item.reorder_level ?? item.threshold ?? 0),
+    reorderLevel,
+    minimum_threshold: item.minimum_threshold ?? reorderLevel,
   };
+}
+
+export function getApiErrorMessage(error, fallback = 'Request failed. Please try again.') {
+  const status = error?.response?.status;
+  const responseData = error?.response?.data;
+  const explicitMessage = typeof responseData === 'string'
+    ? responseData
+    : responseData?.message ?? responseData?.error ?? responseData?.detail ?? responseData?.details ?? null;
+
+  if (explicitMessage) {
+    return explicitMessage;
+  }
+
+  if (status === 409) {
+    return 'This record already exists for the current tenant.';
+  }
+
+  if (status === 400) {
+    return 'The submitted data is invalid.';
+  }
+
+  return error?.message ?? fallback;
 }
 
 export function normalizeMedicalRecord(record = {}) {
@@ -289,6 +339,226 @@ const staffRoutes = (staffId) => (staffId
 const verifyRoutes = (staffId) => [`/hr/staff/${staffId}/verify-return`, `/hr/employees/${staffId}/verify-return`];
 
 const payrollRoutes = () => ['/hr/payroll/runs', '/hr/payroll-records', '/hr/payroll'];
+
+const normalizeHerdRecord = (cow = {}) => {
+  const tagNumber = cow.tag_number ?? cow.tagNumber ?? cow.tag ?? cow.id ?? cow.ear_tag ?? '';
+  const dateOfBirth = cow.date_of_birth ?? cow.dateOfBirth ?? cow.dob ?? null;
+  const breedStatus = cow.breed_status ?? cow.breed ?? 'Foundation';
+  const currentStatus = cow.current_status ?? cow.currentStatus ?? cow.status ?? cow.lactation_status ?? 'Unknown';
+
+  return {
+    ...cow,
+    id: cow.id ?? tagNumber ?? null,
+    tag: cow.tag ?? tagNumber ?? null,
+    tagNumber,
+    tag_number: tagNumber,
+    name: cow.name ?? '',
+    dob: cow.dob ?? dateOfBirth,
+    dateOfBirth,
+    date_of_birth: dateOfBirth,
+    breed: cow.breed ?? breedStatus,
+    breed_status: breedStatus,
+    current_status: currentStatus,
+    currentStatus,
+  };
+};
+
+const buildHerdPayload = (payload = {}) => {
+  const tagNumber = payload.tag_number ?? payload.tagNumber ?? payload.tag ?? payload.id ?? payload.ear_tag ?? '';
+  const dateOfBirth = payload.date_of_birth ?? payload.dateOfBirth ?? payload.dob ?? null;
+  const request = {
+    tag_number: tagNumber,
+    date_of_birth: dateOfBirth,
+  };
+
+  if (payload.name !== undefined) {
+    request.name = payload.name;
+  }
+
+  const breedStatus = payload.breed_status ?? payload.breed;
+  if (breedStatus !== undefined && breedStatus !== null && breedStatus !== '') {
+    request.breed_status = breedStatus;
+  }
+
+  return request;
+};
+
+const buildInventoryItemPayload = (payload = {}) => {
+  const unit = payload.unit ?? payload.stock?.unit ?? payload.stockUnit ?? '';
+  const currentStock = Number(payload.currentStock ?? payload.current_qty ?? payload.stock?.value ?? payload.stock?.quantity ?? payload.stock?.qty ?? payload.stock ?? payload.quantity ?? 0);
+  const reorderLevel = Number(payload.reorderLevel ?? payload.minimum_threshold ?? payload.reorder_level ?? payload.threshold ?? 0);
+  const request = {
+    name: payload.name ?? '',
+    category: payload.category ?? '',
+    unit,
+    sku: payload.sku ?? '',
+    currentStock,
+    current_qty: payload.current_qty ?? currentStock,
+    reorderLevel,
+    minimum_threshold: payload.minimum_threshold ?? reorderLevel,
+  };
+
+  ['energy_mj_per_kg', 'protein_grams_per_kg', 'fiber_grams_per_kg', 'cost_per_kg'].forEach((key) => {
+    if (payload[key] !== undefined && payload[key] !== null && payload[key] !== '') {
+      request[key] = payload[key];
+    }
+  });
+
+  return request;
+};
+
+const normalizeInventoryMovementPayload = (payload = {}) => {
+  const rawType = String(
+    payload.transaction_type
+      ?? payload.transactionType
+      ?? payload.movement_type
+      ?? payload.movementType
+      ?? payload.type
+      ?? ''
+  ).trim();
+
+  const normalizedType = rawType.toUpperCase();
+  const inboundAliases = new Set(['IN', 'RESTOCK', 'ADD', 'RECEIVE', 'RECEIVED', 'PURCHASE']);
+  const outboundAliases = new Set(['OUT', 'DEDUCT', 'USAGE', 'CONSUME', 'CONSUMPTION', 'ISSUE', 'DISPATCH', 'WASTAGE', 'WASTE', 'SALE']);
+
+  const transactionType = inboundAliases.has(normalizedType)
+    ? 'IN'
+    : outboundAliases.has(normalizedType)
+      ? 'OUT'
+      : normalizedType;
+
+  const quantityValue = Number(payload.quantity ?? payload.qty ?? payload.amount ?? 0);
+  const quantity = Number.isFinite(quantityValue) ? Math.abs(quantityValue) : 0;
+
+  return {
+    ...payload,
+    item_id: payload.item_id ?? payload.itemId ?? payload.inventory_item_id ?? payload.inventoryItemId,
+    quantity,
+    transaction_type: transactionType,
+    reference_note: payload.reference_note ?? payload.referenceNote ?? payload.note ?? '',
+  };
+};
+
+export const buildProductionYieldPayload = (payload = {}) => {
+  const cowId = payload.cow_id ?? payload.cowId ?? payload.cow ?? payload.animal_id ?? payload.animalId ?? '';
+  const amount = Number(payload.amount ?? payload.volume ?? payload.liters ?? 0);
+  const session = payload.session ?? payload.milkingSession ?? 'morning';
+
+  return {
+    cow_id: cowId,
+    amount,
+    session,
+    milkingDate: payload.milkingDate ?? payload.date ?? payload.dateOfMilking ?? new Date().toISOString().slice(0, 10),
+  };
+};
+
+const normalizeRecipePayload = (payload = {}) => ({
+  ...payload,
+  recipeType: payload.recipeType ?? payload.recipe_type ?? '',
+  recipe_type: payload.recipe_type ?? payload.recipeType ?? '',
+  ingredients: Array.isArray(payload.ingredients) ? payload.ingredients : [],
+});
+
+const normalizeNutritionIngredientPayload = (ingredient = {}) => {
+  const parsedIngredientId = Number(
+    ingredient.ingredient_id
+      ?? ingredient.ingredientId
+      ?? ingredient.inventory_item_id
+      ?? ingredient.inventoryItemId
+      ?? ingredient.item_id
+      ?? ingredient.itemId
+      ?? ingredient.id
+  );
+
+  const parsedInclusionPercentage = Number(
+    ingredient.inclusion_percentage
+      ?? ingredient.inclusionPercent
+      ?? ingredient.inclusionPercentage
+      ?? ingredient.percentage
+      ?? ingredient.share
+      ?? 0
+  );
+
+  const inclusionPercentage = Number.isFinite(parsedInclusionPercentage)
+    ? Math.max(0, parsedInclusionPercentage)
+    : 0;
+
+  const normalizedIngredient = {
+    ...ingredient,
+    inclusion_percentage: inclusionPercentage,
+    inclusionPercentage,
+    percentage: inclusionPercentage,
+  };
+
+  if (Number.isFinite(parsedIngredientId) && parsedIngredientId > 0) {
+    normalizedIngredient.ingredient_id = parsedIngredientId;
+    normalizedIngredient.ingredientId = parsedIngredientId;
+    normalizedIngredient.inventory_item_id = parsedIngredientId;
+    normalizedIngredient.inventoryItemId = parsedIngredientId;
+  }
+
+  return normalizedIngredient;
+};
+
+const normalizeNutritionRequestPayload = (payload = {}) => {
+  const normalized = normalizeRecipePayload(payload);
+  const recipeType = normalized.recipe_type || normalized.recipeType;
+  const parsedBatchSize = Number(
+    payload.batch_size_kg
+      ?? payload.batchSizeKg
+      ?? payload.batch_size
+      ?? payload.batchSize
+      ?? 0
+  );
+  const parsedTargetProtein = Number(
+    payload.target_protein_percent
+      ?? payload.targetProteinPercent
+      ?? payload.target_protein_percentage
+      ?? payload.targetProteinPercentage
+      ?? payload.target_protein
+      ?? payload.targetProtein
+  );
+
+  const batchSizeKg = Number.isFinite(parsedBatchSize) ? parsedBatchSize : 0;
+  const fallbackTargetProtein = recipeType === 'main_meal' ? 14 : 16;
+  const targetProteinPercent = Number.isFinite(parsedTargetProtein) && parsedTargetProtein > 0
+    ? parsedTargetProtein
+    : fallbackTargetProtein;
+  const ingredients = Array.isArray(normalized.ingredients)
+    ? normalized.ingredients.map((ingredient) => normalizeNutritionIngredientPayload(ingredient))
+    : [];
+
+  return {
+    ...normalized,
+    ingredients,
+    target_protein_percent: targetProteinPercent,
+    targetProteinPercent: targetProteinPercent,
+    target_protein_percentage: targetProteinPercent,
+    targetProteinPercentage: targetProteinPercent,
+    batch_size_kg: batchSizeKg,
+    batchSizeKg: batchSizeKg,
+  };
+};
+
+const normalizeConversionPayload = (payload = {}) => {
+  const context = payload.context ?? payload.material ?? '';
+  const unitName = payload.unitName ?? payload.localUnit ?? payload.unit_name ?? '';
+  const factor = Number(payload.factor ?? payload.ratio ?? 0);
+  const baseUnit = payload.baseUnit ?? payload.base_unit ?? 'kg';
+
+  return {
+    ...payload,
+    context,
+    material: payload.material ?? context,
+    unitName,
+    unit_name: payload.unit_name ?? unitName,
+    localUnit: payload.localUnit ?? unitName,
+    factor,
+    ratio: payload.ratio ?? factor,
+    baseUnit,
+    base_unit: payload.base_unit ?? baseUnit,
+  };
+};
 
 export const authApi = {
   login(credentials) {
@@ -343,10 +613,7 @@ export const productionApi = {
     return apiClient.get('/production/yield').then((response) => toArray(response.data));
   },
   createYield(payload, config = {}) {
-    return apiClient.post('/production/yield', payload, config).then((response) => toObject(response.data));
-  },
-  updateYield(yieldId, payload, config = {}) {
-    return apiClient.patch(`/production/yield/${yieldId}`, payload, config).then((response) => toObject(response.data));
+    return apiClient.post('/production/yield', buildProductionYieldPayload(payload), config).then((response) => toObject(response.data));
   },
   getYield(yieldId) {
     return apiClient.get(`/production/yield/${yieldId}`).then((response) => toObject(response.data));
@@ -354,11 +621,34 @@ export const productionApi = {
   deleteYield(yieldId) {
     return apiClient.delete(`/production/yield/${yieldId}`);
   },
+  verifyYield(yieldId) {
+    return apiClient.patch(`/production/yield/${yieldId}/verify`).then((response) => toObject(response.data));
+  },
   listMilkDropAlerts() {
-    return apiClient.get('/operations/api/production/milk-drop-alerts').then((response) => toArray(response.data));
+    return requestWithFallback(apiClient, [
+      {
+        method: 'get',
+        url: '/production/milk-drop-alerts',
+      },
+      {
+        method: 'get',
+        url: '/operations/api/production/milk-drop-alerts',
+      },
+    ]).then((response) => toArray(response.data));
   },
   investigateMilkDropAlert(alertId, payload) {
-    return apiClient.post(`/operations/api/production/milk-drop-alerts/${alertId}/investigate`, payload).then((response) => toObject(response.data));
+    return requestWithFallback(apiClient, [
+      {
+        method: 'post',
+        url: `/production/milk-drop-alerts/${alertId}/investigate`,
+        data: payload,
+      },
+      {
+        method: 'post',
+        url: `/operations/api/production/milk-drop-alerts/${alertId}/investigate`,
+        data: payload,
+      },
+    ]).then((response) => toObject(response.data));
   },
 };
 
@@ -507,10 +797,10 @@ export const inventoryApi = {
     return apiClient.get('/inventory/items').then((response) => toArray(response.data).map(normalizeInventoryItem));
   },
   createItem(payload) {
-    return apiClient.post('/inventory/items', payload).then((response) => normalizeInventoryItem(toObject(response.data) ?? payload));
+    return apiClient.post('/inventory/items', buildInventoryItemPayload(payload)).then((response) => normalizeInventoryItem(toObject(response.data) ?? payload));
   },
   updateItem(itemId, payload) {
-    return apiClient.patch(`/inventory/items/${itemId}`, payload).then((response) => normalizeInventoryItem(toObject(response.data) ?? payload));
+    return apiClient.patch(`/inventory/items/${itemId}`, buildInventoryItemPayload(payload)).then((response) => normalizeInventoryItem(toObject(response.data) ?? payload));
   },
   deleteItem(itemId) {
     return apiClient.delete(`/inventory/items/${itemId}`);
@@ -519,7 +809,7 @@ export const inventoryApi = {
     return apiClient.get('/inventory/movements').then((response) => toArray(response.data));
   },
   createMovement(payload) {
-    return apiClient.post('/inventory/movements', payload).then((response) => toObject(response.data));
+    return apiClient.post('/inventory/movements', normalizeInventoryMovementPayload(payload)).then((response) => toObject(response.data));
   },
   listStock() {
     return apiClient.get('/inventory/stock').then((response) => toArray(response.data).map(normalizeInventoryItem));
@@ -530,17 +820,22 @@ export const inventoryApi = {
 };
 
 export const herdApi = {
-  list() {
-    return apiClient.get('/herd').then((response) => toArray(response.data));
+  list(params = {}) {
+    return apiClient.get('/herd', {
+      params: {
+        per_page: 200,
+        ...params,
+      },
+    }).then((response) => toArray(response.data).map(normalizeHerdRecord));
   },
   get(id) {
-    return apiClient.get(`/herd/${id}`).then((response) => toObject(response.data));
+    return apiClient.get(`/herd/${id}`).then((response) => normalizeHerdRecord(toObject(response.data) ?? {}));
   },
   create(payload) {
-    return apiClient.post('/herd', payload).then((response) => toObject(response.data));
+    return apiClient.post('/herd', buildHerdPayload(payload)).then((response) => normalizeHerdRecord(toObject(response.data) ?? payload));
   },
   update(id, payload) {
-    return apiClient.patch(`/herd/${id}`, payload).then((response) => toObject(response.data));
+    return apiClient.patch(`/herd/${id}`, buildHerdPayload(payload)).then((response) => normalizeHerdRecord(toObject(response.data) ?? payload));
   },
   delete(id) {
     return apiClient.delete(`/herd/${id}`);
@@ -576,33 +871,51 @@ export const animalsApi = {
     return apiClient.patch(`/animals/${id}`, payload).then((response) => toObject(response.data));
   },
   milkHistory(id) {
-    return apiClient.get(`/animals/${id}/milk-history`).then((response) => toArray(response.data));
+    return apiClient.get(`/animals/${id}/milk-history`).then((response) => {
+      const data = response.data;
+      // Accept both the new envelope shape { sessions, stats } and the legacy bare array.
+      if (data && !Array.isArray(data) && Array.isArray(data.sessions)) {
+        return { sessions: data.sessions, stats: data.stats ?? null };
+      }
+      return { sessions: toArray(data), stats: null };
+    });
   },
   listEvents(id, params = {}) {
+    return apiClient.get(`/animals/${id}/events`, { params }).then((response) => toObject(response.data));
+  },
+  createEvent(id, payload) {
+    return apiClient.post(`/animals/${id}/events`, payload).then((response) => toObject(response.data));
+  },
+};
+
+export const yieldTargetsApi = {
+  get(cowId) {
     return requestWithFallback(apiClient, [
       {
         method: 'get',
-        url: `/animals/${id}/events`,
-        params,
+        url: `/v1/animals/${cowId}/yield-target`,
       },
       {
         method: 'get',
-        url: `/operations/api/animals/${id}/events`,
-        params,
+        url: `/animals/${cowId}/yield-target`,
       },
     ]).then((response) => toObject(response.data));
   },
-  createEvent(id, payload) {
+  save(cowId, payload) {
+    const request = {
+      target_liters: Number(payload?.target_liters ?? payload?.targetLiters ?? 0),
+    };
+
     return requestWithFallback(apiClient, [
       {
         method: 'post',
-        url: `/animals/${id}/events`,
-        data: payload,
+        url: `/v1/animals/${cowId}/yield-target`,
+        data: request,
       },
       {
         method: 'post',
-        url: `/operations/api/animals/${id}/events`,
-        data: payload,
+        url: `/animals/${cowId}/yield-target`,
+        data: request,
       },
     ]).then((response) => toObject(response.data));
   },
@@ -610,19 +923,70 @@ export const animalsApi = {
 
 export const medicalApi = {
   listRecords() {
-    return apiClient.get('/clinical/vet-visits').then((response) => toArray(response.data).map(normalizeMedicalRecord));
+    return requestWithFallback(apiClient, [
+      {
+        method: 'get',
+        url: '/clinical/vet-visits',
+      },
+      {
+        method: 'get',
+        url: '/medical/records',
+      },
+    ]).then((response) => toArray(response.data).map(normalizeMedicalRecord));
   },
   createRecord(payload) {
-    return apiClient.post('/clinical/vet-visits', payload).then((response) => normalizeMedicalRecord(toObject(response.data) ?? payload));
+    return requestWithFallback(apiClient, [
+      {
+        method: 'post',
+        url: '/clinical/vet-visits',
+        data: payload,
+      },
+      {
+        method: 'post',
+        url: '/medical/records',
+        data: payload,
+      },
+    ]).then((response) => normalizeMedicalRecord(toObject(response.data) ?? payload));
   },
   listPendingFollowUps() {
-    return apiClient.get('/clinical/vet-visits/follow-ups/pending').then((response) => toArray(response.data).map(normalizeMedicalRecord));
+    return requestWithFallback(apiClient, [
+      {
+        method: 'get',
+        url: '/clinical/vet-visits/follow-ups/pending',
+      },
+      {
+        method: 'get',
+        url: '/medical/records/follow-ups/pending',
+      },
+    ]).then((response) => toArray(response.data).map(normalizeMedicalRecord));
   },
   scheduleFollowUp(visitId, payload) {
-    return apiClient.put(`/clinical/vet-visits/${visitId}/follow-up/schedule`, payload).then((response) => normalizeMedicalRecord(toObject(response.data) ?? payload));
+    return requestWithFallback(apiClient, [
+      {
+        method: 'put',
+        url: `/clinical/vet-visits/${visitId}/follow-up/schedule`,
+        data: payload,
+      },
+      {
+        method: 'put',
+        url: `/medical/records/${visitId}/follow-up/schedule`,
+        data: payload,
+      },
+    ]).then((response) => normalizeMedicalRecord(toObject(response.data) ?? payload));
   },
   completeFollowUp(visitId, payload = {}) {
-    return apiClient.put(`/clinical/vet-visits/${visitId}/follow-up/complete`, payload).then((response) => normalizeMedicalRecord(toObject(response.data) ?? payload));
+    return requestWithFallback(apiClient, [
+      {
+        method: 'put',
+        url: `/clinical/vet-visits/${visitId}/follow-up/complete`,
+        data: payload,
+      },
+      {
+        method: 'put',
+        url: `/medical/records/${visitId}/follow-up/complete`,
+        data: payload,
+      },
+    ]).then((response) => normalizeMedicalRecord(toObject(response.data) ?? payload));
   },
 };
 
@@ -658,13 +1022,100 @@ export const nutritionApi = {
     return apiClient.get('/feed/recipes').then((response) => toArray(response.data));
   },
   createRecipe(payload) {
-    return apiClient.post('/feed/recipes', payload).then((response) => toObject(response.data));
+    return apiClient.post('/feed/recipes', normalizeRecipePayload(payload)).then((response) => toObject(response.data));
   },
   updateRecipe(recipeId, payload) {
-    return apiClient.patch(`/feed/recipes/${recipeId}`, payload).then((response) => toObject(response.data));
+    return apiClient.patch(`/feed/recipes/${recipeId}`, normalizeRecipePayload(payload)).then((response) => toObject(response.data));
   },
   deleteRecipe(recipeId) {
     return apiClient.delete(`/feed/recipes/${recipeId}`);
+  },
+  calculateNutrition(payload) {
+    const data = normalizeNutritionRequestPayload(payload);
+
+    return requestWithFallback(apiClient, [
+      {
+        method: 'post',
+        url: '/v1/recipes/calculate-nutrition',
+        data,
+      },
+      {
+        method: 'post',
+        url: '/recipes/calculate-nutrition',
+        data,
+      },
+      {
+        method: 'post',
+        url: '/v1/feed-formulation/recipes/calculate-nutrition',
+        data,
+      },
+    ]).then((response) => toObject(response.data));
+  },
+  formulateRecipe(payload) {
+    const data = normalizeNutritionRequestPayload(payload);
+
+    return requestWithFallback(apiClient, [
+      {
+        method: 'post',
+        url: '/v1/recipes/formulate',
+        data,
+      },
+      {
+        method: 'post',
+        url: '/recipes/formulate',
+        data,
+      },
+      {
+        method: 'post',
+        url: '/v1/feed-formulation/recipes/formulate',
+        data,
+      },
+    ]).then((response) => toObject(response.data));
+  },
+  autoSaveRecipe(payload) {
+    const data = normalizeNutritionRequestPayload(payload);
+
+    return requestWithFallback(apiClient, [
+      {
+        method: 'post',
+        url: '/v1/recipes/auto-save',
+        data,
+      },
+      {
+        method: 'post',
+        url: '/recipes/auto-save',
+        data,
+      },
+      {
+        method: 'post',
+        url: '/v1/feed-formulation/recipes/auto-save',
+        data,
+      },
+    ]).then((response) => toObject(response.data));
+  },
+  suggestedMix(params = {}) {
+    return requestWithFallback(apiClient, [
+      {
+        method: 'get',
+        url: '/v1/nutrition/feed-formulation/suggested-mix',
+        params,
+      },
+      {
+        method: 'get',
+        url: '/v1/feed-formulation/suggested-mix',
+        params,
+      },
+      {
+        method: 'get',
+        url: '/feed-formulation/suggested-mix',
+        params,
+      },
+      {
+        method: 'get',
+        url: '/v1/recipes/suggested-mix',
+        params,
+      },
+    ]).then((response) => toObject(response.data));
   },
   formulate(payload) {
     return apiClient.post('/feed/formulate', payload).then((response) => toObject(response.data));
@@ -673,7 +1124,7 @@ export const nutritionApi = {
     return apiClient.get('/units/conversions').then((response) => toArray(response.data));
   },
   saveConversion(payload) {
-    return apiClient.post('/units/conversions', payload).then((response) => toObject(response.data));
+    return apiClient.post('/units/conversions', normalizeConversionPayload(payload)).then((response) => toObject(response.data));
   },
   feedCosting() {
     return apiClient.get('/feed/costing').then((response) => toObject(response.data));
