@@ -3,6 +3,22 @@ import React from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import offlineQueue from '../lib/offlineQueue';
 
+function getCacheNamespace() {
+  try {
+    const sessionStr = sessionStorage.getItem('jivu_user');
+    if (!sessionStr) {
+      return 'anonymous';
+    }
+
+    const session = JSON.parse(sessionStr);
+    const tenantId = session?.tenant_id ?? session?.cooperative_id ?? 'unknown-tenant';
+    const farmId = session?.farm_id ?? 'unknown-farm';
+    return `${tenantId}:${farmId}`;
+  } catch {
+    return 'anonymous';
+  }
+}
+
 // Centralized Query Keys mapping
 export const QUERY_KEYS = {
   COWS: (tenantId, farmId) => [tenantId, farmId, 'cows'],
@@ -41,7 +57,8 @@ export function QueryProvider({ children }) {
   
   React.useEffect(() => {
     // Basic React Query cache persistence (small & best-effort).
-    const STORAGE = 'rq_cache_v1';
+    const STORAGE_PREFIX = 'rq_cache_v1';
+    const STORAGE = `${STORAGE_PREFIX}:${getCacheNamespace()}`;
 
     // Restore cached queries on startup
     try {
