@@ -1,5 +1,7 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTenant } from "../../hooks/useTenant";
+import { useAuth } from "../../contexts/AuthContext";
+import { canViewAdminControls } from "../../lib/roles";
 import { QUERY_KEYS } from "../../providers/QueryProvider";
 import { financeApi, productionApi, safetyApi } from "../../lib/backendApi";
 import { Plus, Beaker, AlertTriangle, ShieldCheck, Search, Filter, RotateCcw, ChevronDown, Pencil, Trash2 } from "lucide-react";
@@ -7,22 +9,100 @@ import { useEffect, useMemo, useState } from "react";
 import FastMilkLog from "../../components/operations/FastMilkLog";
 import { Link } from "react-router-dom";
 
+const AMOUNT_FIELD_CANDIDATES = [
+  'amount',
+  'volume',
+  'liters',
+  'milk_volume',
+  'milkVolume',
+  'yield_amount',
+  'yieldAmount',
+  'volume_liters',
+  'volumeLiters',
+  'quantity',
+  'qty',
+  'amount_liters',
+  'amountLiters',
+  'quantity_liters',
+  'quantityLiters',
+  'milk_amount',
+  'milkAmount',
+  'produced_liters',
+  'producedLiters',
+];
+
+function isDevEnvironment() {
+  return Boolean(import.meta.env?.DEV);
+}
+
+function logDevWarning(message, details) {
+  if (!isDevEnvironment()) return;
+  console.warn(`[productionLog] ${message}`, details);
+}
+
+function logDevError(message, details) {
+  if (!isDevEnvironment()) return;
+  console.error(`[productionLog] ${message}`, details);
+}
+
+function extractAmountCandidate(row) {
+  if (!row || typeof row !== 'object') {
+    return { value: null, key: null, found: false };
+  }
+
+  for (const key of AMOUNT_FIELD_CANDIDATES) {
+    if (row[key] !== undefined && row[key] !== null && `${row[key]}`.trim() !== '') {
+      return { value: row[key], key, found: true };
+    }
+  }
+
+  return { value: null, key: null, found: false };
+}
+
+function parseAmountValue(rawValue) {
+  if (rawValue === null || rawValue === undefined) return null;
+  if (typeof rawValue === 'number') {
+    return Number.isFinite(rawValue) ? rawValue : null;
+  }
+
+  const normalized = `${rawValue}`.replace(/,/g, '').trim();
+  if (!normalized) return null;
+
+  const parsed = Number.parseFloat(normalized);
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
 export function filterMilkRows(rows, filters) {
   return rows.filter((row) => {
-    const rowAmount = Number(row.amount);
+    const rowAmount = typeof row.amountValue === 'number' ? row.amountValue : Number.parseFloat(row.amount);
+    const hasValidAmount = Number.isFinite(rowAmount);
     const cowIdMatch = filters.cowId
       ? row.cowId.toLowerCase().includes(filters.cowId.toLowerCase())
       : true;
     const dateMatch = filters.date ? row.date === filters.date : true;
     const statusMatch = filters.status === 'all' ? true : row.status.toLowerCase() === filters.status.toLowerCase();
-    const minMatch = filters.minAmount ? rowAmount >= Number(filters.minAmount) : true;
-    const maxMatch = filters.maxAmount ? rowAmount <= Number(filters.maxAmount) : true;
+    const minMatch = filters.minAmount ? (hasValidAmount ? rowAmount >= Number(filters.minAmount) : false) : true;
+    const maxMatch = filters.maxAmount ? (hasValidAmount ? rowAmount <= Number(filters.maxAmount) : false) : true;
     return cowIdMatch && dateMatch && statusMatch && minMatch && maxMatch;
   });
 }
 
+const BACKEND_STATUS_MAP = {
+  RECORDED: 'Pending',
+  PENDING: 'Pending',
+  VERIFIED: 'Verified',
+  FLAGGED: 'Flagged',
+};
+
+function normalizeStatus(raw) {
+  if (!raw) return 'Pending';
+  return BACKEND_STATUS_MAP[String(raw).toUpperCase()] ?? raw;
+}
+
 export default function YieldLog() {
   const { tenantId, farmId } = useTenant();
+  const { currentUser } = useAuth();
+  const canVerify = canViewAdminControls(currentUser);
   const queryClient = useQueryClient();
   const [showFastLog, setShowFastLog] = useState(false);
   const [selectedRecord, setSelectedRecord] = useState(null);
@@ -37,28 +117,79 @@ export default function YieldLog() {
     maxAmount: "",
   });
 
-  const { data: yieldRowsRaw } = useQuery({
+  const {
+    data: yieldRowsRaw,
+    error: yieldRowsError,
+    isError: hasYieldRowsError,
+  } = useQuery({
     queryKey: ['production-yield-rows', tenantId, farmId],
     queryFn: () => productionApi.listYield(),
-    enabled: !!farmId,
   });
 
-  const normalizeYieldRow = (row) => ({
-    id: row?.id ?? row?.yield_id ?? row?.recordId ?? `milk-${Date.now()}`,
-    date: row?.date ?? row?.milkingDate ?? row?.created_at ?? new Date().toISOString().slice(0, 10),
-    time: row?.time ?? (row?.createdAt ? new Date(row.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })),
-    milker: row?.milker ?? row?.created_by ?? 'SYSTEM',
-    cowId: row?.cowId ?? row?.cow_id ?? row?.animal_id ?? '',
-    cowName: row?.cowName ?? row?.animal_name ?? row?.name ?? '',
-    amount: Number(row?.amount ?? row?.volume ?? row?.liters ?? 0).toFixed(1),
-    status: row?.status ?? 'Pending',
-  });
+  const normalizeYieldRow = (row) => {
+    const amountCandidate = extractAmountCandidate(row);
+    const parsedAmount = parseAmountValue(amountCandidate.value);
+    const hasValidAmount = Number.isFinite(parsedAmount);
+
+    if (!amountCandidate.found) {
+      logDevWarning('Yield row missing expected amount field.', {
+        rowId: row?.id ?? row?.yield_id ?? row?.recordId ?? null,
+        knownAmountKeys: AMOUNT_FIELD_CANDIDATES,
+        receivedKeys: row && typeof row === 'object' ? Object.keys(row) : [],
+        row,
+      });
+    } else if (!hasValidAmount) {
+      logDevWarning('Yield row amount could not be parsed.', {
+        rowId: row?.id ?? row?.yield_id ?? row?.recordId ?? null,
+        amountKey: amountCandidate.key,
+        rawAmount: amountCandidate.value,
+        row,
+      });
+    }
+
+    return {
+      id: row?.id ?? row?.yield_id ?? row?.recordId ?? `milk-${Date.now()}`,
+      date: row?.date ?? row?.milkingDate ?? row?.created_at ?? new Date().toISOString().slice(0, 10),
+      time: row?.time ?? (row?.createdAt ? new Date(row.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })),
+      milker: row?.milker ?? row?.created_by ?? 'SYSTEM',
+      animalRefId: row?.animal_id ?? row?.animalId ?? row?.cow_id ?? row?.cowId ?? row?.cow ?? null,
+      cowId: row?.cowId ?? row?.cow_id ?? row?.animal_id ?? '',
+      cowName: row?.cowName ?? row?.animal_name ?? row?.animalName ?? row?.name ?? '',
+      amountValue: hasValidAmount ? parsedAmount : null,
+      amount: hasValidAmount ? parsedAmount.toFixed(1) : '--',
+      status: normalizeStatus(row?.status),
+    };
+  };
 
   useEffect(() => {
-    if (Array.isArray(yieldRowsRaw)) {
-      setMilkRows(yieldRowsRaw.map(normalizeYieldRow));
+    if (!Array.isArray(yieldRowsRaw)) {
+      if (yieldRowsRaw !== undefined) {
+        logDevWarning('Expected yield rows array but received different payload shape.', {
+          payloadType: typeof yieldRowsRaw,
+          payload: yieldRowsRaw,
+        });
+      }
+      return;
     }
+
+    setMilkRows(yieldRowsRaw.map(normalizeYieldRow));
   }, [yieldRowsRaw]);
+
+  useEffect(() => {
+    if (!hasYieldRowsError) return;
+
+    logDevError('Failed to load production yield rows.', {
+      tenantId,
+      farmId,
+      queryKey: ['production-yield-rows', tenantId, farmId],
+      error: {
+        message: yieldRowsError?.message,
+        status: yieldRowsError?.response?.status,
+        statusText: yieldRowsError?.response?.statusText,
+        data: yieldRowsError?.response?.data,
+      },
+    });
+  }, [hasYieldRowsError, yieldRowsError, tenantId, farmId]);
 
   const filteredMilkRows = useMemo(() => {
     return filterMilkRows(milkRows, filters);
@@ -68,7 +199,9 @@ export default function YieldLog() {
     const verified = milkRows.filter((row) => row.status === 'Verified').length;
     const pending = milkRows.filter((row) => row.status === 'Pending').length;
     const flagged = milkRows.filter((row) => row.status === 'Flagged').length;
-    const totalVolume = milkRows.reduce((sum, row) => sum + Number(row.amount || 0), 0);
+    const totalVolume = milkRows.reduce((sum, row) => (
+      typeof row.amountValue === 'number' ? sum + row.amountValue : sum
+    ), 0);
 
     return {
       verified,
@@ -94,10 +227,13 @@ export default function YieldLog() {
   };
 
   // Integrated Safety Check: Fetching active medical withdrawals
-  const { data: hardlocksRaw } = useQuery({
+  const {
+    data: hardlocksRaw,
+    error: hardlocksError,
+    isError: hasHardlocksError,
+  } = useQuery({
     queryKey: QUERY_KEYS.HARDLOCKS(tenantId, farmId),
     queryFn: () => safetyApi.activeHardlocks(),
-    enabled: !!farmId,
   });
 
   const hardlocks = Array.isArray(hardlocksRaw)
@@ -107,6 +243,22 @@ export default function YieldLog() {
       : Array.isArray(hardlocksRaw?.data)
         ? hardlocksRaw.data
         : [];
+
+  useEffect(() => {
+    if (!hasHardlocksError) return;
+
+    logDevError('Failed to load active hardlocks.', {
+      tenantId,
+      farmId,
+      queryKey: QUERY_KEYS.HARDLOCKS(tenantId, farmId),
+      error: {
+        message: hardlocksError?.message,
+        status: hardlocksError?.response?.status,
+        statusText: hardlocksError?.response?.statusText,
+        data: hardlocksError?.response?.data,
+      },
+    });
+  }, [hasHardlocksError, hardlocksError, tenantId, farmId]);
 
   const handleFastLogSaved = () => {
     queryClient.invalidateQueries({ queryKey: QUERY_KEYS.YIELD_SUMMARY(tenantId, farmId) });
@@ -129,14 +281,17 @@ export default function YieldLog() {
   const handleLogSave = (savedRecord) => {
     handleFastLogSaved();
     setMilkRows((prev) => {
+      const savedAmount = parseAmountValue(savedRecord?.volume ?? savedRecord?.amount ?? selectedRecord?.amount ?? null);
       const normalizedRow = {
         id: savedRecord?.id || selectedRecord?.id || `milk-${Date.now()}`,
         date: savedRecord?.date || savedRecord?.milkingDate || selectedRecord?.date || new Date().toISOString().slice(0, 10),
         time: selectedRecord?.time || new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
         milker: selectedRecord?.milker || 'MWANGI',
+        animalRefId: savedRecord?.animal_id || savedRecord?.animalId || savedRecord?.cow_id || savedRecord?.cowId || selectedRecord?.animalRefId || selectedRecord?.cowId || null,
         cowId: savedRecord?.cowId || selectedRecord?.cowId || '',
         cowName: selectedRecord?.cowName || 'Updated Cow',
-        amount: Number(savedRecord?.volume ?? savedRecord?.amount ?? selectedRecord?.amount ?? 0).toFixed(1),
+        amountValue: Number.isFinite(savedAmount) ? savedAmount : null,
+        amount: Number.isFinite(savedAmount) ? savedAmount.toFixed(1) : '--',
         status: selectedRecord?.status || 'Pending',
       };
 
@@ -162,6 +317,18 @@ export default function YieldLog() {
       setMilkRows((prev) => prev.filter((entry) => entry.id !== row.id));
     } catch (error) {
       console.error('Failed to delete milk record', error);
+    }
+  };
+
+  const handleVerifyEntry = async (row) => {
+    try {
+      await productionApi.verifyYield(row.id);
+      setMilkRows((prev) =>
+        prev.map((entry) => (entry.id === row.id ? { ...entry, status: 'Verified' } : entry))
+      );
+      handleFastLogSaved();
+    } catch (error) {
+      console.error('Failed to verify milk record', error);
     }
   };
 
@@ -345,13 +512,13 @@ export default function YieldLog() {
                 <td className="p-5">
                   <div className="flex items-center gap-3">
                     <div className="w-2 h-2 rounded-full bg-accent"></div>
-                    <Link to={`/operations/animal/${row.cowId}/milk-history`} className="p-3 text-right font-sans text-1.8xl font-medium text-brand tabular-nums">
+                    <Link to={`/operations/animal/${row.animalRefId ?? row.cowId}/milk-history`} className="p-3 text-right font-sans text-1.8xl font-medium text-brand tabular-nums">
                       {row.cowId} ({row.cowName})
                     </Link>
                   </div>
                 </td>
                 <td className="p-3 text-right font-sans text-1.8xl font-medium text-brand tabular-nums">
-                  {row.amount} <span className="text-[18px] opacity-100 ml-0.4">L</span>
+                  {row.amount} {row.amount === '--' ? null : <span className="text-[18px] opacity-100 ml-0.4">L</span>}
                 </td>
                 <td className="p-5">
                   <div className="flex justify-center">
@@ -370,6 +537,15 @@ export default function YieldLog() {
                 </td>
                 <td className="p-5 text-right">
                   <div className="inline-flex items-center gap-2">
+                    {canVerify && row.status !== 'Verified' && (
+                      <button
+                        type="button"
+                        onClick={() => handleVerifyEntry(row)}
+                        className="btn-ghost gap-1 px-3 py-2 text-xs text-success border border-success/30 hover:bg-success/10"
+                      >
+                        <ShieldCheck size={12} /> Verify
+                      </button>
+                    )}
                     <button
                       type="button"
                       onClick={() => openEditLog(row)}
