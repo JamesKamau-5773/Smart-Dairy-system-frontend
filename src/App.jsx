@@ -214,16 +214,16 @@ export default function App() {
 
             <Route path="tasks" element={renderLazyPage(HerdsmanView, 'Loading herdsman view…')} />
             <Route path="operations/herdsman" element={renderLazyPage(HerdsmanView, 'Loading herdsman view…')} />
-            <Route path="operations/lab" element={renderLazyPage(MilkLab, 'Loading milk lab…')} />
-            <Route path="operations/nutrition" element={renderLazyPage(NutritionDashboard, 'Loading nutrition dashboard…')} />
-            <Route path="feed-nutrition" element={renderLazyPage(NutritionDashboard, 'Loading nutrition dashboard…')} />
+            <Route path="operations/lab" element={renderLazyPage(MilkLab, 'Loading milk feeding planner…')} />
+            <Route path="operations/nutrition" element={renderLazyPage(NutritionDashboard, 'Loading feed planner…')} />
+            <Route path="feed-nutrition" element={renderLazyPage(NutritionDashboard, 'Loading feed planner…')} />
             
-            {/* UPDATED: Unit Conversions moved to operations layer to match sidebar UX */}
+            {/* UPDATED: Unit Helpers moved to operations layer to match sidebar UX */}
             <Route
               path="operations/unit-conversions"
               element={(
                 <RoleRoute allowedRoles={['SUPER_ADMIN', 'ADMIN']}>
-                  {renderLazyPage(UnitConversions, 'Loading unit conversions…')}
+                  {renderLazyPage(UnitConversions, 'Loading unit helpers…')}
                 </RoleRoute>
               )}
             />
@@ -257,7 +257,7 @@ export default function App() {
               path="operations/feed-formulation"
               element={(
                 <RoleRoute allowedRoles={['SUPER_ADMIN', 'ADMIN']}>
-                  {renderLazyPage(FeedFormulation, 'Loading feed formulation…')}
+                  {renderLazyPage(FeedFormulation, 'Loading feed mixing planner…')}
                 </RoleRoute>
               )}
             />
@@ -265,7 +265,7 @@ export default function App() {
               path="feed-nutrition/mix"
               element={(
                 <RoleRoute allowedRoles={['SUPER_ADMIN', 'ADMIN']}>
-                  {renderLazyPage(FeedFormulation, 'Loading feed formulation…')}
+                  {renderLazyPage(FeedFormulation, 'Loading feed mixing planner…')}
                 </RoleRoute>
               )}
             />

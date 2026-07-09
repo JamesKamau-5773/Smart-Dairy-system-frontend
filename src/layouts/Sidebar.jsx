@@ -19,7 +19,7 @@ export default function Sidebar() {
 
   const mobileDefaultCollapsedGroups = () => ({
     'Herd Management': true,
-    'Feed & Nutrition': true,
+    'Feed Planning': true,
     'Finance & Supply': true,
     Compliance: true,
     'Human Resources': true,
@@ -36,7 +36,7 @@ export default function Sidebar() {
   const canViewHR = showAdminControls;
   const canViewHerdsmanView = true;
   const canViewFeedNutrition = showAdminControls || Boolean(currentUser);
-  const herdsmanViewLabel = 'Herdsman View';
+  const herdsmanViewLabel = 'Farm Task View';
   const isPlatformAdmin = isSuperAdmin(currentUser);
   const isCoopAdmin = isCooperativeAdmin(currentUser);
   const showCommandCenter = canAccessCommandCenter(currentUser);
@@ -71,26 +71,26 @@ export default function Sidebar() {
     {
       title: 'Herd Management',
       items: [
-        { label: 'Herd Registry', to: '/operations/herd', icon: BookOpen, visible: true },
+        { label: 'Cow Register', to: '/operations/herd', icon: BookOpen, visible: true },
         { label: 'Breeding & Genetics', to: '/operations/breeding', icon: Dna, visible: canViewBreeding },
         { label: LABELS.MEDICAL_RECORDS, to: '/operations/records', icon: BookHeart, visible: true },
         // NEW: Added Milk Drop Reports right under Medical Records
-        { label: 'Milk Drop Reports', to: '/operations/milk-drop-reports', icon: FileWarning, visible: true },
+        { label: 'Milk Drop Alerts', to: '/operations/milk-drop-reports', icon: FileWarning, visible: true },
       ],
     },
     {
-      title: LABELS.FEED_NUTRITION || 'Feed & Nutrition',
+      title: LABELS.FEED_NUTRITION || 'Feed Planning',
       items: [
         { label: LABELS.FEED_DASHBOARD || LABELS.NUTRITION_PLANNER, to: '/feed-nutrition', icon: Wheat, visible: canViewFeedNutrition, exact: true },
         { label: LABELS.FEED_FORMULATION, to: '/feed-nutrition/mix', icon: Dna, visible: canViewFeedNutrition },
         { label: LABELS.MILK_LAB, to: '/operations/lab', icon: Pill, visible: canViewFeedNutrition },
-        { label: 'Unit Conversions', to: '/settings/unit-conversions', icon: BookOpen, visible: canViewFeedNutrition },
+        { label: 'Unit Helpers', to: '/settings/unit-conversions', icon: BookOpen, visible: canViewFeedNutrition },
       ],
     },
     {
       title: 'Finance & Supply',
       items: [
-        { label: LABELS.CUSTOMER_BILLING, to: '/finance/buyers', icon: Users, visible: canViewBuyers },
+        { label: 'Customer Payments', to: '/finance/buyers', icon: Users, visible: canViewBuyers },
         { label: 'Inventory', to: '/operations/inventory', icon: Package, visible: showAdminControls },
         { label: 'Ledger', to: '/finance/ledger', icon: Wallet, visible: showAdminControls },
       ],
