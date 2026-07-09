@@ -5,27 +5,69 @@ import { queryClient } from '../providers/QueryProvider';
 import { authApi } from '../lib/backendApi';
 
 export const TenantContext = createContext();
+const ACTIVE_FARM_STORAGE_KEY = 'jivu_active_farm';
+
+function readStoredActiveFarm() {
+  try {
+    const raw = sessionStorage.getItem(ACTIVE_FARM_STORAGE_KEY);
+    if (!raw) return null;
+
+    const parsed = JSON.parse(raw);
+    if (!parsed || typeof parsed !== 'object') return null;
+
+    return {
+      id: parsed.id ?? null,
+      name: parsed.name ?? null,
+    };
+  } catch {
+    return null;
+  }
+}
+
+function writeStoredActiveFarm(farm) {
+  if (!farm?.id) {
+    sessionStorage.removeItem(ACTIVE_FARM_STORAGE_KEY);
+    return;
+  }
+
+  sessionStorage.setItem(ACTIVE_FARM_STORAGE_KEY, JSON.stringify({
+    id: farm.id,
+    name: farm.name ?? null,
+  }));
+}
 
 export function TenantProvider({ children }) {
   const { currentUser, updateSession } = useAuth();
-  const [activeFarm, setActiveFarm] = useState(null);
+  const [activeFarm, setActiveFarm] = useState(() => readStoredActiveFarm());
   const [isSwitching, setIsSwitching] = useState(false);
 
   useEffect(() => {
     const scopedTenantId = currentUser?.tenant_id ?? currentUser?.cooperative_id;
     if (currentUser && scopedTenantId) {
+      const availableFarms = Array.isArray(currentUser.available_farms) ? currentUser.available_farms : [];
+      const storedActiveFarm = readStoredActiveFarm();
+      const currentFarmId = currentUser.farm_id ?? storedActiveFarm?.id ?? availableFarms[0]?.id ?? null;
+      const currentFarmName = currentUser.farm_name
+        ?? storedActiveFarm?.name
+        ?? availableFarms.find((farm) => farm.id === currentFarmId)?.name
+        ?? availableFarms[0]?.name
+        ?? null;
+
       // 1. Sync the non-React Axios interceptor ref
       tenantRef.tenantId = scopedTenantId;
-      tenantRef.farmId = currentUser.farm_id;
+      tenantRef.farmId = currentFarmId;
       
       // 2. Set the React UI state
-      setActiveFarm({
-        id: currentUser.farm_id,
-        name: currentUser.farm_name,
-      });
+      const resolvedActiveFarm = currentFarmId
+        ? { id: currentFarmId, name: currentFarmName }
+        : null;
+
+      setActiveFarm(resolvedActiveFarm);
+      writeStoredActiveFarm(resolvedActiveFarm);
     } else {
       tenantRef.tenantId = null;
       tenantRef.farmId = null;
+      sessionStorage.removeItem(ACTIVE_FARM_STORAGE_KEY);
       setActiveFarm(null);
     }
   }, [currentUser]);
@@ -50,6 +92,7 @@ export function TenantProvider({ children }) {
 
       // Update global auth state which triggers the useEffect above
       updateSession(updatedUser);
+      writeStoredActiveFarm({ id: updatedUser.farm_id, name: updatedUser.farm_name });
 
     } catch (error) {
       console.error("Failed to switch farm context", error);
@@ -61,6 +104,8 @@ export function TenantProvider({ children }) {
   return (
     <TenantContext.Provider value={{
       tenantId: currentUser?.tenant_id ?? currentUser?.cooperative_id,
+      farmId: activeFarm?.id ?? currentUser?.farm_id ?? null,
+      farmName: activeFarm?.name ?? currentUser?.farm_name ?? null,
       cooperativeId: currentUser?.cooperative_id ?? currentUser?.tenant_id,
       cooperativeName: currentUser?.cooperative_name ?? currentUser?.tenant_name,
       tenantType: currentUser?.tenant_type,

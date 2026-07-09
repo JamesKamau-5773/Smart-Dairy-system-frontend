@@ -13,11 +13,18 @@ export function AuthProvider({ children }) {
 
     const bootstrapSession = async () => {
       const savedUser = sessionStorage.getItem('jivu_user');
+      let restoredUser = null;
 
       if (savedUser) {
         try {
-          const parsedUser = normalizeSessionUser(JSON.parse(savedUser));
-          setCurrentUser(parsedUser);
+          restoredUser = normalizeSessionUser(JSON.parse(savedUser));
+          setCurrentUser(restoredUser);
+          setIsLoading(false);
+
+          // If we already have a restored session, keep it authoritative for this reload.
+          // The backend cookie can belong to a different browser session, which would
+          // otherwise overwrite the user's active farm and role after refresh.
+          return;
         } catch (error) {
           console.warn('Failed to restore saved session.', error);
         }
