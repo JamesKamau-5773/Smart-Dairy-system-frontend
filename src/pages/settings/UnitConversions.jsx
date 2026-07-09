@@ -32,7 +32,7 @@ export default function UnitConversions() {
   return (
     <div className="max-w-4xl mx-auto p-4 space-y-6 animate-reveal">
       <div className="border-b border-ink/10 pb-4">
-        <h1 className="font-black text-3xl text-ink m-0">Unit Conversions</h1>
+        <h1 className="font-black text-3xl text-ink m-0">Unit Helpers</h1>
         <p className="text-sm text-ink-muted mt-2">Define local farm units (e.g. Kasuku) and their conversion to SI units.</p>
       </div>
 
@@ -64,7 +64,7 @@ export default function UnitConversions() {
         </form>
 
         <div className="mt-6">
-          <h3 className="font-bold text-ink-strong mb-3">Existing conversions</h3>
+          <h3 className="font-bold text-ink-strong mb-3">Saved unit helpers</h3>
           <div className="space-y-2">
             {conversions.length === 0 && <div className="text-sm text-ink-muted">No conversions yet. Add one above.</div>}
             {conversions.map((c) => (

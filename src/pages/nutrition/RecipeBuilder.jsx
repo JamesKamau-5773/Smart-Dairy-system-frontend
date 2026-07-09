@@ -1,15 +1,15 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { Calculator, AlertTriangle } from 'lucide-react';
 import { calculateRecipeMetrics, validateRecipe } from '../../services/NutritionalCalculator';
 
 const RECIPE_CONFIG = {
   dairy_meal: {
-    title: 'Dairy Meal Formulator',
+    title: 'Dairy Meal Mixer',
     defaultBatchSize: 500,
     targetProtein: 16,
   },
   main_meal: {
-    title: 'Main Meal (TMR) Mixer',
+    title: 'Main Feed Mixer',
     defaultBatchSize: 2000,
     targetProtein: 14,
   },
@@ -17,10 +17,15 @@ const RECIPE_CONFIG = {
 
 const getRecipeConfig = (recipeType) => RECIPE_CONFIG[recipeType] || RECIPE_CONFIG.dairy_meal;
 
+const resolveBatchSize = (value, fallback) => {
+  const parsedValue = Number(value);
+  return Number.isFinite(parsedValue) && parsedValue > 0 ? parsedValue : fallback;
+};
+
 function BatchSizeControl({ value, onChange }) {
   return (
     <label className="flex items-center gap-2 rounded-full border border-ink/10 bg-surface-raised px-3 py-1.5 text-xs font-bold text-ink-muted">
-      <span className="shrink-0">Batch Size</span>
+      <span className="shrink-0">Mix Size</span>
       <input
         type="number"
         min="1"
@@ -54,9 +59,9 @@ function ProteinMeter({ averageProtein, targetProtein, hasWarning }) {
   return (
     <div className="space-y-1.5 mb-8 bg-surface-raised p-4 rounded-lg border border-ink/5">
       <div className="flex justify-between text-xs font-black uppercase text-ink-muted">
-        <span>Target Protein ({targetProtein}%)</span>
+        <span>Protein Goal ({targetProtein}%)</span>
         <span className={averageProtein >= targetProtein ? 'text-brand' : 'text-warning-dark'}>
-          Current: {averageProtein.toFixed(1)}%
+          Current Mix: {averageProtein.toFixed(1)}%
         </span>
       </div>
       <div className="h-2.5 w-full bg-white rounded-full overflow-hidden shadow-inner">
@@ -106,25 +111,80 @@ function MetricsFooter({ metrics }) {
   );
 }
 
-export default function RecipeBuilder({ recipeType, initialIngredients }) {
+export default function RecipeBuilder({
+  recipeType,
+  initialIngredients,
+  ingredients: controlledIngredients,
+  initialBatchSize,
+  onIngredientsChange,
+  onBatchSizeChange,
+  targetProtein,
+  isLoading = false,
+}) {
   const config = getRecipeConfig(recipeType);
+  const resolvedTargetProtein = Number.isFinite(Number(targetProtein)) && Number(targetProtein) > 0
+    ? Number(targetProtein)
+    : config.targetProtein;
+  const isControlledIngredients = Array.isArray(controlledIngredients);
   const [ingredients, setIngredients] = useState(initialIngredients || []);
-  const [batchSize, setBatchSize] = useState(config.defaultBatchSize);
+  const [batchSize, setBatchSize] = useState(resolveBatchSize(initialBatchSize, config.defaultBatchSize));
+
+  useEffect(() => {
+    if (isControlledIngredients) {
+      return;
+    }
+
+    setIngredients(Array.isArray(initialIngredients) ? initialIngredients : []);
+  }, [initialIngredients, isControlledIngredients]);
+
+  useEffect(() => {
+    if (!isControlledIngredients) {
+      return;
+    }
+
+    setIngredients(Array.isArray(controlledIngredients) ? controlledIngredients : []);
+  }, [controlledIngredients, isControlledIngredients]);
+
+  useEffect(() => {
+    const nextBatchSize = resolveBatchSize(initialBatchSize, config.defaultBatchSize);
+    setBatchSize((currentBatchSize) => (currentBatchSize === nextBatchSize ? currentBatchSize : nextBatchSize));
+  }, [recipeType, initialBatchSize, config.defaultBatchSize]);
+
+  useEffect(() => {
+    if (typeof onIngredientsChange === 'function') {
+      onIngredientsChange(ingredients);
+    }
+  }, [ingredients, onIngredientsChange]);
+
+  useEffect(() => {
+    if (typeof onBatchSizeChange === 'function') {
+      onBatchSizeChange(batchSize);
+    }
+  }, [batchSize, onBatchSizeChange]);
 
   const metrics = useMemo(() => 
     calculateRecipeMetrics(ingredients, batchSize), [ingredients, batchSize]
   );
 
   const alerts = useMemo(() => 
-    validateRecipe(metrics, batchSize, config.targetProtein), [metrics, batchSize, config.targetProtein]
+    validateRecipe(metrics, batchSize, resolvedTargetProtein), [metrics, batchSize, resolvedTargetProtein]
   );
 
   const updatePercentage = (id, newPercentage) => {
     // Ensure we don't drop below 0
     const val = Math.max(0, Number(newPercentage) || 0);
-    setIngredients(prev => prev.map(item => 
+    const nextIngredients = ingredients.map((item) =>
       item.id === id ? { ...item, percentage: val } : item
-    ));
+    );
+
+    if (isControlledIngredients) {
+      if (typeof onIngredientsChange === 'function') {
+        onIngredientsChange(nextIngredients);
+      }
+      return;
+    }
+
+    setIngredients(nextIngredients);
   };
 
   const updateBatchSize = (newBatchSize) => {
@@ -147,25 +207,31 @@ export default function RecipeBuilder({ recipeType, initialIngredients }) {
 
       <ProteinMeter
         averageProtein={metrics.averageProtein}
-        targetProtein={config.targetProtein}
+        targetProtein={resolvedTargetProtein}
         hasWarning={alerts.some((alert) => alert.type === 'warning')}
       />
 
       {/* Ingredient Inputs */}
       <div className="space-y-2 mb-8">
         <div className="grid grid-cols-12 gap-2 px-3 pb-2 text-[10px] font-black uppercase text-ink-muted border-b border-ink/5">
-          <div className="col-span-5">Ingredient</div>
-          <div className="col-span-3 text-right">Percentage</div>
-          <div className="col-span-4 text-right">Weight</div>
+          <div className="col-span-5">Feed Item</div>
+          <div className="col-span-3 text-right">Share</div>
+          <div className="col-span-4 text-right">Amount</div>
         </div>
-        
-        {metrics.ingredients.map((item) => (
-          <IngredientAllocationRow
-            key={item.id}
-            item={item}
-            onPercentageChange={updatePercentage}
-          />
-        ))}
+
+        {isLoading ? (
+          <div className="px-3 py-6 text-sm text-ink-muted">Loading feed items...</div>
+        ) : metrics.ingredients.length > 0 ? (
+          metrics.ingredients.map((item) => (
+            <IngredientAllocationRow
+              key={item.id}
+              item={item}
+              onPercentageChange={updatePercentage}
+            />
+          ))
+        ) : (
+          <div className="px-3 py-6 text-sm text-ink-muted">No feed items found. Add feed stock in Inventory first.</div>
+        )}
       </div>
       
       <MetricsFooter metrics={metrics} />

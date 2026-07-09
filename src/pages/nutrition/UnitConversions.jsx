@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Scale, Info, Plus, Trash2, ArrowRight } from 'lucide-react';
 import { nutritionApi } from '../../lib/backendApi';
+import { useTenant } from '../../hooks/useTenant';
 
 /**
  * SRP: Renders the informative banner explaining how the data is stored.
@@ -59,6 +60,7 @@ const ConversionRow = ({ conversion, onRemove }) => {
  */
 export default function UnitConversions() {
   const queryClient = useQueryClient();
+  const { tenantId, farmId } = useTenant();
   const [material, setMaterial] = useState('');
   const [localUnit, setLocalUnit] = useState('');
   const [baseUnit, setBaseUnit] = useState('kg');
@@ -75,8 +77,9 @@ export default function UnitConversions() {
   });
 
   const { data: backendConversions } = useQuery({
-    queryKey: ['unit-conversions'],
+    queryKey: ['unit-conversions', tenantId, farmId],
     queryFn: () => nutritionApi.listConversions(),
+    enabled: !!tenantId && !!farmId,
   });
 
   useEffect(() => {
@@ -89,7 +92,7 @@ export default function UnitConversions() {
     mutationFn: (payload) => nutritionApi.saveConversion(payload),
     onSuccess: (savedConversion) => {
       setConversions((current) => [...current, savedConversion]);
-      queryClient.invalidateQueries({ queryKey: ['unit-conversions'] });
+      queryClient.invalidateQueries({ queryKey: ['unit-conversions', tenantId, farmId] });
       setMaterial('');
       setLocalUnit('');
       setRatio('');
@@ -130,7 +133,7 @@ export default function UnitConversions() {
         
         {/* Page Header */}
         <div className="border-b border-ink/10 pb-4">
-          <h1 className="font-black text-3xl text-ink m-0">Unit Conversions</h1>
+          <h1 className="font-black text-3xl text-ink m-0">Unit Helpers</h1>
           <p className="text-sm text-ink-muted mt-2">
             Define local farm measurements (e.g., Kasuku, Wheelbarrow) and translate them into standard SI units.
           </p>
@@ -142,7 +145,7 @@ export default function UnitConversions() {
         <div className="bg-surface rounded-2xl shadow-sm border border-ink/10 p-6 md:p-8">
           <div className="flex items-center gap-2 mb-6 text-ink">
             <Plus className="w-5 h-5 text-brand" />
-            <h2 className="text-sm font-bold uppercase tracking-widest">Create New Conversion</h2>
+            <h2 className="text-sm font-bold uppercase tracking-widest">Add New Unit Helper</h2>
           </div>
 
           <form onSubmit={handleSave} className="space-y-6">
@@ -232,7 +235,7 @@ export default function UnitConversions() {
         <div className="bg-surface rounded-2xl shadow-sm border border-ink/10 p-6 md:p-8">
           <div className="flex items-center justify-between mb-6">
             <h3 className="text-sm font-bold text-ink uppercase tracking-widest">
-              Existing Conversions
+              Saved Unit Helpers
             </h3>
             <span className="bg-brand/10 text-brand text-xs font-bold px-2.5 py-1 rounded-md">
               {conversions.length} Saved
