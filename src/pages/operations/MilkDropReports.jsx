@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { FileWarning, Download, Filter, AlertCircle, ChevronRight, Stethoscope, Wheat, ThermometerSun, Settings, X } from 'lucide-react';
 import { productionApi } from '../../lib/backendApi';
+import { useTenant } from '../../hooks/useTenant';
 
 const DIAGNOSTIC_CATEGORIES = [
   { id: 'clinical', label: 'Cow Health & Sickness', icon: Stethoscope, options: ['Signs of Mastitis (clots, swelling)', 'Lame or sore hooves', 'Metabolic sickness (Milk fever, etc.)', 'Not eating / Looks weak'] },
@@ -12,6 +13,7 @@ const DIAGNOSTIC_CATEGORIES = [
 
 export default function MilkDropReports() {
   const queryClient = useQueryClient();
+  const { tenantId, farmId } = useTenant();
   
   // FIXED: State must be declared at the top of the component
   const [investigateModal, setInvestigateModal] = useState({ isOpen: false, log: null });
@@ -19,8 +21,9 @@ export default function MilkDropReports() {
   const [managerNotes, setManagerNotes] = useState('');
 
   const { data: reportsData } = useQuery({
-    queryKey: ['milk-drop-reports'], 
+    queryKey: ['milk-drop-reports', tenantId, farmId], 
     queryFn: () => productionApi.listMilkDropAlerts(),
+    enabled: !!tenantId && !!farmId,
   });
 
   const reports = Array.isArray(reportsData)
@@ -35,20 +38,20 @@ export default function MilkDropReports() {
     : [];
 
   const { data: suggestion, isLoading: isSuggesting } = useQuery({
-    queryKey: ['diagnostic-suggestion', investigateModal.log?.id],
+    queryKey: ['diagnostic-suggestion', tenantId, farmId, investigateModal.log?.id],
     queryFn: () => new Promise((resolve) => setTimeout(() => resolve({
       recommended_category: "Milking Routine & Equipment",
       confidence: 85,
       reasoning: "Herdsman logged a delayed morning shift today.",
       suggested_tags: ["Milking was late (over 30 mins)"]
     }), 1200)),
-    enabled: !!investigateModal.log?.id,
+    enabled: !!tenantId && !!farmId && !!investigateModal.log?.id,
   });
 
   const saveInvestigation = useMutation({
     mutationFn: ({ alertId, ...payload }) => productionApi.investigateMilkDropAlert(alertId, payload),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['milk-drop-reports'] });
+      queryClient.invalidateQueries({ queryKey: ['milk-drop-reports', tenantId, farmId] });
       closeModal();
     },
   });

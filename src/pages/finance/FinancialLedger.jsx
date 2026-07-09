@@ -54,6 +54,8 @@ export default function FinancialLedger() {
       mutationFn: async (newTransactionData) => {
         return financeApi.createLedgerEntry({
           ...newTransactionData,
+          tenant_id: tenantId,
+          farm_id: farmId,
           type: transactionType,
           status: transactionType === 'income' ? 'CLEARED' : 'PAID',
           party: transactionType === 'income' ? newTransactionData.source : newTransactionData.paidTo,

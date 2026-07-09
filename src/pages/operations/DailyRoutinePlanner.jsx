@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Clock, Save, CheckSquare } from 'lucide-react';
 import { loadScheduleTasks, saveScheduleTasks } from '../../lib/schedule';
 import { routineApi } from '../../lib/backendApi';
+import { useTenant } from '../../hooks/useTenant';
 
 function loadInitialTasks() {
   return loadScheduleTasks();
@@ -10,10 +11,12 @@ function loadInitialTasks() {
 
 export default function DailyRoutinePlanner() {
   const queryClient = useQueryClient();
+  const { tenantId, farmId } = useTenant();
   const initialTasks = loadInitialTasks();
   const { data: backendTasks } = useQuery({
-    queryKey: ['routine-plans'],
+    queryKey: ['routine-plans', tenantId, farmId],
     queryFn: () => routineApi.listPlans(),
+    enabled: !!tenantId && !!farmId,
   });
   const [tasks, setTasks] = useState(initialTasks);
   const [activeTaskId, setActiveTaskId] = useState(initialTasks[0]?.id ?? null);
@@ -51,7 +54,7 @@ export default function DailyRoutinePlanner() {
     mutationFn: (payload) => routineApi.savePlans(payload),
     onSuccess: () => {
       saveScheduleTasks(tasks);
-      queryClient.invalidateQueries({ queryKey: ['routine-plans'] });
+      queryClient.invalidateQueries({ queryKey: ['routine-plans', tenantId, farmId] });
       setLastSavedAt(new Date());
     },
   });

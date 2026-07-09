@@ -5,6 +5,7 @@ import { Link } from 'react-router-dom';
 import { safetyApi } from '../../lib/backendApi';
 import { Skeleton } from '../../components/ui';
 import Modal from '../../components/ui/Modal';
+import { useTenant } from '../../hooks/useTenant';
 
 const fetchHardlocks = async () => {
   return safetyApi.activeHardlocks();
@@ -27,14 +28,16 @@ function normalizeHardlock(lock) {
 }
 
 export default function MilkSafetyBoard() {
+  const { tenantId, farmId } = useTenant();
   const [query, setQuery] = useState('');
   const [severityFilter, setSeverityFilter] = useState('All');
   const [selectedLock, setSelectedLock] = useState(null);
   const [controlsOpen, setControlsOpen] = useState(true);
 
   const { data: hardlocksRaw, isLoading, error } = useQuery({
-    queryKey: ['vet_hardlocks'],
+    queryKey: ['vet_hardlocks', tenantId, farmId],
     queryFn: fetchHardlocks,
+    enabled: !!tenantId && !!farmId,
   });
 
   const hardlocks = Array.isArray(hardlocksRaw)

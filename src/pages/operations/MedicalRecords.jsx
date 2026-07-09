@@ -24,6 +24,7 @@ import Modal from '../../components/ui/Modal';
 import { createAuditEntry, getRelativeTime, logToAuditTrail } from '../../lib/audit';
 import { formatValidationErrors, getFirstErrorMessage, validateForm } from '../../lib/validation';
 import { medicalApi } from '../../lib/backendApi';
+import { useTenant } from '../../hooks/useTenant';
 
 const EMPTY_FORM = {
   cowTag: '',
@@ -52,6 +53,7 @@ const STATUS_STYLES = {
 
 export default function VetRecords() {
   const queryClient = useQueryClient();
+  const { tenantId, farmId } = useTenant();
   const [showForm, setShowForm] = useState(false);
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [selectedRecord, setSelectedRecord] = useState(null);
@@ -67,15 +69,16 @@ export default function VetRecords() {
   const [errorMessage, setErrorMessage] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
   const { data: backendRecords } = useQuery({
-    queryKey: ['medical-records'],
+    queryKey: ['medical-records', tenantId, farmId],
     queryFn: () => medicalApi.listRecords(),
+    enabled: !!tenantId && !!farmId,
   });
 
   const createRecordMutation = useMutation({
     mutationFn: (payload) => medicalApi.createRecord(payload),
     onSuccess: (record) => {
       setRecords((current) => [record, ...current.filter((entry) => entry.id !== record.id)]);
-      queryClient.invalidateQueries({ queryKey: ['medical-records'] });
+      queryClient.invalidateQueries({ queryKey: ['medical-records', tenantId, farmId] });
       setSelectedRecord(record);
       setShowForm(false);
       setForm(EMPTY_FORM);

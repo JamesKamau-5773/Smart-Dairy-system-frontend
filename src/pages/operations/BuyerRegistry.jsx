@@ -4,16 +4,19 @@ import { Users, Search, Building2, Link as LinkIcon, FileText, CheckCircle2, Ale
 import AlertBanner from '../../components/ui/AlertBanner';
 import Modal from '../../components/ui/Modal';
 import { financeApi } from '../../lib/backendApi';
+import { useTenant } from '../../hooks/useTenant';
 
 export default function BuyerRegistry() {
+  const { tenantId, farmId } = useTenant();
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('All');
   const [banner, setBanner] = useState(null);
   const [selectedBuyer, setSelectedBuyer] = useState(null);
 
   const { data: buyersData = [] } = useQuery({
-    queryKey: ['finance', 'buyers'],
+    queryKey: ['finance', 'buyers', tenantId, farmId],
     queryFn: async () => financeApi.listBuyers(),
+    enabled: !!tenantId && !!farmId,
   });
 
   const buyers = Array.isArray(buyersData)

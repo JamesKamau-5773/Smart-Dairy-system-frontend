@@ -6,6 +6,7 @@ import Confirmation, { useConfirmation } from '../../components/ui/Confirmation'
 import { validateForm, ValidationRules, getFirstErrorMessage } from '../../lib/validation';
 import { formatDateTime, getRelativeTime, createAuditEntry, logToAuditTrail } from '../../lib/audit';
 import { breedingApi } from '../../lib/backendApi';
+import { useTenant } from '../../hooks/useTenant';
 import {
   Dna,
   CalendarDays,
@@ -292,6 +293,7 @@ function SemenInventory({ stock, onAddInventory }) {
 // MAIN ORCHESTRATOR COMPONENT
 // ============================================================================
 export default function BreedingHub() {
+  const { tenantId, farmId } = useTenant();
   const [vetQueue, setVetQueue] = useState(initialVetQueue);
   const [vetHistory, setVetHistory] = useState(INITIAL_HISTORY);
   const [inventory, setInventory] = useState(bullStock);
@@ -311,7 +313,7 @@ export default function BreedingHub() {
   const confirmation = useConfirmation();
 
   const { data: semenInventoryData } = useQuery({
-    queryKey: ['breeding', 'semen-inventory'],
+    queryKey: ['breeding', 'semen-inventory', tenantId, farmId],
     queryFn: async () => {
       try {
         return await breedingApi.listSemenInventory();
@@ -320,10 +322,11 @@ export default function BreedingHub() {
         return [];
       }
     },
+    enabled: !!tenantId && !!farmId,
   });
 
   const { data: breedingPerformance } = useQuery({
-    queryKey: ['breeding', 'performance'],
+    queryKey: ['breeding', 'performance', tenantId, farmId],
     queryFn: async () => {
       try {
         return await breedingApi.breedingPerformance();
@@ -332,10 +335,11 @@ export default function BreedingHub() {
         return null;
       }
     },
+    enabled: !!tenantId && !!farmId,
   });
 
   const { data: breedingLogsData } = useQuery({
-    queryKey: ['breeding', 'logs'],
+    queryKey: ['breeding', 'logs', tenantId, farmId],
     queryFn: async () => {
       try {
         return await breedingApi.listLogs();
@@ -344,6 +348,7 @@ export default function BreedingHub() {
         return [];
       }
     },
+    enabled: !!tenantId && !!farmId,
   });
 
   useEffect(() => {

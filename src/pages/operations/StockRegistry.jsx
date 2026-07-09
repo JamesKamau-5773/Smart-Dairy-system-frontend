@@ -5,16 +5,19 @@ import {
   ArrowUpRight, Wheat, Syringe, HeartPulse, Search, ChevronDown, ChevronUp
 } from 'lucide-react';
 import { inventoryApi } from '../../lib/backendApi';
+import { useTenant } from '../../hooks/useTenant';
 
 export default function StockRegistry() {
+  const { tenantId, farmId } = useTenant();
   const [inventory, setInventory] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('All');
   const [controlsOpen, setControlsOpen] = useState(false);
 
   const { data: stockData } = useQuery({
-    queryKey: ['stock-registry'],
+    queryKey: ['stock-registry', tenantId, farmId],
     queryFn: () => inventoryApi.listStock(),
+    enabled: !!tenantId && !!farmId,
   });
 
   React.useEffect(() => {
