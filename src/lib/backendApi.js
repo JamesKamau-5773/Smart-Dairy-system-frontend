@@ -313,24 +313,122 @@ export function getApiErrorMessage(error, fallback = 'Request failed. Please try
 }
 
 export function normalizeMedicalRecord(record = {}) {
+  const source = record.visit ?? record.record ?? record.data ?? record.result ?? record;
+
+  const normalizedCow = source.cow_name
+    ?? source.cowName
+    ?? source.animal_name
+    ?? source.animalName
+    ?? source.livestock_name
+    ?? source.cow?.name
+    ?? source.animal?.name
+    ?? source.livestock?.name
+    ?? source.cow
+    ?? source.cowTag
+    ?? source.cow_tag
+    ?? source.cow_id
+    ?? source.animalId
+    ?? source.animal_id
+    ?? '';
+
+  const medications = source.meds ?? source.medications ?? source.treatment ?? '';
+  const normalizedMeds = Array.isArray(medications)
+    ? medications.filter(Boolean).join(', ')
+    : medications;
+
+  const backendFollowUpStatus = source.follow_up_status ?? source.followUpStatus ?? null;
+  const normalizedStatus = (backendFollowUpStatus === 'Completed' ? 'Closed' : null)
+    ?? (backendFollowUpStatus === 'Scheduled' ? 'Follow-up Due' : null)
+    ?? source.status
+    ?? 'Under Treatment';
+
+  const normalizedReason = source.reason
+    ?? source.reason_for_visit
+    ?? source.symptoms
+    ?? source.symptom
+    ?? source.signs
+    ?? source.signsOfSickness
+    ?? source.signs_of_sickness
+    ?? source.clinicalSigns
+    ?? source.clinical_signs
+    ?? source.complaint
+    ?? source.observations
+    ?? '';
+
   return {
-    ...record,
-    id: record.id ?? record.record_id ?? record.visit_id ?? null,
-    date: record.date ?? record.visit_date ?? record.createdAt ?? record.created_at ?? new Date().toISOString().split('T')[0],
-    cow: record.cow ?? record.cowTag ?? record.cow_tag ?? record.animal_name ?? record.animalId ?? '',
-    reason: record.reason ?? record.symptoms ?? record.complaint ?? '',
-    diagnosis: record.diagnosis ?? record.diagnosis_text ?? '',
-    meds: record.meds ?? record.medications ?? record.treatment ?? '',
-    recommendations: record.recommendations ?? record.notes ?? '',
-    status: record.status ?? 'Under Treatment',
-    severity: record.severity ?? 'Medium',
-    vet: record.vet ?? record.vet_name ?? record.createdBy ?? '',
-    followUp: record.followUp ?? record.follow_up ?? record.follow_up_date ?? null,
-    createdAt: record.createdAt ?? record.created_at ?? null,
-    updatedAt: record.updatedAt ?? record.updated_at ?? null,
-    updatedBy: record.updatedBy ?? record.updated_by ?? null,
+    ...source,
+    id: source.id ?? source.record_id ?? source.visit_id ?? null,
+    date: source.date ?? source.visit_date ?? source.createdAt ?? source.created_at ?? new Date().toISOString().split('T')[0],
+    cow: String(normalizedCow).trim(),
+    reason: String(normalizedReason ?? '').trim(),
+    diagnosis: source.diagnosis ?? source.diagnosis_text ?? '',
+    meds: String(normalizedMeds ?? '').trim(),
+    recommendations: source.recommendations ?? source.notes ?? '',
+    status: normalizedStatus,
+    severity: source.severity ?? 'Medium',
+    vet: source.vet ?? source.vet_name ?? source.createdBy ?? source.remarks ?? '',
+    followUp: source.followUp ?? source.follow_up ?? source.follow_up_date ?? null,
+    createdAt: source.createdAt ?? source.created_at ?? null,
+    updatedAt: source.updatedAt ?? source.updated_at ?? source.createdAt ?? source.created_at ?? null,
+    updatedBy: source.updatedBy ?? source.updated_by ?? source.remarks ?? null,
   };
 }
+
+const mapUiMedicalStatusToBackend = (status) => {
+  const normalizedStatus = String(status ?? '').trim().toLowerCase();
+
+  if (normalizedStatus === 'closed') {
+    return 'Completed';
+  }
+
+  if (normalizedStatus === 'follow-up due') {
+    return 'Scheduled';
+  }
+
+  return null;
+};
+
+const buildMedicalRecordPayload = (payload = {}) => {
+  const normalizedCowId = payload.cow_id ?? payload.cowId ?? payload.animal_id ?? payload.animalId ?? payload.cow;
+  const medicationSource = payload.medications ?? payload.meds ?? payload.treatment ?? [];
+  const medications = Array.isArray(medicationSource)
+    ? medicationSource.filter(Boolean).map((item) => String(item).trim()).filter(Boolean)
+    : String(medicationSource ?? '')
+      .split(',')
+      .map((item) => item.trim())
+      .filter(Boolean);
+
+  const backendFollowUpStatus = payload.follow_up_status
+    ?? payload.followUpStatus
+    ?? mapUiMedicalStatusToBackend(payload.status);
+
+  const request = {
+    ...payload,
+    visit_date: payload.visit_date ?? payload.date,
+    reason_for_visit: payload.reason_for_visit ?? payload.reason ?? payload.symptoms,
+    medications,
+    follow_up_date: payload.follow_up_date ?? payload.followUp,
+    follow_up_status: backendFollowUpStatus,
+  };
+
+  if (normalizedCowId !== undefined && normalizedCowId !== null && normalizedCowId !== '') {
+    request.cow_id = normalizedCowId;
+    request.animal_id = normalizedCowId;
+  }
+
+  if (backendFollowUpStatus === 'Completed') {
+    request.follow_up_required = false;
+    request.follow_up_completed_at = payload.follow_up_completed_at ?? payload.followUpCompletedAt ?? new Date().toISOString();
+  } else if (backendFollowUpStatus === 'Scheduled') {
+    request.follow_up_required = true;
+  }
+
+  if (!request.remarks && payload.updatedBy) {
+    request.remarks = `Updated by ${payload.updatedBy}`;
+  }
+
+  return request;
+};
 
 const staffRoutes = (staffId) => (staffId
   ? [`/hr/staff/${staffId}`, `/hr/employees/${staffId}`]
@@ -558,6 +656,104 @@ const normalizeConversionPayload = (payload = {}) => {
     baseUnit,
     base_unit: payload.base_unit ?? baseUnit,
   };
+};
+
+const normalizeSemenInventoryPayload = (payload = {}) => {
+  const bullName = String(payload.bull_name ?? payload.bullName ?? payload.name ?? '').trim();
+  const strawCode = String(payload.straw_code ?? payload.strawCode ?? payload.code ?? '')
+    .trim()
+    .toUpperCase()
+    .replace(/\s+/g, '-')
+    .replace(/[^A-Z0-9-]/g, '');
+  const breed = String(payload.breed ?? payload.breed_improvement ?? payload.breedImprovement ?? payload.improves ?? '').trim();
+  const quantity = Number(payload.stock_level ?? payload.straws_left ?? payload.strawsLeft ?? payload.quantity ?? 0);
+  const normalizedQuantity = Number.isFinite(quantity) ? Math.max(0, quantity) : 0;
+
+  return {
+    bull_name: bullName,
+    straw_code: strawCode,
+    breed,
+    stock_level: normalizedQuantity,
+    straws_left: normalizedQuantity,
+    name: bullName,
+    code: strawCode,
+    improves: breed,
+    breed_improvement: breed,
+    quantity: normalizedQuantity,
+  };
+};
+
+const normalizeBreedingLogPayload = (payload = {}) => {
+  const cowId = String(payload.cow_id ?? payload.cowId ?? payload.cow ?? '').trim();
+  const inseminationDate = String(payload.insemination_date ?? payload.aiDate ?? payload.date ?? '').trim();
+  const semenId = String(payload.semen_id ?? payload.sireCode ?? payload.sire_code ?? '').trim();
+  const rawSemenSource = String(payload.semen_source ?? payload.semenSource ?? payload.source ?? 'farm_stock').trim().toLowerCase();
+  const semenSource = rawSemenSource === 'vet_provided' ? 'vet_provided' : 'farm_stock';
+  const notes = String(payload.note ?? payload.notes ?? '').trim();
+  const status = payload.status ?? 'Pending';
+
+  return {
+    cow_id: cowId,
+    insemination_date: inseminationDate,
+    semen_id: semenId,
+    semen_source: semenSource,
+    cowId,
+    aiDate: inseminationDate,
+    sireCode: semenId,
+    semenSource,
+    note: notes,
+    notes,
+    status,
+  };
+};
+
+const extractBreedingLogsArray = (payload) => {
+  if (Array.isArray(payload)) {
+    return payload;
+  }
+
+  if (!payload || typeof payload !== 'object') {
+    return [];
+  }
+
+  const directCandidates = [
+    payload.logs,
+    payload.breeding_logs,
+    payload.breedingLogs,
+    payload.items,
+    payload.records,
+    payload.results,
+  ];
+
+  for (const candidate of directCandidates) {
+    if (Array.isArray(candidate)) {
+      return candidate;
+    }
+  }
+
+  const nested = payload.data;
+  if (nested && typeof nested === 'object') {
+    const nestedCandidates = [
+      nested.logs,
+      nested.breeding_logs,
+      nested.breedingLogs,
+      nested.items,
+      nested.records,
+      nested.results,
+    ];
+
+    for (const candidate of nestedCandidates) {
+      if (Array.isArray(candidate)) {
+        return candidate;
+      }
+    }
+  }
+
+  if (payload.breeding_log_id || payload.log_id || payload.id) {
+    return [payload];
+  }
+
+  return [];
 };
 
 export const authApi = {
@@ -844,10 +1040,10 @@ export const herdApi = {
 
 export const breedingApi = {
   listLogs() {
-    return apiClient.get('/operations/breeding-logs').then((response) => toArray(response.data));
+    return apiClient.get('/operations/breeding-logs').then((response) => extractBreedingLogsArray(response.data));
   },
   createLog(payload) {
-    return apiClient.post('/operations/breeding-logs', payload).then((response) => toObject(response.data));
+    return apiClient.post('/operations/breeding-logs', normalizeBreedingLogPayload(payload)).then((response) => toObject(response.data));
   },
   updateLogStatus(logId, status) {
     return apiClient.put(`/operations/breeding-logs/${logId}/status`, { status }).then((response) => toObject(response.data));
@@ -856,7 +1052,24 @@ export const breedingApi = {
     return apiClient.get('/operations/semen-inventory').then((response) => toArray(response.data));
   },
   createSemenInventory(payload) {
-    return apiClient.post('/operations/semen-inventory', payload).then((response) => toObject(response.data));
+    return apiClient.post('/operations/semen-inventory', normalizeSemenInventoryPayload(payload)).then((response) => toObject(response.data));
+  },
+  updateSemenInventory(itemId, payload) {
+    return requestWithFallback(apiClient, [
+      {
+        method: 'patch',
+        url: `/operations/semen-inventory/${itemId}`,
+        data: normalizeSemenInventoryPayload(payload),
+      },
+      {
+        method: 'put',
+        url: `/operations/semen-inventory/${itemId}`,
+        data: normalizeSemenInventoryPayload(payload),
+      },
+    ]).then((response) => toObject(response.data));
+  },
+  deleteSemenInventory(itemId) {
+    return apiClient.delete(`/operations/semen-inventory/${itemId}`);
   },
   breedingPerformance() {
     return apiClient.get('/operations/breeding/performance').then((response) => toObject(response.data));
@@ -935,18 +1148,77 @@ export const medicalApi = {
     ]).then((response) => toArray(response.data).map(normalizeMedicalRecord));
   },
   createRecord(payload) {
+    const requestPayload = buildMedicalRecordPayload(payload);
+
     return requestWithFallback(apiClient, [
       {
         method: 'post',
         url: '/clinical/vet-visits',
-        data: payload,
+        data: requestPayload,
       },
       {
         method: 'post',
         url: '/medical/records',
-        data: payload,
+        data: requestPayload,
       },
-    ]).then((response) => normalizeMedicalRecord(toObject(response.data) ?? payload));
+    ]).then((response) => normalizeMedicalRecord(toObject(response.data) ?? requestPayload));
+  },
+  async updateRecord(recordId, payload) {
+    const requestPayload = buildMedicalRecordPayload(payload);
+    const response = await requestWithFallback(apiClient, [
+      {
+        method: 'put',
+        url: `/clinical/vet-visits/${recordId}`,
+        data: requestPayload,
+      },
+      {
+        method: 'put',
+        url: `/medical/records/${recordId}`,
+        data: requestPayload,
+      },
+    ]);
+
+    const normalizedPayloadStatus = String(payload?.status ?? '').trim().toLowerCase();
+
+    if (normalizedPayloadStatus === 'closed') {
+      const completionResponse = await requestWithFallback(apiClient, [
+        {
+          method: 'put',
+          url: `/clinical/vet-visits/${recordId}/follow-up/complete`,
+          data: {},
+        },
+        {
+          method: 'put',
+          url: `/medical/records/${recordId}/follow-up/complete`,
+          data: {},
+        },
+      ]);
+
+      return normalizeMedicalRecord(toObject(completionResponse.data) ?? { ...requestPayload, id: recordId, follow_up_status: 'Completed' });
+    }
+
+    if (normalizedPayloadStatus === 'follow-up due') {
+      const schedulePayload = {
+        follow_up_date: requestPayload.follow_up_date,
+      };
+
+      const scheduleResponse = await requestWithFallback(apiClient, [
+        {
+          method: 'put',
+          url: `/clinical/vet-visits/${recordId}/follow-up/schedule`,
+          data: schedulePayload,
+        },
+        {
+          method: 'put',
+          url: `/medical/records/${recordId}/follow-up/schedule`,
+          data: schedulePayload,
+        },
+      ]);
+
+      return normalizeMedicalRecord(toObject(scheduleResponse.data) ?? { ...requestPayload, id: recordId, follow_up_status: 'Scheduled' });
+    }
+
+    return normalizeMedicalRecord(toObject(response.data) ?? { ...requestPayload, id: recordId });
   },
   listPendingFollowUps() {
     return requestWithFallback(apiClient, [

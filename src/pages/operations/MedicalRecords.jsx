@@ -23,7 +23,7 @@ import AlertBanner from '../../components/ui/AlertBanner';
 import Modal from '../../components/ui/Modal';
 import { createAuditEntry, getRelativeTime, logToAuditTrail } from '../../lib/audit';
 import { formatValidationErrors, getFirstErrorMessage, validateForm } from '../../lib/validation';
-import { medicalApi } from '../../lib/backendApi';
+import { herdApi, medicalApi } from '../../lib/backendApi';
 import { useTenant } from '../../hooks/useTenant';
 
 const EMPTY_FORM = {
@@ -64,6 +64,7 @@ export default function VetRecords() {
   const [form, setForm] = useState(EMPTY_FORM);
   const [formErrors, setFormErrors] = useState({});
   const [isSaving, setIsSaving] = useState(false);
+  const [editingRecordId, setEditingRecordId] = useState(null);
   const [showError, setShowError] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
@@ -73,19 +74,46 @@ export default function VetRecords() {
     queryFn: () => medicalApi.listRecords(),
     enabled: !!tenantId && !!farmId,
   });
+  const { data: herdData } = useQuery({
+    queryKey: ['medical-records-cows', tenantId, farmId],
+    queryFn: () => herdApi.list(),
+    enabled: !!tenantId && !!farmId,
+  });
+
+  const resolveCowLabel = (record) => {
+    const rawCow = String(record?.cow ?? record?.cowTag ?? record?.cow_tag ?? record?.animalId ?? record?.animal_id ?? '').trim();
+    if (!rawCow) return '';
+
+    if (!Array.isArray(herdData) || herdData.length === 0) {
+      return rawCow;
+    }
+
+    const normalizedRawCow = rawCow.toLowerCase();
+    const matchedCow = herdData.find((cow) => {
+      const candidates = [cow?.name, cow?.cow_name, cow?.id, cow?.tagNumber, cow?.tag_number, cow?.tag]
+        .filter(Boolean)
+        .map((value) => String(value).trim().toLowerCase());
+
+      return candidates.includes(normalizedRawCow);
+    });
+
+    const matchedName = String(matchedCow?.name ?? matchedCow?.cow_name ?? '').trim();
+    return matchedName || rawCow;
+  };
 
   const createRecordMutation = useMutation({
     mutationFn: (payload) => medicalApi.createRecord(payload),
     onSuccess: (record) => {
-      setRecords((current) => [record, ...current.filter((entry) => entry.id !== record.id)]);
+      const normalizedRecord = { ...record, cow: resolveCowLabel(record) };
+      setRecords((current) => [normalizedRecord, ...current.filter((entry) => entry.id !== record.id)]);
       queryClient.invalidateQueries({ queryKey: ['medical-records', tenantId, farmId] });
-      setSelectedRecord(record);
+      setSelectedRecord(normalizedRecord);
       setShowForm(false);
       setForm(EMPTY_FORM);
       setFormErrors({});
       setErrorMessage('');
       setShowError(false);
-      setSuccessMessage(`Medical record saved for ${record.cow || form.cowTag}.`);
+      setSuccessMessage(`Medical record saved for ${normalizedRecord.cow || form.cowTag}.`);
       setShowSuccess(true);
     },
     onError: () => {
@@ -97,11 +125,36 @@ export default function VetRecords() {
     },
   });
 
+  const updateRecordMutation = useMutation({
+    mutationFn: ({ id, payload }) => medicalApi.updateRecord(id, payload),
+    onSuccess: (record) => {
+      const normalizedRecord = { ...record, cow: resolveCowLabel(record) };
+      setRecords((current) => current.map((entry) => (entry.id === record.id ? normalizedRecord : entry)));
+      queryClient.invalidateQueries({ queryKey: ['medical-records', tenantId, farmId] });
+      setSelectedRecord(normalizedRecord);
+      setShowForm(false);
+      setEditingRecordId(null);
+      setForm(EMPTY_FORM);
+      setFormErrors({});
+      setErrorMessage('');
+      setShowError(false);
+      setSuccessMessage(`Medical record updated for ${normalizedRecord.cow || form.cowTag}.`);
+      setShowSuccess(true);
+    },
+    onError: () => {
+      setErrorMessage('Failed to update the medical record. Please try again.');
+      setShowError(true);
+    },
+    onSettled: () => {
+      setIsSaving(false);
+    },
+  });
+
   useEffect(() => {
     if (Array.isArray(backendRecords)) {
-      setRecords(backendRecords);
+      setRecords(backendRecords.map((record) => ({ ...record, cow: resolveCowLabel(record) })));
     }
-  }, [backendRecords]);
+  }, [backendRecords, herdData]);
 
   const stats = useMemo(() => {
     const open = records.filter((record) => record.status !== 'Closed').length;
@@ -117,6 +170,34 @@ export default function VetRecords() {
       resolved,
     };
   }, [records]);
+
+  const tenantCows = useMemo(() => {
+    if (!Array.isArray(herdData)) return [];
+
+    const seen = new Set();
+
+    return herdData
+      .map((cow) => {
+        const tag = String(cow?.id ?? cow?.tagNumber ?? cow?.tag_number ?? '').trim();
+        const name = String(cow?.name ?? '').trim();
+        const key = `${tag.toLowerCase()}::${name.toLowerCase()}`;
+        if (!tag && !name) return null;
+        if (seen.has(key)) return null;
+        seen.add(key);
+        return { tag, name };
+      })
+      .filter(Boolean)
+      .sort((a, b) => `${a.tag} ${a.name}`.localeCompare(`${b.tag} ${b.name}`));
+  }, [herdData]);
+
+  const tenantCowLookup = useMemo(() => {
+    return new Set(
+      tenantCows
+        .flatMap((cow) => [cow.tag, cow.name])
+        .filter(Boolean)
+        .map((value) => String(value).trim().toLowerCase())
+    );
+  }, [tenantCows]);
 
   const filteredRecords = useMemo(() => {
     const normalizedQuery = query.trim().toLowerCase();
@@ -155,6 +236,11 @@ export default function VetRecords() {
       followUp: ['required'],
     });
 
+    const normalizedCowInput = String(form.cowTag ?? '').trim().toLowerCase();
+    if (tenantCows.length > 0 && normalizedCowInput && !tenantCowLookup.has(normalizedCowInput)) {
+      errors.cowTag = 'Select a registered tenant cow by tag or name from the dropdown.';
+    }
+
     if (Object.keys(errors).length > 0) {
       const formattedErrors = formatValidationErrors(errors);
       setFormErrors(formattedErrors);
@@ -181,11 +267,43 @@ export default function VetRecords() {
       updatedBy: form.vet,
     };
 
+    if (editingRecordId) {
+      updateRecordMutation.mutate(
+        { id: editingRecordId, payload: nextRecord },
+        {
+          onSuccess: (savedRecord) => {
+            logToAuditTrail(createAuditEntry('update', 'medical-record', savedRecord, form.vet));
+          },
+        }
+      );
+      return;
+    }
+
     createRecordMutation.mutate(nextRecord, {
       onSuccess: (savedRecord) => {
         logToAuditTrail(createAuditEntry('create', 'medical-record', savedRecord, form.vet));
       },
     });
+  };
+
+  const handleEditRecord = (record) => {
+    setForm({
+      cowTag: record.cow ?? '',
+      date: record.date ?? new Date().toISOString().split('T')[0],
+      symptoms: record.reason ?? '',
+      diagnosis: record.diagnosis ?? '',
+      medications: record.meds ?? '',
+      recommendations: record.recommendations ?? '',
+      vet: record.vet ?? 'Dr. A. Njoroge',
+      status: record.status ?? 'Under Treatment',
+      severity: record.severity ?? 'Medium',
+      followUp: record.followUp ?? '',
+    });
+    setEditingRecordId(record.id ?? null);
+    setFormErrors({});
+    setShowError(false);
+    setShowForm(true);
+    setSelectedRecord(null);
   };
 
   const clearFilters = () => {
@@ -229,7 +347,20 @@ export default function VetRecords() {
             <p className="max-w-2xl text-sm leading-6 text-ink">Track vet visits, diagnoses, treatment plans, and follow-ups in a way the whole farm team can act on quickly.</p>
           </div>
 
-          <button onClick={() => setShowForm((current) => !current)} className="btn-command inline-flex items-center gap-2 self-start lg:self-auto">
+          <button
+            onClick={() => {
+              setShowForm((current) => {
+                const next = !current;
+                if (!next) {
+                  setEditingRecordId(null);
+                  setForm(EMPTY_FORM);
+                  setFormErrors({});
+                }
+                return next;
+              });
+            }}
+            className="btn-command inline-flex items-center gap-2 self-start lg:self-auto"
+          >
             <Plus size={16} /> {showForm ? LABELS.CANCEL : LABELS.LOG_NEW_VISIT}
           </button>
         </div>
@@ -352,22 +483,43 @@ export default function VetRecords() {
           <div className="mb-6 flex items-center gap-3">
             <div className="rounded-2xl bg-brand/10 p-3 text-brand"><Stethoscope size={18} /></div>
             <div>
-              <h3 className="font-bold text-brand text-base sm:text-lg">{LABELS.LOG_NEW_CLINICAL}</h3>
+              <div className="flex flex-wrap items-center gap-2">
+                <h3 className="font-bold text-brand text-base sm:text-lg">{editingRecordId ? 'Edit Clinical Record' : LABELS.LOG_NEW_CLINICAL}</h3>
+                {editingRecordId && (
+                  <span className="inline-flex items-center rounded-full border border-brand/20 bg-brand/10 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-brand">
+                    Editing record
+                  </span>
+                )}
+              </div>
               <p className="text-sm text-ink leading-6">Capture enough detail for the next shift to continue treatment without guessing.</p>
             </div>
           </div>
 
           <form className="grid grid-cols-1 gap-6 md:grid-cols-2" onSubmit={handleSaveRecord}>
             <div className="space-y-2">
-              <label className="text-[10px] font-bold uppercase tracking-wider text-ink-strong">Cow Tag No. *</label>
+              <label className="text-[10px] font-bold uppercase tracking-wider text-ink-strong">Cow Tag or Name *</label>
               <input
                 className={`input-machined w-full ${formErrors.cowTag ? 'border-rose-300 bg-rose-50' : ''}`}
-                placeholder="e.g. C-101"
+                placeholder="e.g. C-101 or Bella"
                 value={form.cowTag}
                 onChange={(event) => handleFieldChange('cowTag', event.target.value)}
+                list="tenant-cow-options"
                 aria-invalid={!!formErrors.cowTag}
                 aria-describedby={formErrors.cowTag ? 'cowTag-error' : undefined}
               />
+              <datalist id="tenant-cow-options">
+                {tenantCows.map((cow, index) => (
+                  <React.Fragment key={`${cow.tag || 'no-tag'}-${cow.name || 'no-name'}-${index}`}>
+                    {cow.tag && (
+                      <option value={cow.tag}>{cow.name ? `${cow.name} (name)` : 'Cow tag'}</option>
+                    )}
+                    {cow.name && (
+                      <option value={cow.name}>{cow.tag ? `${cow.tag} (tag)` : 'Cow name'}</option>
+                    )}
+                  </React.Fragment>
+                ))}
+              </datalist>
+              <p className="text-[11px] text-ink-muted">Start typing and select a registered tenant cow from the dropdown.</p>
               {formErrors.cowTag && <p id="cowTag-error" className="mt-1 flex items-center gap-1 text-xs text-rose-600"><AlertCircle size={12} /> {formErrors.cowTag}</p>}
             </div>
 
@@ -482,6 +634,8 @@ export default function VetRecords() {
                 type="button"
                 onClick={() => {
                   setShowForm(false);
+                  setEditingRecordId(null);
+                  setForm(EMPTY_FORM);
                   setFormErrors({});
                 }}
                 className="btn-command bg-surface-raised text-ink hover:bg-ink/10"
@@ -490,7 +644,7 @@ export default function VetRecords() {
               </button>
               <button type="submit" className="btn-command inline-flex items-center gap-2" disabled={isSaving}>
                 {isSaving ? <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" /> : <Plus size={16} />}
-                {isSaving ? 'Saving...' : 'Save Record'}
+                {isSaving ? 'Saving...' : editingRecordId ? 'Update Record' : 'Save Record'}
               </button>
             </div>
           </form>
@@ -627,7 +781,7 @@ export default function VetRecords() {
               <button onClick={() => setSelectedRecord(null)} className="btn-command bg-surface-raised text-ink inline-flex items-center gap-2">
                 <X size={16} /> Close
               </button>
-              <button className="btn-command">
+              <button type="button" onClick={() => handleEditRecord(selectedRecord)} className="btn-command">
                 Edit Record
               </button>
             </div>

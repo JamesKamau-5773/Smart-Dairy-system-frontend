@@ -42,12 +42,37 @@ function formatDate(dateValue) {
 }
 
 function statusTone(status) {
-  if (status === 'Milking') return 'bg-accent/20 text-brand-dark border-accent/30';
-  if (status === 'Dry') return 'bg-ink/10 text-ink-muted border-ink/15';
+  if (isMilkingStatus(status)) return 'bg-accent/20 text-brand-dark border-accent/30';
+  if (isDryStatus(status)) return 'bg-ink/10 text-ink-muted border-ink/15';
   if (status === 'Calf') return 'bg-accent/10 text-accent-dark border-accent/20';
   if (status === 'Heifer') return 'bg-surface-raised text-ink border-ink/10';
   if (status === 'Cow') return 'bg-accent/20 text-brand-dark border-accent/30';
   return 'bg-surface-raised text-ink border-ink/10';
+}
+
+function normalizeStatusValue(status = '') {
+  return String(status)
+    .trim()
+    .toLowerCase()
+    .replace(/[_-]+/g, ' ')
+    .replace(/\s+/g, ' ');
+}
+
+function isMilkingStatus(status = '') {
+  const normalized = normalizeStatusValue(status);
+  return ['milking', 'lactating', 'in milk'].includes(normalized);
+}
+
+function isDryStatus(status = '') {
+  const normalized = normalizeStatusValue(status);
+  return ['dry', 'dry off', 'dry cow', 'non lactating'].includes(normalized);
+}
+
+function matchesStatusFilter(status = '', filter = 'All') {
+  if (filter === 'All') return true;
+  if (filter === 'Milking') return isMilkingStatus(status);
+  if (filter === 'Dry') return isDryStatus(status);
+  return String(status) === filter;
 }
 
 function hasValidTimestamp(timestamp) {
@@ -77,7 +102,7 @@ function normalizeHerdCow(cow = {}, fallback = {}) {
 function getFilteredHerd(herd, statusFilter, searchTerm) {
   const normalizedSearch = searchTerm.trim().toLowerCase();
   return herd
-    .filter((cow) => statusFilter === 'All' || cow.status === statusFilter)
+    .filter((cow) => matchesStatusFilter(cow.status, statusFilter))
     .filter((cow) => {
       if (!normalizedSearch) return true;
       return [cow.id, cow.name, cow.breed, cow.status].some((field) =>
@@ -93,8 +118,8 @@ function getFilteredHerd(herd, statusFilter, searchTerm) {
 
 function getHerdSummary(herd) {
   const totalAnimals = herd.length;
-  const milkingCount = herd.filter((cow) => cow.status === 'Milking').length;
-  const dryCount = herd.filter((cow) => cow.status === 'Dry').length;
+  const milkingCount = herd.filter((cow) => isMilkingStatus(cow.status)).length;
+  const dryCount = herd.filter((cow) => isDryStatus(cow.status)).length;
   const averageAgeMonths =
     totalAnimals === 0
       ? 0
@@ -487,8 +512,8 @@ export default function HerdRegistry() {
               <div className="flex flex-wrap items-center gap-2">
                 {[
                   { label: 'All', count: herdState.length },
-                  { label: 'Milking', count: herdState.filter((cow) => cow.status === 'Milking').length },
-                  { label: 'Dry', count: herdState.filter((cow) => cow.status === 'Dry').length },
+                  { label: 'Milking', count: herdState.filter((cow) => isMilkingStatus(cow.status)).length },
+                  { label: 'Dry', count: herdState.filter((cow) => isDryStatus(cow.status)).length },
                 ].map((option) => (
                   <button
                     key={option.label}

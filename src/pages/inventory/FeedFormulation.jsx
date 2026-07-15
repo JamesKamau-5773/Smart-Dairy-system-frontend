@@ -243,12 +243,67 @@ export default function FeedFormulation() {
     const targetProteinPercent = Number.isFinite(normalizedTargetProtein) && normalizedTargetProtein > 0
       ? normalizedTargetProtein
       : fallbackTargetProtein;
+    const normalizedIngredients = (Array.isArray(recipe) ? recipe : [])
+      .map((ingredient) => {
+        const parsedIngredientId = Number(
+          ingredient.ingredient_id
+          ?? ingredient.ingredientId
+          ?? ingredient.inventory_item_id
+          ?? ingredient.inventoryItemId
+          ?? ingredient.item_id
+          ?? ingredient.itemId
+          ?? ingredient.id
+        );
+
+        const parsedPercentage = Number(
+          ingredient.percentage
+          ?? ingredient.inclusion_percentage
+          ?? ingredient.inclusionPercent
+          ?? ingredient.inclusionPercentage
+          ?? 0
+        );
+
+        const inclusionPercentage = Number.isFinite(parsedPercentage)
+          ? Math.max(0, parsedPercentage)
+          : 0;
+
+        if (!Number.isFinite(parsedIngredientId) || parsedIngredientId <= 0 || inclusionPercentage <= 0) {
+          return null;
+        }
+
+        return {
+          ...ingredient,
+          ingredient_id: parsedIngredientId,
+          ingredientId: parsedIngredientId,
+          inventory_item_id: parsedIngredientId,
+          inventoryItemId: parsedIngredientId,
+          inclusion_percentage: inclusionPercentage,
+          inclusionPercentage,
+          percentage: inclusionPercentage,
+        };
+      })
+      .filter(Boolean);
 
     if (normalizedBatchSize <= 0) {
       throw new Error('Batch size is required and must be greater than 0 kg.');
     }
 
-    const hasIngredientIds = recipe.every((ingredient) => {
+    if (normalizedIngredients.length === 0) {
+      throw new Error('Add at least one ingredient with a share greater than 0% before checking nutrition.');
+    }
+
+    return {
+      recipe_type: recipeType,
+      ingredients: normalizedIngredients,
+      target_protein_percent: targetProteinPercent,
+      target_protein_percentage: targetProteinPercent,
+      batch_size_kg: normalizedBatchSize,
+      ...extraPayload,
+    };
+  };
+
+  const hasValidIngredients = useMemo(() => {
+    return (Array.isArray(recipe) ? recipe : []).some((ingredient) => {
       const parsedIngredientId = Number(
         ingredient.ingredient_id
         ?? ingredient.ingredientId
@@ -258,23 +313,20 @@ export default function FeedFormulation() {
         ?? ingredient.itemId
         ?? ingredient.id
       );
+      const parsedPercentage = Number(
+        ingredient.percentage
+        ?? ingredient.inclusion_percentage
+        ?? ingredient.inclusionPercent
+        ?? ingredient.inclusionPercentage
+        ?? 0
+      );
 
-      return Number.isFinite(parsedIngredientId) && parsedIngredientId > 0;
+      return Number.isFinite(parsedIngredientId)
+        && parsedIngredientId > 0
+        && Number.isFinite(parsedPercentage)
+        && parsedPercentage > 0;
     });
-
-    if (!hasIngredientIds) {
-      throw new Error('Some feed items are missing inventory IDs. Please refresh inventory items and try again.');
-    }
-
-    return {
-      recipe_type: recipeType,
-      ingredients: recipe,
-      target_protein_percent: targetProteinPercent,
-      target_protein_percentage: targetProteinPercent,
-      batch_size_kg: normalizedBatchSize,
-      ...extraPayload,
-    };
-  };
+  }, [recipe]);
 
   const calculateNutritionMutation = useMutation({
     mutationFn: () => nutritionApi.calculateNutrition(buildRecipeRequestPayload()),
@@ -451,14 +503,14 @@ export default function FeedFormulation() {
             <div className="grid grid-cols-1 gap-2 mb-4">
               <button
                 onClick={() => calculateNutritionMutation.mutate()}
-                disabled={calculateNutritionMutation.isPending}
+                disabled={calculateNutritionMutation.isPending || !hasValidIngredients}
                 className="w-full bg-surface-raised hover:bg-ink/5 text-ink-strong px-4 py-2.5 rounded-button font-bold text-sm transition-colors disabled:opacity-70"
               >
                 {calculateNutritionMutation.isPending ? 'Checking...' : 'Check Protein Level'}
               </button>
               <button
                 onClick={() => formulateMutation.mutate()}
-                disabled={formulateMutation.isPending}
+                disabled={formulateMutation.isPending || !hasValidIngredients}
                 className="w-full bg-brand/10 hover:bg-brand/20 text-brand-dark px-4 py-2.5 rounded-button font-bold text-sm transition-colors disabled:opacity-70"
               >
                 {formulateMutation.isPending ? 'Adjusting...' : 'Auto-Adjust Feed Shares'}
@@ -486,7 +538,7 @@ export default function FeedFormulation() {
             <div className="space-y-3">
               <button 
                 onClick={() => saveRecipe.mutate(recipe)}
-                disabled={saveRecipe.isPending}
+                disabled={saveRecipe.isPending || !hasValidIngredients}
                 className="w-full bg-brand hover:bg-brand-dark text-white px-4 py-3 rounded-button font-bold text-sm transition-colors shadow-sm flex items-center justify-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed"
               >
                 <Save size={18} /> 
