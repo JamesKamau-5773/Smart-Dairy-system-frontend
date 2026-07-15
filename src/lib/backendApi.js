@@ -1293,6 +1293,30 @@ export const nutritionApi = {
   listRecipes() {
     return apiClient.get('/feed/recipes').then((response) => toArray(response.data));
   },
+  listMixerIngredients(recipeType) {
+    const params = {
+      recipe_type: recipeType,
+      mixer_type: recipeType,
+      mixerType: recipeType,
+    };
+
+    return requestWithFallback(apiClient, [
+      {
+        method: 'get',
+        url: `/v1/nutrition/mixers/${recipeType}/ingredients`,
+      },
+      {
+        method: 'get',
+        url: '/v1/nutrition/mixers/ingredients',
+        params,
+      },
+      {
+        method: 'get',
+        url: '/v1/nutrition/recipes/ingredients',
+        params,
+      },
+    ]).then((response) => toArray(response.data));
+  },
   createRecipe(payload) {
     return apiClient.post('/feed/recipes', normalizeRecipePayload(payload)).then((response) => toObject(response.data));
   },
@@ -1306,6 +1330,11 @@ export const nutritionApi = {
     const data = normalizeNutritionRequestPayload(payload);
 
     return requestWithFallback(apiClient, [
+      {
+        method: 'post',
+        url: '/v1/nutrition/recipes/calculate-nutrition',
+        data,
+      },
       {
         method: 'post',
         url: '/v1/recipes/calculate-nutrition',
@@ -1329,6 +1358,11 @@ export const nutritionApi = {
     return requestWithFallback(apiClient, [
       {
         method: 'post',
+        url: '/v1/nutrition/recipes/formulate',
+        data,
+      },
+      {
+        method: 'post',
         url: '/v1/recipes/formulate',
         data,
       },
@@ -1348,6 +1382,11 @@ export const nutritionApi = {
     const data = normalizeNutritionRequestPayload(payload);
 
     return requestWithFallback(apiClient, [
+      {
+        method: 'post',
+        url: '/v1/nutrition/recipes/auto-save',
+        data,
+      },
       {
         method: 'post',
         url: '/v1/recipes/auto-save',

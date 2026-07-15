@@ -1,8 +1,8 @@
-import React, { useMemo, useState } from 'react';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import React, { useEffect, useMemo, useState } from 'react';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { X, Beaker, Tractor } from 'lucide-react';
 import AlertBanner from '../../components/ui/AlertBanner';
-import { getApiErrorMessage, nutritionApi } from '../../lib/backendApi';
+import { getApiErrorMessage, inventoryApi, nutritionApi } from '../../lib/backendApi';
 import { useTenant } from '../../hooks/useTenant';
 import RecipeBuilder from './RecipeBuilder';
 
@@ -25,6 +25,11 @@ const CUSTOM_FORMULATIONS = {
   },
 };
 
+const DEFAULT_BATCH_SIZE_BY_TYPE = {
+  dairy_meal: 500,
+  main_meal: 2000,
+};
+
 export default function AddFeedModal({ onClose }) {
   const [activeCustomTab, setActiveCustomTab] = useState('dairy_meal');
   const [builderIngredients, setBuilderIngredients] = useState(CUSTOM_FORMULATIONS.dairy_meal.ingredients);
@@ -32,7 +37,43 @@ export default function AddFeedModal({ onClose }) {
   const [errorMessage, setErrorMessage] = useState('');
   const queryClient = useQueryClient();
   const { tenantId, farmId } = useTenant();
+
+  const { data: inventoryItemsRaw = [], isLoading: isInventoryLoading } = useQuery({
+    queryKey: ['inventory-items', tenantId, farmId],
+    queryFn: () => inventoryApi.listItems(),
+    enabled: !!tenantId && !!farmId,
+  });
+
   const currentFormulation = CUSTOM_FORMULATIONS[activeCustomTab];
+
+  const inventoryBackedIngredients = useMemo(() => {
+    const source = Array.isArray(inventoryItemsRaw) ? inventoryItemsRaw : [];
+
+    return source.map((item) => ({
+      id: String(item.id ?? item.sku ?? item.name),
+      ingredientId: Number.isFinite(Number(item.id)) && Number(item.id) > 0 ? Number(item.id) : null,
+      ingredient_id: Number.isFinite(Number(item.id)) && Number(item.id) > 0 ? Number(item.id) : null,
+      inventory_item_id: Number.isFinite(Number(item.id)) && Number(item.id) > 0 ? Number(item.id) : null,
+      name: item.name ?? item.sku ?? 'Unknown Ingredient',
+      percentage: 0,
+      proteinContent: Number(item.protein_grams_per_kg ?? item.proteinContent ?? 0) / 10,
+      pricePerKg: Number(item.cost_per_kg ?? item.costPerKg ?? 0),
+    }));
+  }, [inventoryItemsRaw]);
+
+  const initialIngredients = useMemo(() => {
+    return inventoryBackedIngredients.length > 0
+      ? inventoryBackedIngredients
+      : currentFormulation.ingredients;
+  }, [currentFormulation.ingredients, inventoryBackedIngredients]);
+
+  useEffect(() => {
+    setBuilderIngredients(initialIngredients);
+  }, [activeCustomTab, initialIngredients]);
+
+  useEffect(() => {
+    setBuilderBatchSize(DEFAULT_BATCH_SIZE_BY_TYPE[activeCustomTab] ?? DEFAULT_BATCH_SIZE_BY_TYPE.dairy_meal);
+  }, [activeCustomTab]);
 
   const computedTotals = useMemo(() => {
     const ingredients = Array.isArray(builderIngredients) ? builderIngredients : [];
@@ -157,9 +198,10 @@ export default function AddFeedModal({ onClose }) {
             <RecipeBuilder
               key={activeCustomTab}
               recipeType={activeCustomTab}
-              initialIngredients={currentFormulation.ingredients}
+              initialIngredients={initialIngredients}
               onIngredientsChange={setBuilderIngredients}
               onBatchSizeChange={setBuilderBatchSize}
+              isLoading={isInventoryLoading}
             />
             
             {/* FOOTER ACTIONS */}

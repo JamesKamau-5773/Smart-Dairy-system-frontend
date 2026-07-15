@@ -1,9 +1,9 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useLocation, useNavigate, } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Beaker, Tractor, Save, AlertCircle, XCircle } from 'lucide-react';
 import RecipeBuilder from '../nutrition/RecipeBuilder'; 
-import { inventoryApi, nutritionApi } from '../../lib/backendApi';
+import { nutritionApi } from '../../lib/backendApi';
 import { useTenant } from '../../hooks/useTenant';
 
 // 1. CRITICAL FIX: Define defaults OUTSIDE the component.
@@ -35,11 +35,62 @@ function normalizeBatchSize(value, fallback = 0) {
   return fallback;
 }
 
+function normalizeIngredientIdentifier(value) {
+  if (value === null || value === undefined) {
+    return null;
+  }
+
+  const trimmed = String(value).trim();
+  if (!trimmed) {
+    return null;
+  }
+
+  const numericValue = Number(trimmed);
+  if (Number.isFinite(numericValue) && numericValue > 0) {
+    return numericValue;
+  }
+
+  return trimmed;
+}
+
 function getRequestErrorMessage(error, fallbackMessage) {
   return error?.response?.data?.message
     ?? error?.response?.data?.error
     ?? error?.message
     ?? fallbackMessage;
+}
+
+export function mapInventoryItemToRecipeIngredient(item = {}) {
+  const numericItemId = Number(item.id ?? item.ingredient_id ?? item.ingredientId ?? item.item_id ?? item.itemId);
+  const ingredientId = Number.isFinite(numericItemId) && numericItemId > 0 ? numericItemId : null;
+  const rawPercentage = Number(
+    item.inclusion_percentage
+    ?? item.inclusionPercent
+    ?? item.inclusionPercentage
+    ?? item.default_share_percent
+    ?? item.defaultSharePercent
+    ?? item.default_percentage
+    ?? item.defaultPercentage
+    ?? item.percentage
+    ?? 0
+  );
+
+  // Backend is the single source of truth for default/share percentages.
+  // Frontend must never derive percentages from stock quantities.
+  const percentage = Number.isFinite(rawPercentage) && rawPercentage > 0 ? rawPercentage : 0;
+
+  return {
+    id: String(item.id ?? item.sku ?? item.name),
+    ingredientId,
+    ingredient_id: ingredientId,
+    inventory_item_id: ingredientId,
+    name: item.name ?? item.sku ?? 'Unknown Ingredient',
+    percentage,
+    proteinContent: Number(item.protein_grams_per_kg ?? item.proteinContent ?? 0) / 10,
+    pricePerKg: Number(item.cost_per_kg ?? item.costPerKg ?? 0),
+    availableStock: Number(item.currentStock ?? item.current_qty ?? item.stock?.value ?? 0),
+    stockUnit: item.unit ?? item.stock?.unit ?? 'kg',
+  };
 }
 
 function mapSuggestedIngredient(item = {}, index = 0) {
@@ -54,7 +105,9 @@ function mapSuggestedIngredient(item = {}, index = 0) {
   );
 
   const rawPercentage = Number(
-    item.percentage
+    item.adjusted_percentage
+    ?? item.adjustedPercentage
+    ?? item.percentage
     ?? item.inclusion_percentage
     ?? item.inclusionPercent
     ?? item.inclusionPercentage
@@ -120,19 +173,18 @@ export default function FeedFormulation() {
   const queryClient = useQueryClient();
   const { tenantId, farmId } = useTenant();
 
+  const routerState = location.state || {};
+  const importedDraft = routerState.isImportedDraft ? routerState : null;
+  const [activeTab, setActiveTab] = useState(importedDraft?.draftType || 'dairy_meal');
+  const recipeType = activeTab === 'dairy_meal' ? 'dairy_meal' : 'main_meal';
+
   const { data: inventoryItemsRaw = [], isLoading: isInventoryLoading } = useQuery({
-    queryKey: ['inventory-items', tenantId, farmId],
-    queryFn: () => inventoryApi.listItems(),
+    queryKey: ['mixer-ingredients', recipeType, tenantId, farmId],
+    queryFn: () => nutritionApi.listMixerIngredients(recipeType),
     enabled: !!tenantId && !!farmId,
   });
 
-  // 2. CRITICAL FIX: Ultra-safe router state extraction
-  // Handles cases where the user clicks the Sidebar link and location.state is completely null
-  const routerState = location.state || {};
-  const importedDraft = routerState.isImportedDraft ? routerState : null;
-
   // State initialization
-  const [activeTab, setActiveTab] = useState(importedDraft?.draftType || 'dairy_meal');
   const [recipe, setRecipe] = useState([]);
   const [batchSizeKg, setBatchSizeKg] = useState(
     DEFAULT_BATCH_SIZE_BY_TYPE[importedDraft?.draftType || 'dairy_meal'] ?? DEFAULT_BATCH_SIZE_BY_TYPE.dairy_meal
@@ -154,7 +206,6 @@ export default function FeedFormulation() {
     setBatchSizeKg(DEFAULT_BATCH_SIZE_BY_TYPE[activeTab] ?? DEFAULT_BATCH_SIZE_BY_TYPE.dairy_meal);
   }, [activeTab]);
 
-  const recipeType = activeTab === 'dairy_meal' ? 'dairy_meal' : 'main_meal';
   const defaultRecipeName = recipeType === 'dairy_meal' ? 'Dairy Meal Mix' : 'Main Feed Mix';
 
   useEffect(() => {
@@ -166,16 +217,8 @@ export default function FeedFormulation() {
   const inventoryBackedIngredients = useMemo(() => {
     const source = Array.isArray(inventoryItemsRaw) ? inventoryItemsRaw : [];
 
-    return source.map((item) => ({
-      id: String(item.id ?? item.sku ?? item.name),
-      ingredientId: Number.isFinite(Number(item.id)) && Number(item.id) > 0 ? Number(item.id) : null,
-      ingredient_id: Number.isFinite(Number(item.id)) && Number(item.id) > 0 ? Number(item.id) : null,
-      inventory_item_id: Number.isFinite(Number(item.id)) && Number(item.id) > 0 ? Number(item.id) : null,
-      name: item.name ?? item.sku ?? 'Unknown Ingredient',
-      percentage: 0,
-      proteinContent: Number(item.protein_grams_per_kg ?? item.proteinContent ?? 0) / 10,
-      pricePerKg: Number(item.cost_per_kg ?? item.costPerKg ?? 0),
-    }));
+    return source
+      .map((item) => mapInventoryItemToRecipeIngredient(item));
   }, [inventoryItemsRaw]);
 
   const fallbackDefaults = useMemo(
@@ -194,9 +237,32 @@ export default function FeedFormulation() {
     return inventoryBackedIngredients.length > 0 ? inventoryBackedIngredients : fallbackDefaults;
   }, [activeTab, fallbackDefaults, importedDraft, inventoryBackedIngredients]);
 
+  const inventoryDefaultsSignature = useMemo(() => {
+    if (!Array.isArray(inventoryBackedIngredients) || inventoryBackedIngredients.length === 0) {
+      return 'empty';
+    }
+
+    return inventoryBackedIngredients
+      .map((ingredient) => `${ingredient.id}:${Number(ingredient.percentage ?? 0)}`)
+      .join('|');
+  }, [inventoryBackedIngredients]);
+
+  const recipeInitializationKey = useMemo(() => {
+    const source = inventoryBackedIngredients.length > 0 ? 'inventory' : 'fallback';
+    const draftMarker = importedDraft && importedDraft.draftType === activeTab ? 'draft' : 'standard';
+    return `${activeTab}|${source}|${draftMarker}|${inventoryDefaultsSignature}`;
+  }, [activeTab, importedDraft, inventoryBackedIngredients.length, inventoryDefaultsSignature]);
+
+  const lastRecipeInitializationKeyRef = useRef('');
+
   useEffect(() => {
+    if (lastRecipeInitializationKeyRef.current === recipeInitializationKey) {
+      return;
+    }
+
     setRecipe(initialIngredients);
-  }, [initialIngredients]);
+    lastRecipeInitializationKeyRef.current = recipeInitializationKey;
+  }, [initialIngredients, recipeInitializationKey]);
 
   const suggestedMixQuery = useQuery({
     queryKey: ['feed-formulation-suggested-mix', tenantId, farmId, routerState?.yieldTargetId, routerState?.targetLiters],
@@ -236,7 +302,8 @@ export default function FeedFormulation() {
     }
   }, [routerState?.fromMilkLab, suggestedMixQuery.data]);
 
-  const buildRecipeRequestPayload = (extraPayload = {}) => {
+  const buildRecipeRequestPayload = (extraPayload = {}, options = {}) => {
+    const allowZeroPercentages = Boolean(options.allowZeroPercentages);
     const normalizedBatchSize = normalizeBatchSize(batchSizeKg);
     const normalizedTargetProtein = Number(targetProtein);
     const fallbackTargetProtein = recipeType === 'main_meal' ? 14 : 16;
@@ -245,7 +312,7 @@ export default function FeedFormulation() {
       : fallbackTargetProtein;
     const normalizedIngredients = (Array.isArray(recipe) ? recipe : [])
       .map((ingredient) => {
-        const parsedIngredientId = Number(
+        const normalizedIngredientId = normalizeIngredientIdentifier(
           ingredient.ingredient_id
           ?? ingredient.ingredientId
           ?? ingredient.inventory_item_id
@@ -267,16 +334,16 @@ export default function FeedFormulation() {
           ? Math.max(0, parsedPercentage)
           : 0;
 
-        if (!Number.isFinite(parsedIngredientId) || parsedIngredientId <= 0 || inclusionPercentage <= 0) {
+        if (!normalizedIngredientId || (!allowZeroPercentages && inclusionPercentage <= 0)) {
           return null;
         }
 
         return {
           ...ingredient,
-          ingredient_id: parsedIngredientId,
-          ingredientId: parsedIngredientId,
-          inventory_item_id: parsedIngredientId,
-          inventoryItemId: parsedIngredientId,
+          ingredient_id: normalizedIngredientId,
+          ingredientId: normalizedIngredientId,
+          inventory_item_id: normalizedIngredientId,
+          inventoryItemId: normalizedIngredientId,
           inclusion_percentage: inclusionPercentage,
           inclusionPercentage,
           percentage: inclusionPercentage,
@@ -289,7 +356,11 @@ export default function FeedFormulation() {
     }
 
     if (normalizedIngredients.length === 0) {
-      throw new Error('Add at least one ingredient with a share greater than 0% before checking nutrition.');
+      throw new Error(
+        allowZeroPercentages
+          ? 'Add at least one ingredient before auto-adjusting feed shares.'
+          : 'Add at least one ingredient with a share greater than 0% before checking nutrition.'
+      );
     }
 
     return {
@@ -302,9 +373,25 @@ export default function FeedFormulation() {
     };
   };
 
+  const hasEligibleIngredients = useMemo(() => {
+    return (Array.isArray(recipe) ? recipe : []).some((ingredient) => {
+      const normalizedIngredientId = normalizeIngredientIdentifier(
+        ingredient.ingredient_id
+        ?? ingredient.ingredientId
+        ?? ingredient.inventory_item_id
+        ?? ingredient.inventoryItemId
+        ?? ingredient.item_id
+        ?? ingredient.itemId
+        ?? ingredient.id
+      );
+
+      return Boolean(normalizedIngredientId);
+    });
+  }, [recipe]);
+
   const hasValidIngredients = useMemo(() => {
     return (Array.isArray(recipe) ? recipe : []).some((ingredient) => {
-      const parsedIngredientId = Number(
+      const normalizedIngredientId = normalizeIngredientIdentifier(
         ingredient.ingredient_id
         ?? ingredient.ingredientId
         ?? ingredient.inventory_item_id
@@ -321,11 +408,34 @@ export default function FeedFormulation() {
         ?? 0
       );
 
-      return Number.isFinite(parsedIngredientId)
-        && parsedIngredientId > 0
+      return Boolean(normalizedIngredientId)
         && Number.isFinite(parsedPercentage)
         && parsedPercentage > 0;
     });
+  }, [recipe]);
+
+  const ingredientEligibilityDiagnostics = useMemo(() => {
+    const source = Array.isArray(recipe) ? recipe : [];
+    const missingIdNames = source
+      .filter((ingredient) => {
+        const normalizedIngredientId = normalizeIngredientIdentifier(
+          ingredient.ingredient_id
+          ?? ingredient.ingredientId
+          ?? ingredient.inventory_item_id
+          ?? ingredient.inventoryItemId
+          ?? ingredient.item_id
+          ?? ingredient.itemId
+          ?? ingredient.id
+        );
+        return !normalizedIngredientId;
+      })
+      .map((ingredient) => ingredient.name)
+      .slice(0, 4);
+
+    return {
+      total: source.length,
+      missingIds: missingIdNames,
+    };
   }, [recipe]);
 
   const calculateNutritionMutation = useMutation({
@@ -340,10 +450,15 @@ export default function FeedFormulation() {
   });
 
   const formulateMutation = useMutation({
-    mutationFn: () => nutritionApi.formulateRecipe(buildRecipeRequestPayload({
-      target_liters: routerState?.targetLiters ?? undefined,
-      yield_target_id: routerState?.yieldTargetId ?? undefined,
-    })),
+    mutationFn: () => nutritionApi.formulateRecipe(
+      buildRecipeRequestPayload(
+        {
+          target_liters: routerState?.targetLiters ?? undefined,
+          yield_target_id: routerState?.yieldTargetId ?? undefined,
+        },
+        { allowZeroPercentages: true }
+      )
+    ),
     onSuccess: (data) => {
       setFormulationPreview(data);
       setFormulationError('');
@@ -364,16 +479,27 @@ export default function FeedFormulation() {
   });
 
   const saveRecipe = useMutation({
-    mutationFn: async (payload) => {
-      return nutritionApi.autoSaveRecipe(buildRecipeRequestPayload({
+    mutationFn: async () => {
+      const requestPayload = buildRecipeRequestPayload({
         recipe_type: activeTab,
-        ingredients: payload,
         recipe_name: routerState?.draftName ?? defaultRecipeName,
         recipeName: routerState?.draftName ?? defaultRecipeName,
         name: routerState?.draftName ?? defaultRecipeName,
         source: routerState?.fromMilkLab ? 'milk_lab_export' : 'manual',
         yield_target_id: routerState?.yieldTargetId ?? undefined,
+      });
+
+      const adjustedIngredients = (Array.isArray(requestPayload.ingredients) ? requestPayload.ingredients : []).map((ingredient) => ({
+        ingredient_id: ingredient.ingredient_id,
+        ingredientId: ingredient.ingredientId,
+        percentage: ingredient.percentage,
       }));
+
+      return nutritionApi.autoSaveRecipe({
+        ...requestPayload,
+        adjusted_ingredients: adjustedIngredients,
+        adjustedIngredients,
+      });
     },
     onSuccess: () => {
       // Clear the draft state from the URL so a refresh doesn't reload it
@@ -384,9 +510,13 @@ export default function FeedFormulation() {
       queryClient.invalidateQueries({ queryKey: ['active-feed-recipe', tenantId, farmId] });
       queryClient.invalidateQueries({ queryKey: ['feed-recipes', tenantId, farmId] });
       queryClient.invalidateQueries({ queryKey: ['feed-formulation-suggested-mix', tenantId, farmId] });
+      queryClient.invalidateQueries({ queryKey: ['mixer-ingredients', 'dairy_meal', tenantId, farmId] });
+      queryClient.invalidateQueries({ queryKey: ['mixer-ingredients', 'main_meal', tenantId, farmId] });
+      queryClient.invalidateQueries({ queryKey: ['inventory-items', tenantId, farmId] });
+      queryClient.invalidateQueries({ queryKey: ['inventory-stock', tenantId, farmId] });
     },
-    onError: (error, payload) => {
-      console.error("Failed to save recipe:", { error, payload });
+    onError: (error) => {
+      console.error("Failed to save recipe:", { error });
     }
   });
 
@@ -510,12 +640,23 @@ export default function FeedFormulation() {
               </button>
               <button
                 onClick={() => formulateMutation.mutate()}
-                disabled={formulateMutation.isPending || !hasValidIngredients}
+                disabled={formulateMutation.isPending || !hasEligibleIngredients}
                 className="w-full bg-brand/10 hover:bg-brand/20 text-brand-dark px-4 py-2.5 rounded-button font-bold text-sm transition-colors disabled:opacity-70"
               >
                 {formulateMutation.isPending ? 'Adjusting...' : 'Auto-Adjust Feed Shares'}
               </button>
             </div>
+
+            {!hasEligibleIngredients && ingredientEligibilityDiagnostics.total > 0 && (
+              <div className="mb-4 rounded-md border border-warning/20 bg-warning/10 p-3 text-xs text-warning-dark">
+                Auto-adjust is disabled because one or more feed items are missing backend identifiers.
+                {ingredientEligibilityDiagnostics.missingIds.length > 0 && (
+                  <span className="ml-1">
+                    Missing ID items: {ingredientEligibilityDiagnostics.missingIds.join(', ')}.
+                  </span>
+                )}
+              </div>
+            )}
 
             {proteinDiagnostics && (
               <div className="mb-4 rounded-md border border-ink/10 bg-surface-raised p-3 text-xs text-ink-muted">
@@ -537,7 +678,7 @@ export default function FeedFormulation() {
             
             <div className="space-y-3">
               <button 
-                onClick={() => saveRecipe.mutate(recipe)}
+                onClick={() => saveRecipe.mutate()}
                 disabled={saveRecipe.isPending || !hasValidIngredients}
                 className="w-full bg-brand hover:bg-brand-dark text-white px-4 py-3 rounded-button font-bold text-sm transition-colors shadow-sm flex items-center justify-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed"
               >

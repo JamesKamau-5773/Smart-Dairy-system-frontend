@@ -75,9 +75,19 @@ function ProteinMeter({ averageProtein, targetProtein, hasWarning }) {
 }
 
 function IngredientAllocationRow({ item, onPercentageChange }) {
+  const availableStock = Number(item.availableStock ?? 0);
+  const showStock = Number.isFinite(availableStock) && availableStock > 0;
+
   return (
     <div className="grid grid-cols-12 gap-2 items-center bg-white p-3 rounded-md border border-ink/10 hover:border-brand/30 transition-colors focus-within:border-brand focus-within:ring-1 focus-within:ring-brand shadow-sm">
-      <span className="col-span-5 text-sm font-bold text-ink-strong truncate pr-2">{item.name}</span>
+      <div className="col-span-5 pr-2">
+        <div className="text-sm font-bold text-ink-strong truncate">{item.name}</div>
+        {showStock && (
+          <div className="text-[10px] font-bold uppercase tracking-wide text-ink-muted">
+            In stock: {availableStock.toFixed(0)} {item.stockUnit || 'kg'}
+          </div>
+        )}
+      </div>
       <div className="col-span-3 flex items-center justify-end gap-2">
         <input
           type="number"
@@ -128,6 +138,9 @@ export default function RecipeBuilder({
   const isControlledIngredients = Array.isArray(controlledIngredients);
   const [ingredients, setIngredients] = useState(initialIngredients || []);
   const [batchSize, setBatchSize] = useState(resolveBatchSize(initialBatchSize, config.defaultBatchSize));
+  const activeIngredients = isControlledIngredients
+    ? (Array.isArray(controlledIngredients) ? controlledIngredients : [])
+    : ingredients;
 
   useEffect(() => {
     if (isControlledIngredients) {
@@ -138,23 +151,19 @@ export default function RecipeBuilder({
   }, [initialIngredients, isControlledIngredients]);
 
   useEffect(() => {
-    if (!isControlledIngredients) {
-      return;
-    }
-
-    setIngredients(Array.isArray(controlledIngredients) ? controlledIngredients : []);
-  }, [controlledIngredients, isControlledIngredients]);
-
-  useEffect(() => {
     const nextBatchSize = resolveBatchSize(initialBatchSize, config.defaultBatchSize);
     setBatchSize((currentBatchSize) => (currentBatchSize === nextBatchSize ? currentBatchSize : nextBatchSize));
   }, [recipeType, initialBatchSize, config.defaultBatchSize]);
 
   useEffect(() => {
+    if (isControlledIngredients) {
+      return;
+    }
+
     if (typeof onIngredientsChange === 'function') {
       onIngredientsChange(ingredients);
     }
-  }, [ingredients, onIngredientsChange]);
+  }, [ingredients, isControlledIngredients, onIngredientsChange]);
 
   useEffect(() => {
     if (typeof onBatchSizeChange === 'function') {
@@ -163,7 +172,7 @@ export default function RecipeBuilder({
   }, [batchSize, onBatchSizeChange]);
 
   const metrics = useMemo(() => 
-    calculateRecipeMetrics(ingredients, batchSize), [ingredients, batchSize]
+    calculateRecipeMetrics(activeIngredients, batchSize), [activeIngredients, batchSize]
   );
 
   const alerts = useMemo(() => 
@@ -173,7 +182,7 @@ export default function RecipeBuilder({
   const updatePercentage = (id, newPercentage) => {
     // Ensure we don't drop below 0
     const val = Math.max(0, Number(newPercentage) || 0);
-    const nextIngredients = ingredients.map((item) =>
+    const nextIngredients = activeIngredients.map((item) =>
       item.id === id ? { ...item, percentage: val } : item
     );
 
@@ -216,7 +225,7 @@ export default function RecipeBuilder({
         <div className="grid grid-cols-12 gap-2 px-3 pb-2 text-[10px] font-black uppercase text-ink-muted border-b border-ink/5">
           <div className="col-span-5">Feed Item</div>
           <div className="col-span-3 text-right">Share</div>
-          <div className="col-span-4 text-right">Amount</div>
+          <div className="col-span-4 text-right">Mix Amount</div>
         </div>
 
         {isLoading ? (
