@@ -6,7 +6,6 @@ import RegisterResourceModal from '../../components/inventory/RegisterResourceMo
 import StandardDeliveryModal from '../../components/inventory/StandardDeliveryModal';
 import EditResourceModal from '../../components/inventory/EditResourceModal';
 import { getApiErrorMessage, inventoryApi } from '../../lib/backendApi';
-import { areNutritionAndCostAllZero } from '../../lib/feedNutritionStandards';
 import { useTenant } from '../../hooks/useTenant';
 
 export default function InventoryRegistry() {
@@ -105,10 +104,6 @@ export default function InventoryRegistry() {
       queryClient.invalidateQueries({ queryKey: ['inventory-items', tenantId, farmId] });
       queryClient.invalidateQueries({ queryKey: ['inventory-movements', tenantId, farmId] });
       queryClient.invalidateQueries({ queryKey: ['inventory-stock', tenantId, farmId] });
-    },
-    onError: (error) => {
-      setErrorMessage(getApiErrorMessage(error, 'Failed to restock inventory item. Please try again.'));
-      setShowError(true);
     },
   });
 

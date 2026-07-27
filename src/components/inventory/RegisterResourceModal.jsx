@@ -4,18 +4,7 @@ import { createPortal } from 'react-dom';
 import { X, Check } from 'lucide-react';
 import { resolveIngredientStandards } from '../../lib/feedNutritionStandards';
 
-const INITIAL_STATE = {
-  name: '',
-  sku: '',
-  category: 'Bulk Feed',
-  unit: 'KG',
-  currentStock: 0,
-  reorderLevel: 10,
-  proteinGramsPerKg: 0,
-  energyMjPerKg: 0,
-  fiberGramsPerKg: 0,
-  costPerKg: 0,
-};
+const INITIAL_STATE = { name: '', sku: '', category: 'Bulk Feed', unit: 'KG', currentStock: 0, reorderLevel: 10 };
 
 export default function RegisterResourceModal({ isOpen, onClose, onRegister }) {
   const [formData, setFormData] = useState(INITIAL_STATE);

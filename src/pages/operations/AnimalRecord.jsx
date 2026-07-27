@@ -126,7 +126,6 @@ function normalizeAnimal(animal = {}, id = '') {
 export default function AnimalPassport() {
   const queryClient = useQueryClient();
   const { tenantId, farmId } = useTenant();
-  const location = useLocation();
   const [activeFilter, setActiveFilter] = useState('All');
   const [activeTab, setActiveTab] = useState('timeline');
   const { id } = useParams();
