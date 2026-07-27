@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient, } from '@tanstack/react-query';
 import { useTenant } from '../../hooks/useTenant';
 import { QUERY_KEYS } from '../../providers/QueryProvider';
 import apiClient from '../../lib/apiClient';
@@ -7,6 +7,8 @@ import { financeApi } from '../../lib/backendApi';
 import { Wallet, ArrowUpRight, ArrowDownLeft, Receipt, ShieldCheck, Sun, Moon } from 'lucide-react';
 import ExpenseModal from '../../components/forms/ExpenseModal';
 import IncomeModal from '../../components/forms/IncomeModal';
+import { calculateKpis } from '../../lib/financeUtils';
+import FinancialKpiCards from '../../components/finance/FinancialKpiCards';
 import { useTheme } from '../../providers/ThemeProvider';
 
 const TransactionRow = ({ tx }) => (
@@ -47,8 +49,27 @@ export default function FinancialLedger() {
     enabled: !!farmId,
   });
 
-  const [transactions, setTransactions] = useState([]);
+  // Fetch customer data at the page level to pass down to modals.
+  // This follows the best practice of lifting state up and passing clean data down.
+  const { data: customersData } = useQuery({
+    queryKey: ['customers', tenantId, farmId],
+    queryFn: () => financeApi.listCustomers(),
+    enabled: !!farmId,
+  });
 
+  // Extract the array cleanly, providing a safe fallback.
+  // The modal will now always receive a predictable array.
+  const customers = customersData?.items || [];
+
+  const { data: ledgerData, isLoading: isLoadingTransactions } = useQuery({
+    queryKey: ['ledger-entries', tenantId, farmId],
+    queryFn: () => financeApi.listLedgerEntries(),
+    enabled: !!farmId,
+  });
+
+  // Derive transactions directly from the query result. This avoids an anti-pattern
+  // of syncing server state into local state and prevents an extra re-render.
+  const transactions = ledgerData?.items || [];
   const useTransactionMutation = (transactionType) => {
     return useMutation({
       mutationFn: async (newTransactionData) => {
@@ -64,9 +85,15 @@ export default function FinancialLedger() {
             : -Math.abs(parseFloat(newTransactionData.amount)),
         });
       },
-      onSuccess: (newTransaction) => {
-        // Optimistically update the local state
-        setTransactions(prev => [newTransaction, ...prev].sort((a, b) => new Date(b.date) - new Date(a.date)));
+      onSuccess: () => {
+        // Invalidate and refetch the ledger entries to show the new transaction
+        queryClient.invalidateQueries({ queryKey: ['ledger-entries', tenantId, farmId] });
+        // Close the relevant modal on success
+        if (transactionType === 'income') {
+          setIsIncomeModalOpen(false);
+        } else {
+          setIsExpenseModalOpen(false);
+        }
       },
       onError: (error) => {
         console.error(`Failed to add ${transactionType}:`, error);
@@ -77,16 +104,7 @@ export default function FinancialLedger() {
   const addIncomeMutation = useTransactionMutation('income');
   const addExpenseMutation = useTransactionMutation('expense');
 
-  const kpis = useMemo(() => {
-    return transactions.reduce((acc, tx) => {
-      if (tx.type === 'income') {
-        acc.totalIncome += tx.amount;
-      } else {
-        acc.totalCosts += Math.abs(tx.amount);
-      }
-      return acc;
-    }, { totalIncome: 0, totalCosts: 0 });
-  }, [transactions]);
+  const kpis = useMemo(() => calculateKpis(transactions), [transactions]);
 
   const totalProfit = kpis.totalIncome - kpis.totalCosts;
 
@@ -117,54 +135,11 @@ export default function FinancialLedger() {
         </div>
       </div>
 
-      {/* KPI CARDS - Updated to 4-column layout */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-        
-        {/* Total Profit */}
-        <div className="bg-white p-6 rounded-xl border border-slate-100 shadow-sm">
-          <span className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Total Profit</span>
-          <div className="text-xl font-black text-ink mt-2">KSh {totalProfit.toLocaleString('en-US', { minimumFractionDigits: 2 })}</div>
-          <p className="text-[10px] font-bold text-slate-400 mt-2">// Profit this season</p>
-        </div>
-
-        {/* Total Costs */}
-        <div className="bg-white p-6 rounded-xl border border-slate-100 shadow-sm">
-          <span className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Total Costs</span>
-          <div className="text-xl font-black text-danger mt-2">KSh {kpis.totalCosts.toLocaleString('en-US', { minimumFractionDigits: 2 })}</div>
-          <p className="text-[10px] font-bold text-slate-400 mt-2">// Money spent this season</p>
-        </div>
-
-        {/* Dynamic Card (Payout/Sales) */}
-        {isCoopMember ? (
-          <div className="bg-white p-6 rounded-xl border border-slate-100 shadow-sm">
-            <span className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Payout Breakdown</span>
-            <div className="mt-4 space-y-3">
-              <div className="flex justify-between items-center"><span className="text-xs font-bold text-ink">Cash in hand</span><span className="text-xs font-black text-brand">75%</span></div>
-              <div className="h-2 w-full bg-slate-100 rounded-full flex overflow-hidden">
-                 <div className="h-full bg-brand w-[75%]"></div>
-                 <div className="h-full bg-slate-300 w-[25%]"></div>
-              </div>
-            </div>
-            <p className="text-[10px] font-bold text-slate-400 mt-3 italic">// 25% saved for you.</p>
-          </div>
-        ) : (
-          <div className="bg-white p-6 rounded-xl border border-slate-100 shadow-sm">
-            <span className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Total Income</span>
-            <div className="text-xl font-black text-brand mt-4">KSh {kpis.totalIncome.toLocaleString('en-US', { minimumFractionDigits: 2 })}</div>
-            <p className="text-[10px] font-bold text-slate-400 mt-2">// Total from all sales</p>
-          </div>
-        )}
-
-        {/* Tax Status */}
-        <div className="bg-white p-6 rounded-xl border border-slate-100 shadow-sm">
-          <span className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Tax Status</span>
-          <div className="mt-4 flex items-center gap-3">
-             <div className="p-2 bg-emerald-50 border border-emerald-100 text-emerald-600 rounded-lg"> <ShieldCheck size={18} /> </div>
-             <div className="font-black text-xs text-ink">eTIMS sync active</div>
-          </div>
-          <p className="text-[10px] font-bold text-slate-400 mt-2">// Linked to: Bahati_01</p>
-        </div>
-      </div>
+      <FinancialKpiCards 
+        kpis={kpis}
+        totalProfit={totalProfit}
+        isCoopMember={isCoopMember}
+      />
 
       {/* TRANSACTION MATRIX */}
       <div className="bg-white border border-slate-100 rounded-xl shadow-sm overflow-hidden">
@@ -185,7 +160,15 @@ export default function FinancialLedger() {
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
-            {transactions.map(tx => <TransactionRow key={tx.id} tx={tx} />)}
+            {isLoadingTransactions ? (
+              <tr><td colSpan="6" className="p-8 text-center text-slate-500">Loading transactions...</td></tr>
+            ) : transactions.length > 0 ? (
+              transactions.map(tx => <TransactionRow key={tx.id} tx={tx} />)
+            ) : (
+              <tr>
+                <td colSpan="6" className="p-8 text-center text-slate-500">No transactions recorded yet.</td>
+              </tr>
+            )}
           </tbody>
         </table>
       </div>
@@ -198,6 +181,7 @@ export default function FinancialLedger() {
       <IncomeModal 
         isOpen={isIncomeModalOpen} 
         onClose={() => setIsIncomeModalOpen(false)}
+        customers={customers}
         onSave={(data) => addIncomeMutation.mutate(data)}
       />
     </div>

@@ -100,7 +100,7 @@ const FastMilkUI = ({
               <option value="" disabled>Choose cow...</option>
               {displayHerd.map((cow) => (
                 <option key={cow.id} value={cow.id}>
-                  {cow.id} ({cow.name})
+                  {cow.name} ({cow.tag_number || cow.tag})
                 </option>
               ))}
             </select>

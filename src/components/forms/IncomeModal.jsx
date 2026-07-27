@@ -1,7 +1,6 @@
 // src/components/forms/IncomeModal.jsx
 import React, { useState, useEffect } from 'react';
 import { X, Save, Calendar, User, Briefcase, CreditCard } from 'lucide-react';
-import { useCustomers } from '../../hooks/useCustomers';
 
 const INITIAL_STATE = { 
   date: '', 
@@ -13,8 +12,7 @@ const INITIAL_STATE = {
   notes: '' 
 };
 
-export default function IncomeModal({ isOpen, onClose, onSave }) {
-  const { data: customers } = useCustomers();
+export default function IncomeModal({ isOpen, onClose, onSave, customers = [] }) {
   const [formData, setFormData] = useState(INITIAL_STATE);
 
   // Reset form state when modal is opened
@@ -72,8 +70,10 @@ export default function IncomeModal({ isOpen, onClose, onSave }) {
                 className="w-full pl-9 pr-3 py-2 border border-slate-300 rounded-lg text-xs font-bold outline-none bg-white"
               >
                 <option value="">Select a customer...</option>
-                {customers?.map((c) => (
-                  <option key={c.id} value={c.name}>{c.name}</option>
+                {customers.map((customer) => (
+                  <option key={customer.id} value={customer.id}>
+                    {customer.name}
+                  </option>
                 ))}
               </select>
             </div>

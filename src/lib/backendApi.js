@@ -745,35 +745,35 @@ export const hrApi = {
 };
 
 export const financeApi = {
-  customers() {
-    return apiClient.get('/finance/customers').then((response) => toArray(response.data));
+  listCustomers() {
+    return apiClient.get('/customers').then((response) => toArray(response.data));
   },
   createCustomer(payload) {
-    return apiClient.post('/finance/customers', payload).then((response) => toObject(response.data));
+    return apiClient.post('/customers', payload).then((response) => toObject(response.data));
   },
   getCustomer(id) {
-    return apiClient.get(`/finance/customers/${id}`).then((response) => toObject(response.data));
+    return apiClient.get(`/customers/${id}`).then((response) => toObject(response.data));
   },
   listBuyers() {
-    return apiClient.get('/finance/buyers').then((response) => toArray(response.data));
+    return apiClient.get('/buyers').then((response) => toArray(response.data));
   },
   getBuyerProfile(buyerId) {
-    return apiClient.get(`/finance/buyers/${buyerId}`).then((response) => toObject(response.data));
+    return apiClient.get(`/buyers/${buyerId}`).then((response) => toObject(response.data));
   },
   createBuyer(payload) {
-    return apiClient.post('/finance/buyers', payload).then((response) => toObject(response.data));
+    return apiClient.post('/buyers', payload).then((response) => toObject(response.data));
   },
-  listLedger() {
-    return apiClient.get('/finance/ledger').then((response) => toArray(response.data));
+  listLedgerEntries() {
+    return apiClient.get('/ledger').then((response) => toArray(response.data));
   },
   createLedgerEntry(payload) {
-    return apiClient.post('/finance/ledger', payload).then((response) => toObject(response.data));
+    return apiClient.post('/ledger', payload).then((response) => toObject(response.data));
   },
   unitCost() {
-    return apiClient.get('/finance/unit-cost').then((response) => toObject(response.data));
+    return apiClient.get('/unit-cost').then((response) => toObject(response.data));
   },
   statement(token) {
-    return apiClient.get(`/finance/statements/${token}`).then((response) => toObject(response.data));
+    return apiClient.get(`/statements/${token}`).then((response) => toObject(response.data));
   },
 };
 
