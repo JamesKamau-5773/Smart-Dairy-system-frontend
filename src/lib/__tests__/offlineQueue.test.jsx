@@ -38,6 +38,27 @@ describe('offlineQueue (memory/localforage fallback) enqueue & flush', () => {
     window.removeEventListener('offlineQueue:flushing', handler);
   });
 
+  it('normalizes camelCase yield payloads before posting', async () => {
+    const payload = { cowId: 'C-TEST-3', volume: 7.25, session: 'evening', milkingDate: '2026-06-04' };
+    await offlineQueue.enqueue(payload);
+
+    const postSpy = vi.spyOn(apiClient, 'post').mockResolvedValue({ data: { ok: true } });
+
+    await offlineQueue.flush();
+
+    expect(postSpy).toHaveBeenCalled();
+    const [url, postedPayload] = postSpy.mock.calls[0];
+    expect(url).toBe('/production/yield');
+    expect(postedPayload).toMatchObject({
+      cow_id: 'C-TEST-3',
+      amount: 7.25,
+      session: 'evening',
+      milkingDate: '2026-06-04',
+    });
+
+    postSpy.mockRestore();
+  });
+
   it('removes item when server responds with 409 (duplicate)', async () => {
     const payload = { cowId: 'C-TEST-2', volume: 3.2, session: 'evening', milkingDate: '2026-06-03' };
     const id = await offlineQueue.enqueue(payload);

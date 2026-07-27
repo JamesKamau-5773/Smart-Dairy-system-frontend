@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { X, PackagePlus, Check } from 'lucide-react';
 
-const INITIAL_STATE = { name: '', sku: '', category: 'Bulk Feed', unit: 'KG', initialStock: 0, reorderLevel: 10 };
+const INITIAL_STATE = { name: '', sku: '', category: 'Bulk Feed', unit: 'KG', currentStock: 0, reorderLevel: 10 };
 
 export default function RegisterResourceModal({ isOpen, onClose, onRegister }) {
   const [formData, setFormData] = useState(INITIAL_STATE);
@@ -56,8 +56,8 @@ export default function RegisterResourceModal({ isOpen, onClose, onRegister }) {
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="text-[10px] font-black text-ink-muted uppercase tracking-widest mb-1.5 block">Initial Stock</label>
-                <input required name="initialStock" value={formData.initialStock} onChange={handleChange} type="number" min="0" className="w-full p-3 border border-slate-200 rounded-[12px] text-sm font-bold focus:ring-2 focus:ring-brand/20 outline-none" />
+                <label className="text-[10px] font-black text-ink-muted uppercase tracking-widest mb-1.5 block">Current Stock</label>
+                <input required name="currentStock" value={formData.currentStock} onChange={handleChange} type="number" min="0" className="w-full p-3 border border-slate-200 rounded-[12px] text-sm font-bold focus:ring-2 focus:ring-brand/20 outline-none" />
               </div>
               <div>
                 <label className="text-[10px] font-black text-ink-muted uppercase tracking-widest mb-1.5 block">Unit</label>

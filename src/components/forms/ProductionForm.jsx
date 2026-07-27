@@ -1,16 +1,16 @@
 import React, { useState } from 'react';
 
 export default function ProductionForm({ onSubmit }) {
-  const [cow, setCow] = useState('C-101 (Bessie)');
-  const [session, setSession] = useState('Morning');
+  const [cow, setCow] = useState('C-101');
+  const [session, setSession] = useState('morning');
   const [volume, setVolume] = useState('');
 
   const handleSubmit = (e) => {
     e.preventDefault();
     onSubmit({
-      cow,
+      cow_id: cow,
       session,
-      volume: parseFloat(volume) || 0,
+      amount: parseFloat(volume) || 0,
     });
   };
 
@@ -25,17 +25,17 @@ export default function ProductionForm({ onSubmit }) {
         <div className="space-y-2">
           <label className="text-[10px] font-bold uppercase tracking-widest text-ink-muted">Select cow</label>
           <select value={cow} onChange={(e) => setCow(e.target.value)} className="input-machined w-full font-semibold text-sm">
-            <option>C-101 (Bessie)</option>
-            <option>C-102 (Luna)</option>
-            <option>C-103 (Daisy)</option>
+            <option value="C-101">C-101 (Bessie)</option>
+            <option value="C-102">C-102 (Luna)</option>
+            <option value="C-103">C-103 (Daisy)</option>
           </select>
         </div>
         <div className="space-y-2">
           <label className="text-[10px] font-bold uppercase tracking-widest text-ink-muted">Session</label>
           <div className="grid grid-cols-2 gap-2 rounded-2xl border border-ink/10 bg-surface p-1 shadow-sm">
             {['Morning', 'Evening'].map((s) => (
-              <button key={s} type="button" onClick={() => setSession(s)} className={`rounded-xl px-4 py-2.5 text-xs font-bold uppercase tracking-widest transition-colors ${
-                session === s ? 'bg-brand text-surface shadow-sm' : 'text-ink-muted hover:bg-ink/5 hover:text-ink'
+              <button key={s} type="button" onClick={() => setSession(s.toLowerCase())} className={`rounded-xl px-4 py-2.5 text-xs font-bold uppercase tracking-widest transition-colors ${
+                session === s.toLowerCase() ? 'bg-brand text-surface shadow-sm' : 'text-ink-muted hover:bg-ink/5 hover:text-ink'
               }`}>
                 {s}
               </button>
