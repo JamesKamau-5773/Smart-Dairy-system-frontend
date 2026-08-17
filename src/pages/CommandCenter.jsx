@@ -1,9 +1,8 @@
 import { useQuery } from '@tanstack/react-query';
 import { useTenant } from '../hooks/useTenant';
 import { QUERY_KEYS } from '../providers/QueryProvider';
-import apiClient from '../lib/apiClient';
-import { financeApi, productionApi } from '../lib/backendApi';
-import { Activity, Droplets, TrendingUp, DollarSign, LineChart as ChartIcon } from 'lucide-react';
+import { productionApi } from '../lib/backendApi';
+import { Activity, Droplets, TrendingUp, DollarSign, LineChart as ChartIcon, ShoppingCart, Archive } from 'lucide-react';
 import React, { Suspense, lazy, useMemo } from 'react';
 
 // Components
@@ -171,24 +170,9 @@ export default function FarmDashboard() {
 
   const trend = buildTrendData(trendQuery.data);
 
-  const financeQuery = useQuery({
-    queryKey: QUERY_KEYS.UNIT_COST(tenantId, farmId),
-    queryFn: () => financeApi.unitCost(),
-    enabled: !!farmId,
-  });
-
-  const dashboardSummaryQuery = useQuery({
-    queryKey: QUERY_KEYS.DASHBOARD_SUMMARY(tenantId, farmId),
-    queryFn: () => apiClient.get('/v1/dashboard/summary').then((res) => res.data),
-    enabled: !!farmId,
-  });
-
   const summary = summaryQuery.data;
-  const finance = financeQuery.data;
-  const dashboardSummary = dashboardSummaryQuery.data;
   const hasSummaryError = summaryQuery.isError;
-  const hasDashboardError = dashboardSummaryQuery.isError;
-  const isRetryingSummary = summaryQuery.isFetching || dashboardSummaryQuery.isFetching;
+  const isRetryingSummary = summaryQuery.isFetching;
 
   const derivedTodaySummary = useMemo(() => {
     const rows = Array.isArray(trendQuery.data) ? trendQuery.data : [];
@@ -206,6 +190,7 @@ export default function FarmDashboard() {
   }, [trendQuery.data]);
 
   const totalLitersToday = metricFromSummary(summary, [
+    'production_total_liters',
     'total_liters_today',
     'totalLitersToday',
     'today_total_liters',
@@ -233,8 +218,12 @@ export default function FarmDashboard() {
     'average_per_cow',
   ]) ?? derivedTodaySummary.averagePerCow;
 
+  const profitPerLiter = useMemo(() => {
+    return summary?.profit_per_liter ?? summary?.profitPerLiter ?? 0;
+  }, [summary]);
+
   const handleRetrySummary = async () => {
-    await Promise.all([summaryQuery.refetch(), dashboardSummaryQuery.refetch()]);
+    await summaryQuery.refetch();
   };
 
   return (
@@ -251,17 +240,13 @@ export default function FarmDashboard() {
         <ManagerInboxWidget />
       </section>
 
-      {(hasSummaryError || hasDashboardError) && (
+      {hasSummaryError && (
         <section className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <p>
               Some dashboard totals are unavailable right now. Check the backend responses for
               {' '}
               <span className="font-bold">/api/production/summary</span>
-              {' '}
-              and
-              {' '}
-              <span className="font-bold">/api/v1/dashboard/summary</span>.
             </p>
             <button
               type="button"
@@ -279,28 +264,31 @@ export default function FarmDashboard() {
         <div className="card-machined bg-surface p-5 border border-ink/5">
           <p className="text-xs font-bold text-ink-muted uppercase tracking-wider">Today's Milk Sales</p>
           <h3 className="text-2xl font-black text-brand mt-2">
-            {dashboardSummaryQuery.isLoading ? 'Loading...' : hasDashboardError ? 'Unavailable' : `KES ${(dashboardSummary?.today_revenue_kes ?? 0).toLocaleString()}`}
+            {summaryQuery.isLoading ? 'Loading...' : hasSummaryError ? 'Unavailable' : `KES ${(summary?.revenue_total_kes ?? 0).toLocaleString()}`}
           </h3>
         </div>
         <div className="card-machined bg-surface p-5 border border-ink/5">
           <p className="text-xs font-bold text-ink-muted uppercase tracking-wider">Today's Feed Cost</p>
           <h3 className="text-2xl font-black text-ink mt-2">
-            {dashboardSummaryQuery.isLoading ? 'Loading...' : hasDashboardError ? 'Unavailable' : `KES ${(dashboardSummary?.today_feed_cost_kes ?? 0).toLocaleString()}`}
+            {summaryQuery.isLoading ? 'Loading...' : hasSummaryError ? 'Unavailable' : `KES ${(summary?.feed_cost_total_kes ?? 0).toLocaleString()}`}
           </h3>
         </div>
         <div className="card-machined bg-brand/5 p-5 border-2 border-brand/20 shadow-sm">
           <p className="text-xs font-bold text-brand uppercase tracking-wider">Daily Profit</p>
           <h3 className="text-2xl font-black text-brand mt-2">
-            {dashboardSummaryQuery.isLoading ? 'Loading...' : hasDashboardError ? 'Unavailable' : `KES ${(dashboardSummary?.net_margin_kes ?? 0).toLocaleString()}`}
+            {summaryQuery.isLoading ? 'Loading...' : hasSummaryError ? 'Unavailable' : `KES ${(summary?.net_margin_kes ?? 0).toLocaleString()}`}
           </h3>
         </div>
       </section>
 
       <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <SummaryCard title="Total Milk (Today)" value={hasSummaryError ? '—' : totalLitersToday} unit="Liters" icon={Droplets} trend={summary?.variance_from_yesterday} loading={summaryQuery.isLoading} />
-        <SummaryCard title="Cows Milked" value={hasSummaryError ? '—' : cowsMilked} unit="Cows" icon={Activity} loading={summaryQuery.isLoading} />
+        <SummaryCard title="Total Milk (Today)" value={summaryQuery.isLoading ? '—' : totalLitersToday.toFixed(1)} unit="Liters" icon={Droplets} loading={summaryQuery.isLoading} />
+        <SummaryCard title="Saleable Milk (Today)" value={summaryQuery.isLoading ? '—' : (summary?.saleable_liters ?? 0).toFixed(1)} unit="Liters" icon={Droplets} loading={summaryQuery.isLoading} />
+        <SummaryCard title="Milk Sold (Today)" value={summaryQuery.isLoading ? '—' : (summary?.total_sold_liters ?? 0).toFixed(1)} unit="Liters" icon={ShoppingCart} loading={summaryQuery.isLoading} />
+        <SummaryCard title="Milk Remaining" value={summaryQuery.isLoading ? '—' : (summary?.remaining_milk_liters ?? 0).toFixed(1)} unit="Liters" icon={Archive} loading={summaryQuery.isLoading} />
+        <SummaryCard title="Cows Milked" value={hasSummaryError ? '—' : (summary?.cows_milked ?? cowsMilked)} unit="Cows" icon={Activity} loading={summaryQuery.isLoading} />
         <SummaryCard title="Avg. per Cow" value={hasSummaryError ? '—' : averageYieldPerCow} unit="L/cow" icon={TrendingUp} loading={summaryQuery.isLoading} />
-        <SummaryCard title="Profit per Liter" value={financeQuery.isLoading ? '—' : <Money amount={finance?.margin ?? 0} currency={finance?.currency ?? 'KES'} />} icon={DollarSign} loading={financeQuery.isLoading} />
+        <SummaryCard title="Profit per Liter" value={summaryQuery.isLoading ? '—' : <Money amount={profitPerLiter} currency={summary?.currency ?? 'KES'} />} icon={DollarSign} loading={summaryQuery.isLoading} />
       </section>
 
       <div className="card-machined bg-surface p-8 border border-ink/10">

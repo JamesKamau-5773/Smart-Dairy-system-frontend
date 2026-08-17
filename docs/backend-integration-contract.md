@@ -104,6 +104,8 @@ Feed dashboards and formulation screens need recipe, ingredient, unit, and profi
 
 Inventory, buyers, ledger, and customer profile screens depend on transaction histories, balances, and statement data. The backend should support paging, filtering, and tokenized statement access where the external portal needs it.
 
+Milk deliveries are a distinct resource from generic ledger entries: the frontend logs `liters_delivered` and `personal_consumption_liters` per customer per day (`/api/finance/deliveries`, see [backend-endpoint-map.md](backend-endpoint-map.md)), and the backend must compute `billable_liters` and `amount` (`billable_liters * agreed rate`) rather than trusting client-side arithmetic, then keep the customer's balance/ledger in sync. Deliveries must support update and delete, not just create — the frontend gives users edit/delete controls that call these endpoints directly, with no local-only fallback.
+
 ### External Portal
 
 The customer portal uses a public/shared token route. The backend must validate the token, restrict the response to the correct statement scope, and keep the payload read-only.

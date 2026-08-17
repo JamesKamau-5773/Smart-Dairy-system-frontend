@@ -26,37 +26,15 @@ export default function InventoryRegistry() {
     enabled: !!tenantId && !!farmId,
   });
 
-  // Initialized as state so the UI updates immediately when editing or deleting
-  const [inventoryData, setInventoryData] = useState([]);
-
-  useEffect(() => {
-    if (Array.isArray(backendInventory)) {
-      setInventoryData(backendInventory);
-    }
-  }, [backendInventory]);
-
-  const upsertLocalItem = (item) => {
-    setInventoryData((current) => {
-      const nextItem = {
-        ...item,
-        stock: item.stock || { value: 0, unit: 'units' },
-      };
-
-      const existingIndex = current.findIndex((entry) => entry.sku === nextItem.sku);
-      if (existingIndex === -1) {
-        return [nextItem, ...current];
-      }
-
-      const next = [...current];
-      next[existingIndex] = { ...next[existingIndex], ...nextItem };
-      return next;
-    });
-  };
-
   const createItemMutation = useMutation({
     mutationFn: (payload) => inventoryApi.createItem(payload),
     onSuccess: (item) => {
-      upsertLocalItem(item);
+      // Optimistically update the cache for immediate feedback
+      queryClient.setQueryData(['inventory-items', tenantId, farmId], (oldData) => {
+        const nextItem = { ...item, stock: item.stock || { value: 0, unit: 'units' } };
+        return oldData ? [nextItem, ...oldData] : [nextItem];
+      });
+      // Invalidate to ensure eventual consistency with the backend
       queryClient.invalidateQueries({ queryKey: ['inventory-items', tenantId, farmId] });
       queryClient.invalidateQueries({ queryKey: ['inventory-stock', tenantId, farmId] });
     },
@@ -69,7 +47,14 @@ export default function InventoryRegistry() {
   const updateItemMutation = useMutation({
     mutationFn: ({ itemId, payload }) => inventoryApi.updateItem(itemId, payload),
     onSuccess: (item) => {
-      upsertLocalItem(item);
+      // Optimistically update the cache for immediate feedback
+      queryClient.setQueryData(['inventory-items', tenantId, farmId], (oldData) => {
+        const nextItem = { ...item, stock: item.stock || { value: 0, unit: 'units' } };
+        return oldData?.map((entry) =>
+          entry.id === nextItem.id ? { ...entry, ...nextItem } : entry
+        ) || [];
+      });
+      // Invalidate to ensure eventual consistency with the backend
       queryClient.invalidateQueries({ queryKey: ['inventory-items', tenantId, farmId] });
       queryClient.invalidateQueries({ queryKey: ['inventory-stock', tenantId, farmId] });
     },
@@ -87,25 +72,58 @@ export default function InventoryRegistry() {
       movement_type: 'restock',
       reference_note: `Restock for ${item.sku}`,
     }),
-    onSuccess: (_, variables) => {
-      setInventoryData((current) => current.map((entry) => {
-        if (entry.sku !== variables.item.sku) {
+    onSuccess: (data, variables) => {
+      // Optimistically update the cache for immediate feedback
+      queryClient.setQueryData(['inventory-items', tenantId, farmId], (oldData) => {
+        return oldData?.map((entry) => {
+          if (entry.id === variables.item.id) {
+            return {
+              ...entry,
+              stock: {
+                ...entry.stock,
+                value: Number(entry.stock?.value || 0) + Number(variables.amount || 0),
+              },
+            };
+          }
           return entry;
-        }
-
-        return {
-          ...entry,
-          stock: {
-            ...entry.stock,
-            value: Number(entry.stock?.value || 0) + Number(variables.amount || 0),
-          },
-        };
-      }));
+        }) || [];
+      });
       queryClient.invalidateQueries({ queryKey: ['inventory-items', tenantId, farmId] });
       queryClient.invalidateQueries({ queryKey: ['inventory-movements', tenantId, farmId] });
       queryClient.invalidateQueries({ queryKey: ['inventory-stock', tenantId, farmId] });
     },
   });
+
+  const deleteItemMutation = useMutation({
+    mutationFn: (itemId) => inventoryApi.deleteItem(itemId),
+    onSuccess: (data, itemId) => {
+      // Optimistically update the cache for immediate feedback
+      queryClient.setQueryData(['inventory-items', tenantId, farmId], (oldData) =>
+        oldData?.filter((item) => item.id !== itemId && item.sku !== itemId)
+      );
+      // Invalidate to ensure eventual consistency with the backend
+      queryClient.invalidateQueries({ queryKey: ['inventory-items', tenantId, farmId] });
+    },
+    onError: (error) => {
+      setErrorMessage(getApiErrorMessage(error, 'Failed to delete inventory item.'));
+      setShowError(true);
+    },
+  });
+
+  const handleDelete = (item) => {
+    const identifier = item.sku || item.id;
+    if (window.confirm(`Are you sure you want to delete item ${item.name} (${identifier})? This action cannot be undone.`)) {
+      deleteItemMutation.mutate(identifier);
+    }
+  };
+
+  const areNutritionAndCostAllZero = (item) => {
+    const protein = Number(item.proteinGramsPerKg ?? item.protein_grams_per_kg ?? 0);
+    const energy = Number(item.energyMjPerKg ?? item.energy_mj_per_kg ?? 0);
+    const fiber = Number(item.fiberGramsPerKg ?? item.fiber_grams_per_kg ?? 0);
+    const cost = Number(item.costPerKg ?? item.cost_per_kg ?? 0);
+    return protein === 0 && energy === 0 && fiber === 0 && cost === 0;
+  };
 
   // Add new resource to the inventory list
   const handleRegisterResource = (newResourceData) => {
@@ -131,14 +149,14 @@ export default function InventoryRegistry() {
   };
 
   const categories = useMemo(() => {
-    const allCategories = inventoryData.map(item => item.category);
+    const allCategories = backendInventory?.map(item => item.category) || [];
     // Return a unique list of categories, with "All" at the beginning
     return ['All', ...new Set(allCategories)];
-  }, [inventoryData]);
+  }, [backendInventory]);
 
   // Dynamically determine item status based on stock and reorder levels
   const getItemStatus = (item) => {
-    if (item.stock.value <= item.reorderLevel) return 'CRITICAL';
+    if ((item.stock?.value ?? 0) <= (item.reorderLevel ?? 0)) return 'CRITICAL';
     return 'HEALTHY';
   };
 
@@ -150,13 +168,6 @@ export default function InventoryRegistry() {
   const handleEdit = (item) => {
     setSelectedItem(item);
     setIsEditModalOpen(true);
-  };
-
-  // Delete function to remove the item from state
-  const handleDelete = (skuToDelete) => {
-    if (window.confirm('Are you sure you want to delete this resource?')) {
-      setInventoryData(prevData => prevData.filter(item => item.sku !== skuToDelete));
-    }
   };
 
   // Edit function to save updated data back to state
@@ -176,26 +187,24 @@ export default function InventoryRegistry() {
 
   // Restock function to update stock quantity in state
   const handleConfirmRestock = (itemToRestock, amount) => {
-    restockMutation.mutate({ item: itemToRestock, amount });
+    return restockMutation.mutateAsync({ item: itemToRestock, amount });
   };
 
   // Filter data based on search term
   const filteredInventoryData = useMemo(() => {
     const term = searchTerm.trim().toLowerCase();
     
-    return inventoryData.filter(item => {
+    return (backendInventory || []).filter(item => {
       const matchesSearch = term ? 
         item.name.toLowerCase().includes(term) || 
         item.sku.toLowerCase().includes(term) : 
         true;
-      
-      const matchesCategory = categoryFilter === 'All' ? 
-        true : 
-        item.category === categoryFilter;
+
+      const matchesCategory = categoryFilter === 'All' ? true : item.category === categoryFilter;
       
       return matchesSearch && matchesCategory;
     });
-  }, [inventoryData, searchTerm, categoryFilter]);
+  }, [backendInventory, searchTerm, categoryFilter]);
 
   return (
     <div className="animate-reveal p-8">
@@ -279,7 +288,7 @@ export default function InventoryRegistry() {
                 </td>
                 <td className="px-6 py-4 text-xs font-bold text-slate-600">{item.category}</td>
                 <td className="px-6 py-4 text-xs font-black text-ink">
-                  {item.stock.value} <span className="text-slate-400">{item.stock.unit}</span>
+                  {item.stock?.value ?? 0} <span className="text-slate-400">{item.stock?.unit || 'units'}</span>
                 </td>
                 <td className="px-6 py-4">
                   {(() => {
@@ -309,7 +318,7 @@ export default function InventoryRegistry() {
                     <Edit2 size={14} />
                   </button>
                   <button 
-                    onClick={() => handleDelete(item.sku)}
+                    onClick={() => handleDelete(item)}
                     className="p-2 text-slate-400 hover:text-red-500 transition-colors"
                     title="Delete Item"
                   >
@@ -335,6 +344,8 @@ export default function InventoryRegistry() {
         onClose={() => setIsRestockModalOpen(false)}
         item={selectedItem}
         onRestock={handleConfirmRestock}
+        tenantId={tenantId}
+        farmId={farmId}
       />
 
       <EditResourceModal 

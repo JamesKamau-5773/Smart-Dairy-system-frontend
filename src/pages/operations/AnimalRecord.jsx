@@ -9,119 +9,27 @@ import { Skeleton } from '../../components/ui';
 import AlertBanner from '../../components/ui/AlertBanner';
 import Modal from '../../components/ui/Modal';
 import Confirmation, { useConfirmation } from '../../components/ui/Confirmation';
-import { validateForm, ValidationRules, getFirstErrorMessage } from '../../lib/validation';
+import { validateForm, getFirstErrorMessage } from '../../lib/validation';
 import { formatDateTime, getRelativeTime, createAuditEntry, logToAuditTrail } from '../../lib/audit';
+import {
+  normalizeAnimal,
+  normalizeTimelineResponse,
+  normalizeTimelineEvent,
+  getTimelineTheme,
+} from '../../lib/animalUtils';
+import {
+  getAnimalActionValidationSchema,
+  buildHealthLogPayload,
+  buildBreedingLogPayload,
+  buildGeneralEventPayload,
+} from '../../lib/animalActionLog';
 import LABELS from '../../lib/labels';
-import { animalsApi } from '../../lib/backendApi';
+import { animalsApi, medicalApi, breedingApi } from '../../lib/backendApi';
 import { useTenant } from '../../hooks/useTenant';
 import cowAvatar from '../../assets/cow-avatar.svg';
 import AnimalSummaryCards from '../../components/operations/animalRecord/AnimalSummaryCards';
 import AnimalTimelineSection from '../../components/operations/animalRecord/AnimalTimelineSection';
 import AnimalNutritionPlanner from '../../components/operations/animalRecord/AnimalNutritionPlanner';
-
-function getAvatarLabel(animal) {
-  const nameInitial = animal?.name?.trim()?.charAt(0)?.toUpperCase();
-  const idInitial = animal?.id?.trim()?.charAt(0)?.toUpperCase();
-  return nameInitial || idInitial || 'C';
-}
-
-function calculateDaysInMilk(lastCalved) {
-  if (!lastCalved) return null;
-
-  const calvingDate = new Date(lastCalved);
-  if (Number.isNaN(calvingDate.getTime())) return null;
-
-  const elapsedDays = Math.floor((Date.now() - calvingDate.getTime()) / (1000 * 60 * 60 * 24));
-  return Math.max(0, elapsedDays);
-}
-
-function getTimelineTheme(type) {
-  if (type === 'Health') {
-    return {
-      badgeClass: 'text-danger bg-danger/10 border-danger/20',
-      cardClass: 'border-l-danger bg-danger/5 border-danger/15',
-    };
-  }
-
-  if (type === 'Breeding') {
-    return {
-      badgeClass: 'text-brand bg-brand/10 border-brand/20',
-      cardClass: 'border-l-brand bg-brand/5 border-brand/15',
-    };
-  }
-
-  return {
-    badgeClass: 'text-accent-dark bg-accent/10 border-accent/20',
-    cardClass: 'border-l-accent bg-accent/5 border-accent/15',
-  };
-}
-
-function TimelineEventCard({ event }) {
-  const theme = getTimelineTheme(event.type);
-
-  return (
-    <div className="relative flex items-start group">
-      <div className={`absolute left-[-22px] z-10 flex h-8 w-8 items-center justify-center rounded-full border-2 bg-surface transition-transform group-hover:scale-110 md:left-[-34px] ${theme.badgeClass}`}>
-        {event.icon}
-      </div>
-
-      <div className="ml-6 w-full md:ml-4">
-        <div className={`rounded-xl border bg-surface p-4 transition-colors hover:bg-surface-raised ${theme.cardClass}`}>
-          <div className="mb-2 flex flex-col gap-1 md:flex-row md:items-center md:justify-between">
-            <h4 className="text-sm font-bold text-ink md:text-base">{event.title}</h4>
-            <span className="rounded bg-surface-warm px-2 py-0.5 font-mono text-xs text-ink-muted">{event.date}</span>
-          </div>
-          <p className="text-sm leading-relaxed text-ink-muted">{event.description}</p>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function normalizeTimelineEvent(entry = {}, animalId = '') {
-  const eventType = entry.event_type ?? entry.type ?? 'general';
-  const normalizedType = `${eventType}`.trim().toLowerCase();
-  const displayType = normalizedType === 'health' ? 'Health' : normalizedType === 'breeding' ? 'Breeding' : 'General';
-
-  return {
-    id: entry.id ?? `${animalId}-${entry.created_at ?? entry.event_date ?? Date.now()}`,
-    cowId: entry.cow_id ?? entry.cowId ?? animalId,
-    tenantId: entry.tenant_id ?? entry.tenantId ?? null,
-    type: displayType,
-    title: entry.title ?? `${displayType} event`,
-    description: entry.description ?? 'No additional details provided.',
-    date: formatDateTime(entry.event_date ?? entry.created_at ?? entry.createdAt ?? new Date().toISOString()),
-    rawDate: entry.event_date ?? entry.created_at ?? entry.createdAt ?? null,
-    eventData: entry.event_data ?? entry.eventData ?? null,
-    createdBy: entry.created_by ?? entry.createdBy ?? null,
-    createdAt: entry.created_at ?? entry.createdAt ?? null,
-    iconKey: normalizedType,
-  };
-}
-
-function normalizeTimelineResponse(response, animalId = '') {
-  const items = Array.isArray(response?.items) ? response.items : [];
-  const meta = response?.meta ?? { page: 1, per_page: items.length || 20, total: items.length, pages: 1 };
-
-  return {
-    items: items.map((item) => normalizeTimelineEvent(item, animalId)),
-    meta,
-  };
-}
-
-function normalizeAnimal(animal = {}, id = '') {
-  const ageMonths = Number(animal.ageMonths ?? animal.age_months ?? 0);
-  return {
-    id: animal.id ?? animal.cow_id ?? animal.ear_tag ?? id,
-    name: animal.name ?? animal.cow_name ?? 'Unnamed',
-    breed: animal.breed ?? animal.breed_name ?? 'Unknown',
-    ageMonths,
-    status: animal.status ?? animal.current_status ?? animal.currentStatus ?? animal.lactation_status ?? 'Cow',
-    current_status: animal.current_status ?? animal.currentStatus ?? animal.status ?? animal.lactation_status ?? 'Cow',
-    lastCalved: animal.lastCalved ?? animal.last_calved ?? null,
-    milk: animal.milk ?? animal.daily_milk ?? '0.0 L/day',
-  };
-}
 
 export default function AnimalPassport() {
   const queryClient = useQueryClient();
@@ -138,6 +46,8 @@ export default function AnimalPassport() {
     enabled: !!tenantId && !!id,
   });
 
+  // The backend mirrors medical/breeding writes into this same table, so it's
+  // the single source of truth for the timeline — no client-side merging needed.
   const { data: timelineResponse, isLoading: isTimelineLoading } = useQuery({
     queryKey: ['animal-passport-events', tenantId, farmId, id, timelinePage, timelinePerPage],
     queryFn: async () => normalizeTimelineResponse(await animalsApi.listEvents(id, { page: timelinePage, per_page: timelinePerPage }), id),
@@ -148,7 +58,21 @@ export default function AnimalPassport() {
   const [errorMessage, setErrorMessage] = useState('');
   const [showError, setShowError] = useState(false);
   const [isEventOpen, setIsEventOpen] = useState(false);
-  const [newEvent, setNewEvent] = useState({ title: '', description: '', date: '', type: 'Health' });
+  const EMPTY_ACTION = {
+    title: '',
+    description: '',
+    date: '',
+    type: 'Health',
+    diagnosis: '',
+    medications: '',
+    vet: 'Dr. A. Njoroge',
+    severity: 'Medium',
+    status: 'Under Treatment',
+    followUp: '',
+    sireCode: '',
+    semenSource: 'farm_stock',
+  };
+  const [newEvent, setNewEvent] = useState(EMPTY_ACTION);
   const [formErrors, setFormErrors] = useState({});
   const [isSaving, setIsSaving] = useState(false);
   const confirmation = useConfirmation();
@@ -179,6 +103,10 @@ export default function AnimalPassport() {
       setActiveTab(desiredTab);
     }
   }, [location.search, location.hash]);
+
+  useEffect(() => {
+    setTimelinePage(1);
+  }, [activeFilter]);
 
   if (!animal && !isLoading) {
     return (
@@ -211,13 +139,8 @@ export default function AnimalPassport() {
     setFormErrors({});
     setShowError(false);
 
-    // Validate
-    const validationSchema = {
-      title: [ValidationRules.required, ValidationRules.minLength(3)],
-      description: [ValidationRules.minLength(5)],
-    };
-
-    const errors = validateForm(newEvent, validationSchema);
+    const actionType = newEvent.type;
+    const errors = validateForm(newEvent, getAnimalActionValidationSchema(actionType));
     if (Object.keys(errors).length > 0) {
       setFormErrors(errors);
       setErrorMessage(getFirstErrorMessage(errors));
@@ -227,51 +150,87 @@ export default function AnimalPassport() {
 
     try {
       setIsSaving(true);
-      const eventType = (newEvent.type || 'general').toLowerCase();
-      const eventData = {
-        event_type: eventType,
-        title: newEvent.title.trim(),
-        description: newEvent.description.trim(),
-        event_date: newEvent.date ? new Date(newEvent.date).toISOString() : undefined,
-        event_data: { source: 'animal-passport' },
-        metadata: { source: 'animal-passport' },
-      };
 
-      const createdEvent = await createEventMutation.mutateAsync(eventData);
-      const normalizedCreatedEvent = normalizeTimelineEvent(createdEvent, id);
+      // Health/Breeding write straight to the same endpoints the dedicated
+      // pages use; the backend mirrors those writes into this animal's event
+      // timeline itself, so there's no separate client-side mirror call here.
+      if (actionType === 'Health') {
+        const payload = buildHealthLogPayload(newEvent, resolvedAnimal.id);
+        const savedRecord = await medicalApi.createRecord(payload);
 
-      logToAuditTrail(
-        createAuditEntry({
+        await Promise.all([
+          queryClient.invalidateQueries({ queryKey: ['medical-records', tenantId, farmId] }),
+          queryClient.invalidateQueries({ queryKey: ['animal-passport-events', tenantId, farmId, id] }),
+        ]);
+
+        logToAuditTrail(createAuditEntry({
+          action: 'create',
+          recordType: 'medical-record',
+          recordId: savedRecord?.id ?? null,
+          userName: payload.vet || 'You',
+          notes: `Logged vet visit: ${payload.diagnosis}`,
+        }));
+
+        setSuccessMessage(`Medical record saved for ${resolvedAnimal.id} — also visible on Medical Records.`);
+      } else if (actionType === 'Breeding') {
+        const payload = buildBreedingLogPayload(newEvent, id, resolvedAnimal.name);
+        if (!payload) {
+          throw new Error('Unable to build a valid breeding log from the entered details.');
+        }
+
+        const savedLog = await breedingApi.createLog(payload);
+
+        await Promise.all([
+          queryClient.invalidateQueries({ queryKey: ['breeding', 'logs', tenantId, farmId] }),
+          queryClient.invalidateQueries({ queryKey: ['animal-passport-events', tenantId, farmId, id] }),
+        ]);
+
+        logToAuditTrail(createAuditEntry({
+          action: 'create',
+          recordType: 'breeding-log',
+          recordId: savedLog?.id ?? null,
+          userName: 'You',
+          notes: `Logged AI service: ${payload.semen_id}`,
+        }));
+
+        setSuccessMessage(`Breeding log saved for ${resolvedAnimal.id} — also visible on Breeding & Genetics.`);
+      } else {
+        const eventData = buildGeneralEventPayload(newEvent);
+        const createdEvent = await createEventMutation.mutateAsync(eventData);
+        const normalizedCreatedEvent = normalizeTimelineEvent(createdEvent, id);
+
+        logToAuditTrail(createAuditEntry({
           action: 'create',
           recordType: 'timeline_event',
           recordId: normalizedCreatedEvent.id,
           userName: 'You',
           notes: `Added ${normalizedCreatedEvent.type} event: ${normalizedCreatedEvent.title}`,
-        })
-      );
+        }));
+
+        setSuccessMessage(`Logged ${normalizedCreatedEvent.type.toLowerCase()} event for ${resolvedAnimal.id}.`);
+      }
 
       setActiveFilter('All');
-      setSuccessMessage(`Logged ${normalizedCreatedEvent.type.toLowerCase()} event for ${resolvedAnimal.id}.`);
-      setNewEvent({ title: '', description: '', date: '', type: 'Health' });
+      setNewEvent(EMPTY_ACTION);
       setIsEventOpen(false);
     } catch (error) {
       console.error('Error adding event:', error);
-      setErrorMessage('Failed to add event. Please try again.');
+      setErrorMessage(error?.message || 'Failed to add event. Please try again.');
       setShowError(true);
     } finally {
       setIsSaving(false);
     }
   };
 
-  const filteredEvents = timelineEvents.filter(event => 
-    activeFilter === 'All' || event.type === activeFilter
+  const filteredEvents = timelineEvents.filter(
+    (eventItem) => activeFilter === 'All' || eventItem.type === activeFilter
   );
 
   return (
     <div className="animate-reveal space-y-6 max-w-5xl mx-auto">
       {/* ── ERROR & SUCCESS ALERTS ── */}
       {showError && (
-        <div className="fixed top-4 right-4 z-50 w-[min(92vw,430px)]">
+        <div className="fixed top-4 right-4 z-[60] w-[min(92vw,430px)]">
           <AlertBanner
             type="error"
             title="Error"
@@ -283,7 +242,7 @@ export default function AnimalPassport() {
       )}
 
       {successMessage && (
-        <div className="fixed top-4 right-4 z-50 w-[min(92vw,430px)]">
+        <div className="fixed top-4 right-4 z-[60] w-[min(92vw,430px)]">
           <AlertBanner
             type="success"
             title="Success"
@@ -327,7 +286,7 @@ export default function AnimalPassport() {
 
       {/* ── ALERTS ── */}
       {successMessage && (
-        <div className="fixed top-4 right-4 z-50 w-[min(92vw,430px)]">
+        <div className="fixed top-4 right-4 z-[60] w-[min(92vw,430px)]">
           <AlertBanner type="success" title="Done" message={successMessage} autoDismiss={2400} onDismiss={() => setSuccessMessage('')} />
         </div>
       )}
@@ -394,19 +353,22 @@ export default function AnimalPassport() {
             </select>
           </div>
 
-          <div>
-            <label className="mb-1 block text-xs font-bold uppercase tracking-wider text-ink-strong">Title</label>
-            <input
-              className="input-machined w-full"
-              value={newEvent.title}
-              onChange={(event) => setNewEvent((current) => ({ ...current, title: event.target.value }))}
-              placeholder="e.g. Vet check completed"
-              required
-            />
-          </div>
+          {newEvent.type === 'General' && (
+            <div>
+              <label className="mb-1 block text-xs font-bold uppercase tracking-wider text-ink-strong">Title</label>
+              <input
+                className="input-machined w-full"
+                value={newEvent.title}
+                onChange={(event) => setNewEvent((current) => ({ ...current, title: event.target.value }))}
+                placeholder="e.g. Fence repaired"
+              />
+            </div>
+          )}
 
           <div>
-            <label className="mb-1 block text-xs font-bold uppercase tracking-wider text-ink-strong">Date</label>
+            <label className="mb-1 block text-xs font-bold uppercase tracking-wider text-ink-strong">
+              {newEvent.type === 'Health' ? 'Visit date' : newEvent.type === 'Breeding' ? 'Insemination date *' : 'Date'}
+            </label>
             <input
               type="date"
               className="input-machined w-full"
@@ -416,15 +378,109 @@ export default function AnimalPassport() {
           </div>
 
           <div>
-            <label className="mb-1 block text-xs font-bold uppercase tracking-wider text-ink-strong">Description</label>
+            <label className="mb-1 block text-xs font-bold uppercase tracking-wider text-ink-strong">
+              {newEvent.type === 'Health' ? 'Signs of sickness *' : newEvent.type === 'Breeding' ? 'Notes' : 'Description'}
+            </label>
             <textarea
               className="input-machined w-full min-h-[110px]"
               value={newEvent.description}
               onChange={(event) => setNewEvent((current) => ({ ...current, description: event.target.value }))}
               placeholder="Add treatment notes, breeding details, or general remarks"
-              required
             />
           </div>
+
+          {newEvent.type === 'Health' && (
+            <>
+              <div>
+                <label className="mb-1 block text-xs font-bold uppercase tracking-wider text-ink-strong">Diagnosis *</label>
+                <input
+                  className="input-machined w-full"
+                  value={newEvent.diagnosis}
+                  onChange={(event) => setNewEvent((current) => ({ ...current, diagnosis: event.target.value }))}
+                  placeholder="e.g. Mastitis, Milk Fever"
+                />
+              </div>
+              <div>
+                <label className="mb-1 block text-xs font-bold uppercase tracking-wider text-ink-strong">Medications prescribed *</label>
+                <input
+                  className="input-machined w-full"
+                  value={newEvent.medications}
+                  onChange={(event) => setNewEvent((current) => ({ ...current, medications: event.target.value }))}
+                  placeholder="Name and dosage"
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="mb-1 block text-xs font-bold uppercase tracking-wider text-ink-strong">Vet *</label>
+                  <input
+                    className="input-machined w-full"
+                    value={newEvent.vet}
+                    onChange={(event) => setNewEvent((current) => ({ ...current, vet: event.target.value }))}
+                  />
+                </div>
+                <div>
+                  <label className="mb-1 block text-xs font-bold uppercase tracking-wider text-ink-strong">Follow-up date *</label>
+                  <input
+                    type="date"
+                    className="input-machined w-full"
+                    value={newEvent.followUp}
+                    onChange={(event) => setNewEvent((current) => ({ ...current, followUp: event.target.value }))}
+                  />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="mb-1 block text-xs font-bold uppercase tracking-wider text-ink-strong">Severity</label>
+                  <select
+                    className="input-machined w-full"
+                    value={newEvent.severity}
+                    onChange={(event) => setNewEvent((current) => ({ ...current, severity: event.target.value }))}
+                  >
+                    <option>Low</option>
+                    <option>Medium</option>
+                    <option>High</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="mb-1 block text-xs font-bold uppercase tracking-wider text-ink-strong">Status</label>
+                  <select
+                    className="input-machined w-full"
+                    value={newEvent.status}
+                    onChange={(event) => setNewEvent((current) => ({ ...current, status: event.target.value }))}
+                  >
+                    <option>Under Treatment</option>
+                    <option>Follow-up Due</option>
+                    <option>Closed</option>
+                  </select>
+                </div>
+              </div>
+            </>
+          )}
+
+          {newEvent.type === 'Breeding' && (
+            <>
+              <div>
+                <label className="mb-1 block text-xs font-bold uppercase tracking-wider text-ink-strong">Semen / sire code *</label>
+                <input
+                  className="input-machined w-full"
+                  value={newEvent.sireCode}
+                  onChange={(event) => setNewEvent((current) => ({ ...current, sireCode: event.target.value }))}
+                  placeholder="e.g. HF-2201"
+                />
+              </div>
+              <div>
+                <label className="mb-1 block text-xs font-bold uppercase tracking-wider text-ink-strong">Semen source</label>
+                <select
+                  className="input-machined w-full"
+                  value={newEvent.semenSource}
+                  onChange={(event) => setNewEvent((current) => ({ ...current, semenSource: event.target.value }))}
+                >
+                  <option value="farm_stock">Farm Stock</option>
+                  <option value="vet_provided">Vet Provided</option>
+                </select>
+              </div>
+            </>
+          )}
 
           <div className="flex justify-end gap-3 pt-2">
             <button

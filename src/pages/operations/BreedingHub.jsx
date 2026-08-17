@@ -1,9 +1,20 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import AlertBanner from '../../components/ui/AlertBanner';
 import Modal from '../../components/ui/Modal';
 import Confirmation, { useConfirmation } from '../../components/ui/Confirmation';
 import { validateForm, ValidationRules, getFirstErrorMessage } from '../../lib/validation';
+import {
+  normalizeBreedingLog,
+  normalizeDateForApi,
+  normalizeHerdOption,
+  normalizeSemenCode,
+  normalizeSemenInventory,
+  resolveCowId,
+  resolveCowIdentity,
+  normalizeBreedingLogPayload,
+} from '../../lib/breedingUtils';
 import { formatDateTime, getRelativeTime, createAuditEntry, logToAuditTrail } from '../../lib/audit';
 import { breedingApi, herdApi } from '../../lib/backendApi';
 import { useTenant } from '../../hooks/useTenant';
@@ -86,168 +97,10 @@ function mergeBreedingLogs(serverLogs = [], cachedLogs = []) {
   return Array.from(merged.values());
 }
 
-function normalizeSemenInventory(item = {}) {
-  const stableId = item.id ?? item.item_id ?? item.straw_code ?? item.code ?? item.bull_code ?? item.bull_name ?? item.name;
-
-  return {
-    id: String(stableId ?? '').trim() || `bull-${Date.now()}`,
-    name: item.name ?? item.bull_name ?? 'Unnamed Bull',
-    code: item.code ?? item.bull_code ?? item.straw_code ?? '',
-    strawsLeft: Number(item.strawsLeft ?? item.straws_left ?? item.stock_level ?? item.quantity ?? 0),
-    improves: item.improves ?? item.breed_improvement ?? item.breed ?? item.best_for ?? item.purpose ?? '',
-  };
-}
-
-function normalizeBreedingLog(log = {}) {
-  const rawAiDate = log.aiDate
-    ?? log.ai_date
-    ?? log.insemination_date
-    ?? log.service_date
-    ?? log.event_date
-    ?? log.date
-    ?? log.created_at
-    ?? '';
-  const aiDate = normalizeDateForApi(rawAiDate) || '';
-  const computedDaysPostAI = aiDate
-    ? Math.max(0, Math.floor((Date.now() - new Date(aiDate).getTime()) / (1000 * 60 * 60 * 24)))
-    : 0;
-  const daysPostAI = Number(log.daysPostAI ?? log.days_post_ai ?? computedDaysPostAI);
-  const expectedCalvingDate = log.expectedCalvingDate ?? log.expected_calving_date ?? log.calving_due_date ?? null;
-  const rawStatus = String(log.status ?? log.check_status ?? log.outcome_status ?? 'Pending').trim().toLowerCase();
-  let status = 'Pending';
-  const rawProvidedBy = String(log.provided_by ?? '').trim().toLowerCase();
-  const rawSource = String(log.semenSource ?? log.semen_source ?? '').trim().toLowerCase();
-  const rawSourceLabel = String(log.semen_source_label ?? '').trim().toLowerCase();
-  const cowId = String(
-    log.cowId
-    ?? log.cow_id
-    ?? log.cow_tag
-    ?? log.tag_number
-    ?? log.animal_id
-    ?? log.cow
-    ?? ''
-  ).trim();
-  const cowName = String(
-    log.cowName
-    ?? log.cow_name
-    ?? log.animal_name
-    ?? log.name
-    ?? ''
-  ).trim();
-
-  if (['pregnant', 'in-calf', 'incalf', 'confirmed_pregnant'].includes(rawStatus)) {
-    status = 'Pregnant';
-  } else if (['open', 'not pregnant', 'not_pregnant', 'negative'].includes(rawStatus)) {
-    status = 'Open';
-  } else if (['pending', 'pending check', 'pending_check', 'awaiting_check', 'awaiting'].includes(rawStatus)) {
-    status = 'Pending';
-  }
-
-  return {
-    id: log.id ?? log.log_id ?? log.breeding_log_id ?? `log-${Date.now()}`,
-    cowId,
-    cowName,
-    aiDate,
-    sireCode: log.sireCode
-      ?? log.sire_code
-      ?? log.semen_id
-      ?? log.external_sire_code
-      ?? log.straw_code
-      ?? log.bull_code
-      ?? log.bull_name
-      ?? '',
-    semenSource: rawSource
-      || (rawProvidedBy === 'vet' ? 'vet_provided' : '')
-      || (rawProvidedBy === 'inventory' ? 'farm_stock' : '')
-      || (rawSourceLabel.includes('vet') ? 'vet_provided' : '')
-      || (rawSourceLabel.includes('farm') || rawSourceLabel.includes('stock') ? 'farm_stock' : 'unknown'),
-    expectedCalvingDate,
-    daysPostAI,
-    status,
-    notes: log.note ?? log.notes ?? '',
-  };
-}
-
-function normalizeHerdOption(cow = {}) {
-  const id = String(cow.tag_number ?? cow.tagNumber ?? cow.tag ?? cow.cow_id ?? cow.ear_tag ?? cow.id ?? '').trim();
-  const name = String(cow.name ?? cow.cow_name ?? cow.animal_name ?? '').trim();
-  const display = name ? `${id} (${name})` : id;
-
-  return {
-    id,
-    name,
-    display,
-  };
-}
-
-function normalizeDateForApi(rawDate = '') {
-  const input = String(rawDate ?? '').trim();
-  if (!input) return '';
-
-  if (/^\d{4}-\d{2}-\d{2}$/.test(input)) {
-    return input;
-  }
-
-  const parsed = new Date(input);
-  if (Number.isNaN(parsed.getTime())) return '';
-  return parsed.toISOString().slice(0, 10);
-}
-
-function normalizeSemenCode(rawCode = '') {
-  return String(rawCode ?? '')
-    .trim()
-    .toUpperCase()
-    .replace(/\s+/g, '-')
-    .replace(/[^A-Z0-9-]/g, '');
-}
-
-function resolveCowId(rawValue = '', herdOptions = []) {
-  const input = String(rawValue).trim();
-  if (!input) return '';
-
-  const exact = herdOptions.find((option) => (
-    option.id.toLowerCase() === input.toLowerCase()
-    || option.name.toLowerCase() === input.toLowerCase()
-    || option.display.toLowerCase() === input.toLowerCase()
-  ));
-
-  if (exact?.id) {
-    return exact.id;
-  }
-
-  const parsedFromDisplay = input.match(/^([^()]+)\s*\(/);
-  if (parsedFromDisplay?.[1]) {
-    return parsedFromDisplay[1].trim();
-  }
-
-  return input;
-}
-
-function resolveCowIdentity(rawValue = '', herdOptions = []) {
-  const input = String(rawValue).trim();
-  if (!input) return { id: '', name: '' };
-
-  const exact = herdOptions.find((option) => (
-    option.id.toLowerCase() === input.toLowerCase()
-    || option.name.toLowerCase() === input.toLowerCase()
-    || option.display.toLowerCase() === input.toLowerCase()
-  ));
-
-  if (exact) {
-    return { id: exact.id, name: exact.name || '' };
-  }
-
-  const parsedFromDisplay = input.match(/^([^()]+)\s*\(([^)]+)\)$/);
-  if (parsedFromDisplay) {
-    return {
-      id: parsedFromDisplay[1].trim(),
-      name: parsedFromDisplay[2].trim(),
-    };
-  }
-
-  return { id: resolveCowId(input, herdOptions), name: '' };
-}
-
+/**
+ * NOTE: The following components should be extracted into their own files
+ * under `src/components/breeding/` to improve code organization and reusability.
+ */
 function createHistoryEntry(log, status = 'Pending', notes = '') {
   const labelByStatus = {
     Pregnant: 'Pregnant (In-Calf)',
@@ -544,6 +397,7 @@ function SemenInventory({ stock, onAddInventory, onRestockInventory, onDeleteInv
 // ============================================================================
 export default function BreedingHub() {
   const { tenantId, farmId } = useTenant();
+  const queryClient = useQueryClient();
   const [vetQueue, setVetQueue] = useState(initialVetQueue);
   const [vetHistory, setVetHistory] = useState(INITIAL_HISTORY);
   const [inventory, setInventory] = useState(bullStock);
@@ -621,14 +475,14 @@ export default function BreedingHub() {
     enabled: !!tenantId && !!farmId,
   });
 
-  const { data: breedingPerformance } = useQuery({
-    queryKey: ['breeding', 'performance', tenantId, farmId],
+  const { data: geneticProgressData, isLoading: isLoadingGeneticProgress } = useQuery({
+    queryKey: ['herd', 'genetic-progress', tenantId, farmId],
     queryFn: async () => {
       try {
-        return await breedingApi.breedingPerformance();
+        return await herdApi.geneticProgress();
       } catch (error) {
-        console.error('Failed to load breeding performance:', error);
-        return null;
+        console.error('Failed to load genetic progress data:', error);
+        return [];
       }
     },
     enabled: !!tenantId && !!farmId,
@@ -678,27 +532,6 @@ export default function BreedingHub() {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [isLogServiceOpen]);
 
-  const performanceSummary = useMemo(() => {
-    if (!breedingPerformance || typeof breedingPerformance !== 'object') {
-      return null;
-    }
-
-    const daughtersYield = Number(breedingPerformance.daughtersYield ?? breedingPerformance.daughters_yield ?? breedingPerformance.daughtersMilkYield ?? 0);
-    const mothersYield = Number(breedingPerformance.mothersYield ?? breedingPerformance.mothers_yield ?? breedingPerformance.mothersMilkYield ?? 0);
-    const changePercent = Number(breedingPerformance.changePercent ?? breedingPerformance.change_percent ?? breedingPerformance.deltaPercent ?? breedingPerformance.delta_percent ?? 0);
-
-    if (!daughtersYield && !mothersYield && !changePercent) {
-      return null;
-    }
-
-    return {
-      daughtersYield,
-      mothersYield,
-      changePercent,
-      note: breedingPerformance.note ?? breedingPerformance.summary ?? '',
-    };
-  }, [breedingPerformance]);
-
   // Derived State for KPI Chips
   const metrics = {
     onHeat: breedingAlerts.length,
@@ -730,6 +563,9 @@ export default function BreedingHub() {
           };
         })
       );
+
+      // Same reasoning as handleAddHistoryEntry: keep other consumers of this key in sync.
+      await queryClient.invalidateQueries({ queryKey: ['breeding', 'logs', tenantId, farmId] });
     } catch (error) {
       console.error('Failed to update breeding log status:', error);
       setErrorMessage(error?.response?.data?.error || 'Failed to confirm vet outcome. Please retry.');
@@ -778,50 +614,35 @@ export default function BreedingHub() {
 
       const resolvedCow = resolveCowIdentity(logForm.cowId, herdOptions);
 
-      const newLog = {
-        id: `log_${Date.now().toString(36)}`,
+      const payload = normalizeBreedingLogPayload({
         cowId: resolvedCow.id,
-        cowName: resolvedCow.name,
-        aiDate: normalizeDateForApi(logForm.aiDate || new Date().toISOString().slice(0, 10)),
-        sireCode: normalizeSemenCode(logForm.sireCode),
-        semenSource: logForm.semenSource,
-        daysPostAI: 0,
-      };
-
-      if (!newLog.aiDate || !/^\d{4}-\d{2}-\d{2}$/.test(newLog.aiDate)) {
-        setErrorMessage('AI Date must be in YYYY-MM-DD format.');
-        setShowError(true);
-        setIsSaving(false);
-        return;
-      }
-
-      if (!/^[A-Z0-9][A-Z0-9-]{1,30}$/.test(newLog.sireCode)) {
-        setFormErrors((current) => ({ ...current, sireCode: 'Use letters/numbers (hyphen allowed), e.g. FR-889.' }));
-        setErrorMessage('Sire code format is invalid.');
-        setShowError(true);
-        setIsSaving(false);
-        return;
-      }
-
-      const createResponse = await breedingApi.createLog({
-        cowId: newLog.cowId,
-        cow_name: newLog.cowName,
-        aiDate: newLog.aiDate,
-        sireCode: newLog.sireCode,
-        semenSource: newLog.semenSource,
-        note: logForm.note.trim(),
-        status: 'Pending',
+        cow_name: resolvedCow.name, // Pass name for context
+        event_date: logForm.aiDate || new Date().toISOString().slice(0, 10),
+        sire_id: logForm.sireCode,
+        notes: logForm.note.trim(),
+        eventType: 'INSEMINATION', // Explicitly set event type for AI Service log
+        semenSource: logForm.semenSource, // Pass the selected semen source
+        // Additional fields can be added here if needed by the normalizer
       });
+
+      if (!payload) {
+        setErrorMessage('Failed to create a valid breeding log. Please check the required fields.');
+        setShowError(true);
+        setIsSaving(false);
+        return;
+      }
+
+      const createResponse = await breedingApi.createLog(payload);
 
       const savedLog = normalizeBreedingLog({
         ...createResponse,
-        cowId: createResponse?.cow_id ?? createResponse?.cowId ?? newLog.cowId,
-        cowName: createResponse?.cow_name ?? createResponse?.cowName ?? newLog.cowName,
-        aiDate: createResponse?.insemination_date ?? createResponse?.aiDate ?? newLog.aiDate,
-        sireCode: createResponse?.external_sire_code ?? createResponse?.semen_id ?? createResponse?.sireCode ?? newLog.sireCode,
+        cowId: createResponse?.cow_id ?? createResponse?.cowId ?? payload.animal_id,
+        cowName: createResponse?.cow_name ?? createResponse?.cowName ?? resolvedCow.name,
+        aiDate: createResponse?.insemination_date ?? createResponse?.aiDate ?? payload.event_date,
+        sireCode: createResponse?.external_sire_code ?? createResponse?.semen_id ?? createResponse?.sireCode ?? payload.sire_id,
         semenSource: createResponse?.semen_source
           ?? (String(createResponse?.provided_by ?? '').toUpperCase() === 'VET' ? 'vet_provided' : null)
-          ?? newLog.semenSource,
+          ?? logForm.semenSource,
         expectedCalvingDate: createResponse?.expected_calving_date ?? createResponse?.expectedCalvingDate ?? null,
         status: createResponse?.status ?? 'Pending',
       });
@@ -829,24 +650,27 @@ export default function BreedingHub() {
       upsertBreedingCacheLog(tenantId, farmId, savedLog);
 
       if (!savedLog.semenSource) {
-        savedLog.semenSource = newLog.semenSource;
+        savedLog.semenSource = logForm.semenSource;
       }
 
       const entry = createHistoryEntry(savedLog, 'Pending', logForm.note.trim());
       setVetQueue((current) => [...current, savedLog]);
       setVetHistory((current) => [entry, ...current]);
 
+      // Keeps other pages/widgets sharing this query key (e.g. Animal Passport) in sync.
+      await queryClient.invalidateQueries({ queryKey: ['breeding', 'logs', tenantId, farmId] });
+
       logToAuditTrail(
         createAuditEntry({
           action: 'create',
           recordType: 'ai_service',
-          recordId: newLog.id,
+          recordId: savedLog.id,
           userName: 'You',
-          notes: `Logged AI service for ${newLog.cowId} with sire ${newLog.sireCode}`,
+          notes: `Logged AI service for ${savedLog.cowId} with sire ${savedLog.sireCode}`,
         })
       );
 
-      setInfoMessage(`Logged AI service for ${newLog.cowId}.`);
+      setInfoMessage(`Logged AI service for ${savedLog.cowId}.`);
       setLogForm({ cowId: '', aiDate: '', sireCode: '', semenSource: 'farm_stock', note: '' });
       setIsCowPickerOpen(false);
       setIsLogServiceOpen(false);
@@ -1034,13 +858,13 @@ export default function BreedingHub() {
   return (
     <div className="animate-reveal space-y-8 max-w-7xl mx-auto">
       {errorMessage && (
-        <div className="fixed top-4 right-4 z-50 w-[min(92vw,430px)]">
+        <div className="fixed top-4 right-4 z-[60] w-[min(92vw,430px)]">
           <AlertBanner type="error" title="Error" message={errorMessage} autoDismiss={4000} onDismiss={() => setShowError(false)} />
         </div>
       )}
 
       {infoMessage && (
-        <div className="fixed top-4 right-4 z-50 w-[min(92vw,430px)]">
+        <div className="fixed top-4 right-4 z-[60] w-[min(92vw,430px)]">
           <AlertBanner type="success" title="Success" message={infoMessage} autoDismiss={2400} onDismiss={() => setInfoMessage('')} />
         </div>
       )}
@@ -1085,35 +909,30 @@ export default function BreedingHub() {
               <TrendingUp size={16} className="text-accent" /> Herd Genetic Progress
             </h3>
 
-            {performanceSummary ? (
-              <>
-                <div className="grid grid-cols-2 gap-8">
-                  <div>
-                    <p className="mb-1 text-xs font-bold uppercase text-ink-muted">Daughters' Yield</p>
-                    <div className="text-3xl font-black text-ink-strong">
-                      {performanceSummary.daughtersYield.toFixed(1)} <span className="text-sm font-bold text-ink-muted">L/day</span>
-                    </div>
-                  </div>
-                  <div>
-                    <p className="mb-1 text-xs font-bold uppercase text-ink-muted">Mothers' Yield</p>
-                    <div className="text-3xl font-black text-ink-strong">
-                      {performanceSummary.mothersYield.toFixed(1)} <span className="text-sm font-bold text-ink-muted">L/day</span>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="mt-6 flex items-center gap-3 border-t border-ink/10 pt-4">
-                  <div className="rounded border border-brand/20 bg-brand/5 px-2 py-1 text-xs font-black text-brand">
-                    {performanceSummary.changePercent > 0 ? '+' : ''}{performanceSummary.changePercent.toFixed(0)}%
-                  </div>
-                  <p className="text-xs font-semibold text-ink-muted">
-                    {performanceSummary.note || 'Breeding performance data loaded from the backend.'}
-                  </p>
-                </div>
-              </>
+            {isLoadingGeneticProgress ? (
+              <div className="h-[300px] flex items-center justify-center text-ink-muted">Loading chart data...</div>
+            ) : geneticProgressData && geneticProgressData.length > 0 ? (
+              <ResponsiveContainer width="100%" height={300}>
+                <LineChart data={geneticProgressData} margin={{ top: 5, right: 20, left: -10, bottom: 5 }}>
+                  <CartesianGrid strokeDasharray="3 3" strokeOpacity={0.3} />
+                  <XAxis dataKey="year" stroke="#64748b" fontSize={12} />
+                  <YAxis stroke="#64748b" fontSize={12} label={{ value: 'Avg. Yield (L/day)', angle: -90, position: 'insideLeft', offset: 10, style: { textAnchor: 'middle', fill: '#64748b' } }} />
+                  <Tooltip
+                    contentStyle={{
+                      backgroundColor: 'rgba(255, 255, 255, 0.8)',
+                      backdropFilter: 'blur(4px)',
+                      border: '1px solid rgba(0, 0, 0, 0.1)',
+                      borderRadius: '0.5rem',
+                    }}
+                  />
+                  <Legend wrapperStyle={{ fontSize: '12px' }} />
+                  <Line type="monotone" dataKey="daughters_yield" name="Daughters' Avg Yield" stroke="#10b981" strokeWidth={2} dot={{ r: 4 }} activeDot={{ r: 6 }} />
+                  <Line type="monotone" dataKey="mothers_yield" name="Mothers' Avg Yield" stroke="#3b82f6" strokeWidth={2} dot={{ r: 4 }} activeDot={{ r: 6 }} />
+                </LineChart>
+              </ResponsiveContainer>
             ) : (
-              <div className="rounded-lg border border-dashed border-ink/10 bg-surface p-6 text-sm text-ink-muted">
-                No breeding performance data yet. Connect the backend breeding summary to show genetic progress.
+              <div className="h-[300px] flex items-center justify-center rounded-lg border border-dashed border-ink/10 bg-surface p-6 text-sm text-ink-muted">
+                Not enough data to plot genetic progress chart.
               </div>
             )}
           </div>

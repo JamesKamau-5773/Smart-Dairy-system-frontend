@@ -4,6 +4,7 @@ import { httpClientConfig } from './httpClientConfig';
 import { getPermissionSet, getRoleSet, normalizeRole } from './roles';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
+import { normalizeNutritionRequestPayload } from './feedUtils';
 const HEALTH_BASE_URL = API_BASE_URL.replace(/\/api\/?$/, '');
 
 const authClient = axios.create({
@@ -66,7 +67,8 @@ const toObject = (value) => {
 
   if (value.data && !Array.isArray(value.data)) return value.data;
   if (value.user) return value.user;
-  if (value.session) return value.session;
+  // Only unwrap `session` when it's the auth session object, not resource fields like a milking `session` string (e.g. "morning").
+  if (value.session && typeof value.session === 'object') return value.session;
   if (value.record) return value.record;
   if (value.run) return value.run;
 
@@ -496,25 +498,54 @@ const buildInventoryItemPayload = (payload = {}) => {
     minimum_threshold: payload.minimum_threshold ?? reorderLevel,
   };
 
-  ['energy_mj_per_kg', 'protein_grams_per_kg', 'fiber_grams_per_kg', 'cost_per_kg'].forEach((key) => {
-    if (payload[key] !== undefined && payload[key] !== null && payload[key] !== '') {
-      request[key] = payload[key];
+  const nutritionFieldNames = {
+    energy_mj_per_kg: 'energyMjPerKg',
+    protein_grams_per_kg: 'proteinGramsPerKg',
+    fiber_grams_per_kg: 'fiberGramsPerKg',
+    cost_per_kg: 'costPerKg',
+  };
+
+  Object.entries(nutritionFieldNames).forEach(([apiField, formField]) => {
+    // Edit forms use camelCase state while existing API records retain the
+    // original snake_case value. Prefer the current form value when present.
+    const value = payload[formField] ?? payload[apiField];
+    if (value !== undefined && value !== null && value !== '') {
+      request[apiField] = Number(value);
     }
   });
 
   return request;
 };
 
+const normalizeInventoryMovementPayload = (payload = {}) => {
+  const quantity = Number(payload.quantity ?? payload.amount ?? payload.qty ?? 0);
+
+  return {
+    ...payload,
+    item_id: payload.item_id ?? payload.itemId ?? payload.inventory_item_id ?? payload.inventoryItemId,
+    quantity: Number.isFinite(quantity) ? quantity : 0,
+    transaction_type: payload.transaction_type ?? payload.transactionType ?? 'IN',
+    movement_type: payload.movement_type ?? payload.movementType ?? 'restock',
+    reference_note: payload.reference_note ?? payload.referenceNote ?? '',
+  };
+};
+
 export const buildProductionYieldPayload = (payload = {}) => {
   const cowId = payload.cow_id ?? payload.cowId ?? payload.cow ?? payload.animal_id ?? payload.animalId ?? '';
   const amount = Number(payload.amount ?? payload.volume ?? payload.liters ?? 0);
   const session = payload.session ?? payload.milkingSession ?? 'morning';
+  const milkingDate = payload.milking_date
+    ?? payload.milkingDate
+    ?? payload.date
+    ?? payload.dateOfMilking
+    ?? new Date().toISOString().slice(0, 10);
 
   return {
     cow_id: cowId,
     amount,
     session,
-    milkingDate: payload.milkingDate ?? payload.date ?? payload.dateOfMilking ?? new Date().toISOString().slice(0, 10),
+    milking_date: milkingDate,
+    milkingDate,
   };
 };
 
@@ -543,6 +574,27 @@ const normalizeConversionPayload = (payload = {}) => {
     baseUnit,
     base_unit: payload.base_unit ?? baseUnit,
   };
+};
+
+// Utility function to extract an array of breeding logs from various API response structures
+export const extractBreedingLogsArray = (data) => {
+  if (Array.isArray(data)) {
+    return data;
+  }
+  // Common patterns for API responses that contain an array
+  if (data && typeof data === 'object') {
+    if (Array.isArray(data.items)) {
+      return data.items;
+    }
+    if (Array.isArray(data.data)) {
+      return data.data;
+    }
+    if (Array.isArray(data.logs)) { // Specific to breeding logs if the backend nests them under 'logs'
+      return data.logs;
+    }
+  }
+  console.warn('extractBreedingLogsArray received non-array or unexpected data structure:', data);
+  return [];
 };
 
 export const authApi = {
@@ -595,7 +647,22 @@ export const productionApi = {
     return apiClient.get('/production/summary').then((response) => toObject(response.data));
   },
   listYield() {
-    return apiClient.get('/production/yield').then((response) => toArray(response.data));
+    const perPage = 100;
+    const fetchPage = (page) => apiClient.get('/production/yield', { params: { page, per_page: perPage } }).then((response) => response.data);
+
+    return fetchPage(1).then(async (firstPage) => {
+      const items = toArray(firstPage);
+      const totalPages = firstPage?.meta?.pages ?? 1;
+
+      if (totalPages <= 1) {
+        return items;
+      }
+
+      const remainingPageNumbers = Array.from({ length: totalPages - 1 }, (_, index) => index + 2);
+      const remainingPages = await Promise.all(remainingPageNumbers.map(fetchPage));
+
+      return items.concat(...remainingPages.map(toArray));
+    });
   },
   createYield(payload, config = {}) {
     return apiClient.post('/production/yield', buildProductionYieldPayload(payload), config).then((response) => toObject(response.data));
@@ -754,6 +821,12 @@ export const financeApi = {
   getCustomer(id) {
     return apiClient.get(`/customers/${id}`).then((response) => toObject(response.data));
   },
+  updateCustomer(id, payload) {
+    return apiClient.patch(`/customers/${id}`, payload).then((response) => toObject(response.data));
+  },
+  deleteCustomer(id) {
+    return apiClient.delete(`/customers/${id}`);
+  },
   listBuyers() {
     return apiClient.get('/buyers').then((response) => toArray(response.data));
   },
@@ -763,11 +836,46 @@ export const financeApi = {
   createBuyer(payload) {
     return apiClient.post('/buyers', payload).then((response) => toObject(response.data));
   },
-  listLedgerEntries() {
-    return apiClient.get('/ledger').then((response) => toArray(response.data));
+  listLedgerEntries(params = {}) {
+    // The backend returns a structured object { items, meta, summary }.
+    // We return the whole object so the UI can access both the transaction
+    // list (`items`) and the financial summary (`summary`).
+    return apiClient.get('/ledger', { params }).then((response) => response.data);
   },
   createLedgerEntry(payload) {
-    return apiClient.post('/ledger', payload).then((response) => toObject(response.data));
+    // The backend expects `transaction_type` as 'Revenue' or 'Expense', but older
+    // form components may send `type` as 'income' or 'expense'. This adapter
+    // normalizes the payload before sending. It also handles aliases for other fields.
+    const { type, stream, notes, description, note, reference, reference_code, ...rest } = payload;
+    const transaction_type = type === 'income' ? 'Revenue' : type === 'expense' ? 'Expense' : type;
+    const apiPayload = {
+      ...rest,
+      transaction_type,
+      // The backend requires 'category', but some UI components send 'stream'.
+      category: stream ?? payload.category,
+      // The backend requires 'description', but some UI components may send 'note' or 'notes'.
+      description: description ?? notes ?? note,
+      // The backend requires 'reference_code', but some UI components may send 'reference'.
+      reference_code: reference_code ?? reference,
+    };
+
+    return apiClient.post('/ledger', apiPayload).then((response) => toObject(response.data));
+  },
+  // Daily milk delivery records: the backend is the sole source of truth for
+  // billable_liters/amount — it must compute those from liters_delivered minus
+  // personal_consumption_liters (the farmer's own, non-billable, use) and the
+  // customer's agreed rate. The frontend only submits the raw inputs.
+  listDeliveries(params = {}) {
+    return apiClient.get('/deliveries', { params }).then((response) => toArray(response.data));
+  },
+  createDelivery(payload) {
+    return apiClient.post('/deliveries', payload).then((response) => toObject(response.data));
+  },
+  updateDelivery(id, payload) {
+    return apiClient.patch(`/deliveries/${id}`, payload).then((response) => toObject(response.data));
+  },
+  deleteDelivery(id) {
+    return apiClient.delete(`/deliveries/${id}`);
   },
   unitCost() {
     return apiClient.get('/unit-cost').then((response) => toObject(response.data));
@@ -802,6 +910,13 @@ export const inventoryApi = {
   deduct(payload) {
     return apiClient.post('/v1/inventory/deduct', payload).then((response) => toObject(response.data));
   },
+  getQuickRestockItems: async () => {
+    // This endpoint is designed to return a small, optimized list of
+    // items that are at or below their reorder level.
+    const response = await apiClient.get('/api/v1/inventory/insights/quick-restock');
+    // The backend returns { items: [...] }, so we extract the array here
+    return response.data.items;
+  },
 };
 
 export const herdApi = {
@@ -825,6 +940,18 @@ export const herdApi = {
   delete(id) {
     return apiClient.delete(`/herd/${id}`);
   },
+  geneticProgress() {
+    return apiClient.get('/herd/genetic-progress').then((response) => toArray(response.data));
+  },
+  listYieldTargets() {
+    return apiClient.get('/v1/herd/yield-targets').then((response) => toObject(response.data));
+  },
+  calculateFeedingPlanFromTargets(params = {}) {
+    return apiClient.get('/v1/herd/feeding-plan/from-targets', { params }).then((response) => toObject(response.data));
+  },
+  calculateCustomFeedingPlan(payload) {
+    return apiClient.post('/v1/herd/feeding-plan/custom', payload).then((response) => toObject(response.data));
+  },
 };
 
 export const breedingApi = {
@@ -832,7 +959,7 @@ export const breedingApi = {
     return apiClient.get('/operations/breeding-logs').then((response) => extractBreedingLogsArray(response.data));
   },
   createLog(payload) {
-    return apiClient.post('/operations/breeding-logs', normalizeBreedingLogPayload(payload)).then((response) => toObject(response.data));
+    return apiClient.post('/operations/breeding-logs', payload).then((response) => toObject(response.data));
   },
   updateLogStatus(logId, status) {
     return apiClient.put(`/operations/breeding-logs/${logId}/status`, { status }).then((response) => toObject(response.data));
@@ -873,13 +1000,35 @@ export const animalsApi = {
     return apiClient.patch(`/animals/${id}`, payload).then((response) => toObject(response.data));
   },
   milkHistory(id) {
-    return apiClient.get(`/animals/${id}/milk-history`).then((response) => {
-      const data = response.data;
-      // Accept both the new envelope shape { sessions, stats } and the legacy bare array.
-      if (data && !Array.isArray(data) && Array.isArray(data.sessions)) {
-        return { sessions: data.sessions, stats: data.stats ?? null };
+    // This route is paginated (default per_page=20) just like /production/yield — a cow with
+    // more than 20 logged sessions had its oldest entries silently dropped from page 1. Fetch
+    // every page and concatenate so the full history is always returned.
+    const perPage = 100;
+    const fetchPage = (page) => apiClient.get(`/animals/${id}/milk-history`, { params: { page, per_page: perPage } }).then((response) => response.data);
+
+    return fetchPage(1).then(async (firstPage) => {
+      if (!firstPage || Array.isArray(firstPage)) {
+        return { sessions: toArray(firstPage), stats: null, animal: null };
       }
-      return { sessions: toArray(data), stats: null };
+
+      const firstPageSessions = Array.isArray(firstPage.sessions) ? firstPage.sessions : toArray(firstPage);
+      const totalPages = firstPage?.meta?.pages ?? 1;
+
+      let sessions = firstPageSessions;
+      if (totalPages > 1) {
+        const remainingPageNumbers = Array.from({ length: totalPages - 1 }, (_, index) => index + 2);
+        const remainingPages = await Promise.all(remainingPageNumbers.map(fetchPage));
+        const remainingSessions = remainingPages.map((page) => (Array.isArray(page?.sessions) ? page.sessions : toArray(page)));
+        sessions = firstPageSessions.concat(...remainingSessions);
+      }
+
+      // Backend nests stats under `summary` or exposes them at the top level depending on route version.
+      const stats = firstPage.stats ?? {
+        average_yield: firstPage.summary?.average_yield ?? firstPage.average_yield ?? firstPage.average ?? null,
+        peak_yield: firstPage.summary?.peak_yield ?? firstPage.peak_yield ?? firstPage.peak ?? null,
+      };
+      // Resolving this route already accepts the ear tag, unlike GET /animals/<id> which needs the internal id.
+      return { sessions, stats, animal: firstPage.animal ?? null };
     });
   },
   listEvents(id, params = {}) {
@@ -920,6 +1069,28 @@ export const yieldTargetsApi = {
         data: request,
       },
     ]).then((response) => toObject(response.data));
+  },
+  update(cowId, payload) {
+    const request = {
+      target_liters: payload?.target_liters ?? payload?.targetLiters,
+      base_herd_feed_kg: payload?.base_herd_feed_kg ?? payload?.baseHerdFeedKg,
+      times_to_feed_daily: payload?.times_to_feed_daily ?? payload?.timesToFeedDaily,
+    };
+
+    // Remove undefined keys so we only send what's being updated for PATCH
+    Object.keys(request).forEach(key => request[key] === undefined && delete request[key]);
+
+    return requestWithFallback(apiClient, [
+      {
+        method: 'patch',
+        url: `/v1/animals/${cowId}/yield-target`,
+        data: request,
+      },
+    ]).then((response) => toObject(response.data));
+  },
+  deactivate(cowId) {
+    return apiClient.delete(`/v1/animals/${cowId}/yield-target`)
+      .then((response) => toObject(response.data));
   },
 };
 
@@ -1116,7 +1287,7 @@ export const nutritionApi = {
     return apiClient.delete(`/feed/recipes/${recipeId}`);
   },
   calculateNutrition(payload) {
-    const data = normalizeNutritionRequestPayload(payload);
+    const data = normalizeNutritionRequestPayload(payload, 'ingredients');
 
     return requestWithFallback(apiClient, [
       {
@@ -1142,7 +1313,9 @@ export const nutritionApi = {
     ]).then((response) => toObject(response.data));
   },
   formulateRecipe(payload) {
-    const data = normalizeNutritionRequestPayload(payload);
+    const data = normalizeNutritionRequestPayload(payload, 'ingredients', {
+      forceZeroPercentages: true,
+    });
 
     return requestWithFallback(apiClient, [
       {
@@ -1168,7 +1341,7 @@ export const nutritionApi = {
     ]).then((response) => toObject(response.data));
   },
   autoSaveRecipe(payload) {
-    const data = normalizeNutritionRequestPayload(payload);
+    const data = normalizeNutritionRequestPayload(payload, 'adjusted_ingredients');
 
     return requestWithFallback(apiClient, [
       {
@@ -1252,5 +1425,18 @@ export const exportApi = {
 export const healthApi = {
   status() {
     return healthClient.get('/health').then((response) => toObject(response.data));
+  },
+};
+
+export const reportsApi = {
+  getMilkInventory: (startDate, endDate) => {
+    const params = new URLSearchParams();
+    if (startDate) {
+      params.append('start_date', startDate);
+    }
+    if (endDate) {
+      params.append('end_date', endDate);
+    }
+    return apiClient.get(`/reports/milk-inventory?${params.toString()}`).then((res) => res.data);
   },
 };

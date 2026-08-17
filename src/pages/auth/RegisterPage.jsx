@@ -93,13 +93,13 @@ export default function RegisterPage() {
       <div className="relative z-10 flex min-h-screen items-center justify-center">
         <div className="card-machined w-full max-w-lg p-10 relative z-10 animate-reveal">
           {successMessage && (
-            <div className="fixed top-4 right-4 z-50 w-[min(92vw,430px)]">
+            <div className="fixed top-4 right-4 z-[60] w-[min(92vw,430px)]">
               <AlertBanner type="success" title="Registered" message={successMessage} autoDismiss={2400} onDismiss={() => setSuccessMessage('')} />
             </div>
           )}
 
           {errorMessage && (
-            <div className="fixed top-4 right-4 z-50 w-[min(92vw,430px)]">
+            <div className="fixed top-4 right-4 z-[60] w-[min(92vw,430px)]">
               <AlertBanner type="danger" title="Registration failed" message={errorMessage} onDismiss={() => setErrorMessage('')} />
             </div>
           )}

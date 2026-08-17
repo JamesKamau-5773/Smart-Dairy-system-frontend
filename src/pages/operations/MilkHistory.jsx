@@ -3,82 +3,12 @@ import { useQuery } from '@tanstack/react-query';
 import { Link, useParams } from 'react-router-dom';
 import { ArrowLeft, Activity, Calendar, Droplets, ShieldAlert, TrendingUp, Search, Filter, RotateCcw, ChevronDown } from 'lucide-react';
 import { animalsApi } from '../../lib/backendApi';
+import { normalizeAnimal } from '../../lib/animalUtils';
+import {
+  filterMilkHistorySessions,
+  normalizeMilkHistorySession,
+} from '../../lib/milkUtils';
 import { useTenant } from '../../hooks/useTenant';
-
-export function filterMilkHistorySessions(sessions, filters) {
-  // GUARDRAIL: Safely return an empty array if sessions is undefined or not an array
-  if (!sessions || !Array.isArray(sessions)) {
-    return [];
-  }
-
-  const searchValue = filters.search.trim().toLowerCase();
-  return sessions.filter((entry) => {
-    const matchesSearch = searchValue
-      ? [entry.date, entry.session, entry.milker, entry.status, entry.liters]
-          .join(' ')
-          .toLowerCase()
-          .includes(searchValue)
-      : true;
-    const matchesDate = filters.date ? entry.date === filters.date : true;
-    const matchesStatus = filters.status === 'all' ? true : entry.status.toLowerCase() === filters.status.toLowerCase();
-    const matchesSession = filters.session === 'all' ? true : entry.session.toLowerCase() === filters.session.toLowerCase();
-    return matchesSearch && matchesDate && matchesStatus && matchesSession;
-  });
-}
-
-function toNormalizedSessionLabel(value) {
-  const normalized = String(value || '').trim().toLowerCase();
-
-  if (!normalized) return 'Unknown';
-  if (normalized === 'midday') return 'Afternoon';
-  if (normalized === 'morning') return 'Morning';
-  if (normalized === 'afternoon') return 'Afternoon';
-  if (normalized === 'evening') return 'Evening';
-
-  return normalized.charAt(0).toUpperCase() + normalized.slice(1);
-}
-
-export function deriveMilkSessionFromLoggedAt(entry = {}) {
-  const rawTimestamp = entry.created_at
-    ?? entry.createdAt
-    ?? entry.logged_at
-    ?? entry.loggedAt
-    ?? entry.recorded_at
-    ?? entry.recordedAt
-    ?? entry.timestamp
-    ?? entry.milkingDate
-    ?? null;
-
-  if (!rawTimestamp) return null;
-
-  // Only derive by clock time when the payload includes an actual time component.
-  const rawString = String(rawTimestamp);
-  const hasTime = /T\d{1,2}:\d{2}|\s\d{1,2}:\d{2}/.test(rawString);
-  if (!hasTime) return null;
-
-  // Parse clock time directly from the source string to avoid timezone shifts.
-  const timeMatch = rawString.match(/(?:T|\s)(\d{1,2}):(\d{2})/);
-  if (timeMatch) {
-    const hours = Number.parseInt(timeMatch[1], 10);
-    const minutes = Number.parseInt(timeMatch[2], 10);
-
-    if (Number.isFinite(hours) && Number.isFinite(minutes)) {
-      const totalMinutesFromString = (hours * 60) + minutes;
-      if (totalMinutesFromString < 12 * 60) return 'Morning';
-      if (totalMinutesFromString <= 16 * 60) return 'Afternoon';
-      return 'Evening';
-    }
-  }
-
-  const parsedTime = new Date(rawTimestamp);
-  if (Number.isNaN(parsedTime.getTime())) return null;
-
-  const totalMinutes = (parsedTime.getHours() * 60) + parsedTime.getMinutes();
-
-  if (totalMinutes < 12 * 60) return 'Morning';
-  if (totalMinutes <= 16 * 60) return 'Afternoon';
-  return 'Evening';
-}
 
 function MetricCard({ label, value, icon: Icon, tone = 'brand' }) {
   const toneStyles = {
@@ -101,29 +31,6 @@ function MetricCard({ label, value, icon: Icon, tone = 'brand' }) {
   );
 }
 
-export function normalizeMilkHistorySession(entry = {}) {
-  const rawLiters = entry.liters
-    ?? entry.amount
-    ?? entry.volume
-    ?? entry.milk_volume
-    ?? entry.milkVolume
-    ?? entry.yield_amount
-    ?? entry.yieldAmount
-    ?? 0;
-
-  const parsedLiters = Number.parseFloat(rawLiters);
-  const derivedSession = deriveMilkSessionFromLoggedAt(entry);
-  const fallbackSession = entry.session ?? entry.milking_session ?? entry.shift ?? 'Unknown';
-
-  return {
-    date: entry.date ?? entry.milkingDate ?? entry.created_at ?? entry.createdAt ?? '',
-    session: derivedSession ?? toNormalizedSessionLabel(fallbackSession),
-    milker: entry.milker ?? entry.created_by ?? entry.createdBy ?? 'SYSTEM',
-    liters: Number.isFinite(parsedLiters) ? parsedLiters.toFixed(1) : '0.0',
-    status: entry.status ?? 'Pending',
-  };
-}
-
 export default function MilkHistory() {
   const { id } = useParams();
   const { tenantId, farmId } = useTenant();
@@ -138,13 +45,17 @@ export default function MilkHistory() {
   const { data: history, isLoading } = useQuery({
     queryKey: ['milk-history', tenantId, farmId, id],
     queryFn: async () => {
+      // GET /animals/<id> only accepts the internal numeric id (404s for an ear tag like "002"),
+      // but the milk-history route resolves either, and already embeds the animal record — prefer that.
       const [animal, sessions] = await Promise.all([
         animalsApi.get(id).catch(() => null),
         animalsApi.milkHistory(id).catch(() => []),
       ]);
 
+      const resolvedAnimal = sessions?.animal ?? animal;
+
       return {
-        animal,
+        animal: resolvedAnimal ? normalizeAnimal(resolvedAnimal, id) : null,
         sessions: Array.isArray(sessions?.sessions) ? sessions.sessions.map(normalizeMilkHistorySession) : [],
         stats: sessions?.stats ?? null,
       };
@@ -218,20 +129,20 @@ export default function MilkHistory() {
               <Activity size={12} /> Milk Production History
             </div>
             <h2 className="font-sans font-bold text-2xl tracking-tight text-brand m-0 truncate">
-              {id} <span className="text-ink-muted">({resolvedHistory?.animal?.name || resolvedHistory?.name || 'Unknown Cow'})</span>
+              {id} <span className="text-ink-muted">({resolvedHistory?.animal?.name || 'Unknown Cow'})</span>
             </h2>
             <p className="text-sm text-ink-muted mt-1">Detailed yield history for the selected animal.</p>
           </div>
           </div>
           <div className="hidden sm:block text-right">
-            <p className="text-[10px] font-bold uppercase tracking-widest text-ink-muted">Session count</p>
+            <p className="text-[10px] font-bold uppercase tracking-widest text-ink-muted">Total Milkings</p>
             <p className="text-2xl font-black text-ink">{totalSessions}</p>
           </div>
         </div>
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
-        <MetricCard label="Cow" value={resolvedHistory?.animal?.name || resolvedHistory?.name || 'Unknown Cow'} icon={Droplets} />
+        <MetricCard label="Cow" value={resolvedHistory?.animal?.name || 'Unknown Cow'} icon={Droplets} />
         <MetricCard label="Average Yield" value={averageYield} icon={TrendingUp} />
         <MetricCard label="Peak Yield" value={peakYield} icon={Calendar} />
         <MetricCard label="Total Logged" value={`${totalYield} L`} icon={ShieldAlert} tone="accent" />

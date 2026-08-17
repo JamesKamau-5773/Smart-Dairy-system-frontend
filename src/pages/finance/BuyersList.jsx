@@ -1,15 +1,16 @@
 import React, { useMemo, useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import { 
   Users, Search, ArrowRight, ChevronDown, ChevronUp, 
   Plus, TrendingDown, CheckCircle2, AlertCircle, FileSpreadsheet
 } from 'lucide-react';
+import { toast } from 'react-hot-toast';
 import { useTenant } from '../../hooks/useTenant';
 import { financeApi } from '../../lib/backendApi';
 import { Skeleton } from '../../components/ui';
 import SlidePanel from '../../components/ui/SlidePanel';
-import AddBuyerForm from './AddBuyerForm';
+import CustomerForm from '../../components/finance/CustomerForm';
 
 /**
  * SRP: Renders a single Financial KPI Widget.
@@ -39,10 +40,10 @@ const BuyerRow = ({ buyer, isExpanded, onToggle }) => {
 
   const id = buyer?.id || 'Unknown ID';
   const name = buyer?.name || 'Unnamed Buyer';
-  const type = buyer?.type || 'Standard';
-  const contact = buyer?.contact || 'No contact';
-  const balance = Number(buyer?.balance || 0);
-  const rate = Number(buyer?.rate_per_liter || 0);
+  const type = buyer?.type || 'Standard'; // 'type' may not exist on customer model
+  const contact = buyer?.phone_number || buyer?.contact || 'No contact';
+  const balance = Number(buyer?.account_balance || buyer?.balance || 0);
+  const rate = Number(buyer?.agreed_rate_per_liter || 0);
 
   return (
     <div className="bg-surface rounded-xl border border-ink/5 shadow-sm overflow-hidden transition-all duration-200 hover:border-ink/15">
@@ -55,7 +56,7 @@ const BuyerRow = ({ buyer, isExpanded, onToggle }) => {
         <div>
           <div className="font-bold text-ink text-sm flex items-center gap-2">
             {name}
-            <span className="px-2 py-0.5 bg-surface-raised border border-ink/10 text-[10px] uppercase tracking-wider rounded-md text-ink-muted">
+            <span className="px-2 py-0.5 bg-surface-raised border border-ink/10 text-[10px] uppercase tracking-wider rounded-md text-ink-muted font-sans">
               {type}
             </span>
           </div>
@@ -98,7 +99,7 @@ const BuyerRow = ({ buyer, isExpanded, onToggle }) => {
             </div>
             <div className="col-span-2 md:col-span-2 flex justify-end items-end">
               <Link 
-                to={`/finance/buyers/${id}`} 
+                to={`/finance/customers/${id}`} 
                 className="inline-flex items-center gap-2 font-bold text-brand hover:text-brand-dark bg-brand/5 hover:bg-brand/10 px-4 py-2 rounded-lg transition-colors text-sm group"
               >
                 Open Full Statement <ArrowRight size={16} className="group-hover:translate-x-1 transition-transform" />
@@ -115,34 +116,57 @@ const BuyerRow = ({ buyer, isExpanded, onToggle }) => {
  * Main Page Component
  */
 export default function BuyersList() {
+  const queryClient = useQueryClient();
   const { tenantId, farmId } = useTenant();
   const [searchTerm, setSearchTerm] = useState('');
   const [expandedCustomerId, setExpandedCustomerId] = useState(null);
   const [isAddPanelOpen, setIsAddPanelOpen] = useState(false);
 
   // Data Fetching
-  const { data: buyers, isLoading } = useQuery({
-    queryKey: ['finance-buyers', tenantId, farmId],
-    queryFn: () => financeApi.listBuyers(),
+  // UNIFIED: We now fetch from the 'customers' endpoint to have a single source of truth.
+  const { data: customers, isLoading } = useQuery({
+    queryKey: ['customers', tenantId, farmId],
+    queryFn: () => financeApi.listCustomers().then(res => res?.items || res?.data || res || []),
     enabled: !!farmId,
   });
 
-  // Defensive: Ensure buyers is always an array
-  const safeBuyers = Array.isArray(buyers) ? buyers : [];
+  // --- Mutations for CUD (Create, Update, Delete) ---
+  // We only need 'create' on this page. The full management is on Customers.jsx
+  const { mutate: createCustomer, isLoading: isSaving } = useMutation({
+    mutationFn: (customerData) => financeApi.createCustomer(customerData),
+    onSuccess: () => {
+      toast.success(`Customer created successfully!`);
+      queryClient.invalidateQueries({ queryKey: ['customers', tenantId, farmId] });
+      setIsAddPanelOpen(false);
+    },
+    onError: (error) => {
+      toast.error(error.message || `Failed to create customer.`);
+    },
+  });
+
+  // Defensive: Ensure customers is always an array
+  const safeCustomers = Array.isArray(customers) ? customers : [];
 
   // Derived State (Filtering)
-  const filteredBuyers = useMemo(() => {
+  const filteredCustomers = useMemo(() => {
     const term = searchTerm.trim().toLowerCase();
-    if (!term) return safeBuyers;
-    return safeBuyers.filter((buyer) => 
-      [buyer?.name, buyer?.id, buyer?.type, buyer?.contact]
+    if (!term) return safeCustomers;
+    return safeCustomers.filter((customer) => 
+      [
+        customer?.name, 
+        customer?.id, 
+        customer?.type, 
+        customer?.contact, 
+        customer?.phone_number,
+        customer?.contact_person
+      ]
         .some((value) => String(value || '').toLowerCase().includes(term))
     );
-  }, [safeBuyers, searchTerm]);
+  }, [safeCustomers, searchTerm]);
 
   // Derived State (KPIs)
-  const totalOutstanding = safeBuyers.reduce((sum, buyer) => sum + Number(buyer?.balance || 0), 0);
-  const settledBuyersCount = safeBuyers.filter((buyer) => Number(buyer?.balance || 0) <= 0).length;
+  const totalOutstanding = safeCustomers.reduce((sum, customer) => sum + Number(customer?.account_balance || customer?.balance || 0), 0);
+  const settledBuyersCount = safeCustomers.filter((customer) => Number(customer?.account_balance || customer?.balance || 0) <= 0).length;
 
   const toggleStatement = (buyerId) => {
     setExpandedCustomerId((currentId) => (currentId === buyerId ? null : buyerId));
@@ -171,7 +195,7 @@ export default function BuyersList() {
         </div>
         
         {/* IMPROVEMENT: Only show the top-right button if data exists */}
-        {safeBuyers.length > 0 && (
+        {safeCustomers.length > 0 && (
           <button 
             onClick={() => setIsAddPanelOpen(true)}
             className="btn-command bg-brand text-white hover:bg-brand/90 px-6 py-2.5 rounded-xl font-bold flex items-center gap-2 shadow-sm transition-all w-full md:w-auto justify-center"
@@ -183,11 +207,11 @@ export default function BuyersList() {
       </div>
 
       {/* IMPROVEMENT: Wrap KPIs in a conditional check */}
-      {safeBuyers.length > 0 && (
+      {safeCustomers.length > 0 && (
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6 mb-8 animate-in slide-in-from-bottom-4">
           <KPIWidget 
             title="Total Buyers" 
-            value={safeBuyers.length} 
+            value={safeCustomers.length} 
             subtitle="Active customers in your registry."
             icon={Users} 
           />
@@ -210,7 +234,7 @@ export default function BuyersList() {
 
       <div className="space-y-4">
         {/* IMPROVEMENT: Hide Persistent Search Bar if empty */}
-        {safeBuyers.length > 0 && (
+        {safeCustomers.length > 0 && (
           <div className="relative max-w-md animate-in fade-in">
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-ink-muted/50" size={18} />
             <input
@@ -236,9 +260,9 @@ export default function BuyersList() {
         )}
 
         {/* Data List */}
-        {!isLoading && filteredBuyers.length > 0 && (
+        {!isLoading && filteredCustomers.length > 0 && (
           <div className="space-y-3">
-            {filteredBuyers.map((buyer) => (
+            {filteredCustomers.map((buyer) => (
               <BuyerRow
                 key={buyer?.id}
                 buyer={buyer}
@@ -250,7 +274,7 @@ export default function BuyersList() {
         )}
 
         {/* Empty Search State */}
-        {!isLoading && safeBuyers.length > 0 && filteredBuyers.length === 0 && (
+        {!isLoading && safeCustomers.length > 0 && filteredCustomers.length === 0 && (
           <div className="bg-surface border border-dashed border-ink/15 rounded-xl p-12 text-center animate-in fade-in">
             <Search className="w-8 h-8 text-ink-muted/30 mx-auto mb-3" />
             <p className="text-ink font-bold text-sm">No customers found</p>
@@ -259,7 +283,7 @@ export default function BuyersList() {
         )}
 
         {/* IMPROVEMENT: Supercharged "Cold Start" Absolute Empty State */}
-        {!isLoading && safeBuyers.length === 0 && (
+        {!isLoading && safeCustomers.length === 0 && (
           <div className="bg-surface border border-ink/10 rounded-2xl p-12 flex flex-col items-center justify-center text-center shadow-sm max-w-3xl mx-auto mt-12 animate-fade-in">
             <div className="bg-brand/5 p-4 rounded-full mb-6">
               <Users size={40} className="text-brand opacity-80" />
@@ -291,12 +315,13 @@ export default function BuyersList() {
       <SlidePanel 
         isOpen={isAddPanelOpen} 
         onClose={() => setIsAddPanelOpen(false)}
-        title="Register New Buyer"
+        title="Register New Customer"
         subtitle="Add a new customer to your milk billing registry."
       >
-        <AddBuyerForm 
-          onSuccess={() => setIsAddPanelOpen(false)} 
-          onCancel={() => setIsAddPanelOpen(false)} 
+        <CustomerForm
+          onSave={createCustomer}
+          onCancel={() => setIsAddPanelOpen(false)}
+          isSaving={isSaving}
         />
       </SlidePanel>
     </div>

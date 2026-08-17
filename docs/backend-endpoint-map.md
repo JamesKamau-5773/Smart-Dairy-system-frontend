@@ -294,6 +294,54 @@ Ledger entry create request:
 }
 ```
 
+### Milk deliveries (NOT YET IMPLEMENTED — frontend-required)
+
+The frontend now has a UI (`CustomerProfile.jsx`) for logging the daily volume of
+milk issued to each customer, editing/deleting those records, and excluding a
+farmer's personal-consumption portion from billing. The backend must own the
+billing math — the frontend only submits raw liters and expects the backend to
+return the computed billable liters and amount.
+
+- `GET /api/finance/deliveries?customer_id=<id>` — list deliveries, filterable by `customer_id`, paginated like other list endpoints.
+- `POST /api/finance/deliveries` — create a delivery record.
+- `PATCH /api/finance/deliveries/<delivery_id>` — update a delivery record.
+- `DELETE /api/finance/deliveries/<delivery_id>` — delete a delivery record.
+
+Delivery create/update request:
+
+```json
+{
+	"customer_id": 5,
+	"date": "2026-08-10",
+	"liters_delivered": 20,
+	"personal_consumption_liters": 2,
+	"notes": "Morning + evening shift"
+}
+```
+
+Expected delivery response (server-computed fields in bold via naming):
+
+```json
+{
+	"id": 41,
+	"customer_id": 5,
+	"date": "2026-08-10",
+	"liters_delivered": 20.0,
+	"personal_consumption_liters": 2.0,
+	"billable_liters": 18.0,
+	"rate_per_liter": 55.0,
+	"amount": 990.0,
+	"notes": "Morning + evening shift"
+}
+```
+
+Expected behavior:
+
+- `billable_liters = liters_delivered - personal_consumption_liters`, and `amount = billable_liters * rate_per_liter` (customer's `agreed_rate`/`agreed_rate_per_liter`) — computed server-side, never trusted from the client.
+- `400` when `personal_consumption_liters > liters_delivered`, or when `customer_id`/`date`/`liters_delivered` is missing.
+- `404` when `customer_id` does not exist for the tenant.
+- Creating, updating, or deleting a delivery should keep the customer's `account_balance` and ledger/statement in sync (e.g. by writing a corresponding ledger entry), so `GET /api/finance/customers/<id>` and `GET /api/finance/ledger?customer_id=<id>` reflect the change immediately.
+
 ## Dashboard
 
 - `GET /api/v1/dashboard/summary`

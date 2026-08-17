@@ -68,7 +68,10 @@ export function QueryProvider({ children }) {
         Object.keys(parsed).forEach((k) => {
           try {
             const key = JSON.parse(k);
-            queryClient.setQueryData(key, parsed[k].data);
+            // Preserve the original fetch timestamp so staleTime is honored and a
+            // background refetch still happens instead of the restored snapshot
+            // being treated as brand-new (and never refreshed) on every reload.
+            queryClient.setQueryData(key, parsed[k].data, { updatedAt: parsed[k].updatedAt });
           } catch (e) {
             // ignore invalid entries
           }

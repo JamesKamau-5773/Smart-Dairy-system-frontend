@@ -34,6 +34,8 @@ const BreedingHub = lazy(() => import('./pages/operations/BreedingHub'));
 const AnimalPassport = lazy(() => import('./pages/operations/AnimalRecord'));
 const MilkHistory = lazy(() => import('./pages/operations/MilkHistory'));
 const FeedFormulation = lazy(() => import('./pages/inventory/FeedFormulation'));
+const MilkInventoryReport = lazy(() => import('./pages/operations/MilkInventoryReport.jsx'));
+const CustomersPage = lazy(() => import('./pages/operations/Customers.jsx'));
 const NutritionDashboard = lazy(() => import('./pages/nutrition/NutritionDashboard'));
 // UPDATED: Pointing to the new correct location in the nutrition folder
 const UnitConversions = lazy(() => import('./pages/nutrition/UnitConversions'));
@@ -236,6 +238,14 @@ export default function App() {
             <Route path="operations/animal/:id/milk-history" element={renderLazyPage(MilkHistory, 'Loading milk history…')} />
             <Route path="operations/animal/:id" element={renderLazyPage(AnimalPassport, 'Loading animal record…')} />
             
+            {/* Reports */}
+            <Route
+              path="operations/reports/milk-inventory"
+              element={
+                <RoleRoute allowedRoles={['ADMIN', 'FARM_MANAGER', 'FARMER']}>{renderLazyPage(MilkInventoryReport, 'Loading milk inventory report…')}</RoleRoute>
+              }
+            />
+
             {/* Capital & Inventory */}
             <Route
               path="finance/ledger"
@@ -280,7 +290,7 @@ export default function App() {
               )}
             />
             <Route
-              path="finance/buyers/:buyerId"
+              path="finance/customers/:customerId"
               element={(
                 <RoleRoute allowedRoles={['SUPER_ADMIN', 'ADMIN']}>
                   {renderLazyPage(CustomerProfile, 'Loading customer profile…')}
@@ -289,6 +299,14 @@ export default function App() {
             />
             <Route path="operations/buyers" element={<Navigate to="/finance/buyers" replace />} />
             <Route path="operations/buyers/registry" element={<Navigate to="/finance/buyers" replace />} />
+            <Route
+              path="operations/customers"
+              element={(
+                <RoleRoute allowedRoles={['SUPER_ADMIN', 'ADMIN', 'FARMER']}>
+                  {renderLazyPage(CustomersPage, 'Loading customer management...')}
+                </RoleRoute>
+              )}
+            />
 
             {/* Human Resources */}
             <Route

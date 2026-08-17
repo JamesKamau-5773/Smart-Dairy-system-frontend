@@ -1,189 +1,286 @@
-import React, { useState, useMemo } from 'react';
-import { useQuery, useMutation, useQueryClient, } from '@tanstack/react-query';
+import React, { useState, useMemo, useEffect } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { format, parseISO } from 'date-fns';
+import { Wallet, TrendingUp, TrendingDown, ChevronsRight, Plus, X } from 'lucide-react';
+
 import { useTenant } from '../../hooks/useTenant';
+import { financeApi, getApiErrorMessage } from '../../lib/backendApi';
 import { QUERY_KEYS } from '../../providers/QueryProvider';
-import apiClient from '../../lib/apiClient';
-import { financeApi } from '../../lib/backendApi';
-import { Wallet, ArrowUpRight, ArrowDownLeft, Receipt, ShieldCheck, Sun, Moon } from 'lucide-react';
-import ExpenseModal from '../../components/forms/ExpenseModal';
-import IncomeModal from '../../components/forms/IncomeModal';
-import { calculateKpis } from '../../lib/financeUtils';
-import FinancialKpiCards from '../../components/finance/FinancialKpiCards';
-import { useTheme } from '../../providers/ThemeProvider';
+import Money from '../../components/ui/Money';
+import toast from 'react-hot-toast';
 
-const TransactionRow = ({ tx }) => (
-  <tr className="hover:bg-slate-50 transition-colors">
-    <td className="px-6 py-4 text-xs font-bold text-slate-500">{tx.date}</td>
-    <td className="px-6 py-4 font-mono bg-slate-50 border border-slate-100 rounded text-[11px] font-black text-ink">
-      {tx.reference || 'N/A'}
-    </td>
-    <td className="px-6 py-4">
-      <span className="text-[9px] font-black bg-slate-100 px-2 py-1 rounded text-slate-600">{tx.category}</span>
-    </td>
-    <td className="px-6 py-4 text-xs font-bold text-ink">{tx.party}</td>
-    <td className="px-6 py-4">
-      <span className={`text-[9px] font-bold px-2 py-1 rounded ${
-        tx.status === 'CLEARED' ? 'text-emerald-600 bg-emerald-50' : 'text-slate-600 bg-slate-100'
-      }`}>
-        {tx.status}
-      </span>
-    </td>
-    <td className={`px-6 py-4 text-right font-black ${tx.type === 'income' ? 'text-brand' : 'text-danger'}`}>
-      {tx.type === 'income' ? '+' : ''}{tx.amount.toLocaleString('en-US', { minimumFractionDigits: 2 })}
-    </td>
-  </tr>
-);
+const SummaryCard = ({ title, value, icon: Icon, tone = 'default' }) => {
+  const tones = {
+    default: 'text-ink',
+    success: 'text-success',
+    danger: 'text-danger',
+  };
+  return (
+    <div className="card-machined p-5">
+      <div className="flex items-center gap-4">
+        <div className={`p-3 rounded-lg bg-surface-raised border border-ink/10 ${tones[tone]}`}>
+          <Icon size={20} />
+        </div>
+        <div>
+          <p className="text-xs font-bold uppercase tracking-wider text-ink-muted">{title}</p>
+          <p className="text-2xl font-black">{value}</p>
+        </div>
+      </div>
+    </div>
+  );
+};
 
-export default function FinancialLedger() {
-  const { tenantId, farmId, tenant } = useTenant();
+const StatusBadge = ({ status }) => {
+  const normalizedStatus = String(status || '').toLowerCase();
+  let styles = 'bg-yellow-100 text-yellow-800'; // Default to Pending
+  if (normalizedStatus === 'cleared' || normalizedStatus === 'paid' || normalizedStatus === 'revenue') {
+    styles = 'bg-success/10 text-success';
+  } else if (normalizedStatus === 'pending') {
+    styles = 'bg-warning/10 text-warning-dark';
+  } else if (normalizedStatus === 'void' || normalizedStatus === 'cancelled' || normalizedStatus === 'expense') {
+    styles = 'bg-danger/10 text-danger';
+  }
+  return (
+    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${styles}`}>
+      {status || 'Pending'}
+    </span>
+  );
+};
+
+const LedgerEntryFormModal = ({ isOpen, onClose, transactionType, farmId, tenantId }) => {
   const queryClient = useQueryClient();
-  const [isExpenseModalOpen, setIsExpenseModalOpen] = useState(false);
-  const [isIncomeModalOpen, setIsIncomeModalOpen] = useState(false);
-  const { theme, toggleTheme } = useTheme();
+  const [formData, setFormData] = useState({});
 
-  const isCoopMember = tenant?.isCoopMember || false;
-
-  const { data: finance } = useQuery({
-    queryKey: QUERY_KEYS.UNIT_COST(tenantId, farmId),
-    queryFn: () => financeApi.unitCost(),
-    enabled: !!farmId,
-  });
-
-  // Fetch customer data at the page level to pass down to modals.
-  // This follows the best practice of lifting state up and passing clean data down.
-  const { data: customersData } = useQuery({
-    queryKey: ['customers', tenantId, farmId],
+  const { data: customers = [] } = useQuery({
+    queryKey: [QUERY_KEYS.CUSTOMERS, tenantId, farmId],
     queryFn: () => financeApi.listCustomers(),
-    enabled: !!farmId,
+    enabled: !!tenantId && !!farmId && isOpen && transactionType === 'income',
   });
 
-  // Extract the array cleanly, providing a safe fallback.
-  // The modal will now always receive a predictable array.
-  const customers = customersData?.items || [];
+  useEffect(() => {
+    if (isOpen) {
+      setFormData({
+        date: format(new Date(), 'yyyy-MM-dd'),
+        amount: '',
+        category: transactionType === 'income' ? 'Milk Sales' : 'Feed',
+        customer_id: '',
+        party: '', // For expense supplier
+        paymentMethod: 'M-Pesa',
+        reference_code: '',
+        description: '',
+      });
+    }
+  }, [isOpen, transactionType]);
 
-  const { data: ledgerData, isLoading: isLoadingTransactions } = useQuery({
-    queryKey: ['ledger-entries', tenantId, farmId],
-    queryFn: () => financeApi.listLedgerEntries(),
-    enabled: !!farmId,
+  const mutation = useMutation({
+    mutationFn: (newEntry) => financeApi.createLedgerEntry(newEntry),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.LEDGER_ENTRIES, tenantId, farmId] });
+      toast.success('Transaction logged successfully!');
+      onClose();
+    },
+    onError: (error) => {
+      toast.error(`Failed to log transaction: ${getApiErrorMessage(error)}`);
+      console.error(error);
+    },
   });
 
-  // Derive transactions directly from the query result. This avoids an anti-pattern
-  // of syncing server state into local state and prevents an extra re-render.
-  const transactions = ledgerData?.items || [];
-  const useTransactionMutation = (transactionType) => {
-    return useMutation({
-      mutationFn: async (newTransactionData) => {
-        return financeApi.createLedgerEntry({
-          ...newTransactionData,
-          tenant_id: tenantId,
-          farm_id: farmId,
-          type: transactionType,
-          status: transactionType === 'income' ? 'CLEARED' : 'PAID',
-          party: transactionType === 'income' ? newTransactionData.source : newTransactionData.paidTo,
-          amount: transactionType === 'income'
-            ? parseFloat(newTransactionData.amount)
-            : -Math.abs(parseFloat(newTransactionData.amount)),
-        });
-      },
-      onSuccess: () => {
-        // Invalidate and refetch the ledger entries to show the new transaction
-        queryClient.invalidateQueries({ queryKey: ['ledger-entries', tenantId, farmId] });
-        // Close the relevant modal on success
-        if (transactionType === 'income') {
-          setIsIncomeModalOpen(false);
-        } else {
-          setIsExpenseModalOpen(false);
-        }
-      },
-      onError: (error) => {
-        console.error(`Failed to add ${transactionType}:`, error);
-      },
-    });
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({ ...prev, [name]: value }));
   };
 
-  const addIncomeMutation = useTransactionMutation('income');
-  const addExpenseMutation = useTransactionMutation('expense');
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    const payload = {
+      date: formData.date,
+      amount: parseFloat(formData.amount),
+      paymentMethod: formData.paymentMethod,
+      reference_code: formData.reference_code,
+      description: formData.description,
+      type: transactionType, // 'income' or 'expense'
+      farm_id: farmId,
+      tenant_id: tenantId,
+      stream: formData.category,
+    };
 
-  const kpis = useMemo(() => calculateKpis(transactions), [transactions]);
+    if (transactionType === 'income') {
+      payload.customer_id = formData.customer_id;
+    } else {
+      payload.party = formData.party;
+    }
 
-  const totalProfit = kpis.totalIncome - kpis.totalCosts;
+    mutation.mutate(payload);
+  };
+
+  if (!isOpen) return null;
+
+  const isIncomeFormInvalid = !formData.amount || !formData.category || !formData.customer_id;
+  const isExpenseFormInvalid = !formData.amount || !formData.category;
+  const isFormInvalid = transactionType === 'income' ? isIncomeFormInvalid : isExpenseFormInvalid;
 
   return (
-    <div className="animate-reveal p-8">
-      {/* HEADER */}
-      <div className="flex justify-between items-end mb-8">
-        <div>
-          <div className="inline-flex items-center gap-2 px-2 py-1 bg-brand/5 text-brand text-[10px] font-black uppercase tracking-widest mb-3 rounded-md border border-brand/10">
-            <Wallet size={12} /> Financial Registry
-          </div>
-          <h2 className="font-sans font-black text-3xl tracking-tight text-ink m-0">Capital Ledger</h2>
-        </div>
-        <div className="flex items-center gap-3">
-          <button 
-            onClick={toggleTheme}
-            className="flex items-center p-2.5 bg-white border border-slate-200 text-ink rounded-lg hover:bg-slate-50 transition-all"
-            aria-label="Toggle theme"
-          >
-            {theme === 'light' ? <Moon size={14} /> : <Sun size={14} />}
-          </button>
-          <button onClick={() => setIsExpenseModalOpen(true)} className="flex items-center px-5 py-2.5 bg-white border border-slate-200 text-ink rounded-lg font-black text-xs uppercase hover:bg-slate-50 transition-all">
-            <ArrowDownLeft size={14} className="mr-2 text-danger" /> Log Expense
-          </button>
-          <button onClick={() => setIsIncomeModalOpen(true)} className="flex items-center px-5 py-2.5 bg-brand text-white rounded-lg font-black text-xs uppercase hover:bg-brand-dark transition-all">
-            <ArrowUpRight size={14} className="mr-2" /> Log Income
+    <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 animate-reveal-fast">
+      <div className="bg-white rounded-lg shadow-xl w-full max-w-lg">
+        <div className="p-5 border-b flex justify-between items-center">
+          <h3 className="text-lg font-bold text-ink">
+            Log New {transactionType === 'income' ? 'Income' : 'Expense'}
+          </h3>
+          <button onClick={onClose} className="p-1 rounded-full hover:bg-gray-100 text-ink-muted">
+            <X size={20} />
           </button>
         </div>
-      </div>
-
-      <FinancialKpiCards 
-        kpis={kpis}
-        totalProfit={totalProfit}
-        isCoopMember={isCoopMember}
-      />
-
-      {/* TRANSACTION MATRIX */}
-      <div className="bg-white border border-slate-100 rounded-xl shadow-sm overflow-hidden">
-        <div className="flex items-center justify-between px-6 py-5 border-b border-slate-100">
-            <h3 className="font-black text-xs uppercase text-ink flex items-center gap-2 tracking-widest">
-              <Receipt size={14} /> Transaction Matrix
-            </h3>
-        </div>
-        <table className="w-full text-left border-collapse">
-          <thead className="bg-slate-50 text-[10px] uppercase font-black text-slate-500">
-            <tr>
-              <th className="px-6 py-4">Date</th>
-              <th className="px-6 py-4">Ref (Code)</th>
-              <th className="px-6 py-4">Category</th>
-              <th className="px-6 py-4">Customer / Supplier</th>
-              <th className="px-6 py-4">Status</th>
-              <th className="px-6 py-4 text-right">Amount (KSh)</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-slate-100">
-            {isLoadingTransactions ? (
-              <tr><td colSpan="6" className="p-8 text-center text-slate-500">Loading transactions...</td></tr>
-            ) : transactions.length > 0 ? (
-              transactions.map(tx => <TransactionRow key={tx.id} tx={tx} />)
+        <form onSubmit={handleSubmit}>
+          <div className="p-6 space-y-4 max-h-[70vh] overflow-y-auto">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <label className="form-control"><span className="label-text">Date Received</span><input type="date" name="date" value={formData.date} onChange={handleChange} className="input-machined" required /></label>
+              <label className="form-control"><span className="label-text">Amount Received (KSH)</span><input type="number" step="any" name="amount" value={formData.amount} onChange={handleChange} className="input-machined" placeholder="e.g., 5000" required /></label>
+            </div>
+            {transactionType === 'income' ? (
+              <label className="form-control">
+                <span className="label-text">Who paid you? (Customer/Co-op)</span>
+                <select name="customer_id" value={formData.customer_id} onChange={handleChange} className="input-machined" required>
+                  <option value="" disabled>Select a customer</option>
+                  {customers.map(customer => (
+                    <option key={customer.id} value={customer.id}>{customer.name}</option>
+                  ))}
+                </select>
+              </label>
             ) : (
-              <tr>
-                <td colSpan="6" className="p-8 text-center text-slate-500">No transactions recorded yet.</td>
-              </tr>
+              <label className="form-control"><span className="label-text">Party (Supplier)</span><input type="text" name="party" value={formData.party} onChange={handleChange} className="input-machined" placeholder="e.g., Agrovet Store" /></label>
             )}
-          </tbody>
-        </table>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <label className="form-control">
+                <span className="label-text">What is this for?</span>
+                <select name="category" value={formData.category} onChange={handleChange} className="input-machined" required>
+                  {transactionType === 'income' ? <option value="Milk Sales">Milk Sales</option> : <><option value="Feed">Feed</option><option value="Labor">Labor</option><option value="Utilities">Utilities</option><option value="Vet Services">Vet Services</option><option value="Other">Other</option></>}
+                </select>
+              </label>
+              <label className="form-control">
+                <span className="label-text">Payment Method</span>
+                <select name="paymentMethod" value={formData.paymentMethod} onChange={handleChange} className="input-machined" required>
+                  <option value="M-Pesa">M-Pesa</option><option value="Cash">Cash</option><option value="Bank">Bank</option><option value="Other">Other</option>
+                </select>
+              </label>
+            </div>
+            <label className="form-control"><span className="label-text">Transaction Reference (Code)</span><input type="text" name="reference_code" value={formData.reference_code} onChange={handleChange} className="input-machined" placeholder="e.g., UHA213HOIG" /></label>
+            <label className="form-control"><span className="label-text">Additional Details</span><textarea name="description" value={formData.description} onChange={handleChange} className="input-machined" rows="2"></textarea></label>
+          </div>
+          <div className="p-4 bg-gray-50 rounded-b-lg flex justify-end gap-3">
+            <button type="button" onClick={onClose} className="btn-secondary">
+              Cancel
+            </button>
+            <button type="submit" className="btn-primary" disabled={mutation.isPending || isFormInvalid}>
+              {mutation.isPending ? 'Saving...' : `Log ${transactionType === 'income' ? 'Income' : 'Expense'}`}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+};
+
+const FinancialLedger = () => {
+  const { tenantId, farmId } = useTenant();
+  const [filters, setFilters] = useState({ page: 1, per_page: 20 });
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [modalTransactionType, setModalTransactionType] = useState(null);
+
+  const { data, isLoading, isError, error } = useQuery({
+    queryKey: [QUERY_KEYS.LEDGER_ENTRIES, tenantId, farmId, filters],
+    // The backend endpoint for the general ledger requires a scope. While this should
+    // be handled by the tenant/farm ID in the headers, the ledger endpoint specifically
+    // seems to require them as query parameters to return the farm-wide view instead
+    // of demanding a `customer_id`.
+    queryFn: () => financeApi.listLedgerEntries({ ...filters, farm_id: farmId, tenant_id: tenantId }),
+    enabled: !!tenantId && !!farmId,
+    keepPreviousData: true,
+  });
+
+  const transactions = useMemo(() => data?.items || [], [data]);
+  const summary = useMemo(() => data?.summary || {}, [data]);
+  const meta = useMemo(() => data?.meta || {}, [data]);
+
+  const handleOpenModal = (type) => {
+    setModalTransactionType(type);
+    setIsModalOpen(true);
+  };
+
+  const handleCloseModal = () => {
+    setIsModalOpen(false);
+    setModalTransactionType(null);
+  };
+
+  return (
+    <div className="animate-reveal space-y-6 max-w-7xl mx-auto">
+      <div className="flex items-center justify-between gap-4">
+        <div className="flex items-center gap-4">
+          <div className="p-3 bg-brand/5 text-brand rounded-lg border border-brand/10"><Wallet size={20} /></div>
+          <div>
+            <h2 className="font-sans font-bold text-2xl tracking-tight text-brand m-0">Financial Ledger</h2>
+            <p className="text-sm text-ink-muted mt-1">All income and expense transactions.</p>
+          </div>
+        </div>
+        <div className="flex items-center gap-2">
+          <button onClick={() => handleOpenModal('income')} className="btn-primary flex items-center gap-2"><Plus size={16} /><span>Log Income</span></button>
+          <button onClick={() => handleOpenModal('expense')} className="btn-secondary flex items-center gap-2"><Plus size={16} /><span>Log Expense</span></button>
+        </div>
       </div>
 
-      <ExpenseModal 
-        isOpen={isExpenseModalOpen} 
-        onClose={() => setIsExpenseModalOpen(false)} 
-        onSave={(data) => addExpenseMutation.mutate(data)}
-      />
-      <IncomeModal 
-        isOpen={isIncomeModalOpen} 
-        onClose={() => setIsIncomeModalOpen(false)}
-        customers={customers}
-        onSave={(data) => addIncomeMutation.mutate(data)}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <SummaryCard title="Total Income" value={<Money amount={summary.total_income ?? 0} />} icon={TrendingUp} tone="success" />
+        <SummaryCard title="Total Costs" value={<Money amount={summary.total_costs ?? 0} />} icon={TrendingDown} tone="danger" />
+        <SummaryCard title="Net Profit" value={<Money amount={summary.total_profit ?? 0} />} icon={ChevronsRight} />
+        <SummaryCard title="Profit Per Liter" value={<Money amount={summary.profit_per_liter ?? summary.profitPerLiter ?? 0} />} icon={ChevronsRight} />
+      </div>
+
+      <div className="card-machined overflow-hidden !p-0">
+        <div className="overflow-x-auto">
+          <table className="w-full text-left border-collapse">
+            <thead className="bg-brand/5">
+              <tr className="border-b border-ink/10">
+                <th className="p-4 text-xs font-bold uppercase tracking-wider text-ink-muted">Date</th>
+                <th className="p-4 text-xs font-bold uppercase tracking-wider text-ink-muted">Customer/Supplier</th>
+                <th className="p-4 text-xs font-bold uppercase tracking-wider text-ink-muted">Category</th>
+                <th className="p-4 text-xs font-bold uppercase tracking-wider text-ink-muted">Description</th>
+                <th className="p-4 text-xs font-bold uppercase tracking-wider text-ink-muted">Ref Code</th>
+                <th className="p-4 text-xs font-bold uppercase tracking-wider text-ink-muted text-right">Amount</th>
+                <th className="p-4 text-xs font-bold uppercase tracking-wider text-ink-muted">Status</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-ink/5 bg-white">
+              {isLoading ? (
+                <tr><td colSpan="7" className="p-10 text-center text-ink-muted">Loading transactions...</td></tr>
+              ) : isError ? (
+                <tr><td colSpan="7" className="p-10 text-center text-danger">Error: {getApiErrorMessage(error)}</td></tr>
+              ) : transactions.map((tx) => (
+                <tr key={tx.id} className="hover:bg-surface-raised transition-colors">
+                  <td className="p-4 text-sm text-ink-muted font-medium">{format(parseISO(tx.date), 'PPP')}</td>
+                  <td className="p-4 text-sm text-ink font-semibold">{tx.counterparty_name || tx.customer_name || tx.buyer_name || 'N/A'}</td>
+                  <td className="p-4 text-sm text-ink-muted">{tx.category}</td>
+                  <td className="p-4 text-sm text-ink-muted">{tx.description || 'N/A'}</td>
+                  <td className="p-4 text-sm text-ink-muted font-mono">{tx.reference_code || 'N/A'}</td>
+                  <td className={`p-4 text-sm font-semibold text-right tabular-nums ${tx.transaction_type === 'Revenue' ? 'text-success' : 'text-danger'}`}><Money amount={tx.amount} /></td>
+                  <td className="p-4 text-sm"><StatusBadge status={tx.status || tx.transaction_type} /></td>
+                </tr>
+              ))}
+              {!isLoading && !isError && transactions.length === 0 && (
+                <tr><td colSpan="7" className="p-10 text-center text-ink-muted">No transactions recorded yet.</td></tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <LedgerEntryFormModal
+        isOpen={isModalOpen}
+        onClose={handleCloseModal}
+        transactionType={modalTransactionType}
+        farmId={farmId}
+        tenantId={tenantId}
       />
     </div>
   );
-}
+};
+
+export default FinancialLedger;

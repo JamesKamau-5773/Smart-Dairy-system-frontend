@@ -48,6 +48,21 @@ const normalizeRoleToken = (value) => {
   return token;
 };
 
+// Like normalizeRoleToken, but keeps granular operational roles (e.g. HERDSMAN) distinct
+// instead of collapsing them into 'FARMER' — used when building the full role set so
+// per-role UI/permission checks can tell an org-tier "FARMER" apart from "HERDSMAN" staff.
+const normalizeRoleSetToken = (value) => {
+  const token = toRoleToken(value);
+
+  if (SUPER_ADMIN_VALUES.has(token)) return 'SUPER_ADMIN';
+  if (ADMIN_VALUES.has(token)) return 'ADMIN';
+  if (FARM_ADMIN_VALUES.has(token)) return 'FARM_ADMIN';
+  if (OPERATIONAL_ROLE_ALIASES.has(token)) return OPERATIONAL_ROLE_ALIASES.get(token);
+  if (FARMER_VALUES.has(token)) return 'FARMER';
+
+  return token;
+};
+
 const collectRoleTokens = (user) => {
   if (!user) return [];
 
@@ -69,7 +84,7 @@ const collectRoleTokens = (user) => {
   }
 
   return roleSet
-    .map((value) => normalizeRoleToken(value))
+    .map((value) => normalizeRoleSetToken(value))
     .filter(Boolean);
 };
 
@@ -116,7 +131,7 @@ export const normalizeRole = (user) => {
 
 export const hasRole = (user, allowedRoles = []) => {
   const roleSet = getRoleSet(user);
-  const normalizedAllowedRoles = allowedRoles.map((value) => normalizeRoleToken(value));
+  const normalizedAllowedRoles = allowedRoles.map((value) => normalizeRoleSetToken(value));
   return normalizedAllowedRoles.some((role) => roleSet.includes(role));
 };
 

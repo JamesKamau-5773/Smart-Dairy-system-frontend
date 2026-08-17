@@ -3,12 +3,12 @@ import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { 
   LayoutDashboard, Beaker, Pill, Package, Wallet, LogOut, Menu, X, 
   Users, Dna, Landmark, ShieldCheck, BookHeart, BookOpen, Activity, 
-  Wheat, ChevronRight, ChevronDown, FileWarning 
+  Wheat, ChevronRight, ChevronDown, FileWarning, ClipboardList
 } from 'lucide-react';
 import LABELS from '../lib/labels';
 import { useAuth } from '../contexts/AuthContext';
 import FarmSwitcher from './FarmSwitcher';
-import { canAccessCommandCenter, canViewAdminControls, isCooperativeAdmin, isSuperAdmin } from '../lib/roles';
+import { canAccessCommandCenter, canViewAdminControls, isCooperativeAdmin, isSuperAdmin, hasRole } from '../lib/roles';
 
 export default function Sidebar() {
   const { currentUser, logout } = useAuth();
@@ -40,6 +40,8 @@ export default function Sidebar() {
   const isPlatformAdmin = isSuperAdmin(currentUser);
   const isCoopAdmin = isCooperativeAdmin(currentUser);
   const showCommandCenter = canAccessCommandCenter(currentUser);
+  const canViewCustomers = showAdminControls || hasRole(currentUser, ['FARMER']);
+  const canViewMilkReport = hasRole(currentUser, ['ADMIN', 'FARM_MANAGER', 'FARMER']);
 
   const navGroups = [
     {
@@ -90,9 +92,11 @@ export default function Sidebar() {
     {
       title: 'Finance & Supply',
       items: [
-        { label: 'Customer Payments', to: '/finance/buyers', icon: Users, visible: canViewBuyers },
+        { label: 'Buyers List', to: '/finance/buyers', icon: Users, visible: canViewBuyers },
+        { label: 'Customer Management', to: '/operations/customers', icon: Users, visible: canViewCustomers },
         { label: 'Inventory', to: '/operations/inventory', icon: Package, visible: showAdminControls },
         { label: 'Ledger', to: '/finance/ledger', icon: Wallet, visible: showAdminControls },
+        { label: 'Milk Inventory Report', to: '/operations/reports/milk-inventory', icon: ClipboardList, visible: canViewMilkReport },
       ],
     },
     {

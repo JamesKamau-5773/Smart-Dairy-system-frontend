@@ -12,6 +12,7 @@ import {
   ShieldCheck,
   AlertCircle,
   Trash2,
+  Pencil,
   Undo2,
 } from 'lucide-react';
 import { Skeleton } from '../../components/ui';
@@ -20,131 +21,21 @@ import AlertBanner from '../../components/ui/AlertBanner';
 import Confirmation, { useConfirmation } from '../../components/ui/Confirmation';
 import { validateForm, ValidationRules, getFirstErrorMessage } from '../../lib/validation';
 import { formatDateTime, getRelativeTime, createAuditEntry, logToAuditTrail } from '../../lib/audit';
-import { getApiErrorMessage, herdApi } from '../../lib/backendApi';
+import { getApiErrorMessage, herdApi } from '../../lib/backendApi'; 
 import { useTenant } from '../../hooks/useTenant';
+import {
+  formatAge,
+  formatDate,
+  statusTone,
+  hasValidTimestamp,
+  normalizeHerdCow,
+  getFilteredHerd,
+  getHerdSummary,
+  isMilkingStatus,
+  isDryStatus,
+} from '../../lib/herdUtils';
+
 const INITIAL_HERD = [];
-
-// ─────────────────────────────────────────────────────────────────────────
-// HELPER FUNCTIONS
-// ─────────────────────────────────────────────────────────────────────────
-
-function formatAge(ageMonths) {
-  const years = Math.floor(ageMonths / 12);
-  const months = ageMonths % 12;
-  return `${years}y ${months}m`;
-}
-
-function formatDate(dateValue) {
-  if (!dateValue) return 'N/A';
-  const parsedDate = new Date(dateValue);
-  if (Number.isNaN(parsedDate.getTime())) return 'N/A';
-  return parsedDate.toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' });
-}
-
-function statusTone(status) {
-  if (isMilkingStatus(status)) return 'bg-accent/20 text-brand-dark border-accent/30';
-  if (isDryStatus(status)) return 'bg-ink/10 text-ink-muted border-ink/15';
-  if (status === 'Calf') return 'bg-accent/10 text-accent-dark border-accent/20';
-  if (status === 'Heifer') return 'bg-surface-raised text-ink border-ink/10';
-  if (status === 'Cow') return 'bg-accent/20 text-brand-dark border-accent/30';
-  return 'bg-surface-raised text-ink border-ink/10';
-}
-
-function normalizeStatusValue(status = '') {
-  return String(status)
-    .trim()
-    .toLowerCase()
-    .replace(/[_-]+/g, ' ')
-    .replace(/\s+/g, ' ');
-}
-
-function isMilkingStatus(status = '') {
-  const normalized = normalizeStatusValue(status);
-  return ['milking', 'lactating', 'in milk'].includes(normalized);
-}
-
-function isDryStatus(status = '') {
-  const normalized = normalizeStatusValue(status);
-  return ['dry', 'dry off', 'dry cow', 'non lactating'].includes(normalized);
-}
-
-function matchesStatusFilter(status = '', filter = 'All') {
-  if (filter === 'All') return true;
-  if (filter === 'Milking') return isMilkingStatus(status);
-  if (filter === 'Dry') return isDryStatus(status);
-  return String(status) === filter;
-}
-
-function hasValidTimestamp(timestamp) {
-  if (!timestamp) return false;
-  const parsedDate = new Date(timestamp);
-  return !Number.isNaN(parsedDate.getTime());
-}
-
-function normalizeHerdCow(cow = {}, fallback = {}) {
-  const ageMonths = Number(cow.ageMonths ?? cow.age_months ?? fallback.ageMonths ?? 0);
-  const status = cow.current_status ?? cow.currentStatus ?? cow.status ?? cow.lactation_status ?? fallback.status ?? 'Cow';
-
-  return {
-    id: cow.tag_number ?? cow.tagNumber ?? cow.tag ?? cow.id ?? cow.cow_id ?? cow.ear_tag ?? fallback.id ?? '',
-    name: cow.name ?? cow.cow_name ?? fallback.name ?? 'Unnamed',
-    breed: cow.breed ?? cow.breed_status ?? cow.breed_name ?? fallback.breed ?? 'Foundation',
-    ageMonths,
-    status,
-    lastCalved: cow.lastCalved ?? cow.last_calved ?? fallback.lastCalved ?? null,
-    milk: cow.milk ?? cow.daily_milk ?? fallback.milk ?? '0.0 L/day',
-    createdAt: cow.createdAt ?? cow.created_at ?? fallback.createdAt ?? new Date().toISOString(),
-    updatedAt: cow.updatedAt ?? cow.updated_at ?? fallback.updatedAt ?? null,
-    updatedBy: cow.updatedBy ?? cow.updated_by ?? fallback.updatedBy ?? 'You',
-  };
-}
-
-function getFilteredHerd(herd, statusFilter, searchTerm) {
-  const normalizedSearch = searchTerm.trim().toLowerCase();
-  return herd
-    .filter((cow) => matchesStatusFilter(cow.status, statusFilter))
-    .filter((cow) => {
-      if (!normalizedSearch) return true;
-      return [cow.id, cow.name, cow.breed, cow.status].some((field) =>
-        field.toLowerCase().includes(normalizedSearch)
-      );
-    })
-    .slice()
-    .sort((a, b) => {
-      if (a.id === b.id) return 0;
-      return a.id < b.id ? -1 : 1;
-    });
-}
-
-function getHerdSummary(herd) {
-  const totalAnimals = herd.length;
-  const milkingCount = herd.filter((cow) => isMilkingStatus(cow.status)).length;
-  const dryCount = herd.filter((cow) => isDryStatus(cow.status)).length;
-  const averageAgeMonths =
-    totalAnimals === 0
-      ? 0
-      : Math.round(
-        herd.reduce((sum, cow) => sum + cow.ageMonths, 0) / totalAnimals
-      );
-  const latestCalved = herd
-    .map((cow) => cow.lastCalved)
-    .filter(Boolean)
-    .sort((a, b) => new Date(b) - new Date(a))[0] || null;
-
-  const latestUpdatedAt = herd
-    .map((cow) => cow.updatedAt)
-    .filter(hasValidTimestamp)
-    .sort((a, b) => new Date(b) - new Date(a))[0] || null;
-
-  return {
-    totalAnimals,
-    milkingCount,
-    dryCount,
-    averageAgeMonths,
-    latestCalved,
-    latestUpdatedAt,
-  };
-}
 
 // ─────────────────────────────────────────────────────────────────────────
 // MAIN COMPONENT
@@ -160,11 +51,21 @@ export default function HerdRegistry() {
   const [controlsOpen, setControlsOpen] = useState(false);
   const [herdState, setHerdState] = useState(INITIAL_HERD);
   const [isAddOpen, setIsAddOpen] = useState(false);
+  const [isEditOpen, setIsEditOpen] = useState(false);
   const [successMessage, setSuccessMessage] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
   const [showError, setShowError] = useState(false);
   const [formErrors, setFormErrors] = useState({});
+  const [editFormErrors, setEditFormErrors] = useState({});
+  const [editingCow, setEditingCow] = useState(null);
+  const [editCow, setEditCow] = useState({
+    tagNumber: '',
+    name: '',
+    breed: '',
+    dateOfBirth: '',
+  });
   const [isSaving, setIsSaving] = useState(false);
+  const [isEditSaving, setIsEditSaving] = useState(false);
   const searchInputRef = useRef(null);
   const confirmation = useConfirmation();
 
@@ -213,16 +114,26 @@ export default function HerdRegistry() {
       if (event.key === 'Escape' && isAddOpen) {
         handleCloseModal();
       }
+      if (event.key === 'Escape' && isEditOpen) {
+        handleCloseEditModal();
+      }
     };
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isAddOpen]);
+  }, [isAddOpen, isEditOpen]);
 
   // Validation schema
   const validationSchema = {
     tagNumber: [ValidationRules.required, ValidationRules.minLength(3)],
     dateOfBirth: [ValidationRules.required, ValidationRules.pastDate],
+  };
+
+  const canonicalizeTagNumber = (value = '') => {
+    const normalized = String(value).trim().toUpperCase();
+    if (!normalized) return '';
+    if (/^C-/.test(normalized)) return normalized;
+    return `C-${normalized}`;
   };
 
   // Handlers
@@ -243,7 +154,7 @@ export default function HerdRegistry() {
     try {
       setIsSaving(true);
 
-      const tagNumber = newCow.tagNumber.trim().toUpperCase();
+      const tagNumber = canonicalizeTagNumber(newCow.tagNumber);
 
       // Client-side check for immediate feedback, backend will enforce uniqueness definitively.
       if (herdState.some((c) => c.id === tagNumber)) {
@@ -290,10 +201,10 @@ export default function HerdRegistry() {
     }
   };
 
-  const handleDeleteCow = async (cowId, cowName) => {
+  const handleDeleteCow = async (cowId, cowName, cowDisplayId = cowId) => {
     const confirmed = await confirmation.confirm({
       title: 'Delete Animal?',
-      message: `Are you sure you want to remove ${cowName} (${cowId}) from your herd? This action cannot be undone.`,
+      message: `Are you sure you want to remove ${cowName} (${cowDisplayId}) from your herd? This action cannot be undone.`,
       type: 'danger',
       confirmText: 'Delete',
       cancelText: 'Keep',
@@ -313,9 +224,9 @@ export default function HerdRegistry() {
         createAuditEntry({
           action: 'delete',
           recordType: 'cow',
-          recordId: cowId,
+          recordId: cowDisplayId,
           userName: 'You',
-          notes: `Deleted animal: ${cowName} (${cowId})`,
+          notes: `Deleted animal: ${cowName} (${cowDisplayId})`,
         })
       );
 
@@ -335,6 +246,87 @@ export default function HerdRegistry() {
     setNewCow({ tagNumber: '', name: '', breed: '', dateOfBirth: '', hasCalved: false });
     setFormErrors({});
     setShowError(false);
+  };
+
+  const handleOpenEdit = (cow) => {
+    setEditingCow(cow);
+    setEditCow({
+      tagNumber: cow.id ?? '',
+      name: cow.name ?? '',
+      breed: cow.breed ?? '',
+      dateOfBirth: cow.dateOfBirth ?? '',
+    });
+    setEditFormErrors({});
+    setShowError(false);
+    setIsEditOpen(true);
+  };
+
+  const handleCloseEditModal = () => {
+    setIsEditOpen(false);
+    setEditingCow(null);
+    setEditCow({ tagNumber: '', name: '', breed: '', dateOfBirth: '' });
+    setEditFormErrors({});
+  };
+
+  const handleEditCow = async (event) => {
+    event.preventDefault();
+    setEditFormErrors({});
+    setShowError(false);
+
+    const errors = validateForm(editCow, validationSchema);
+    if (Object.keys(errors).length > 0) {
+      setEditFormErrors(errors);
+      setErrorMessage(getFirstErrorMessage(errors));
+      setShowError(true);
+      return;
+    }
+
+    const routeId = getCowRouteId(editingCow);
+    if (!routeId) {
+      setErrorMessage('Failed to resolve animal record id for update.');
+      setShowError(true);
+      return;
+    }
+
+    try {
+      setIsEditSaving(true);
+
+      const payload = {
+        tagNumber: canonicalizeTagNumber(editCow.tagNumber),
+        name: editCow.name.trim() || 'Unnamed',
+        breed: editCow.breed.trim() || 'Foundation',
+        dateOfBirth: editCow.dateOfBirth,
+      };
+
+      const updated = await herdApi.update(routeId, payload);
+      const normalizedUpdatedCow = normalizeHerdCow(updated, editingCow ?? {});
+
+      await queryClient.invalidateQueries({ queryKey: ['herd-registry', tenantId, farmId] });
+
+      logToAuditTrail(
+        createAuditEntry({
+          action: 'update',
+          recordType: 'cow',
+          recordId: normalizedUpdatedCow.id,
+          userName: 'You',
+          notes: `Updated animal: ${normalizedUpdatedCow.name} (${normalizedUpdatedCow.id})`,
+        })
+      );
+
+      setSuccessMessage(`Updated ${normalizedUpdatedCow.id} - ${normalizedUpdatedCow.name}`);
+      handleCloseEditModal();
+    } catch (error) {
+      console.error('Error editing cow:', error);
+      setErrorMessage(getApiErrorMessage(error, 'Failed to update animal. Please try again.'));
+      setShowError(true);
+    } finally {
+      setIsEditSaving(false);
+    }
+  };
+
+  const getCowRouteId = (cow) => {
+    const routeId = cow?.recordId ?? cow?.id;
+    return String(routeId ?? '').trim();
   };
 
   const handleClearFilters = () => {
@@ -397,7 +389,7 @@ export default function HerdRegistry() {
 
       {/* ── ALERTS ── */}
       {showError && (
-        <div className="fixed top-4 right-4 z-50 w-[min(92vw,430px)]">
+        <div className="fixed top-4 right-4 z-[60] w-[min(92vw,430px)]">
           <AlertBanner
             type="error"
             title="Error"
@@ -409,7 +401,7 @@ export default function HerdRegistry() {
       )}
 
       {successMessage && (
-        <div className="fixed top-4 right-4 z-50 w-[min(92vw,430px)]">
+        <div className="fixed top-4 right-4 z-[60] w-[min(92vw,430px)]">
           <AlertBanner
             type="success"
             title="Success"
@@ -633,11 +625,14 @@ export default function HerdRegistry() {
                       </td>
                     </tr>
                   )
-                  : visibleHerd.map((cow) => (
-                    <tr key={cow.id} className="transition-colors hover:bg-surface-raised/80">
+                  : visibleHerd.map((cow) => {
+                    const routeId = getCowRouteId(cow);
+
+                    return (
+                    <tr key={`${cow.id}-${routeId || 'row'}`} className="transition-colors hover:bg-surface-raised/80">
                       <td className="px-3 py-2.5">
                         <Link
-                          to={`/operations/animal/${cow.id}`}
+                          to={`/operations/animal/${routeId}`}
                           className="font-sans font-black text-brand hover:underline"
                         >
                           {cow.id}
@@ -676,7 +671,7 @@ export default function HerdRegistry() {
                       <td className="px-3 py-2.5 text-right">
                         <div className="flex items-center justify-end gap-2">
                           <Link
-                            to={`/operations/animal/${cow.id}`}
+                            to={`/operations/animal/${routeId}`}
                             className="btn-command gap-2 px-3 py-2 text-[11px]"
                             aria-label={`View record for ${cow.name}`}
                           >
@@ -684,7 +679,16 @@ export default function HerdRegistry() {
                           </Link>
                           <button
                             type="button"
-                            onClick={() => handleDeleteCow(cow.id, cow.name)}
+                            onClick={() => handleOpenEdit(cow)}
+                            className="btn-secondary gap-1 px-2 py-2 text-[11px]"
+                            aria-label={`Edit ${cow.name}`}
+                            title={`Edit ${cow.name}`}
+                          >
+                            <Pencil size={14} />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteCow(routeId, cow.name, cow.id)}
                             className="btn-danger gap-1 px-2 py-2 text-[11px]"
                             aria-label={`Delete ${cow.name}`}
                             title={`Delete ${cow.name} from herd`}
@@ -694,7 +698,8 @@ export default function HerdRegistry() {
                         </div>
                       </td>
                     </tr>
-                  ))}
+                    );
+                  })}
             </tbody>
           </table>
         </div>
@@ -819,6 +824,105 @@ export default function HerdRegistry() {
               aria-busy={isSaving}
             >
               {isSaving ? 'Saving...' : 'Save Animal'}
+            </button>
+          </div>
+        </form>
+      </Modal>
+
+      <Modal
+        isOpen={isEditOpen}
+        onClose={handleCloseEditModal}
+        title="Edit Animal"
+        subtitle="Update cow details in your herd registry"
+      >
+        <form className="space-y-4" onSubmit={handleEditCow}>
+          <div>
+            <label className="block text-xs font-bold uppercase text-ink-muted mb-1">
+              Ear Tag Number *
+            </label>
+            <input
+              type="text"
+              className={`input-machined w-full ${editFormErrors.tagNumber ? 'border-rose-300 bg-rose-50' : ''}`}
+              value={editCow.tagNumber}
+              onChange={(e) => {
+                setEditCow({ ...editCow, tagNumber: e.target.value });
+                if (editFormErrors.tagNumber) setEditFormErrors({ ...editFormErrors, tagNumber: null });
+              }}
+              placeholder="e.g. C-108"
+              aria-label="Ear tag number"
+              aria-invalid={!!editFormErrors.tagNumber}
+              aria-describedby={editFormErrors.tagNumber ? 'edit-tag-number-error' : undefined}
+            />
+            {editFormErrors.tagNumber && (
+              <p id="edit-tag-number-error" className="mt-1 text-xs text-rose-600 flex items-center gap-1">
+                <AlertCircle size={12} /> {editFormErrors.tagNumber}
+              </p>
+            )}
+          </div>
+
+          <div>
+            <label className="block text-xs font-bold uppercase text-ink-muted mb-1">Name</label>
+            <input
+              type="text"
+              className="input-machined w-full"
+              value={editCow.name}
+              onChange={(e) => setEditCow({ ...editCow, name: e.target.value })}
+              placeholder="Optional (e.g. Luna)"
+              aria-label="Animal name"
+            />
+          </div>
+
+          <div>
+            <label className="block text-xs font-bold uppercase text-ink-muted mb-1">
+              Breed
+            </label>
+            <input
+              type="text"
+              className="input-machined w-full"
+              value={editCow.breed}
+              onChange={(e) => setEditCow({ ...editCow, breed: e.target.value })}
+              placeholder="Optional (e.g. Friesian)"
+              aria-label="Breed"
+            />
+          </div>
+
+          <div>
+            <label className="block text-xs font-bold uppercase text-ink-muted mb-1">Date of Birth *</label>
+            <input
+              type="date"
+              className={`input-machined w-full ${editFormErrors.dateOfBirth ? 'border-rose-300 bg-rose-50' : ''}`}
+              value={editCow.dateOfBirth}
+              onChange={(e) => {
+                setEditCow({ ...editCow, dateOfBirth: e.target.value });
+                if (editFormErrors.dateOfBirth) setEditFormErrors({ ...editFormErrors, dateOfBirth: null });
+              }}
+              aria-label="Date of birth"
+              aria-invalid={!!editFormErrors.dateOfBirth}
+              aria-describedby={editFormErrors.dateOfBirth ? 'edit-date-of-birth-error' : undefined}
+            />
+            {editFormErrors.dateOfBirth && (
+              <p id="edit-date-of-birth-error" className="mt-1 text-xs text-rose-600 flex items-center gap-1">
+                <AlertCircle size={12} /> {editFormErrors.dateOfBirth}
+              </p>
+            )}
+          </div>
+
+          <div className="flex items-center justify-end gap-3 pt-2 border-t border-ink/10">
+            <button
+              type="button"
+              onClick={handleCloseEditModal}
+              disabled={isEditSaving}
+              className="btn-secondary"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={isEditSaving}
+              className="btn-command disabled:opacity-50"
+              aria-busy={isEditSaving}
+            >
+              {isEditSaving ? 'Saving...' : 'Save Changes'}
             </button>
           </div>
         </form>

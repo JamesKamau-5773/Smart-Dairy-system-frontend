@@ -7,6 +7,8 @@ import { financeApi, productionApi, safetyApi } from "../../lib/backendApi";
 import { Plus, Beaker, AlertTriangle, ShieldCheck, Search, Filter, RotateCcw, ChevronDown, Pencil, Trash2 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import FastMilkLog from "../../components/operations/FastMilkLog";
+import { toNormalizedSessionLabel } from "../../lib/milkUtils";
+import { formatDate } from "../../lib/herdUtils";
 import { Link } from "react-router-dom";
 
 const AMOUNT_FIELD_CANDIDATES = [
@@ -106,6 +108,7 @@ export default function YieldLog() {
   const queryClient = useQueryClient();
   const [showFastLog, setShowFastLog] = useState(false);
   const [selectedRecord, setSelectedRecord] = useState(null);
+  const [fastLogInitialDate, setFastLogInitialDate] = useState('');
   const [fastLogMode, setFastLogMode] = useState('create');
   const [milkRows, setMilkRows] = useState([]);
   const [filtersOpen, setFiltersOpen] = useState(false);
@@ -126,10 +129,18 @@ export default function YieldLog() {
     queryFn: () => productionApi.listYield(),
   });
 
+  // Fetch the production summary which now includes accurate financial data
+  const { data: productionSummary, isLoading: isLoadingProductionSummary } = useQuery({
+    queryKey: ['production-summary', tenantId, farmId],
+    queryFn: () => productionApi.summary(), // Calls GET /api/production/summary
+    enabled: !!tenantId && !!farmId,
+  });
+
   const normalizeYieldRow = (row) => {
     const amountCandidate = extractAmountCandidate(row);
     const parsedAmount = parseAmountValue(amountCandidate.value);
     const hasValidAmount = Number.isFinite(parsedAmount);
+    const timestamp = row?.timestamp ?? row?.createdAt ?? row?.created_at;
 
     if (!amountCandidate.found) {
       logDevWarning('Yield row missing expected amount field.', {
@@ -149,14 +160,15 @@ export default function YieldLog() {
 
     return {
       id: row?.id ?? row?.yield_id ?? row?.recordId ?? `milk-${Date.now()}`,
-      date: row?.date ?? row?.milkingDate ?? row?.created_at ?? new Date().toISOString().slice(0, 10),
-      time: row?.time ?? (row?.createdAt ? new Date(row.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })),
-      milker: row?.milker ?? row?.created_by ?? 'SYSTEM',
-      animalRefId: row?.animal_id ?? row?.animalId ?? row?.cow_id ?? row?.cowId ?? row?.cow ?? null,
-      cowId: row?.cowId ?? row?.cow_id ?? row?.animal_id ?? '',
-      cowName: row?.cowName ?? row?.animal_name ?? row?.animalName ?? row?.name ?? '',
+      date: row?.date ?? row?.milkingDate ?? row?.milking_date ?? row?.entry_date ?? (timestamp ? new Date(timestamp).toISOString().slice(0, 10) : new Date().toISOString().slice(0, 10)),
+      time: timestamp ? new Date(timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : (row?.time ?? new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })),
+      milker: row?.milker_name ?? row?.milker ?? row?.created_by ?? 'SYSTEM',
+      animalRefId: row?.cow_tag ?? row?.cowTag ?? row?.animal_id ?? row?.animalId ?? row?.cow_id ?? row?.cowId ?? row?.cow ?? null,
+      cowId: row?.cow_tag ?? row?.cowTag ?? row?.cowId ?? row?.cow_id ?? row?.animal_id ?? '',
+      cowName: row?.cowName ?? row?.cow_name ?? row?.animal_name ?? row?.animalName ?? row?.name ?? '',
       amountValue: hasValidAmount ? parsedAmount : null,
       amount: hasValidAmount ? parsedAmount.toFixed(1) : '--',
+      session: row?.session ?? row?.milking_session ?? row?.milkingSession ?? 'morning',
       status: normalizeStatus(row?.status),
     };
   };
@@ -203,13 +215,19 @@ export default function YieldLog() {
       typeof row.amountValue === 'number' ? sum + row.amountValue : sum
     ), 0);
 
+    // Extract financial data from the production summary
+    const revenueToday = productionSummary?.revenue_total_kes ?? 0;
+    const netMarginToday = productionSummary?.net_margin_kes ?? 0;
+
     return {
       verified,
       pending,
       flagged,
       totalVolume: totalVolume.toFixed(1),
+      revenueToday: revenueToday.toLocaleString(undefined, { minimumFractionDigits: 2 }),
+      netMarginToday: netMarginToday.toLocaleString(undefined, { minimumFractionDigits: 2 }),
     };
-  }, [milkRows]);
+  }, [milkRows, productionSummary]);
 
   const summaryTone = {
     brand: 'text-brand',
@@ -260,38 +278,45 @@ export default function YieldLog() {
     });
   }, [hasHardlocksError, hardlocksError, tenantId, farmId]);
 
-  const handleFastLogSaved = () => {
+  const handleFastLogSaved = (animalRefId) => {
     queryClient.invalidateQueries({ queryKey: QUERY_KEYS.YIELD_SUMMARY(tenantId, farmId) });
     queryClient.invalidateQueries({ queryKey: QUERY_KEYS.YIELD_TREND(tenantId, farmId) });
     queryClient.invalidateQueries({ queryKey: ['production-yield-rows', tenantId, farmId] });
+    if (animalRefId) {
+      queryClient.invalidateQueries({ queryKey: ['milk-history', tenantId, farmId, animalRefId] });
+    }
   };
 
   const openCreateLog = () => {
     setFastLogMode('create');
     setSelectedRecord(null);
+    setFastLogInitialDate(filters.date || new Date().toISOString().slice(0, 10));
     setShowFastLog(true);
   };
 
   const openEditLog = (row) => {
     setFastLogMode('edit');
     setSelectedRecord(row);
+    setFastLogInitialDate('');
     setShowFastLog(true);
   };
 
   const handleLogSave = (savedRecord) => {
-    handleFastLogSaved();
+    const animalRefId = savedRecord?.animal_id || savedRecord?.animalId || savedRecord?.cow_id || savedRecord?.cowId || selectedRecord?.animalRefId || selectedRecord?.cowId || null;
+    handleFastLogSaved(animalRefId);
     setMilkRows((prev) => {
       const savedAmount = parseAmountValue(savedRecord?.volume ?? savedRecord?.amount ?? selectedRecord?.amount ?? null);
       const normalizedRow = {
-        id: savedRecord?.id || selectedRecord?.id || `milk-${Date.now()}`,
-        date: savedRecord?.date || savedRecord?.milkingDate || selectedRecord?.date || new Date().toISOString().slice(0, 10),
+        id: savedRecord?.id || savedRecord?.log_id || selectedRecord?.id || `milk-${Date.now()}`,
+        date: savedRecord?.date || savedRecord?.milkingDate || savedRecord?.milking_date || selectedRecord?.date || new Date().toISOString().slice(0, 10),
         time: selectedRecord?.time || new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-        milker: selectedRecord?.milker || 'MWANGI',
-        animalRefId: savedRecord?.animal_id || savedRecord?.animalId || savedRecord?.cow_id || savedRecord?.cowId || selectedRecord?.animalRefId || selectedRecord?.cowId || null,
-        cowId: savedRecord?.cowId || selectedRecord?.cowId || '',
-        cowName: selectedRecord?.cowName || 'Updated Cow',
+        milker: savedRecord?.milker_name || savedRecord?.milker || selectedRecord?.milker || 'SYSTEM',
+        animalRefId,
+        cowId: savedRecord?.cow_tag || savedRecord?.cowTag || savedRecord?.cow_id || savedRecord?.cowId || selectedRecord?.cowId || '',
+        cowName: savedRecord?.cow_name || savedRecord?.cowName || selectedRecord?.cowName || '',
         amountValue: Number.isFinite(savedAmount) ? savedAmount : null,
         amount: Number.isFinite(savedAmount) ? savedAmount.toFixed(1) : '--',
+        session: savedRecord?.session || selectedRecord?.session || 'morning',
         status: selectedRecord?.status || 'Pending',
       };
 
@@ -304,7 +329,7 @@ export default function YieldLog() {
   };
 
   const handleLogDelete = (deletedRecord) => {
-    handleFastLogSaved();
+    handleFastLogSaved(deletedRecord?.animalRefId || selectedRecord?.animalRefId);
     setMilkRows((prev) => prev.filter((row) => row.id !== (deletedRecord?.id || selectedRecord?.id)));
   };
 
@@ -313,7 +338,7 @@ export default function YieldLog() {
 
     try {
       await productionApi.deleteYield(row.id);
-      handleFastLogSaved();
+      handleFastLogSaved(row.animalRefId);
       setMilkRows((prev) => prev.filter((entry) => entry.id !== row.id));
     } catch (error) {
       console.error('Failed to delete milk record', error);
@@ -326,7 +351,7 @@ export default function YieldLog() {
       setMilkRows((prev) =>
         prev.map((entry) => (entry.id === row.id ? { ...entry, status: 'Verified' } : entry))
       );
-      handleFastLogSaved();
+      handleFastLogSaved(row.animalRefId);
     } catch (error) {
       console.error('Failed to verify milk record', error);
     }
@@ -378,6 +403,7 @@ export default function YieldLog() {
         <FastMilkLog
           mode={fastLogMode}
           record={selectedRecord}
+          initialDate={fastLogInitialDate}
           onClose={() => setShowFastLog(false)}
           onSaveSuccess={handleLogSave}
           onDeleteSuccess={handleLogDelete}
@@ -423,6 +449,11 @@ export default function YieldLog() {
           >
             <RotateCcw size={14} /> Reset filters
           </button>
+        </div>
+
+        <div className="flex items-center gap-2 text-xs text-ink-muted">
+          <Search size={14} />
+          Showing all {filteredMilkRows.length} of {milkRows.length} records
         </div>
 
         {filtersOpen && (
@@ -483,11 +514,6 @@ export default function YieldLog() {
                 />
               </label>
             </div>
-
-            <div className="flex items-center gap-2 text-xs text-ink-muted">
-              <Search size={14} />
-              Showing {filteredMilkRows.length} of {milkRows.length} records
-            </div>
           </div>
         )}
       </div>
@@ -496,7 +522,8 @@ export default function YieldLog() {
         <table className="w-full text-left border-collapse">
           <thead>
             <tr className="bg-brand text-surface">
-              <th className="p-5 font-sans text-xs font-semibold uppercase tracking-[0.12em] text-surface/95">Time</th>
+              <th className="p-5 font-sans text-xs font-semibold uppercase tracking-[0.12em] text-surface/95">Date</th>
+              <th className="p-5 font-sans text-xs font-semibold uppercase tracking-[0.12em] text-surface/95">Session</th>
               <th className="p-5 font-sans text-xs font-semibold uppercase tracking-[0.12em] text-surface/95">Milker</th>
               <th className="p-5 font-sans text-xs font-semibold uppercase tracking-[0.12em] text-surface/95">Cow ID</th>
               <th className="p-5 font-sans text-xs font-semibold uppercase tracking-[0.12em] text-right text-surface/95">Amount</th>
@@ -507,7 +534,8 @@ export default function YieldLog() {
           <tbody className="divide-y-2 divide-ink/5">
             {filteredMilkRows.map((row) => (
               <tr key={row.id} style={{ animationDelay: '0.1s' }} className="animate-stagger group hover:bg-surface-raised transition-colors">
-                <td className="p-5 font-sans text-xs text-ink-muted">{row.time}</td>
+                <td className="p-5 font-sans text-xs text-ink-muted">{formatDate(row.date)}</td>
+                <td className="p-5 font-sans text-xs font-medium text-ink">{toNormalizedSessionLabel(row.session)}</td>
                 <td className="p-5 font-sans text-xs font-medium text-ink">{row.milker}</td>
                 <td className="p-5">
                   <div className="flex items-center gap-3">
@@ -566,7 +594,7 @@ export default function YieldLog() {
             ))}
             {filteredMilkRows.length === 0 && (
               <tr>
-                <td className="p-6 text-center text-ink-muted" colSpan={6}>
+                <td className="p-6 text-center text-ink-muted" colSpan={7}>
                   No milk log entries match the selected filters.
                 </td>
               </tr>

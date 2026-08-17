@@ -14,12 +14,10 @@ const DIAGNOSTIC_CATEGORIES = [
 export default function MilkDropReports() {
   const queryClient = useQueryClient();
   const { tenantId, farmId } = useTenant();
-  
-  // FIXED: State must be declared at the top of the component
+
   const [investigateModal, setInvestigateModal] = useState({ isOpen: false, log: null });
   const [selectedReasons, setSelectedReasons] = useState([]);
   const [managerNotes, setManagerNotes] = useState('');
-
   const { data: reportsData } = useQuery({
     queryKey: ['milk-drop-reports', tenantId, farmId], 
     queryFn: () => productionApi.listMilkDropAlerts(),
@@ -29,7 +27,7 @@ export default function MilkDropReports() {
   const reports = Array.isArray(reportsData)
     ? reportsData.map((report, index) => ({
       id: report.id ?? report.alert_id ?? report.alertId ?? `alert-${index}`,
-        date_time: report.date_time ?? report.createdAt ?? report.created_at ?? new Date().toISOString(),
+      date_time: report.date_time ?? report.createdAt ?? report.created_at ?? new Date().toISOString(),
         cow_tag: report.cow_tag ?? report.cowTag ?? report.cow_id ?? report.cowId ?? 'Unknown',
         missing_milk: Number(report.missing_milk ?? report.missingMilk ?? report.delta_liters ?? report.deltaLiters ?? 0),
         status: report.status ?? 'Pending',
@@ -96,9 +94,15 @@ export default function MilkDropReports() {
       </div>
 
       <div className="bg-surface border border-ink/10 rounded-lg overflow-x-auto shadow-sm">
-        {/* Table content logic remains as your previous version */}
         <table className="w-full text-left text-sm whitespace-nowrap">
-          {/* Table headers and rows */}
+          <thead>
+            <tr className="border-b border-ink/10 text-xs font-semibold uppercase tracking-wide text-ink/50">
+              <th className="px-6 py-3">Date</th>
+              <th className="px-6 py-3">Cow</th>
+              <th className="px-6 py-3">Missing Milk</th>
+              <th className="px-6 py-3">Status</th>
+            </tr>
+          </thead>
           <tbody className="divide-y divide-ink/5">
             {reports.map((report) => (
               <tr key={report.id} className="hover:bg-brand/5">
@@ -110,6 +114,13 @@ export default function MilkDropReports() {
                 </td>
               </tr>
             ))}
+            {reports.length === 0 && (
+              <tr>
+                <td className="px-6 py-6 text-center text-ink/50" colSpan={4}>
+                  No milk drop alerts recorded yet.
+                </td>
+              </tr>
+            )}
           </tbody>
         </table>
       </div>

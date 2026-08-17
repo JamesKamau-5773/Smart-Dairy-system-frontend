@@ -24,6 +24,7 @@ import Modal from '../../components/ui/Modal';
 import { createAuditEntry, getRelativeTime, logToAuditTrail } from '../../lib/audit';
 import { formatValidationErrors, getFirstErrorMessage, validateForm } from '../../lib/validation';
 import { herdApi, medicalApi } from '../../lib/backendApi';
+import { normalizeHerdCow } from '../../lib/herdUtils';
 import { useTenant } from '../../hooks/useTenant';
 
 const EMPTY_FORM = {
@@ -177,16 +178,15 @@ export default function VetRecords() {
     const seen = new Set();
 
     return herdData
-      .map((cow) => {
-        const tag = String(cow?.id ?? cow?.tagNumber ?? cow?.tag_number ?? '').trim();
-        const name = String(cow?.name ?? '').trim();
-        const key = `${tag.toLowerCase()}::${name.toLowerCase()}`;
-        if (!tag && !name) return null;
-        if (seen.has(key)) return null;
+      .map((cow) => normalizeHerdCow(cow))
+      .map((cow) => ({ tag: cow.id, recordId: cow.recordId, name: cow.name }))
+      .filter((cow) => cow.tag || cow.name)
+      .filter((cow) => {
+        const key = `${cow.tag.toLowerCase()}::${cow.name.toLowerCase()}`;
+        if (seen.has(key)) return false;
         seen.add(key);
-        return { tag, name };
+        return true;
       })
-      .filter(Boolean)
       .sort((a, b) => `${a.tag} ${a.name}`.localeCompare(`${b.tag} ${b.name}`));
   }, [herdData]);
 
@@ -251,9 +251,19 @@ export default function VetRecords() {
 
     setIsSaving(true);
 
+    // Resolve whatever the vet typed/selected (tag or name) to the cow's real
+    // backend record ID, so this links to the same animal the Cow Register /
+    // Animal Passport pages use — sending the raw name would leave the record
+    // orphaned from that animal's timeline.
+    const matchedCow = tenantCows.find(
+      (cow) => cow.tag.toLowerCase() === normalizedCowInput || cow.name.toLowerCase() === normalizedCowInput
+    );
+    const resolvedCowId = matchedCow?.recordId || matchedCow?.tag || form.cowTag;
+
     const nextRecord = {
       date: form.date,
-      cow: form.cowTag,
+      cow: resolvedCowId,
+      cow_name: matchedCow?.name || undefined,
       reason: form.symptoms,
       diagnosis: form.diagnosis,
       meds: form.medications,
@@ -272,7 +282,13 @@ export default function VetRecords() {
         { id: editingRecordId, payload: nextRecord },
         {
           onSuccess: (savedRecord) => {
-            logToAuditTrail(createAuditEntry('update', 'medical-record', savedRecord, form.vet));
+            logToAuditTrail(createAuditEntry({
+              action: 'update',
+              recordType: 'medical-record',
+              recordId: savedRecord?.id ?? editingRecordId,
+              userName: form.vet || 'You',
+              notes: `Updated vet visit: ${form.diagnosis}`,
+            }));
           },
         }
       );
@@ -281,7 +297,13 @@ export default function VetRecords() {
 
     createRecordMutation.mutate(nextRecord, {
       onSuccess: (savedRecord) => {
-        logToAuditTrail(createAuditEntry('create', 'medical-record', savedRecord, form.vet));
+        logToAuditTrail(createAuditEntry({
+          action: 'create',
+          recordType: 'medical-record',
+          recordId: savedRecord?.id ?? null,
+          userName: form.vet || 'You',
+          notes: `Logged vet visit: ${form.diagnosis}`,
+        }));
       },
     });
   };
@@ -315,7 +337,7 @@ export default function VetRecords() {
   return (
     <div className="animate-reveal space-y-6">
       {showError && (
-        <div className="fixed right-4 top-4 z-50 w-[min(92vw,440px)]">
+        <div className="fixed right-4 top-4 z-[60] w-[min(92vw,440px)]">
           <AlertBanner
             type="danger"
             title="Record not saved"
@@ -326,7 +348,7 @@ export default function VetRecords() {
       )}
 
       {showSuccess && (
-        <div className="fixed right-4 top-4 z-50 w-[min(92vw,440px)]">
+        <div className="fixed right-4 top-4 z-[60] w-[min(92vw,440px)]">
           <AlertBanner
             type="success"
             title="Medical record saved"

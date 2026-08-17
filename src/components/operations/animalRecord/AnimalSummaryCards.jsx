@@ -1,5 +1,5 @@
 import { Skeleton } from '../../ui';
-import { calculateDaysInMilk, getAvatarLabel } from './animalRecordUtils';
+import { getAvatarLabel } from './animalRecordUtils';
 
 export default function AnimalSummaryCards({ animal, isLoading }) {
   const displayAnimal = animal ?? {};
@@ -52,7 +52,7 @@ export default function AnimalSummaryCards({ animal, isLoading }) {
               {isLoading ? (
                 <Skeleton className="h-6 w-12" />
               ) : (
-                <span className="text-xl font-black text-ink-strong">{calculateDaysInMilk(displayAnimal.lastCalved) ?? 'N/A'}</span>
+                <span className="text-xl font-black text-ink-strong">{displayAnimal.daysInMilk ?? 'N/A'}</span>
               )}
               {!isLoading && <span className="text-xs font-bold text-ink-muted">Days</span>}
             </div>
@@ -91,7 +91,7 @@ export default function AnimalSummaryCards({ animal, isLoading }) {
             {isLoading ? (
               <Skeleton className="h-4 w-8" />
             ) : (
-              <span className="text-sm font-bold text-ink-strong">{displayAnimal.daysOpen}</span>
+              <span className="text-sm font-bold text-ink-strong">{displayAnimal.daysOpen ?? 'N/A'}</span>
             )}
             {!isLoading && <span className="text-xs font-bold text-ink-muted">Days</span>}
           </div>

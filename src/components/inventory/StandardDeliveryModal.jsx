@@ -1,39 +1,55 @@
 import React, { useState, useEffect } from 'react';
 import { X, ClipboardList, Search, Minus, Plus, CheckCircle2, PackageCheck } from 'lucide-react';
+import { useQuery } from '@tanstack/react-query';
+import { inventoryApi } from '../../lib/backendApi';
 
-export default function StandardDeliveryModal({ isOpen, onClose, item, onRestock }) {
+export default function StandardDeliveryModal({ isOpen, onClose, item, onRestock, tenantId, farmId }) {
   const [amount, setAmount] = useState(0);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [selectedProduct, setSelectedProduct] = useState('');
+  const [stagedItem, setStagedItem] = useState(null);
+  const [submitError, setSubmitError] = useState('');
 
   // Update selected product when the modal opens with a specific item
   useEffect(() => {
-    if (item?.name) {
-      setSelectedProduct(item.name);
-      setSearchQuery(item.name);
-    } else {
-      setSelectedProduct('');
-      setSearchQuery('');
-    }
+    setStagedItem(item || null);
     setAmount(0); // Reset amount on open
+    setSubmitError('');
   }, [item, isOpen]);
+
+  // Fetch critical items directly from the new backend endpoint
+  const { data: quickSelectOptions = [], isLoading } = useQuery({
+    queryKey: ['quick-restock-items', tenantId, farmId],
+    queryFn: () => inventoryApi.getQuickRestockItems(),
+    // Only fetch when the modal is open and we are in the general restock mode (no specific item passed)
+    enabled: isOpen && !item,
+    staleTime: 5 * 60 * 1000, // Cache for 5 minutes
+  });
 
   if (!isOpen) return null;
 
-  const quickSelectOptions = [
-    { name: 'Dairy Meal', stock: '120 KG' },
-    { name: 'Maize Germ', stock: '850 KG' },
-    { name: 'Silage', stock: '4500 KG' },
-  ];
+  // `stagedItem` is synchronized in an effect, so render directly from the
+  // caller's item during the first open render.
+  const selectedItem = item ?? stagedItem;
+  const selectedStock = selectedItem?.stock ?? {};
 
-  const handleConfirm = () => {
-    // If an onRestock callback is provided and we have a valid item and amount, call it.
-    if (onRestock && item && amount > 0) {
-      onRestock(item, amount);
-    } else {
-      console.log(`Logging standard batch: ${amount}kg of ${selectedProduct}`);
+  const handleQuickSelect = (option) => {
+    setStagedItem(option);
+  };
+
+  const handleConfirm = async () => {
+    if (!onRestock || !selectedItem || amount <= 0) {
+      return;
     }
-    onClose();
+
+    try {
+      await onRestock(selectedItem, amount);
+      onClose();
+    } catch (error) {
+      setSubmitError(
+        error?.response?.data?.error
+        ?? error?.response?.data?.message
+        ?? 'Could not record this delivery.'
+      );
+    }
   };
 
   const increaseAmount = (val) => setAmount((prev) => prev + val);
@@ -67,61 +83,54 @@ export default function StandardDeliveryModal({ isOpen, onClose, item, onRestock
                 <div>
                   <div className="flex items-center gap-2 mb-1">
                     <PackageCheck size={16} className="text-brand" />
-                    <span className="font-black text-brand text-lg">{item.name}</span>
+                    <span className="font-black text-brand text-lg">{selectedItem?.name ?? 'Selected resource'}</span>
                   </div>
                   <div className="text-[11px] font-bold text-slate-500 uppercase tracking-wider ml-6">
-                    SKU: {item.sku}
+                    SKU: {selectedItem?.sku ?? 'Not assigned'}
                   </div>
                 </div>
                 <div className="text-right">
                   <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Current Stock</div>
-                  <div className="font-black text-slate-700">{item.stock.value} {item.stock.unit}</div>
+                  <div className="font-black text-slate-700">
+                    {selectedStock.value ?? 0} {selectedStock.unit ?? selectedItem?.unit ?? 'units'}
+                  </div>
                 </div>
               </div>
             ) : (
               /* GENERAL RESTOCK VIEW (User clicked "Add to Feedstore" at the top) */
-              <>
-                <div className="grid grid-cols-3 gap-4 mb-4">
-                  {quickSelectOptions.map((opt) => {
-                    const isSelected = selectedProduct.includes(opt.name);
-                    return (
-                      <button
-                        key={opt.name}
-                        type="button"
-                        onClick={() => {
-                          setSelectedProduct(opt.name);
-                          setSearchQuery(opt.name);
-                        }}
-                        className={`text-left p-4 rounded-xl border-2 transition-all ${
-                          isSelected 
-                            ? 'border-brand bg-brand/5' 
-                            : 'border-slate-100 hover:border-slate-200 bg-white'
-                        }`}
-                      >
-                        <div className={`font-black text-sm mb-2 ${isSelected ? 'text-brand' : 'text-slate-800'}`}>
-                          {opt.name}
-                        </div>
-                        <div className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
-                          Stock: {opt.stock}
-                        </div>
-                      </button>
-                    );
-                  })}
-                </div>
-                <div className="relative">
-                  <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
-                  <input 
-                    type="text"
-                    value={searchQuery}
-                    onChange={(e) => {
-                      setSearchQuery(e.target.value);
-                      setSelectedProduct(e.target.value);
-                    }}
-                    placeholder="Search resources..." 
-                    className="w-full pl-11 pr-4 py-3.5 border border-slate-200 rounded-xl text-sm font-bold text-slate-700 outline-none focus:border-brand/50 transition-all shadow-sm"
-                  />
-                </div>
-              </>
+              <div className="quick-select-container mb-6">
+                <label className="text-[10px] font-black text-ink-muted uppercase tracking-widest mb-2 block">
+                  Priority Restock
+                </label>
+                
+                {isLoading ? (
+                  <div className="text-sm text-slate-400">Loading priorities...</div>
+                ) : quickSelectOptions.length === 0 ? (
+                  <div className="text-sm text-slate-400">All stock levels are healthy!</div>
+                ) : (
+                  <div className="flex flex-wrap gap-2">
+                    {quickSelectOptions.map((option) => {
+                      const isSelected = stagedItem?.id === option.id;
+                      return (
+                        <button
+                          key={option.id}
+                          onClick={() => handleQuickSelect(option)}
+                          className={`px-3 py-1.5 text-sm font-medium rounded-lg transition-colors flex items-center gap-1 border ${
+                            isSelected
+                              ? 'bg-rose-100 text-rose-800 border-rose-200'
+                              : 'bg-rose-50 hover:bg-rose-100 text-rose-700 border-rose-100'
+                          }`}
+                        >
+                          {option.name} 
+                          <span className="opacity-75">
+                            ({option.currentStock}{option.unit})
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
             )}
           </div>
 
@@ -144,7 +153,7 @@ export default function StandardDeliveryModal({ isOpen, onClose, item, onRestock
                 <span className="text-6xl font-black text-slate-800 tabular-nums tracking-tighter">
                   {amount}
                 </span>
-                <span className="text-xl font-bold text-slate-400">{item?.stock?.unit || 'units'}</span>
+                <span className="text-xl font-bold text-slate-400">{selectedStock.unit ?? selectedItem?.unit ?? 'units'}</span>
               </div>
 
               <button 
@@ -172,6 +181,7 @@ export default function StandardDeliveryModal({ isOpen, onClose, item, onRestock
                 + 70kg Bag
               </button>
             </div>
+            {submitError && <p className="mt-4 text-xs font-semibold text-danger">{submitError}</p>}
           </div>
         </div>
 
@@ -187,7 +197,7 @@ export default function StandardDeliveryModal({ isOpen, onClose, item, onRestock
           <button 
             type="button"
             onClick={handleConfirm}
-            disabled={amount === 0 || !selectedProduct}
+            disabled={amount === 0 || !selectedItem}
             className="flex items-center gap-2 px-6 py-3 rounded-xl font-black text-xs uppercase transition-all shadow-sm bg-brand text-white hover:bg-brand-dark disabled:bg-slate-200 disabled:text-slate-400 disabled:cursor-not-allowed"
           >
             <CheckCircle2 size={16} />

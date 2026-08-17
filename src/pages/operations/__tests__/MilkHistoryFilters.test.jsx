@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { deriveMilkSessionFromLoggedAt, filterMilkHistorySessions } from '../MilkHistory';
+import { deriveMilkSessionFromLoggedAt, filterMilkHistorySessions } from '../../../lib/milkUtils';
 
 describe('milk history filters', () => {
   const sessions = [

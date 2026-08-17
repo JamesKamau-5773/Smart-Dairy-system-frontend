@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import {
-  buildYieldSchedulePayload,
+  buildSchedulePayload,
   normalizeYieldTarget,
   isLactatingStatus,
-  summarizeYieldTargets,
+  summarizeTargets,
 } from '../animalYieldTargetService';
 
 describe('animalYieldTargetService helpers', () => {
@@ -35,7 +35,7 @@ describe('animalYieldTargetService helpers', () => {
       { cowId: '3', targetLiters: 20, isActive: true },
     ];
 
-    const payload = buildYieldSchedulePayload({
+    const payload = buildSchedulePayload({
       cows,
       targets,
       fallbackTargetLiters: 40,
@@ -54,7 +54,7 @@ describe('animalYieldTargetService helpers', () => {
   });
 
   it('falls back to herd-level target when no active targets exist', () => {
-    const payload = buildYieldSchedulePayload({
+    const payload = buildSchedulePayload({
       cows: [{ id: 1, current_status: 'DRY' }],
       targets: [],
       fallbackTargetLiters: 35.5,
@@ -82,7 +82,7 @@ describe('animalYieldTargetService helpers', () => {
       { cowId: '3', targetLiters: 10, isActive: false },
     ];
 
-    const summary = summarizeYieldTargets({ cows, targets });
+    const summary = summarizeTargets({ cows, targets });
 
     expect(summary.lactatingWithTarget).toHaveLength(1);
     expect(summary.lactatingMissingTarget).toHaveLength(1);

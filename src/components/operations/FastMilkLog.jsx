@@ -9,9 +9,15 @@ import AlertBanner from '../../components/ui/AlertBanner';
 import offlineQueue from '../../lib/offlineQueue';
 import { ArrowLeft, Droplets, CheckCircle2, AlertOctagon, Trash2, X } from 'lucide-react';
 
-const normalizeFormData = (record) => ({
+const todayIso = () => new Date().toISOString().slice(0, 10);
+
+const SESSION_OPTIONS = ['morning', 'midday', 'evening'];
+
+const normalizeFormData = (record, fallbackDate = todayIso()) => ({
   cowId: record?.cowId || '',
   volume: record?.volume ?? record?.amount ?? '',
+  date: record?.date || record?.milkingDate || record?.milking_date || fallbackDate,
+  session: SESSION_OPTIONS.includes(record?.session) ? record.session : 'morning',
 });
 
 /* =========================================================================
@@ -53,7 +59,7 @@ const FastMilkUI = ({
   return (
     <div className="w-full max-w-md mt-20 bg-white rounded-3xl shadow-2xl border border-ink/10 overflow-hidden relative animate-reveal">
       {message && (
-        <div className="fixed top-4 right-4 z-50 w-[min(92vw,430px)]">
+        <div className="fixed top-4 right-4 z-[60] w-[min(92vw,430px)]">
           <AlertBanner type={messageType} title="Fast Log" message={message} onDismiss={onDismissMessage} autoDismiss={6000} />
         </div>
       )}
@@ -112,6 +118,37 @@ const FastMilkUI = ({
           </div>
         </div>
 
+        <div className="grid grid-cols-2 gap-4">
+          <div className="space-y-2">
+            <label className="text-[11px] font-black text-ink-muted uppercase tracking-widest block">Date</label>
+            <input
+              type="date"
+              value={formData.date}
+              max={todayIso()}
+              onChange={(e) => setFormData({ ...formData, date: e.target.value })}
+              className="w-full bg-white border-2 border-ink/10 rounded-xl p-4 text-sm font-bold text-ink-strong focus:outline-none focus:border-brand focus:ring-4 focus:ring-brand/10 transition-all shadow-sm"
+              required
+            />
+          </div>
+          <div className="space-y-2">
+            <label className="text-[11px] font-black text-ink-muted uppercase tracking-widest block">Session</label>
+            <div className="grid grid-cols-3 gap-1 rounded-xl border-2 border-ink/10 bg-white p-1 shadow-sm">
+              {SESSION_OPTIONS.map((s) => (
+                <button
+                  key={s}
+                  type="button"
+                  onClick={() => setFormData({ ...formData, session: s })}
+                  className={`rounded-lg px-2 py-2.5 text-[11px] font-bold uppercase tracking-wide transition-colors ${
+                    formData.session === s ? 'bg-brand text-surface shadow-sm' : 'text-ink-muted hover:bg-ink/5 hover:text-ink'
+                  }`}
+                >
+                  {s}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+
         {isLocked && (
           <div className="p-3 rounded-lg bg-danger/10 border border-danger flex items-center gap-3 text-danger">
             <AlertOctagon size={20} />
@@ -150,7 +187,7 @@ const FastMilkUI = ({
               <Trash2 size={16} /> {isDeleting ? 'Deleting...' : 'Delete Record'}
             </button>
           )}
-          <button type="submit" disabled={!formData.cowId || !formData.volume || isLocked || isPending} className="flex-1 bg-brand text-surface font-black text-lg py-4 rounded-xl hover:bg-brand-dark disabled:opacity-70 transition-all active:scale-95 shadow-lg shadow-brand/70">
+          <button type="submit" disabled={!formData.cowId || !formData.volume || !formData.date || isLocked || isPending} className="flex-1 bg-brand text-surface font-black text-lg py-4 rounded-xl hover:bg-brand-dark disabled:opacity-70 transition-all active:scale-95 shadow-lg shadow-brand/70">
             {isPending ? 'Saving...' : isEditMode ? 'Update Record' : 'Save Record'}
           </button>
         </div>
@@ -164,10 +201,11 @@ const FastMilkUI = ({
    CONTAINER: logic-only (fetch, mutate, state)
 ========================================================================= */
 
-export default function FastMilkLog({ onClose, onSaveSuccess, onDeleteSuccess, mode = 'create', record = null } = {}) {
+export default function FastMilkLog({ onClose, onSaveSuccess, onDeleteSuccess, mode = 'create', record = null, initialDate = '' } = {}) {
   const navigate = useNavigate();
   const { tenantId, farmId } = useTenant();
-  const [formData, setFormData] = useState(() => normalizeFormData(record));
+  const defaultCreateDate = initialDate || todayIso();
+  const [formData, setFormData] = useState(() => normalizeFormData(record, defaultCreateDate));
   const [saveStatus, setSaveStatus] = useState(null);
   const [message, setMessage] = useState('');
   const [messageType, setMessageType] = useState('info');
@@ -211,21 +249,22 @@ export default function FastMilkLog({ onClose, onSaveSuccess, onDeleteSuccess, m
   const isLocked = !!formData.cowId && hardlocks.some(h => h.cow_id === formData.cowId || h.cow_id === formData.cowId.replace(/^C-?/i, ''));
 
   useEffect(() => {
-    setFormData(normalizeFormData(record));
+    setFormData(normalizeFormData(record, defaultCreateDate));
     setSaveStatus(null);
     setMessage('');
     setMessageType('info');
     setIsDeleting(false);
-  }, [record, mode]);
+  }, [record, mode, defaultCreateDate]);
 
   // Mutation with idempotency and robust error handling
   const mutation = useMutation({
     mutationFn: async (payload) => {
-      const date = payload.milkingDate || new Date().toISOString().slice(0, 10);
+      const date = payload.milking_date || payload.milkingDate || new Date().toISOString().slice(0, 10);
       const requestPayload = {
         cow_id: payload.cowId,
         amount: Number(payload.volume ?? payload.amount ?? 0),
         session: payload.session || 'morning',
+        milking_date: date,
         milkingDate: date,
       };
       const idempotencyKey = isEditMode
@@ -238,8 +277,14 @@ export default function FastMilkLog({ onClose, onSaveSuccess, onDeleteSuccess, m
 
       return productionApi.createYield(requestPayload, { headers: { 'Idempotency-Key': idempotencyKey } });
     },
-    onSuccess: (data) => {
-      const savedRecord = data?.received || data?.updated || data;
+    onSuccess: (data, variables) => {
+      const rawSavedRecord = data?.received || data?.updated || data;
+      // Backend currently echoes today's date instead of the submitted milking date;
+      // trust what the user entered until the server-side bug is fixed.
+      const submittedDate = variables?.milkingDate;
+      const savedRecord = submittedDate
+        ? { ...rawSavedRecord, date: submittedDate, milkingDate: submittedDate, milking_date: submittedDate }
+        : rawSavedRecord;
       setSaveStatus('success');
       setMessage(isEditMode ? 'Updated' : 'Saved');
       setMessageType('success');
@@ -247,7 +292,7 @@ export default function FastMilkLog({ onClose, onSaveSuccess, onDeleteSuccess, m
       setTimeout(() => {
         setSaveStatus(null);
         if (!isEditMode) {
-          setFormData({ cowId: '', volume: '' });
+          setFormData(normalizeFormData(null, defaultCreateDate));
         }
         setMessage('');
         if (isEditMode && onClose) {
@@ -267,7 +312,7 @@ export default function FastMilkLog({ onClose, onSaveSuccess, onDeleteSuccess, m
         setSaveStatus('success');
         setTimeout(() => {
           setSaveStatus(null);
-          setFormData({ cowId: '', volume: '' });
+          setFormData(normalizeFormData(null, defaultCreateDate));
           setMessage('');
           if (inputRef.current) inputRef.current.focus();
         }, 1400);
@@ -281,14 +326,15 @@ export default function FastMilkLog({ onClose, onSaveSuccess, onDeleteSuccess, m
             cow_id: variables.cowId,
             amount: Number(variables.volume ?? variables.amount ?? 0),
             session: variables.session || 'morning',
-            milkingDate: variables.milkingDate || new Date().toISOString().slice(0, 10),
+            milking_date: variables.milking_date || variables.milkingDate || todayIso(),
+            milkingDate: variables.milkingDate || variables.milking_date || todayIso(),
           });
           setMessageType('info');
           setMessage('Saved to device. Will sync when internet returns.');
           setSaveStatus('success');
           setTimeout(() => {
             setSaveStatus(null);
-            setFormData({ cowId: '', volume: '' });
+            setFormData(normalizeFormData(null, defaultCreateDate));
             setMessage('');
             if (inputRef.current) inputRef.current.focus();
           }, 1400);
@@ -306,7 +352,7 @@ export default function FastMilkLog({ onClose, onSaveSuccess, onDeleteSuccess, m
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    if (!formData.cowId || !formData.volume || isLocked || mutation.isLoading || isDeleting) return;
+    if (!formData.cowId || !formData.volume || !formData.date || isLocked || mutation.isLoading || isDeleting) return;
 
     const numeric = parseFloat(formData.volume);
     if (Number.isNaN(numeric) || numeric < 0) {
@@ -315,11 +361,17 @@ export default function FastMilkLog({ onClose, onSaveSuccess, onDeleteSuccess, m
       return;
     }
 
+    if (formData.date > todayIso()) {
+      setMessageType('danger');
+      setMessage('Milking date cannot be in the future');
+      return;
+    }
+
     mutation.mutate({
       cowId: formData.cowId,
       volume: numeric,
-      session: record?.session || 'morning',
-      milkingDate: new Date().toISOString().slice(0, 10),
+      session: formData.session,
+      milkingDate: formData.date,
       id: record?.id,
     });
   };

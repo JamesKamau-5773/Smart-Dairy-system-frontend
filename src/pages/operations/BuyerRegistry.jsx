@@ -68,7 +68,7 @@ export default function BuyerRegistry() {
   return (
     <div className="animate-reveal space-y-6">
       {banner && (
-        <div className="fixed top-4 right-4 z-50 w-[min(92vw,430px)]">
+        <div className="fixed top-4 right-4 z-[60] w-[min(92vw,430px)]">
           <AlertBanner type={banner.type} title={banner.title} message={banner.message} autoDismiss={4000} onDismiss={() => setBanner(null)} />
         </div>
       )}
