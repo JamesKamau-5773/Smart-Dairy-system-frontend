@@ -110,6 +110,42 @@ Milk deliveries are a distinct resource from generic ledger entries: the fronten
 
 The customer portal uses a public/shared token route. The backend must validate the token, restrict the response to the correct statement scope, and keep the payload read-only.
 
+### WhatsApp Interactive Messaging
+
+Jivu Smart Dairy should treat WhatsApp as a guided command surface, not as a free-form chat parser. The backend must own the conversation state and the command routing, while the frontend-side concept of a menu or button becomes a stable intent id in the webhook payload.
+
+Required backend behavior:
+
+- send interactive list messages for top-level navigation such as Log Milk, Feed, Herd, and Reports
+- send interactive buttons for short follow-up choices such as Yes/No, Confirm/Cancel, Morning/Afternoon/Evening
+- parse the `interactive` object from Meta webhook payloads and read the tapped option `id`, not the display label
+- map each option id to a canonical backend command such as `log_milk`, `record_feed`, `open_menu`, or `confirm_action`
+- keep conversation state server-side so the next question depends on the previous selection and the user does not have to retype context
+- deduplicate webhook events using Meta message ids so button retries do not create duplicate farm actions
+- enforce tenant, farm, and role scoping before executing any command
+- return a plain text or interactive follow-up message after each step, depending on the workflow branch
+- keep menu content and command ids stable so retries, translations, and UI label changes do not break workflows
+
+The backend should not treat the visible button text as authoritative. Only the stable ids should drive business logic.
+
+Suggested message flow:
+
+1. User sends `Menu` or taps the persistent menu entry.
+2. Backend replies with an interactive list message.
+3. User taps `Log Milk`.
+4. Backend stores the selected command in conversation state and replies with a button or list prompt such as cow selection or session choice.
+5. User taps the follow-up button.
+6. Backend completes the workflow, persists the record, and returns a confirmation message.
+
+Enterprise-grade criteria for this feature:
+
+- webhook verification via Meta challenge handling
+- signed or authenticated webhook processing
+- idempotent command execution
+- clear audit trail for every chat-driven action
+- rate limiting and abuse protection
+- explicit fallback path when Meta interactive payloads are unavailable and text input is used instead
+
 ## Suggested API Shape
 
 ### Staff
@@ -173,6 +209,15 @@ The frontend already expects endpoints such as:
 - `/api/finance/unit-cost`
 
 The backend may map those paths differently, but it must provide equivalent farm-scoped summaries and keep the shapes stable.
+
+### WhatsApp Webhook and Messaging
+
+The backend should expose a WhatsApp webhook endpoint pair for Meta Cloud API integration:
+
+- `GET /api/whatsapp/webhook` for verification challenge responses
+- `POST /api/whatsapp/webhook` for inbound message events, button taps, and list selections
+
+For outbound replies, the backend should call the Meta Cloud API using stable template ids and interactive payload definitions. The backend must persist the conversation state that determines which interactive prompt comes next.
 
 For a route-by-route breakdown, see [backend-endpoint-map.md](backend-endpoint-map.md).
 

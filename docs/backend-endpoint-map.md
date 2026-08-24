@@ -151,6 +151,40 @@ The browser payload `{ id, name, breed, dob, hasCalved }` is accepted because `i
 - `GET /api/clerk/entries`
 - `POST /api/clerk/entries`
 
+## WhatsApp / Meta Cloud API
+
+These routes are required for frictionless chat-driven farm actions.
+
+- `GET /api/whatsapp/webhook`
+- `POST /api/whatsapp/webhook`
+
+Webhook responsibilities:
+
+- verify Meta webhook challenge requests on `GET`
+- accept inbound text messages, list selections, and button taps on `POST`
+- parse `interactive.list_reply.id` and `interactive.button_reply.id`
+- persist the caller conversation state keyed by WhatsApp user id plus tenant/farm scope
+- deduplicate repeated deliveries using Meta message ids
+- route canonical commands such as `log_milk`, `log_feed`, `confirm`, and `cancel`
+- respond with either plain text, a list message, or quick-reply buttons depending on the workflow step
+
+Recommended backend payload contract for interactive selections:
+
+```json
+{
+	"wa_id": "2547xxxxxxxx",
+	"tenant_id": "tenant_123",
+	"farm_id": "farm_456",
+	"command": "log_milk",
+	"conversation_id": "conv_789",
+	"selection_id": "log_milk_yield",
+	"message_id": "wamid.HBg...",
+	"timestamp": "2026-08-20T10:30:00Z"
+}
+```
+
+The backend should treat `selection_id` as the authoritative intent and should not rely on the display label returned by Meta.
+
 Legacy compatibility:
 
 - Existing prefixed paths under `/api/operations/api/*` are still active for backward compatibility.
