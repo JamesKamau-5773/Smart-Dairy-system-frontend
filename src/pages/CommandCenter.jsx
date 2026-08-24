@@ -2,14 +2,18 @@ import { useQuery } from '@tanstack/react-query';
 import { useTenant } from '../hooks/useTenant';
 import { QUERY_KEYS } from '../providers/QueryProvider';
 import { productionApi } from '../lib/backendApi';
-import { Activity, Droplets, TrendingUp, DollarSign, LineChart as ChartIcon, ShoppingCart, Archive } from 'lucide-react';
-import React, { Suspense, lazy, useMemo } from 'react';
+import { Activity, Droplets, TrendingUp, DollarSign, LineChart as ChartIcon, ShoppingCart, Archive, Calendar as CalendarIcon } from 'lucide-react';
+import React, { Suspense, lazy, useMemo, useState, useRef, useEffect } from 'react';
+import { addDays, format, subDays } from 'date-fns';
+import { DayPicker } from 'react-day-picker';
+import 'react-day-picker/dist/style.css';
+import { buildTrendData, extractYieldCowId, extractYieldDate, extractYieldAmount, metricFromSummary } from '../lib/dashboardUtils';
 
 // Components
 const MilkTrendChart = lazy(() => import('../components/dashboard/MilkTrendChart'));
 import ManagerInboxWidget from '../components/dashboard/ManagerInboxWidget';
 import Money from '../components/ui/Money';
-import { Skeleton } from '../components/ui';
+import { Skeleton } from '@/components/ui';
 
 const SummaryCard = ({ title, value, unit, icon: Icon, trend, loading = false }) => (
   <div className="glass-panel p-6 flex flex-col justify-between min-h-[180px] relative overflow-hidden group">
@@ -38,123 +42,31 @@ const SummaryCard = ({ title, value, unit, icon: Icon, trend, loading = false })
             {value}
             <span className="text-sm ml-2 font-bold text-ink-muted">{unit}</span>
           </div>
-          {trend && (
-            <div className="mt-2 inline-flex items-center gap-2 bg-brand/5 px-2 py-1 rounded border border-brand/10">
-              <span className="font-sans text-[11px] font-bold text-brand tracking-wide">{trend}</span>
-            </div>
-          )}
         </>
       )}
     </div>
   </div>
 );
+export default function CommandCenter() {
+  const { tenantId, farmId } = useTenant();
+  const [dateRange, setDateRange] = useState({
+    from: addDays(new Date(), -13),
+    to: new Date(),
+  });
+  const [isPickerOpen, setIsPickerOpen] = useState(false);
+  const pickerRef = useRef(null);
 
-function parseAmount(value) {
-  const parsed = Number.parseFloat(value);
-  return Number.isFinite(parsed) ? parsed : 0;
-}
-
-function extractYieldAmount(row) {
-  return parseAmount(
-    row?.amount
-      ?? row?.volume
-      ?? row?.liters
-      ?? row?.milk_volume
-      ?? row?.milkVolume
-      ?? row?.yield_amount
-      ?? row?.yieldAmount
-      ?? row?.volume_liters
-      ?? row?.volumeLiters
-      ?? row?.quantity
-      ?? row?.qty
-      ?? 0
-  );
-}
-
-function extractYieldDate(row) {
-  const raw = row?.date
-    ?? row?.milkingDate
-    ?? row?.milking_date
-    ?? row?.created_at
-    ?? row?.createdAt
-    ?? row?.recorded_at
-    ?? row?.recordedAt
-    ?? row?.logged_at
-    ?? row?.loggedAt
-    ?? row?.entry_date
-    ?? row?.entryDate
-    ?? row?.timestamp;
-  if (!raw) {
-    return null;
-  }
-
-  const parsed = new Date(raw);
-  if (Number.isNaN(parsed.getTime())) {
-    return null;
-  }
-
-  return parsed.toISOString().slice(0, 10);
-}
-
-function extractYieldCowId(row) {
-  return String(
-    row?.cow_id
-      ?? row?.cowId
-      ?? row?.animal_id
-      ?? row?.animalId
-      ?? row?.cow_tag
-      ?? row?.cowTag
-      ?? row?.tag_number
-      ?? row?.tagNumber
-      ?? ''
-  ).trim();
-}
-
-function metricFromSummary(summary, keys) {
-  if (!summary || typeof summary !== 'object') {
-    return null;
-  }
-
-  for (const key of keys) {
-    if (summary[key] !== undefined && summary[key] !== null) {
-      const parsed = Number.parseFloat(summary[key]);
-      if (Number.isFinite(parsed)) {
-        return parsed;
+  useEffect(() => {
+    function handleClickOutside(event) {
+      if (pickerRef.current && !pickerRef.current.contains(event.target)) {
+        setIsPickerOpen(false);
       }
     }
-  }
-
-  return null;
-}
-
-function buildTrendData(rows) {
-  if (!Array.isArray(rows) || rows.length === 0) {
-    return [];
-  }
-
-  const totalsByDate = new Map();
-
-  rows.forEach((row) => {
-    const date = extractYieldDate(row);
-    if (!date) {
-      return;
-    }
-
-    const current = totalsByDate.get(date) ?? 0;
-    totalsByDate.set(date, current + extractYieldAmount(row));
-  });
-
-  return Array.from(totalsByDate.entries())
-    .sort(([a], [b]) => a.localeCompare(b))
-    .slice(-14)
-    .map(([date, value]) => ({
-      date,
-      value: Number(value.toFixed(1)),
-    }));
-}
-
-export default function FarmDashboard() {
-  const { tenantId, farmId } = useTenant();
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [pickerRef]);
 
   const summaryQuery = useQuery({
     queryKey: QUERY_KEYS.YIELD_SUMMARY(tenantId, farmId),
@@ -168,7 +80,7 @@ export default function FarmDashboard() {
     enabled: !!farmId,
   });
 
-  const trend = buildTrendData(trendQuery.data);
+  const trend = useMemo(() => buildTrendData(trendQuery.data, dateRange), [trendQuery.data, dateRange]);
 
   const summary = summaryQuery.data;
   const hasSummaryError = summaryQuery.isError;
@@ -292,9 +204,42 @@ export default function FarmDashboard() {
       </section>
 
       <div className="card-machined bg-surface p-8 border border-ink/10">
-        <h3 className="font-sans font-bold text-xl text-brand mb-8 flex items-center gap-2">
-          <ChartIcon size={20} className="text-accent" /> Milk Production Trend 
-        </h3>
+        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-8 gap-4">
+          <h3 className="font-sans font-bold text-xl text-brand flex items-center gap-2">
+            <ChartIcon size={20} className="text-accent" /> Milk Production Trend
+          </h3>
+          <div className="relative" ref={pickerRef}>
+            <button
+              type="button"
+              onClick={() => setIsPickerOpen(!isPickerOpen)}
+              className="btn-secondary inline-flex items-center gap-2 px-3 py-2 text-xs font-semibold"
+            >
+              <CalendarIcon size={14} />
+              <span>
+                {dateRange?.from && dateRange?.to
+                  ? `${format(dateRange.from, 'LLL dd, y')} - ${format(dateRange.to, 'LLL dd, y')}`
+                  : 'Select Date Range'}
+              </span>
+            </button>
+            {isPickerOpen && (
+              <div className="absolute top-full right-0 z-10 mt-2 bg-surface rounded-lg border border-ink/10 shadow-lg p-2">
+                <DayPicker
+                  initialFocus
+                  mode="range"
+                  defaultMonth={dateRange?.from}
+                  selected={dateRange}
+                  onSelect={(range) => {
+                    if (range) setDateRange(range);
+                    if (range?.from && range?.to) {
+                      setIsPickerOpen(false);
+                    }
+                  }}
+                  numberOfMonths={2}
+                />
+              </div>
+            )}
+          </div>
+        </div>
         <div className="h-80 w-full bg-surface-warm/30 rounded-xl">
           <Suspense fallback={<Skeleton className="h-full w-full" />}>
             <MilkTrendChart data={trend} />
