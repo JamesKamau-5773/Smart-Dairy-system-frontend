@@ -2,7 +2,7 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { format, parseISO } from 'date-fns';
 import { Wallet, TrendingUp, TrendingDown, ChevronsRight, Plus, X } from 'lucide-react';
-
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { useTenant } from '../../hooks/useTenant';
 import { financeApi, getApiErrorMessage } from '../../lib/backendApi';
 import { QUERY_KEYS } from '../../providers/QueryProvider';

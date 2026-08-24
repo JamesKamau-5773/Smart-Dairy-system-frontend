@@ -7,20 +7,6 @@ import CreateBatchModal from '../../components/nutrition/CreateBatchModal';
 import { nutritionApi, inventoryApi } from '../../lib/backendApi';
 import { useTenant } from '../../hooks/useTenant';
 
-// 1. CRITICAL FIX: Define defaults OUTSIDE the component.
-// This ensures their memory reference never changes, preventing infinite loops in child components.
-const DEFAULT_DAIRY_MEAL = [
-  { id: 'maize', name: 'Maize Germ', percentage: 50, proteinContent: 9.5, pricePerKg: 32 },
-  { id: 'bran', name: 'Wheat Bran', percentage: 30, proteinContent: 14.5, pricePerKg: 28 },
-  { id: 'sunflower', name: 'Sunflower Cake', percentage: 20, proteinContent: 28.0, pricePerKg: 45 }
-];
-
-const DEFAULT_MAIN_MEAL = [
-  { id: 'silage', name: 'Silage', percentage: 60, proteinContent: 8.0, pricePerKg: 5 },
-  { id: 'dairy_meal', name: 'Dairy Meal (Formulated)', percentage: 30, proteinContent: 16.0, pricePerKg: 35 },
-  { id: 'lucerne', name: 'Lucerne Hay', percentage: 10, proteinContent: 18.0, pricePerKg: 25 }
-];
-
 const DEFAULT_BATCH_SIZE_BY_TYPE = {
   dairy_meal: 500,
   main_meal: 2000,
@@ -268,11 +254,6 @@ export default function FeedFormulation() {
     return combined;
   }, [allInventoryItems, savedRecipeIngredients, activeTab]);
 
-  const fallbackDefaults = useMemo(
-    () => (activeTab === 'dairy_meal' ? DEFAULT_DAIRY_MEAL : DEFAULT_MAIN_MEAL),
-    [activeTab],
-  );
-
   const initialIngredients = useMemo(() => {
     if (importedDraft && importedDraft.draftType === activeTab) {
       const draftData = importedDraft.draftFormula;
@@ -281,8 +262,10 @@ export default function FeedFormulation() {
       }
     }
 
-    return inventoryBackedIngredients.length > 0 ? inventoryBackedIngredients : fallbackDefaults;
-  }, [activeTab, fallbackDefaults, importedDraft, inventoryBackedIngredients]);
+    // If no inventory ingredients are found, this will be an empty array,
+    // which will trigger the UI to show a prompt to the user.
+    return inventoryBackedIngredients;
+  }, [activeTab, importedDraft, inventoryBackedIngredients]);
 
   const inventoryDefaultsSignature = useMemo(() => {
     if (!Array.isArray(inventoryBackedIngredients) || inventoryBackedIngredients.length === 0) {
@@ -678,20 +661,34 @@ export default function FeedFormulation() {
         
         {/* Left Column: The Interactive Builder */}
         <div className="lg:col-span-2">
-          <div className="animate-in fade-in slide-in-from-bottom-4 duration-300">
-            {/* NOTE: RecipeBuilder must be refactored to be a controlled component.
-                It should accept `ingredients` and `onIngredientsChange` props instead of `initialIngredients`. */}
-            <RecipeBuilder 
-              recipeType={activeTab}
-              initialIngredients={initialIngredients}
-              ingredients={recipe}
-              initialBatchSize={batchSizeKg}
-              onIngredientsChange={setRecipe}
-              onBatchSizeChange={setBatchSizeKg}
-              targetProtein={targetProtein}
-              isLoading={isInventoryLoading || isRecipeLoading}
-            />
-          </div>
+          {recipe.length === 0 && !isInventoryLoading && !isRecipeLoading && !importedDraft ? (
+            <div className="flex flex-col items-center justify-center h-full p-8 text-center border-2 border-dashed rounded-lg border-ink/20 bg-surface animate-in fade-in">
+              <Tractor size={48} className="text-ink-muted" />
+              <h3 className="mt-4 text-lg font-bold text-ink-strong">No Feed Ingredients Available</h3>
+              <p className="mt-2 text-sm text-ink-muted max-w-sm">
+                The feed mixer is empty. To formulate a recipe, please add feed items to your inventory for this mix type.
+              </p>
+              <button
+                onClick={() => navigate('/operations/inventory')}
+                className="mt-6 btn-command"
+              >
+                Go to Inventory
+              </button>
+            </div>
+          ) : (
+            <div className="animate-in fade-in slide-in-from-bottom-4 duration-300">
+              <RecipeBuilder 
+                recipeType={activeTab}
+                initialIngredients={initialIngredients}
+                ingredients={recipe}
+                initialBatchSize={batchSizeKg}
+                onIngredientsChange={setRecipe}
+                onBatchSizeChange={setBatchSizeKg}
+                targetProtein={targetProtein}
+                isLoading={isInventoryLoading || isRecipeLoading}
+              />
+            </div>
+          )}
         </div>
 
         {/* Right Column: Strategic Actions & Context */}

@@ -32,9 +32,10 @@ const TransactionRow = ({ tx }) => (
 const DeliveryRow = ({ delivery, onEdit, onDelete }) => {
   const delivered = Number(delivery.liters_delivered) || 0;
   const personalUse = Number(delivery.personal_consumption_liters) || 0;
-  // Prefer the backend-computed billable liters/amount; only fall back to a
-  // client-side estimate if the backend didn't return one.
-  const billableLiters = delivery.billable_liters ?? Math.max(delivered - personalUse, 0);
+  // To allow personal consumption to be logged independently, we no longer
+  // subtract it from the delivered amount for this client-side display fallback.
+  // The backend remains the source of truth for the final billable amount.
+  const billableLiters = delivery.billable_liters ?? delivered;
   const amount = delivery.amount ?? delivery.billed_amount ?? null;
 
   return (
@@ -122,6 +123,7 @@ export default function CustomerProfile() {
   const { mutate: saveDelivery, isPending: isSavingDelivery } = useMutation({
     mutationFn: (payload) => {
       const { id, ...rest } = payload;
+      // With the permanent fix in `financeApi`, we can use the intended helpers.
       return id ? financeApi.updateDelivery(id, rest) : financeApi.createDelivery(rest);
     },
     onSuccess: (_, variables) => {
@@ -136,6 +138,7 @@ export default function CustomerProfile() {
   });
 
   const { mutate: deleteDelivery } = useMutation({
+    // With the permanent fix in `financeApi`, we can use the intended helper.
     mutationFn: (deliveryId) => financeApi.deleteDelivery(deliveryId),
     onSuccess: () => {
       toast.success('Delivery deleted successfully!');
