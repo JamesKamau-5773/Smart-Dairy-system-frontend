@@ -32,7 +32,8 @@ const FeedMixRow = ({ recipe, index, isExpanded, onToggle, onLoadToLab }) => {
     ? recipe.ingredients 
     : (Array.isArray(recipe?.formula) ? recipe.formula : []);
     
-  const protein = recipe?.protein ?? '--';
+  // The recipes API returns `target_protein_percentage`; fall back to `protein`.
+  const protein = recipe?.target_protein_percentage ?? recipe?.protein ?? '--';
   const lastUsed = recipe?.lastUsed || 'Not recorded';
 
   return (
@@ -79,13 +80,17 @@ const FeedMixRow = ({ recipe, index, isExpanded, onToggle, onLoadToLab }) => {
               </p>
               <div className="space-y-2">
                 {ingredientsList.length > 0 ? (
-                  ingredientsList.map((ing, idx) => (
-                    <div key={idx} className="flex items-center text-sm">
-                      <span className="text-ink-strong flex-1">{ing?.name || 'Unknown Ingredient'}</span>
-                      <div className="flex-1 border-b border-dotted border-ink/20 mx-3 opacity-50"></div>
-                      <span className="font-bold text-ink-strong">{ing?.percentage ?? 0}%</span>
-                    </div>
-                  ))
+                  ingredientsList.map((ing, idx) => {
+                    const ingName = ing?.name ?? ing?.ingredient_name ?? ing?.ingredientName ?? 'Unknown Ingredient';
+                    const ingPct = Number(ing?.percentage ?? ing?.inclusion_percentage ?? ing?.inclusionPercentage ?? 0);
+                    return (
+                      <div key={idx} className="flex items-center text-sm">
+                        <span className="text-ink-strong flex-1">{ingName}</span>
+                        <div className="flex-1 border-b border-dotted border-ink/20 mx-3 opacity-50"></div>
+                        <span className="font-bold text-ink-strong">{ingPct}%</span>
+                      </div>
+                    );
+                  })
                 ) : (
                   <p className="text-xs text-ink-muted italic">No formula data available for this mix.</p>
                 )}
@@ -125,12 +130,43 @@ const FeedMixRow = ({ recipe, index, isExpanded, onToggle, onLoadToLab }) => {
 /**
  * Main Component: Acts ONLY as the state manager and list coordinator.
  */
+// Each "Save As Current Feed Mix" creates a NEW recipe row (the backend auto-save
+// never updates in place), so the same formula appears many times. The API returns
+// no performance metrics (yieldAvg / costPerLiter) to rank by, so "best" = the most
+// recently saved version of each distinct formula. Dedupe by formula and cap the list.
+const MAX_MIXES_SHOWN = 5;
+
+const formulaKeyOf = (recipe) =>
+  `${(recipe?.recipe_type ?? recipe?.type ?? '').toString().toLowerCase()}|${(recipe?.name ?? '').toString().toLowerCase()}`;
+
+const getRecency = (recipe) => {
+  const ts = Date.parse(recipe?.updated_at ?? recipe?.updatedAt ?? recipe?.created_at ?? recipe?.createdAt ?? '');
+  if (Number.isFinite(ts)) return ts;
+  const id = Number(recipe?.id);
+  return Number.isFinite(id) ? id : 0; // higher autoincrement id = more recently saved
+};
+
+function selectTopMixes(recipes) {
+  const latestByFormula = new Map();
+  for (const recipe of recipes) {
+    if (!recipe) continue;
+    const key = formulaKeyOf(recipe);
+    const existing = latestByFormula.get(key);
+    if (!existing || getRecency(recipe) >= getRecency(existing)) {
+      latestByFormula.set(key, recipe);
+    }
+  }
+  return [...latestByFormula.values()]
+    .sort((a, b) => getRecency(b) - getRecency(a))
+    .slice(0, MAX_MIXES_SHOWN);
+}
+
 export default function TopRecipesList({ recipes }) {
   const [expandedId, setExpandedId] = useState(null);
   const navigate = useNavigate();
 
-  // Defensive: Ensure we are mapping over an array
-  const safeRecipes = Array.isArray(recipes) ? recipes : [];
+  // Defensive: Ensure we are mapping over an array, then dedupe to top mixes.
+  const safeRecipes = selectTopMixes(Array.isArray(recipes) ? recipes : []);
 
   const handleToggle = (id) => {
     setExpandedId((prevId) => (prevId === id ? null : id));

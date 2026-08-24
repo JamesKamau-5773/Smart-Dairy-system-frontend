@@ -1,9 +1,12 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { X, CheckCircle2, Loader, Package, Scale, Percent } from 'lucide-react';
+import { X, CheckCircle2, Loader, Package, Scale, Percent, AlertTriangle } from 'lucide-react';
 import { nutritionApi } from '../../lib/backendApi';
+import { getApiErrorMessage } from '../../lib/backendApi';
+import { buildBatchPayload, calculateBatchTotals } from '../../lib/feedBatch';
 import { useTenant } from '../../hooks/useTenant';
+import toast from 'react-hot-toast';
 
 export default function CreateBatchModal({
   isOpen,
@@ -31,41 +34,28 @@ export default function CreateBatchModal({
   }, [isOpen, recipeType, initialMixSize]);
 
   // Step 2: Auto-calculate physical weights based on mix size
-  const batchIngredients = useMemo(() => {
-    const totalBatchWeight = Number(mixSize || 0);
+  const batchSummary = useMemo(() => {
     const savedIngredients = Array.isArray(savedRecipeIngredients)
       ? savedRecipeIngredients
       : savedRecipeIngredients.ingredients ?? savedRecipeIngredients.adjusted_ingredients ?? [];
     const sourceIngredients = ingredients.length > 0 ? ingredients : savedIngredients;
 
-    return sourceIngredients.map(ing => {
-      const sharePercentage = Number(ing.percentage ?? ing.inclusion_percentage ?? 0);
-      const parsedCostPerKg = Number(ing.pricePerKg ?? ing.cost_per_kg ?? ing.costPerKg ?? 0);
-      return {
-        ingredientId: ing.ingredient_id ?? ing.ingredientId ?? ing.inventory_item_id ?? ing.id,
-        name: ing.name ?? ing.ingredient_name ?? 'Ingredient',
-        percentage: sharePercentage,
-        costPerKg: Number.isFinite(parsedCostPerKg) ? parsedCostPerKg : 0,
-        // Convert the recipe's percentage into physical kilograms
-        weight: (sharePercentage / 100) * totalBatchWeight
-      };
-    }).filter(ing => ing.weight > 0); // Only include ingredients actually in the mix
-
+    return calculateBatchTotals(sourceIngredients, mixSize);
   }, [ingredients, savedRecipeIngredients, mixSize]);
 
-  const batchTotals = useMemo(() => {
-    const totalWeight = Number(mixSize || 0);
-    const totalCost = batchIngredients.reduce(
-      (sum, ingredient) => sum + (ingredient.weight * ingredient.costPerKg),
-      0
-    );
+  const batchIngredients = batchSummary.rows;
+  const batchTotals = batchSummary;
 
-    return {
-      totalWeight,
-      totalCost,
-      costPerKg: totalWeight > 0 ? totalCost / totalWeight : 0,
-    };
-  }, [batchIngredients, mixSize]);
+  // Client-side stock check: mirror the backend's "Insufficient stock" rule so the
+  // user sees the shortfall before submitting, instead of a generic 400 alert.
+  const insufficientIngredients = useMemo(() => {
+    return batchIngredients.filter((ing) => {
+      const available = Number(ing.availableStock ?? ing.stock ?? ing.current_stock);
+      // Only flag when we actually know the available quantity and it's exceeded.
+      return Number.isFinite(available) && available >= 0 && ing.weight > available;
+    });
+  }, [batchIngredients]);
+  const hasInsufficientStock = insufficientIngredients.length > 0;
 
   const createBatchMutation = useMutation({
     mutationFn: (batchPayload) => nutritionApi.createBatch(batchPayload),
@@ -73,34 +63,33 @@ export default function CreateBatchModal({
       // Refresh dashboard data so "WHAT WE'RE FEEDING NOW" updates instantly
       queryClient.invalidateQueries({ queryKey: ['dashboard-summary'] });
       queryClient.invalidateQueries({ queryKey: ['nutrition-dashboard'] });
-      alert("Batch successfully recorded and inventory deducted!");
+      toast.success('Batch recorded and inventory deducted.');
       onClose();
     },
     onError: (error) => {
-      console.error("Batch creation failed:", error);
-      alert("Failed to record batch. Check the console for details.");
+      // Surface the backend's real validation message (e.g. which ingredient is
+      // short and by how much) instead of a generic "check the console" alert.
+      console.error('[CreateBatchModal] createBatch failed', {
+        message: getApiErrorMessage(error, ''),
+        status: error?.response?.status,
+        data: error?.response?.data,
+        recipeType,
+        tenantId,
+        farmId,
+      });
+      toast.error(getApiErrorMessage(error, 'Failed to record batch. Please try again.'));
     }
   });
 
   // Step 3: Send the strict batch payload to the backend
   const handleSaveBatch = async () => {
-    const batchPayload = {
+    createBatchMutation.mutate(buildBatchPayload({
       batchName: `${recipeType === 'main_meal' ? 'Main' : 'Dairy'} Feed Mix - ${new Date().toLocaleDateString()}`,
       formulaId: null,
       formulaName: `${recipeType === 'main_meal' ? 'Main' : 'Dairy'} Feed Mix`,
-      isSavedAsTemplate: false,
       totalWeight: batchTotals.totalWeight,
-      totalCost: batchTotals.totalCost,
-      costPerKg: batchTotals.costPerKg,
-      ingredients: batchIngredients.map(ing => ({
-        ingredientId: ing.ingredientId,
-        percentage: ing.percentage,
-        weight: ing.weight,
-        lockedCostPerKg: ing.costPerKg,
-      }))
-    };
-
-    createBatchMutation.mutate(batchPayload);
+      ingredients: batchIngredients,
+    }));
   };
 
   if (!isOpen) return null;
@@ -149,12 +138,31 @@ export default function CreateBatchModal({
           </div>
         </div>
 
+        <div className="px-8 pb-2">
+          {hasInsufficientStock && (
+            <div className="flex items-start gap-2 p-3 mb-2 rounded-lg bg-danger/10 border border-danger/20 text-danger text-xs font-bold">
+              <AlertTriangle size={16} className="shrink-0 mt-0.5" />
+              <div>
+                <p>Not enough stock to mix this batch:</p>
+                <ul className="list-disc ml-4 mt-1 font-medium">
+                  {insufficientIngredients.map((ing) => (
+                    <li key={ing.ingredientId}>
+                      {ing.name}: need {ing.weight.toFixed(1)} kg, only {Number(ing.availableStock ?? ing.stock ?? ing.current_stock).toFixed(1)} kg in stock
+                    </li>
+                  ))}
+                </ul>
+                <p className="mt-1 font-medium">Reduce the batch size or restock these items first.</p>
+              </div>
+            </div>
+          )}
+        </div>
+
         <div className="flex items-center justify-between p-6 bg-slate-50 border-t border-slate-200">
           <button type="button" onClick={onClose} className="text-sm font-bold text-slate-500 hover:text-slate-700">Cancel</button>
           <button
             type="button"
             onClick={handleSaveBatch}
-            disabled={createBatchMutation.isPending || isLoadingRecipe || batchIngredients.length === 0}
+            disabled={createBatchMutation.isPending || isLoadingRecipe || batchIngredients.length === 0 || hasInsufficientStock}
             className="flex items-center gap-2 px-6 py-3 rounded-xl font-black text-xs uppercase bg-brand text-white hover:bg-brand-dark disabled:bg-slate-300"
           >
             {createBatchMutation.isPending ? <Loader className="animate-spin" size={16} /> : <CheckCircle2 size={16} />}

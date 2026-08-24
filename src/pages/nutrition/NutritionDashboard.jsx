@@ -1,15 +1,15 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
+import { useNavigate } from 'react-router-dom';
 import { PackagePlus, Wheat } from 'lucide-react';
 import CurrentMixCard from '../../components/nutrition/CurrentMixCard';
 import ProfitabilityChart from '../../components/nutrition/ProfitabilityChart';
 import TopRecipesList from './TopRecipesList';
-import AddFeedModal from './AddFeedModal';
 import { nutritionApi } from '../../lib/backendApi';
 import { useTenant } from '../../hooks/useTenant';
 
 export default function NutritionDashboard() {
-  const [isModalOpen, setIsModalOpen] = useState(false);
+  const navigate = useNavigate();
   const { tenantId, farmId } = useTenant();
 
   const { data: feedCostEfficiency } = useQuery({
@@ -30,35 +30,80 @@ export default function NutritionDashboard() {
     enabled: !!tenantId && !!farmId,
   });
 
+  // feed-cost-efficiency returns { rows: [per-batch...] }, not a flat object.
+  // The "current mix" is the most recent non-depleted batch (fallback: latest row).
   const currentMix = useMemo(() => {
-    if (!feedCostEfficiency) {
+    const rows = Array.isArray(feedCostEfficiency?.rows) ? feedCostEfficiency.rows : [];
+    if (rows.length === 0) {
       return null;
     }
 
+    const batch = rows.find((r) => !r.depletedOn) ?? rows[rows.length - 1];
+    const ingredients = Array.isArray(batch.ingredients)
+      ? batch.ingredients
+      : (Array.isArray(batch.ingredient_breakdown) ? batch.ingredient_breakdown : []);
+
+    const totalWeight = ingredients.reduce((sum, ing) => sum + (Number(ing.weight) || 0), 0);
+    const consumedWeight = Number(batch.consumedWeight ?? batch.consumed_weight ?? 0);
+    const remainingWeight = Number(batch.remainingWeight ?? batch.remaining_weight ?? (totalWeight - consumedWeight));
+
     return {
-      name: feedCostEfficiency.name ?? feedCostEfficiency.mixName ?? 'Feed mix',
-      totalWeight: Number(feedCostEfficiency.totalWeight ?? feedCostEfficiency.total_weight ?? 0),
-      consumedWeight: Number(feedCostEfficiency.consumedWeight ?? feedCostEfficiency.consumed_weight ?? 0),
-      remainingWeight: Number(feedCostEfficiency.remainingWeight ?? feedCostEfficiency.remaining_weight ?? 0),
-      dailyFeedingRate: Number(feedCostEfficiency.dailyFeedingRate ?? feedCostEfficiency.daily_feeding_rate ?? 0),
-      mixedOn: feedCostEfficiency.mixedOn ?? feedCostEfficiency.mixed_on ?? null,
+      name: batch.batchName ?? batch.name ?? 'Feed mix',
+      totalWeight: Number(totalWeight.toFixed(2)),
+      consumedWeight: Number(consumedWeight.toFixed(2)),
+      remainingWeight: Number(remainingWeight.toFixed(2)),
+      dailyFeedingRate: Number(batch.dailyFeedingRate ?? batch.daily_feeding_rate ?? 0),
+      mixedOn: batch.mixedOn ?? batch.mixed_on ?? null,
     };
   }, [feedCostEfficiency]);
 
+  // active-batch-roi-trend-weekly returns { rows: [...] } (or a bare array).
+  // Each point uses `feedCostPerLiter` + `weekStart`, so read those first.
   const trends = useMemo(() => {
-    if (!Array.isArray(roiTrend) || roiTrend.length === 0) {
+    const rows = Array.isArray(roiTrend) ? roiTrend : (Array.isArray(roiTrend?.rows) ? roiTrend.rows : []);
+    if (rows.length === 0) {
       return [];
     }
 
-    return roiTrend.map((point, index) => ({
-      week: point.week || point.label || `Wk ${index + 1}`,
-      cost: Number(point.costPerLiter ?? point.cost ?? 0),
+    return rows.map((point, index) => ({
+      week: point.week || point.weekStart || point.week_start || point.label || `Wk ${index + 1}`,
+      cost: Number(point.feedCostPerLiter ?? point.costPerLiter ?? point.cost ?? 0),
       height: point.height || ['h-24', 'h-20', 'h-16', 'h-12', 'h-10'][Math.min(index, 4)],
       isCurrent: Boolean(point.isCurrent),
     }));
   }, [roiTrend]);
 
   const recipes = useMemo(() => (Array.isArray(recipesData) ? recipesData : []), [recipesData]);
+
+  // Thin launcher: route into the canonical Feed Mixing Planner with the active
+  // batch pre-loaded as an editable draft, instead of a parallel modal form.
+  const handleCreateBatch = () => {
+    const rows = Array.isArray(feedCostEfficiency?.rows) ? feedCostEfficiency.rows : [];
+    const activeBatch = rows.find((r) => !r.depletedOn) ?? rows[rows.length - 1] ?? null;
+    const ingredients = Array.isArray(activeBatch?.ingredients)
+      ? activeBatch.ingredients
+      : (Array.isArray(activeBatch?.ingredient_breakdown) ? activeBatch.ingredient_breakdown : []);
+
+    const draftFormula = ingredients.map((ing) => ({
+      id: String(ing.ingredientId ?? ing.ingredient_id ?? ing.ingredientName ?? ing.name),
+      ingredientId: ing.ingredientId ?? ing.ingredient_id ?? null,
+      ingredient_id: ing.ingredientId ?? ing.ingredient_id ?? null,
+      inventory_item_id: ing.ingredientId ?? ing.ingredient_id ?? null,
+      name: ing.ingredientName ?? ing.ingredient_name ?? ing.name ?? 'Ingredient',
+      percentage: Number(ing.percentage ?? ing.inclusion_percentage ?? 0),
+      proteinContent: Number(ing.proteinGramsPerKg ?? ing.protein_grams_per_kg ?? 0) / 10,
+      pricePerKg: Number(ing.lockedCostPerKg ?? ing.locked_cost_per_kg ?? 0),
+    }));
+
+    navigate('/feed-nutrition/mix', {
+      state: {
+        isImportedDraft: true,
+        draftType: activeBatch?.recipeType ?? activeBatch?.recipe_type ?? 'main_meal',
+        draftFormula,
+        draftName: activeBatch?.batchName ?? 'Current Mix',
+      },
+    });
+  };
 
   return (
     <div className="animate-reveal space-y-8 max-w-7xl mx-auto">
@@ -76,7 +121,7 @@ export default function NutritionDashboard() {
 
         <button
           type="button"
-          onClick={() => setIsModalOpen(true)}
+          onClick={handleCreateBatch}
           className="btn-command flex items-center gap-2 bg-brand text-surface shadow-md hover:bg-brand-dark transition-colors px-4 py-2.5 rounded-button font-bold text-sm"
         >
           <PackagePlus size={18} /> Create New Feed Batch
@@ -91,11 +136,6 @@ export default function NutritionDashboard() {
 
       {/* ── BOTTOM SECTION: HISTORICAL PLAYBOOK ── */}
       <TopRecipesList recipes={recipes} />
-
-      {/* ── MODAL ── */}
-      {isModalOpen && (
-        <AddFeedModal onClose={() => setIsModalOpen(false)} />
-      )}
     </div>
   );
 }

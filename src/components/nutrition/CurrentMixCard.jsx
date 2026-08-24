@@ -15,9 +15,13 @@ export default function CurrentMixCard({ mix }) {
     );
   }
 
-  const stockPercentage = Math.round((mix.remainingWeight / mix.totalWeight) * 100);
-  const daysLeft = Math.floor(mix.remainingWeight / mix.dailyFeedingRate);
-  const isLowStock = daysLeft <= 3;
+  const stockPercentage = mix.totalWeight > 0
+    ? Math.round((mix.remainingWeight / mix.totalWeight) * 100)
+    : 0;
+  // Guard against division by zero when the daily feeding rate is unknown/not yet set.
+  const feedingRate = Number(mix.dailyFeedingRate) || 0;
+  const daysLeft = feedingRate > 0 ? Math.floor(mix.remainingWeight / feedingRate) : null;
+  const isLowStock = daysLeft !== null && daysLeft <= 3;
 
   return (
     <div className="card-machined bg-surface p-6 shadow-sm border border-ink/5 flex flex-col justify-between">
@@ -45,10 +49,12 @@ export default function CurrentMixCard({ mix }) {
         <div className={`mt-4 rounded-lg p-4 border ${isLowStock ? 'bg-danger/5 border-danger/20 text-danger' : 'bg-surface-raised border-ink/10 text-ink-strong'}`}>
           <div className="flex items-center gap-2 font-bold text-sm mb-1">
             {isLowStock && <AlertCircle size={16} />}
-            Will run out in {daysLeft} Days
+            {daysLeft !== null ? `Will run out in ${daysLeft} Days` : 'Consumption not tracked yet'}
           </div>
           <p className="text-xs font-medium opacity-80">
-            The herd is eating about {mix.dailyFeedingRate} kg per day.
+            {feedingRate > 0
+              ? `The herd is eating about ${feedingRate} kg per day.`
+              : 'No daily feeding rate recorded for this batch yet.'}
           </p>
         </div>
       </div>
