@@ -143,6 +143,9 @@ function normalizeSuggestedMixResponse(data = {}) {
       ?? 0
     ),
     batchSizeKg: Number(data.batch_size_kg ?? data.batchSizeKg ?? 0),
+    // The herd plan's computed daily meal requirement — the source of batchSizeKg
+    // when the backend defaults it from the feeding plan rather than a hardcoded 500.
+    dailyMealNeedKg: Number(data.daily_meal_need_kg ?? data.dailyMealNeedKg ?? 0),
     suggestedIngredients: Array.isArray(data.suggested_ingredients)
       ? data.suggested_ingredients
       : Array.isArray(data.ingredients)
@@ -295,9 +298,8 @@ export default function FeedFormulation() {
   }, [initialIngredients, recipeInitializationKey]);
 
   const suggestedMixQuery = useQuery({
-    queryKey: ['feed-formulation-suggested-mix', tenantId, farmId, routerState?.yieldTargetId, routerState?.targetLiters],
+    queryKey: ['feed-formulation-suggested-mix', tenantId, farmId, routerState?.targetLiters],
     queryFn: () => nutritionApi.suggestedMix({
-      yield_target_id: routerState?.yieldTargetId ?? undefined,
       target_liters: routerState?.targetLiters ?? undefined,
     }),
     enabled: Boolean(tenantId && farmId && routerState?.fromMilkLab),
@@ -319,7 +321,13 @@ export default function FeedFormulation() {
 
     if (Number.isFinite(normalizedMix.batchSizeKg) && normalizedMix.batchSizeKg > 0) {
       setBatchSizeKg(normalizedMix.batchSizeKg);
-      setSuggestedMixMessage(`${normalizedMix.batchSizeKg} kg suggested batch size loaded from Milk Lab.`);
+      // Tell the user where the quantity came from when it's the herd's daily plan.
+      const fromPlan = Number.isFinite(normalizedMix.dailyMealNeedKg) && normalizedMix.dailyMealNeedKg > 0;
+      setSuggestedMixMessage(
+        fromPlan
+          ? `${normalizedMix.batchSizeKg} kg batch size = your herd's daily meal need from the Milk Feeding Plan.`
+          : `${normalizedMix.batchSizeKg} kg suggested batch size loaded from Milk Lab.`
+      );
     } else {
       setSuggestedMixMessage(normalizedMix.message || 'Suggested mix loaded from Milk Lab.');
     }
@@ -486,7 +494,6 @@ export default function FeedFormulation() {
       buildRecipeRequestPayload(
         {
           target_liters: routerState?.targetLiters ?? undefined,
-          yield_target_id: routerState?.yieldTargetId ?? undefined,
         },
         { allowZeroPercentages: true }
       )
@@ -534,7 +541,6 @@ export default function FeedFormulation() {
         recipe_name: routerState?.draftName ?? defaultRecipeName,
         name: routerState?.draftName ?? defaultRecipeName,
         source: routerState?.fromMilkLab ? 'milk_lab_export' : 'manual',
-        yield_target_id: routerState?.yieldTargetId ?? undefined,
       });
 
       // --- START: In-component Normalization for Robustness ---
