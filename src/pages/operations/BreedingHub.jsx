@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
+import toast from 'react-hot-toast';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import AlertBanner from '../../components/ui/AlertBanner';
 import Modal from '../../components/ui/Modal';
@@ -404,6 +405,10 @@ export default function BreedingHub() {
   const [infoMessage, setInfoMessage] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
   const [showError, setShowError] = useState(false);
+
+  // Mirror to the global Toaster so feedback renders above any open modal.
+  const notifyInfo = (msg) => { setInfoMessage(msg); toast.success(msg); };
+  const notifyError = (msg) => { setErrorMessage(msg); setShowError(true); toast.error(msg); };
   const [isLogServiceOpen, setIsLogServiceOpen] = useState(false);
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
   const [isInventoryOpen, setIsInventoryOpen] = useState(false);
@@ -548,7 +553,7 @@ export default function BreedingHub() {
 
     try {
       await breedingApi.updateLogStatus(logId, status);
-      setInfoMessage(`Cow marked as ${outcome}. Records updated.`);
+      notifyInfo(`Cow marked as ${outcome}. Records updated.`);
       removeBreedingCacheLog(tenantId, farmId, logId);
       setVetQueue((current) => current.filter((log) => log.id !== logId));
       setVetHistory((current) =>
@@ -670,7 +675,7 @@ export default function BreedingHub() {
         })
       );
 
-      setInfoMessage(`Logged AI service for ${savedLog.cowId}.`);
+      notifyInfo(`Logged AI service for ${savedLog.cowId}.`);
       setLogForm({ cowId: '', aiDate: '', sireCode: '', semenSource: 'farm_stock', note: '' });
       setIsCowPickerOpen(false);
       setIsLogServiceOpen(false);
@@ -739,7 +744,7 @@ export default function BreedingHub() {
         })
       );
 
-      setInfoMessage(`Added ${nextInventory.name} to inventory.`);
+      notifyInfo(`Added ${nextInventory.name} to inventory.`);
       setInventoryForm({ name: '', code: '', strawsLeft: '', improves: '' });
       setIsInventoryOpen(false);
     } catch (error) {
@@ -799,7 +804,7 @@ export default function BreedingHub() {
         })
       );
 
-      setInfoMessage(`Restocked ${updated.name} by ${amount} straws.`);
+      notifyInfo(`Restocked ${updated.name} by ${amount} straws.`);
       setIsRestockOpen(false);
       setSelectedInventoryItem(null);
       setRestockForm({ amount: '' });
@@ -844,11 +849,10 @@ export default function BreedingHub() {
         })
       );
 
-      setInfoMessage(`Deleted ${bull.name} from semen inventory.`);
+      notifyInfo(`Deleted ${bull.name} from semen inventory.`);
     } catch (error) {
       console.error('Error deleting inventory:', error);
-      setErrorMessage(error?.response?.data?.error || 'Failed to delete semen inventory. Please try again.');
-      setShowError(true);
+      notifyError(error?.response?.data?.error || 'Failed to delete semen inventory. Please try again.');
     } finally {
       confirmation.setLoading(false);
       confirmation.close();

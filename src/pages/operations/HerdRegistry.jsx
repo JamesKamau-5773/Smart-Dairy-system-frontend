@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
+import toast from 'react-hot-toast';
 import {
   BookOpen,
   Calendar,
@@ -36,6 +37,7 @@ import {
 } from '../../lib/herdUtils';
 
 const INITIAL_HERD = [];
+const statusOptions = ['Calf', 'Heifer', 'Lactating', 'Dry'];
 
 // ─────────────────────────────────────────────────────────────────────────
 // MAIN COMPONENT
@@ -46,7 +48,7 @@ export default function HerdRegistry() {
   const queryClient = useQueryClient();
   // State
   const [sortBy, setSortBy] = useState('age');
-  const [statusFilter, setStatusFilter] = useState('All');
+  const [statusFilter, setStatusFilter] = useState('All'); // This filter is for the table, not the form dropdown
   const [herdSearch, setHerdSearch] = useState('');
   const [controlsOpen, setControlsOpen] = useState(false);
   const [herdState, setHerdState] = useState(INITIAL_HERD);
@@ -55,6 +57,11 @@ export default function HerdRegistry() {
   const [successMessage, setSuccessMessage] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
   const [showError, setShowError] = useState(false);
+
+  // Mirror every banner to the global Toaster so feedback is guaranteed to render
+  // above any open modal (the inline banners use z-[60], below some overlays).
+  const notifySuccess = (msg) => { setSuccessMessage(msg); toast.success(msg); };
+  const notifyError = (msg) => { setErrorMessage(msg); setShowError(true); toast.error(msg); };
   const [formErrors, setFormErrors] = useState({});
   const [editFormErrors, setEditFormErrors] = useState({});
   const [editingCow, setEditingCow] = useState(null);
@@ -63,7 +70,12 @@ export default function HerdRegistry() {
     name: '',
     breed: '',
     dateOfBirth: '',
+    current_status: '', // Will be pre-filled from cow.status
+    sire_name: '',
+    dam_id: '',
   });
+  const [herdOptions, setHerdOptions] = useState([]);
+  const [loadingHerdOptions, setLoadingHerdOptions] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [isEditSaving, setIsEditSaving] = useState(false);
   const searchInputRef = useRef(null);
@@ -75,19 +87,44 @@ export default function HerdRegistry() {
     enabled: !!tenantId,
   });
 
+  // Fetch herd data for Dam dropdown
+  useEffect(() => {
+    const fetchHerdForDam = async () => {
+      setLoadingHerdOptions(true);
+      try {
+        // Using herdApi.list() as it's already imported and provides the necessary data
+        const response = await herdApi.list();
+        setHerdOptions(
+          response.map((cow) => ({
+            value: cow.id, // Assuming 'id' is the unique identifier for a cow
+            label: `${cow.tag_number || cow.id}${cow.name ? ` (${cow.name})` : ''}`,
+          }))
+        );
+      } catch (err) {
+        console.error('Failed to fetch herd for Dam dropdown:', err);
+        // Optionally set an error state here if you want to display it in the UI
+      } finally {
+        setLoadingHerdOptions(false);
+      }
+    };
+    fetchHerdForDam();
+  }, [tenantId, farmId]); // Re-fetch if tenant or farm changes
+
   useEffect(() => {
     if (Array.isArray(herdData)) {
       setHerdState(herdData.map((cow) => normalizeHerdCow(cow)));
     }
   }, [herdData]);
 
-  // Form state
   const [newCow, setNewCow] = useState({
     tagNumber: '',
     name: '',
     breed: '',
     dateOfBirth: '',
     hasCalved: false,
+    current_status: 'Calf', // Default for new animal
+    sire_name: '',
+    dam_id: '',
   });
 
   // Derived data
@@ -171,6 +208,10 @@ export default function HerdRegistry() {
         breed: newCow.breed || 'Foundation',
         dateOfBirth: newCow.dateOfBirth,
         hasCalved: newCow.hasCalved,
+        // New fields
+        current_status: newCow.current_status,
+        sire_name: newCow.sire_name,
+        dam_id: newCow.dam_id,
       };
 
       const savedCowResponse = await herdApi.create(apiPayload);
@@ -190,7 +231,7 @@ export default function HerdRegistry() {
         })
       );
 
-      setSuccessMessage(`Successfully added ${savedCow.id} — ${savedCow.name}`);
+      notifySuccess(`Successfully added ${savedCow.id} — ${savedCow.name}`);
       handleCloseModal();
     } catch (error) {
       console.error('Error adding cow:', error);
@@ -230,11 +271,10 @@ export default function HerdRegistry() {
         })
       );
 
-      setSuccessMessage(`Removed ${cowName} from your herd`);
+      notifySuccess(`Removed ${cowName} from your herd`);
     } catch (error) {
       console.error('Error deleting cow:', error);
-      setErrorMessage('Failed to delete animal. Please try again.');
-      setShowError(true);
+      notifyError('Failed to delete animal. Please try again.');
     } finally {
       confirmation.setLoading(false);
       confirmation.close();
@@ -254,13 +294,17 @@ export default function HerdRegistry() {
       tagNumber: cow.id ?? '',
       name: cow.name ?? '',
       breed: cow.breed ?? '',
-      dateOfBirth: cow.dateOfBirth ?? '',
+      dateOfBirth: cow.dateOfBirth ?? '', // Assuming dateOfBirth is already in YYYY-MM-DD format
+      // New fields
+      current_status: cow.status ?? 'Calf', // Pre-fill with current status, fallback to 'Calf'
+      sire_name: cow.sire_name ?? '',
+      dam_id: cow.dam_id ?? '',
     });
     setEditFormErrors({});
     setShowError(false);
     setIsEditOpen(true);
   };
-
+  
   const handleCloseEditModal = () => {
     setIsEditOpen(false);
     setEditingCow(null);
@@ -296,6 +340,10 @@ export default function HerdRegistry() {
         name: editCow.name.trim() || 'Unnamed',
         breed: editCow.breed.trim() || 'Foundation',
         dateOfBirth: editCow.dateOfBirth,
+        // New fields
+        current_status: editCow.current_status,
+        sire_name: editCow.sire_name,
+        dam_id: editCow.dam_id,
       };
 
       const updated = await herdApi.update(routeId, payload);
@@ -313,12 +361,11 @@ export default function HerdRegistry() {
         })
       );
 
-      setSuccessMessage(`Updated ${normalizedUpdatedCow.id} - ${normalizedUpdatedCow.name}`);
+      notifySuccess(`Updated ${normalizedUpdatedCow.id} - ${normalizedUpdatedCow.name}`);
       handleCloseEditModal();
     } catch (error) {
       console.error('Error editing cow:', error);
-      setErrorMessage(getApiErrorMessage(error, 'Failed to update animal. Please try again.'));
-      setShowError(true);
+      notifyError(getApiErrorMessage(error, 'Failed to update animal. Please try again.'));
     } finally {
       setIsEditSaving(false);
     }
@@ -792,6 +839,70 @@ export default function HerdRegistry() {
             )}
           </div>
 
+          {/* NEW FIELD: Current Status */}
+          <div>
+            <label className="block text-xs font-bold uppercase text-ink-muted mb-1">Current Status</label>
+            <select
+              className="input-machined w-full"
+              value={newCow.current_status}
+              onChange={(e) => setNewCow({ ...newCow, current_status: e.target.value })}
+              aria-label="Current Status"
+            >
+              {statusOptions.map((status) => (
+                <option key={status} value={status}>
+                  {status}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* NEW FIELD: Sire Name */}
+          <div>
+            <label className="block text-xs font-bold uppercase text-ink-muted mb-1">Sire Name (Father)</label>
+            <input
+              type="text"
+              className="input-machined w-full"
+              value={newCow.sire_name}
+              onChange={(e) => setNewCow({ ...newCow, sire_name: e.target.value })}
+              placeholder="e.g., Bull 123 or AI Code (Optional)"
+              aria-label="Sire Name"
+            />
+          </div>
+
+          {/* NEW FIELD: Dam (Mother) */}
+          <div>
+            <label className="block text-xs font-bold uppercase text-ink-muted mb-1">Dam (Mother)</label>
+            {loadingHerdOptions ? (
+              <p className="text-sm text-ink-muted">Loading herd options...</p>
+            ) : (
+              <select
+                className="input-machined w-full"
+                value={newCow.dam_id}
+                onChange={(e) => setNewCow({ ...newCow, dam_id: e.target.value })}
+                aria-label="Dam (Mother)"
+              >
+                <option value="">-- Select a Dam (Optional) --</option>
+                {herdOptions.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+            )}
+            {/*
+              // For a searchable dropdown like react-select, you would integrate it here:
+              // import Select from 'react-select';
+              // <Select
+              //   options={herdOptions}
+              //   value={herdOptions.find(option => option.value === newCow.dam_id)}
+              //   onChange={(selectedOption) => setNewCow({ ...newCow, dam_id: selectedOption ? selectedOption.value : '' })}
+              //   placeholder="Search or select a Dam (Optional)"
+              //   isClearable
+              // />
+            */}
+          </div>
+
+
           {/* Checkbox */}
           <div className="flex items-center gap-3">
             <input
@@ -905,6 +1016,69 @@ export default function HerdRegistry() {
                 <AlertCircle size={12} /> {editFormErrors.dateOfBirth}
               </p>
             )}
+          </div>
+
+          {/* NEW FIELD: Current Status */}
+          <div>
+            <label className="block text-xs font-bold uppercase text-ink-muted mb-1">Current Status</label>
+            <select
+              className="input-machined w-full"
+              value={editCow.current_status}
+              onChange={(e) => setEditCow({ ...editCow, current_status: e.target.value })}
+              aria-label="Current Status"
+            >
+              {statusOptions.map((status) => (
+                <option key={status} value={status}>
+                  {status}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* NEW FIELD: Sire Name */}
+          <div>
+            <label className="block text-xs font-bold uppercase text-ink-muted mb-1">Sire Name (Father)</label>
+            <input
+              type="text"
+              className="input-machined w-full"
+              value={editCow.sire_name}
+              onChange={(e) => setEditCow({ ...editCow, sire_name: e.target.value })}
+              placeholder="e.g., Bull 123 or AI Code (Optional)"
+              aria-label="Sire Name"
+            />
+          </div>
+
+          {/* NEW FIELD: Dam (Mother) */}
+          <div>
+            <label className="block text-xs font-bold uppercase text-ink-muted mb-1">Dam (Mother)</label>
+            {loadingHerdOptions ? (
+              <p className="text-sm text-ink-muted">Loading herd options...</p>
+            ) : (
+              <select
+                className="input-machined w-full"
+                value={editCow.dam_id}
+                onChange={(e) => setEditCow({ ...editCow, dam_id: e.target.value })}
+                aria-label="Dam (Mother)"
+              >
+                <option value="">-- Select a Dam (Optional) --</option>
+                {herdOptions.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+            )}
+            {/*
+              // For a searchable dropdown like react-select, you would integrate it here:
+              // import Select from 'react-select';
+              // <Select
+              //   options={herdOptions}
+              //   value={herdOptions.find(option => option.value === editCow.dam_id)}
+              //   onChange={(selectedOption) => setEditCow({ ...editCow, dam_id: selectedOption ? selectedOption.value : '' })}
+              //   placeholder="Search or select a Dam (Optional)"
+              //   isClearable
+              // />
+            */}
           </div>
 
           <div className="flex items-center justify-end gap-3 pt-2 border-t border-ink/10">

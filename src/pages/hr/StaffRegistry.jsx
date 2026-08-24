@@ -3,7 +3,9 @@ import { UserPlus, DollarSign, Search, Edit2, UserX, UserCheck } from 'lucide-re
 import AddEmployeeModal from '../../components/forms/AddEmployeeModal';
 import EmployeeDrawer from '../../components/forms/EmployeeDrawer';
 import VerifyReturnModal from '../../components/forms/VerifyReturnModal';
+import Confirmation, { useConfirmation } from '../../components/ui/Confirmation';
 import { useStaff } from '../../providers/StaffProvider';
+import toast from 'react-hot-toast';
 
 export default function StaffRegistry() {
   const { staff, addEmployee, issueAdvance, editEmployee, verifyReturn, toggleEmployeeStatus } = useStaff();
@@ -13,6 +15,7 @@ export default function StaffRegistry() {
   const [selectedStaffId, setSelectedStaffId] = useState(null);
   const [isVerifyModalOpen, setIsVerifyModalOpen] = useState(false);
   const [selectedVerificationStaffId, setSelectedVerificationStaffId] = useState(null);
+  const confirmation = useConfirmation();
 
   const selectedStaff = useMemo(
     () => staff.find((member) => member.id === selectedStaffId) ?? null,
@@ -69,14 +72,19 @@ export default function StaffRegistry() {
     setSelectedVerificationStaffId(null);
   };
 
-  const handleToggleStatus = (staffMember) => {
+  const handleToggleStatus = async (staffMember) => {
     const action = staffMember.status === 'ACTIVE' ? 'deactivate' : 'activate';
-    if (window.confirm(`Are you sure you want to ${action} ${staffMember.name}?`)) {
-      if (action === 'deactivate' && staffMember.loanBalance > 0) {
-        alert(`${staffMember.name} has an outstanding loan balance. Please clear it before deactivating.`);
-      } else {
-        toggleEmployeeStatus(staffMember.id);
-      }
+    const confirmed = await confirmation.confirm({
+      title: `${action === 'deactivate' ? 'Deactivate' : 'Activate'} Staff Member`,
+      message: `Are you sure you want to ${action} ${staffMember.name}?`,
+      confirmText: action === 'deactivate' ? 'Deactivate' : 'Activate',
+      type: action === 'deactivate' ? 'danger' : 'info',
+    });
+    if (!confirmed) return;
+    if (action === 'deactivate' && staffMember.loanBalance > 0) {
+      toast.error(`${staffMember.name} has an outstanding loan balance. Clear it before deactivating.`);
+    } else {
+      toggleEmployeeStatus(staffMember.id);
     }
   };
 
@@ -98,6 +106,7 @@ export default function StaffRegistry() {
 
   return (
     <div className="animate-reveal p-8">
+      <Confirmation {...confirmation} />
       <div className="mb-8 flex items-start justify-between">
         <div>
           <h2 className="m-0 font-sans text-3xl font-black tracking-tight text-slate-800">Staff Registry</h2>

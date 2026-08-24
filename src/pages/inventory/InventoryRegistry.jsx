@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Search, Plus, Filter, Edit2, Package, Trash2, ChevronDown } from 'lucide-react';
 import AlertBanner from '../../components/ui/AlertBanner';
+import Confirmation, { useConfirmation } from '../../components/ui/Confirmation';
 import RegisterResourceModal from '../../components/inventory/RegisterResourceModal';
 import StandardDeliveryModal from '../../components/inventory/StandardDeliveryModal';
 import EditResourceModal from '../../components/inventory/EditResourceModal';
@@ -19,6 +20,7 @@ export default function InventoryRegistry() {
   const [categoryFilter, setCategoryFilter] = useState('All');
   const [showError, setShowError] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
+  const confirmation = useConfirmation();
 
   const { data: backendInventory } = useQuery({
     queryKey: ['inventory-items', tenantId, farmId],
@@ -110,9 +112,15 @@ export default function InventoryRegistry() {
     },
   });
 
-  const handleDelete = (item) => {
+  const handleDelete = async (item) => {
     const identifier = item.sku || item.id;
-    if (window.confirm(`Are you sure you want to delete item ${item.name} (${identifier})? This action cannot be undone.`)) {
+    const confirmed = await confirmation.confirm({
+      title: 'Delete Inventory Item',
+      message: `Are you sure you want to delete item ${item.name} (${identifier})? This action cannot be undone.`,
+      confirmText: 'Delete',
+      type: 'danger',
+    });
+    if (confirmed) {
       deleteItemMutation.mutate(identifier);
     }
   };
@@ -208,6 +216,7 @@ export default function InventoryRegistry() {
 
   return (
     <div className="animate-reveal p-8">
+      <Confirmation {...confirmation} />
       {showError && (
         <div className="mb-6">
           <AlertBanner
@@ -263,13 +272,13 @@ export default function InventoryRegistry() {
       </div>
 
       {/* STOCK TABLE */}
-      <div className="bg-white border border-slate-100 rounded-xl shadow-sm overflow-hidden">
+      <div className="bg-white border border-slate-100 rounded-xl shadow-sm overflow-x-auto">
         {filteredInventoryData.length === 0 ? (
           <div className="p-8 text-center text-sm text-slate-500">
             No inventory items are available yet.
           </div>
         ) : (
-        <table className="w-full text-left border-collapse">
+        <table className="w-full min-w-[680px] text-left border-collapse">
           <thead className="bg-slate-50 text-[10px] uppercase font-black text-slate-500">
             <tr>
               <th className="px-6 py-4">Item Details</th>

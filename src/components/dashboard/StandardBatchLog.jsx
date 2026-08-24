@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { CheckCircle2, Minus, Plus, AlertCircle, RotateCcw, Loader2 } from 'lucide-react';
 import { logInventoryDelivery } from '../../services/InventoryOperations';
+import toast from 'react-hot-toast';
 
 export default function StandardBatchLog({ onCancel, onSaveComplete }) {
   // Pre-loaded inventory shortcuts
@@ -51,7 +52,13 @@ export default function StandardBatchLog({ onCancel, onSaveComplete }) {
     if (result.success) {
       onSaveComplete(); 
     } else {
-      alert("Database error. Please check your connection and try again.");
+      console.error('[StandardBatchLog] inventory delivery failed', {
+        itemId: selectedItem.id,
+        itemName: selectedItem.name,
+        quantity,
+        error: result.error ?? result.message ?? result,
+      });
+      toast.error(`Could not log delivery for ${selectedItem.name}. Please check your connection and try again.`);
       handleUndo();
     }
   };

@@ -7,6 +7,8 @@ import { financeApi, productionApi, safetyApi } from "../../lib/backendApi";
 import { Plus, Beaker, AlertTriangle, ShieldCheck, Search, Filter, RotateCcw, ChevronDown, Pencil, Trash2 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import FastMilkLog from "../../components/operations/FastMilkLog";
+import Confirmation, { useConfirmation } from "../../components/ui/Confirmation";
+import toast from "react-hot-toast";
 import { toNormalizedSessionLabel } from "../../lib/milkUtils";
 import { formatDate } from "../../lib/herdUtils";
 import { Link } from "react-router-dom";
@@ -78,14 +80,23 @@ export function filterMilkRows(rows, filters) {
   return rows.filter((row) => {
     const rowAmount = typeof row.amountValue === 'number' ? row.amountValue : Number.parseFloat(row.amount);
     const hasValidAmount = Number.isFinite(rowAmount);
-    const cowIdMatch = filters.cowId
-      ? row.cowId.toLowerCase().includes(filters.cowId.toLowerCase())
-      : true;
+    const rowCowId = String(row.cowId ?? '').toLowerCase();
+    const rowCowName = String(row.cowName ?? '').toLowerCase();
+    const rowStatus = String(row.status ?? '').toLowerCase();
+    const rowSession = String(row.session ?? '').toLowerCase();
+    const cowIdMatch = filters.cowId ? (
+      rowCowId.includes(filters.cowId.toLowerCase()) ||
+      (rowCowName && rowCowName.includes(filters.cowId.toLowerCase()))
+    ) : true;
+
     const dateMatch = filters.date ? row.date === filters.date : true;
-    const statusMatch = filters.status === 'all' ? true : row.status.toLowerCase() === filters.status.toLowerCase();
+    const statusMatch = filters.status === 'all' ? true : rowStatus === String(filters.status ?? '').toLowerCase();
+    // Rows without a session only match an explicit session filter if they genuinely
+    // carry that session; missing session should not crash nor silently pass.
+    const sessionMatch = (filters.session === 'all' || !filters.session) ? true : rowSession === String(filters.session).toLowerCase();
     const minMatch = filters.minAmount ? (hasValidAmount ? rowAmount >= Number(filters.minAmount) : false) : true;
     const maxMatch = filters.maxAmount ? (hasValidAmount ? rowAmount <= Number(filters.maxAmount) : false) : true;
-    return cowIdMatch && dateMatch && statusMatch && minMatch && maxMatch;
+    return cowIdMatch && dateMatch && statusMatch && sessionMatch && minMatch && maxMatch;
   });
 }
 
@@ -111,11 +122,13 @@ export default function YieldLog() {
   const [fastLogInitialDate, setFastLogInitialDate] = useState('');
   const [fastLogMode, setFastLogMode] = useState('create');
   const [milkRows, setMilkRows] = useState([]);
+  const confirmation = useConfirmation();
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [filters, setFilters] = useState({
     date: "",
     cowId: "",
     status: "all",
+    session: "all",
     minAmount: "",
     maxAmount: "",
   });
@@ -241,7 +254,7 @@ export default function YieldLog() {
   };
 
   const clearFilters = () => {
-    setFilters({ date: '', cowId: '', status: 'all', minAmount: '', maxAmount: '' });
+    setFilters({ date: '', cowId: '', status: 'all', session: 'all', minAmount: '', maxAmount: '' });
   };
 
   // Integrated Safety Check: Fetching active medical withdrawals
@@ -334,14 +347,22 @@ export default function YieldLog() {
   };
 
   const handleDeleteFromTable = async (row) => {
-    if (!window.confirm(`Delete milk record for ${row.cowId}?`)) return;
+    const confirmed = await confirmation.confirm({
+      title: 'Delete Milk Record',
+      message: `Delete milk record for ${row.cowId}? This action cannot be undone.`,
+      confirmText: 'Delete',
+      type: 'danger',
+    });
+    if (!confirmed) return;
 
     try {
       await productionApi.deleteYield(row.id);
       handleFastLogSaved(row.animalRefId);
       setMilkRows((prev) => prev.filter((entry) => entry.id !== row.id));
+      toast.success('Milk record deleted.');
     } catch (error) {
-      console.error('Failed to delete milk record', error);
+      console.error('[productionLog] delete milk record failed', { rowId: row.id, cowId: row.cowId, error });
+      toast.error('Failed to delete milk record. Please try again.');
     }
   };
 
@@ -359,6 +380,7 @@ export default function YieldLog() {
 
   return (
     <div className="animate-reveal space-y-6">
+      <Confirmation {...confirmation} />
       <div className="rounded-[28px] border border-ink/10 bg-[linear-gradient(135deg,rgba(223,249,255,0.95),rgba(255,255,255,0.98))] p-5 sm:p-6 shadow-[0_20px_60px_rgba(15,23,42,0.08)]">
         <div className="flex flex-col gap-4 border-b border-ink/10 pb-5 lg:flex-row lg:items-end lg:justify-between">
           <div className="min-w-0">
@@ -458,7 +480,7 @@ export default function YieldLog() {
 
         {filtersOpen && (
           <div id="production-filter-panel" className="space-y-4">
-            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-5 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-6 gap-3">
               <label className="space-y-1 text-xs font-semibold text-ink-muted">
                 Date
                 <input
@@ -492,6 +514,19 @@ export default function YieldLog() {
                 </select>
               </label>
               <label className="space-y-1 text-xs font-semibold text-ink-muted">
+                Session
+                <select
+                  value={filters.session}
+                  onChange={(e) => updateFilter('session', e.target.value)}
+                  className="input-machined"
+                >
+                  <option value="all">All</option>
+                  <option value="Morning">Morning</option>
+                  <option value="Afternoon">Afternoon</option>
+                  <option value="Evening">Evening</option>
+                </select>
+              </label>
+              <label className="space-y-1 text-xs font-semibold text-ink-muted">
                 Min Amount
                 <input
                   type="number"
@@ -518,8 +553,8 @@ export default function YieldLog() {
         )}
       </div>
 
-      <div className="card-machined overflow-hidden !p-0">
-        <table className="w-full text-left border-collapse">
+      <div className="card-machined overflow-x-auto !p-0">
+        <table className="w-full min-w-[720px] text-left border-collapse">
           <thead>
             <tr className="bg-brand text-surface">
               <th className="p-5 font-sans text-xs font-semibold uppercase tracking-[0.12em] text-surface/95">Date</th>

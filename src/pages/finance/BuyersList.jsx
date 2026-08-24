@@ -173,8 +173,8 @@ export default function BuyersList() {
   };
 
   const handleImport = () => {
-    console.log('TODO: Implement Excel import functionality.');
-    alert('Excel import is not yet implemented.');
+    console.log('[BuyersList] Excel import not yet implemented.');
+    toast('Excel import is coming soon.', { icon: 'ℹ️' });
   };
 
   return (

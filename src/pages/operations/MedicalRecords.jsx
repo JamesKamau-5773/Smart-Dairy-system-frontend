@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import toast from 'react-hot-toast';
 import {
   AlertCircle,
   CalendarDays,
@@ -70,6 +71,10 @@ export default function VetRecords() {
   const [showSuccess, setShowSuccess] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
+
+  // Mirror to the global Toaster so feedback renders above any open modal.
+  const notifySuccess = (msg) => { setSuccessMessage(msg); setShowSuccess(true); toast.success(msg); };
+  const notifyError = (msg) => { setErrorMessage(msg); setShowError(true); toast.error(msg); };
   const { data: backendRecords } = useQuery({
     queryKey: ['medical-records', tenantId, farmId],
     queryFn: () => medicalApi.listRecords(),
@@ -114,12 +119,10 @@ export default function VetRecords() {
       setFormErrors({});
       setErrorMessage('');
       setShowError(false);
-      setSuccessMessage(`Medical record saved for ${normalizedRecord.cow || form.cowTag}.`);
-      setShowSuccess(true);
+      notifySuccess(`Medical record saved for ${normalizedRecord.cow || form.cowTag}.`);
     },
     onError: () => {
-      setErrorMessage('Failed to save the medical record. Please try again.');
-      setShowError(true);
+      notifyError('Failed to save the medical record. Please try again.');
     },
     onSettled: () => {
       setIsSaving(false);
@@ -139,12 +142,10 @@ export default function VetRecords() {
       setFormErrors({});
       setErrorMessage('');
       setShowError(false);
-      setSuccessMessage(`Medical record updated for ${normalizedRecord.cow || form.cowTag}.`);
-      setShowSuccess(true);
+      notifySuccess(`Medical record updated for ${normalizedRecord.cow || form.cowTag}.`);
     },
     onError: () => {
-      setErrorMessage('Failed to update the medical record. Please try again.');
-      setShowError(true);
+      notifyError('Failed to update the medical record. Please try again.');
     },
     onSettled: () => {
       setIsSaving(false);

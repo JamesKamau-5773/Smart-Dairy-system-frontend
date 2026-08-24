@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import toast from 'react-hot-toast';
 import { 
   Activity, Syringe, Baby, Calendar, Droplets, 
   HeartPulse, ShieldCheck, FileText, Filter, ArrowLeft, Download, Share2, Calculator, Plus, AlertCircle
@@ -57,6 +58,10 @@ export default function AnimalPassport() {
   const [successMessage, setSuccessMessage] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
   const [showError, setShowError] = useState(false);
+
+  // Mirror to the global Toaster so feedback renders above any open modal.
+  const notifySuccess = (msg) => { setSuccessMessage(msg); toast.success(msg); };
+  const notifyError = (msg) => { setErrorMessage(msg); setShowError(true); toast.error(msg); };
   const [isEventOpen, setIsEventOpen] = useState(false);
   const EMPTY_ACTION = {
     title: '',
@@ -171,7 +176,7 @@ export default function AnimalPassport() {
           notes: `Logged vet visit: ${payload.diagnosis}`,
         }));
 
-        setSuccessMessage(`Medical record saved for ${resolvedAnimal.id} — also visible on Medical Records.`);
+        notifySuccess(`Medical record saved for ${resolvedAnimal.id} — also visible on Medical Records.`);
       } else if (actionType === 'Breeding') {
         const payload = buildBreedingLogPayload(newEvent, id, resolvedAnimal.name);
         if (!payload) {
@@ -193,7 +198,7 @@ export default function AnimalPassport() {
           notes: `Logged AI service: ${payload.semen_id}`,
         }));
 
-        setSuccessMessage(`Breeding log saved for ${resolvedAnimal.id} — also visible on Breeding & Genetics.`);
+        notifySuccess(`Breeding log saved for ${resolvedAnimal.id} — also visible on Breeding & Genetics.`);
       } else {
         const eventData = buildGeneralEventPayload(newEvent);
         const createdEvent = await createEventMutation.mutateAsync(eventData);
@@ -207,7 +212,7 @@ export default function AnimalPassport() {
           notes: `Added ${normalizedCreatedEvent.type} event: ${normalizedCreatedEvent.title}`,
         }));
 
-        setSuccessMessage(`Logged ${normalizedCreatedEvent.type.toLowerCase()} event for ${resolvedAnimal.id}.`);
+        notifySuccess(`Logged ${normalizedCreatedEvent.type.toLowerCase()} event for ${resolvedAnimal.id}.`);
       }
 
       setActiveFilter('All');
@@ -215,8 +220,7 @@ export default function AnimalPassport() {
       setIsEventOpen(false);
     } catch (error) {
       console.error('Error adding event:', error);
-      setErrorMessage(error?.message || 'Failed to add event. Please try again.');
-      setShowError(true);
+      notifyError(error?.message || 'Failed to add event. Please try again.');
     } finally {
       setIsSaving(false);
     }
