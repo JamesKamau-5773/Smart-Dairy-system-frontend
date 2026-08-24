@@ -2,6 +2,7 @@ import axios from 'axios';
 import apiClient from './apiClient';
 import { httpClientConfig } from './httpClientConfig';
 import { getPermissionSet, getRoleSet, normalizeRole } from './roles';
+import { API_CONTRACTS, validateResponse } from './apiContracts';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
 import { normalizeNutritionRequestPayload } from './feedUtils';
@@ -478,6 +479,21 @@ const buildHerdPayload = (payload = {}) => {
   const breedStatus = payload.breed_status ?? payload.breed;
   if (breedStatus !== undefined && breedStatus !== null && breedStatus !== '') {
     request.breed_status = breedStatus;
+  }
+
+  // Add new fields for current status, sire name, and dam ID
+  if (payload.current_status !== undefined && payload.current_status !== null && payload.current_status !== '') {
+    request.current_status = payload.current_status;
+  }
+
+  if (payload.sire_name !== undefined && payload.sire_name !== null && payload.sire_name !== '') {
+    request.sire_name = payload.sire_name;
+  }
+
+  // Ensure dam_id is sent as null or empty string if not selected, not undefined
+  // Backend might expect null for optional foreign keys if not provided
+  if (payload.dam_id !== undefined) {
+    request.dam_id = payload.dam_id === '' ? null : payload.dam_id;
   }
 
   return request;
@@ -1242,7 +1258,29 @@ export const routineApi = {
 
 export const feedApi = {
   calculateSchedule(payload) {
-    return apiClient.post('/v1/feed/calculate-schedule', payload).then((response) => toObject(response.data));
+    // This function adapts to the unified backend endpoint which now supports two modes.
+    // It determines the correct 'target_mode' based on the payload structure to ensure
+    // backward compatibility while enabling the new per-cow planning logic.
+    const hasPerCowTargets = Array.isArray(payload.per_cow_targets) && payload.per_cow_targets.length > 0;
+
+    let apiPayload;
+
+    if (hasPerCowTargets) {
+      // If per-cow targets are provided, use the modern 'per_cow' mode.
+      // This delegates to HerdFeedingPlanService on the backend for a full breakdown.
+      apiPayload = {
+        ...payload,
+        target_mode: 'per_cow',
+      };
+    } else {
+      // For backward compatibility, use the legacy 'herd' mode.
+      // This performs a simple herd-level calculation.
+      apiPayload = {
+        ...payload,
+        target_mode: 'herd',
+      };
+    }
+    return apiClient.post('/v1/feed/calculate-schedule', apiPayload).then((response) => toObject(response.data));
   },
 };
 
@@ -1251,7 +1289,8 @@ export const nutritionApi = {
     return apiClient.get('/nutrition/dashboard').then((response) => toObject(response.data));
   },
   listRecipes() {
-    return apiClient.get('/feed/recipes').then((response) => toArray(response.data));
+    return apiClient.get('/feed/recipes')
+      .then((response) => validateResponse(API_CONTRACTS.RECIPES, toArray(response.data), 'RECIPES'));
   },
   listMixerIngredients(recipeType) {
     const params = {
@@ -1409,10 +1448,12 @@ export const nutritionApi = {
     return apiClient.post(`/v1/nutrition/batches/${batchId}/consumption-events`, payload).then((response) => toObject(response.data));
   },
   feedCostEfficiency() {
-    return apiClient.get('/v1/nutrition/analytics/feed-cost-efficiency').then((response) => toObject(response.data));
+    return apiClient.get('/v1/nutrition/analytics/feed-cost-efficiency')
+      .then((response) => validateResponse(API_CONTRACTS.FEED_COST_EFFICIENCY, toObject(response.data), 'FEED_COST_EFFICIENCY'));
   },
   activeBatchRoiTrendWeekly() {
-    return apiClient.get('/v1/nutrition/analytics/active-batch-roi-trend-weekly').then((response) => toArray(response.data));
+    return apiClient.get('/v1/nutrition/analytics/active-batch-roi-trend-weekly')
+      .then((response) => validateResponse(API_CONTRACTS.ROI_TREND_WEEKLY, toArray(response.data), 'ROI_TREND_WEEKLY'));
   },
 };
 
