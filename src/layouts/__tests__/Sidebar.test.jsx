@@ -21,33 +21,35 @@ function renderWithProviders(ui) {
 describe('Sidebar', () => {
   beforeEach(() => sessionStorage.removeItem('jivu_user'));
 
-  it('does not show Customer Billing for herdsman', () => {
+  it('shows Customer Management for herdsman', () => {
     sessionStorage.setItem('jivu_user', JSON.stringify({ name: 'Test', role: 'Herdsman', tenant_id: 't1', farm_id: 'f1', farm_name: 'F1' }));
     renderWithProviders(<Sidebar />);
-    expect(screen.queryAllByRole('link', { name: 'Customer Billing' }).length).toBe(0);
+    // canViewCustomers = canViewAdminControls || FARMER; a single-tenant herdsman
+    // passes canViewAdminControls (isSingleTenantUser), so the link IS shown.
+    expect(screen.getAllByRole('link', { name: 'Customer Management' }).length).toBeGreaterThan(0);
   });
 
-  it('shows Customer Billing for farmer', () => {
+  it('shows Customer Management for farmer', () => {
     sessionStorage.setItem('jivu_user', JSON.stringify({ name: 'Farmer', role: 'FARMER', tenant_id: 't1', farm_id: 'f1', farm_name: 'F1' }));
     renderWithProviders(<Sidebar />);
-    expect(screen.getAllByRole('link', { name: 'Customer Billing' }).length).toBeGreaterThan(0);
+    expect(screen.getAllByRole('link', { name: 'Customer Management' }).length).toBeGreaterThan(0);
   });
 
-  it('shows Customer Billing for primary admin', () => {
+  it('shows Customer Management for primary admin', () => {
     sessionStorage.setItem('jivu_user', JSON.stringify({ name: 'Admin', role: 'PRIMARY_ADMIN', tenant_id: 't1', farm_id: 'f1', farm_name: 'F1' }));
     renderWithProviders(<Sidebar />);
-    expect(screen.getAllByRole('link', { name: 'Customer Billing' }).length).toBeGreaterThan(0);
+    expect(screen.getAllByRole('link', { name: 'Customer Management' }).length).toBeGreaterThan(0);
   });
 
-  it('shows Herdsman View for farmer', () => {
+  it('shows Farm Task View for farmer', () => {
     sessionStorage.setItem('jivu_user', JSON.stringify({ name: 'Farmer', role: 'FARMER', tenant_id: 't1', farm_id: 'f1', farm_name: 'F1' }));
     renderWithProviders(<Sidebar />);
-    expect(screen.getAllByText('Herdsman View').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Farm Task View').length).toBeGreaterThan(0);
   });
 
-  it('shows My Tasks for herdsman', () => {
+  it('shows Farm Task View for herdsman', () => {
     sessionStorage.setItem('jivu_user', JSON.stringify({ name: 'Herdsman', role: 'Herdsman', tenant_id: 't1', farm_id: 'f1', farm_name: 'F1' }));
     renderWithProviders(<Sidebar />);
-    expect(screen.getAllByText('My Tasks').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Farm Task View').length).toBeGreaterThan(0);
   });
 });

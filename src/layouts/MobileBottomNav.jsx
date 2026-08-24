@@ -11,7 +11,7 @@ export default function MobileBottomNav() {
   const homePath = getDefaultLandingPath(currentUser);
 
   const canViewTasks = true;
-  const taskLabel = 'Herdsman View';
+  const taskLabel = 'Farm Task View';
 
   return (
     <nav

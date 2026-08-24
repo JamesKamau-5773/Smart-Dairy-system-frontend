@@ -21,15 +21,16 @@ function renderWithProviders(ui) {
 describe('MobileBottomNav', () => {
   beforeEach(() => sessionStorage.removeItem('jivu_user'));
 
-  it('shows Herdsman View for farmer and admin', () => {
+  it('shows Farm Task View for farmer and admin', () => {
     sessionStorage.setItem('jivu_user', JSON.stringify({ name: 'Farmer', role: 'FARMER', tenant_id: 't1', farm_id: 'f1', farm_name: 'F1' }));
     renderWithProviders(<MobileBottomNav />);
-    expect(screen.getAllByText('Herdsman View').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Farm Task View').length).toBeGreaterThan(0);
   });
 
-  it('shows My Tasks for herdsman', () => {
+  it('shows Farm Task View for herdsman', () => {
     sessionStorage.setItem('jivu_user', JSON.stringify({ name: 'Herdsman', role: 'Herdsman', tenant_id: 't1', farm_id: 'f1', farm_name: 'F1' }));
     renderWithProviders(<MobileBottomNav />);
-    expect(screen.getByText('My Tasks')).toBeTruthy();
+    // The label renders inside the NavLink (icon span + text node both match).
+    expect(screen.getAllByText('Farm Task View').length).toBeGreaterThan(0);
   });
 });
