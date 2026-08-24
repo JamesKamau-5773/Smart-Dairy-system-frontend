@@ -24,8 +24,11 @@ const FeedMixRow = ({ recipe, index, isExpanded, onToggle, onLoadToLab }) => {
   
   const recipeId = recipe?.id;
   const name = recipe?.name || 'Unnamed Mix';
-  const yieldAvg = recipe?.yieldAvg ?? 0;
-  const costPerLiter = recipe?.costPerLiter ?? 0;
+  // Backend now returns a `performance` object; fall back to legacy flat fields.
+  const perf = recipe?.performance ?? {};
+  const yieldAvg = Number(perf.avgDailyYieldLiters ?? perf.avg_daily_yield_liters ?? recipe?.yieldAvg ?? 0);
+  const costPerLiter = Number(perf.costPerLiter ?? perf.cost_per_liter ?? recipe?.costPerLiter ?? 0);
+  const hasPerformance = Number.isFinite(yieldAvg) && yieldAvg > 0;
   
   // Safely check for either 'ingredients' or 'formula' depending on the payload shape
   const ingredientsList = Array.isArray(recipe?.ingredients) 
@@ -34,7 +37,7 @@ const FeedMixRow = ({ recipe, index, isExpanded, onToggle, onLoadToLab }) => {
     
   // The recipes API returns `target_protein_percentage`; fall back to `protein`.
   const protein = recipe?.target_protein_percentage ?? recipe?.protein ?? '--';
-  const lastUsed = recipe?.lastUsed || 'Not recorded';
+  const lastUsed = perf.lastFedOn ?? perf.last_fed_on ?? recipe?.lastUsed ?? 'Not recorded';
 
   return (
     <div className="bg-surface-raised rounded-lg transition-all duration-200 border border-transparent hover:border-ink/10 overflow-hidden shadow-sm">
@@ -146,18 +149,37 @@ const getRecency = (recipe) => {
   return Number.isFinite(id) ? id : 0; // higher autoincrement id = more recently saved
 };
 
+// Real performance metrics (avg daily yield, cost/liter) are present on
+// `recipe.performance`; prefer the higher-performing version of a formula, then
+// rank the list by yield so the best mix actually surfaces first.
+const getYield = (r) => Number(r?.performance?.avgDailyYieldLiters ?? r?.performance?.avg_daily_yield_liters ?? r?.yieldAvg ?? 0);
+const getCost = (r) => Number(r?.performance?.costPerLiter ?? r?.performance?.cost_per_liter ?? r?.costPerLiter ?? Infinity);
+
 function selectTopMixes(recipes) {
-  const latestByFormula = new Map();
+  const bestByFormula = new Map();
   for (const recipe of recipes) {
     if (!recipe) continue;
     const key = formulaKeyOf(recipe);
-    const existing = latestByFormula.get(key);
-    if (!existing || getRecency(recipe) >= getRecency(existing)) {
-      latestByFormula.set(key, recipe);
+    const existing = bestByFormula.get(key);
+    if (!existing) {
+      bestByFormula.set(key, recipe);
+      continue;
     }
+    // Prefer the version with real performance; fall back to the more recent.
+    const rPerf = getYield(recipe);
+    const ePerf = getYield(existing);
+    const better = rPerf !== ePerf
+      ? rPerf > ePerf
+      : getRecency(recipe) >= getRecency(existing);
+    if (better) bestByFormula.set(key, recipe);
   }
-  return [...latestByFormula.values()]
-    .sort((a, b) => getRecency(b) - getRecency(a))
+  // Rank by avg daily yield (desc), then cost/liter (asc), then recency (desc).
+  return [...bestByFormula.values()]
+    .sort((a, b) =>
+      (getYield(b) - getYield(a)) ||
+      (getCost(a) - getCost(b)) ||
+      (getRecency(b) - getRecency(a))
+    )
     .slice(0, MAX_MIXES_SHOWN);
 }
 
