@@ -10,42 +10,42 @@ import { StaffProvider } from './providers/StaffProvider';
 import DashboardLayout from './layouts/DashboardLayout';
 
 // Route-loaded pages
-const LoginPage = lazy(() => import('./pages/auth/LoginPage'));
-const RegisterPage = lazy(() => import('./pages/auth/RegisterPage'));
-const ClaimAccountPage = lazy(() => import('./pages/auth/ClaimAccountPage'));
-const SystemAdminDashboardPage = lazy(() => import('./pages/auth/SystemAdminDashboardPage'));
-const SuperAdminCooperativeSetupPage = lazy(() => import('./pages/auth/SuperAdminCooperativeSetupPage'));
-const CooperativeAdminOnboardingPage = lazy(() => import('./pages/auth/CooperativeAdminOnboardingPage'));
-const CustomerPortal = lazy(() => import('./pages/external/CustomerPortal'));
-const CommandCenter = lazy(() => import('./pages/CommandCenter'));
-const MemberDashboard = lazy(() => import('./pages/MemberDashboard'));
-const YieldLog = lazy(() => import('./pages/operations/productionLog'));
-const SafetyDashboard = lazy(() => import('./pages/operations/SafetyDashboard'));
-const MedicalRecords = lazy(() => import('./pages/operations/MedicalRecords'));
+const LoginPage = lazy(() => import('./pages/auth/LoginPage.jsx'));
+const RegisterPage = lazy(() => import('./pages/auth/RegisterPage.jsx'));
+const ClaimAccountPage = lazy(() => import('./pages/auth/ClaimAccountPage.jsx'));
+const SystemAdminDashboardPage = lazy(() => import('./pages/auth/SystemAdminDashboardPage.jsx'));
+const SuperAdminCooperativeSetupPage = lazy(() => import('./pages/auth/SuperAdminCooperativeSetupPage.jsx'));
+const CooperativeAdminOnboardingPage = lazy(() => import('./pages/auth/CooperativeAdminOnboardingPage.jsx'));
+const CustomerPortal = lazy(() => import('./pages/external/CustomerPortal.jsx'));
+const CommandCenter = lazy(() => import('./pages/CommandCenter.jsx'));
+const MemberDashboard = lazy(() => import('./pages/MemberDashboard.jsx'));
+const YieldLog = lazy(() => import('./pages/operations/productionLog.jsx'));
+const SafetyDashboard = lazy(() => import('./pages/operations/SafetyDashboard.jsx'));
+const MedicalRecords = lazy(() => import('./pages/operations/MedicalRecords.jsx'));
 
 // NEW: Added the Milk Drop Reports lazy import
-const MilkDropReports = lazy(() => import('./pages/operations/MilkDropReports'));
+const MilkDropReports = lazy(() => import('./pages/operations/MilkDropReports.jsx'));
 
-const ClerkEntry = lazy(() => import('./pages/operations/ClerkEntry'));
-const HerdsmanView = lazy(() => import('./pages/operations/HerdsmanView'));
-const HerdRegistry = lazy(() => import('./pages/operations/HerdRegistry'));
-const MilkLab = lazy(() => import('./pages/operations/MilkLab'));
-const BreedingHub = lazy(() => import('./pages/operations/BreedingHub'));
-const AnimalPassport = lazy(() => import('./pages/operations/AnimalRecord'));
-const MilkHistory = lazy(() => import('./pages/operations/MilkHistory'));
-const FeedFormulation = lazy(() => import('./pages/inventory/FeedFormulation'));
+const ClerkEntry = lazy(() => import('./pages/operations/ClerkEntry.jsx'));
+const HerdsmanView = lazy(() => import('./pages/operations/HerdsmanView.jsx'));
+const HerdRegistry = lazy(() => import('./pages/operations/HerdRegistry.jsx'));
+const MilkLab = lazy(() => import('./pages/operations/MilkLab.jsx'));
+const BreedingHub = lazy(() => import('./pages/operations/BreedingHub.jsx'));
+const AnimalPassport = lazy(() => import('./pages/operations/AnimalRecord.jsx'));
+const MilkHistory = lazy(() => import('./pages/operations/MilkHistory.jsx'));
+const FeedFormulation = lazy(() => import('./pages/inventory/FeedFormulation.jsx'));
 const MilkInventoryReport = lazy(() => import('./pages/operations/MilkInventoryReport.jsx'));
 const CustomersPage = lazy(() => import('./pages/operations/Customers.jsx'));
-const NutritionDashboard = lazy(() => import('./pages/nutrition/NutritionDashboard'));
+const NutritionDashboard = lazy(() => import('./pages/nutrition/NutritionDashboard.jsx'));
 // UPDATED: Pointing to the new correct location in the nutrition folder
-const UnitConversions = lazy(() => import('./pages/nutrition/UnitConversions'));
-const DailyRoutinePlanner = lazy(() => import('./pages/operations/DailyRoutinePlanner'));
-const FinancialLedger = lazy(() => import('./pages/finance/FinancialLedger'));
-const InventoryRegistry = lazy(() => import('./pages/inventory/InventoryRegistry'));
-const BuyersList = lazy(() => import('./pages/finance/BuyersList'));
-const CustomerProfile = lazy(() => import('./pages/finance/CustomerProfile'));
-const StaffRegistry = lazy(() => import('./pages/hr/StaffRegistry'));
-const Payroll = lazy(() => import('./pages/hr/Payroll'));
+const UnitConversions = lazy(() => import('./pages/nutrition/UnitConversions.jsx'));
+const DailyRoutinePlanner = lazy(() => import('./pages/operations/DailyRoutinePlanner.jsx'));
+const FinancialLedger = lazy(() => import('./pages/finance/FinancialLedger.jsx'));
+const InventoryRegistry = lazy(() => import('./pages/inventory/InventoryRegistry.jsx'));
+const BuyersList = lazy(() => import('./pages/finance/BuyersList.jsx'));
+const CustomerProfile = lazy(() => import('./pages/finance/CustomerProfile.jsx'));
+const StaffRegistry = lazy(() => import('./pages/hr/StaffRegistry.jsx'));
+const Payroll = lazy(() => import('./pages/hr/Payroll.jsx'));
 
 /**
  * PROTECTED ROUTE GATEKEEPER
