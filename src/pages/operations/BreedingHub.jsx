@@ -1,34 +1,31 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import toast from 'react-hot-toast';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import AlertBanner from '../../components/ui/AlertBanner';
 import Modal from '../../components/ui/Modal';
 import Confirmation, { useConfirmation } from '../../components/ui/Confirmation';
-import { validateForm, ValidationRules, getFirstErrorMessage } from '../../lib/validation';
+import {
+  LogAIServiceForm,
+  LogHeatObservationForm,
+  ManageSemenInventoryForm,
+  RestockSemenInventoryForm,
+} from '../../components/forms/breeding';
 import {
   normalizeBreedingLog,
-  normalizeDateForApi,
   normalizeHerdOption,
-  normalizeSemenCode,
   normalizeSemenInventory,
-  resolveCowId,
-  resolveCowIdentity,
-  normalizeBreedingLogPayload,
 } from '../../lib/breedingUtils';
-import { formatDateTime, getRelativeTime, createAuditEntry, logToAuditTrail } from '../../lib/audit';
+import { createAuditEntry, logToAuditTrail } from '../../lib/audit';
 import { breedingApi, herdApi } from '../../lib/backendApi';
 import { useTenant } from '../../hooks/useTenant';
 import {
   Dna,
-  CalendarDays,
   TrendingUp,
   Syringe,
-  AlertCircle,
   CheckCircle2,
   Stethoscope,
   XCircle,
-  Clock,
   Flame,
   Snowflake,
   Plus,
@@ -39,7 +36,6 @@ import {
   Search
 } from 'lucide-react';
 
-const breedingAlerts = [];
 const bullStock = [];
 const initialVetQueue = [];
 const INITIAL_HISTORY = [];
@@ -68,13 +64,6 @@ function writeCachedBreedingLogs(tenantId, farmId, logs) {
   } catch {
     // Ignore quota or storage errors and keep UI flow unaffected.
   }
-}
-
-function upsertBreedingCacheLog(tenantId, farmId, log) {
-  const current = readCachedBreedingLogs(tenantId, farmId);
-  const dedupeKey = `${log.id ?? ''}|${log.cowId ?? ''}|${log.aiDate ?? ''}|${log.sireCode ?? ''}`;
-  const next = [log, ...current.filter((item) => (`${item.id ?? ''}|${item.cowId ?? ''}|${item.aiDate ?? ''}|${item.sireCode ?? ''}`) !== dedupeKey)].slice(0, 300);
-  writeCachedBreedingLogs(tenantId, farmId, next);
 }
 
 function removeBreedingCacheLog(tenantId, farmId, logId) {
@@ -191,7 +180,7 @@ function HistoryStatusBadge({ status, outcome }) {
 // ============================================================================
 // COMPONENT 1: Page Header & KPI Chips (Responsibility: High-level context & Global Actions)
 // ============================================================================
-function BreedingHeader({ metrics, onLogService }) {
+function BreedingHeader({ metrics, onLogService, onRecordHeat }) {
   return (
     <div className="flex flex-col gap-6 border-b border-ink/10 pb-6 md:flex-row md:items-end md:justify-between">
       <div>
@@ -201,7 +190,7 @@ function BreedingHeader({ metrics, onLogService }) {
         <h2 className="m-0 font-sans text-3xl font-bold tracking-tight text-brand mb-4">
           AI & <span className="text-ink-muted">Pregnancy</span>
         </h2>
-        
+
         {/* Compact KPI Chips */}
         <div className="flex flex-wrap items-center gap-3">
           <div className="flex items-center gap-2 rounded-md bg-danger/10 px-3 py-1.5 text-xs font-bold text-danger border border-danger/20">
@@ -215,14 +204,19 @@ function BreedingHeader({ metrics, onLogService }) {
           </div>
         </div>
       </div>
-      
+
       {/* Fixed Primary Action Button */}
-      <button 
-        onClick={onLogService}
-        className="btn-command flex items-center gap-2 text-sm bg-brand text-surface shadow-md hover:bg-brand-dark transition-colors"
-      >
-        <Syringe size={16} /> Log AI Service
-      </button>
+      <div className="flex flex-wrap gap-2">
+        <button onClick={onRecordHeat} className="btn-secondary flex items-center gap-2 text-sm">
+          <Flame size={16} /> Record Heat
+        </button>
+        <button
+          onClick={onLogService}
+          className="btn-command flex items-center gap-2 text-sm bg-brand text-surface shadow-md hover:bg-brand-dark transition-colors"
+        >
+          <Syringe size={16} /> Log AI Service
+        </button>
+      </div>
     </div>
   );
 }
@@ -241,7 +235,7 @@ function SimpleModalSection({ title, children }) {
 // ============================================================================
 // COMPONENT 2: Heat Alerts (Responsibility: Urgent action routing)
 // ============================================================================
-function HeatAlerts({ alerts }) {
+function HeatAlerts({ alerts, onLogService }) {
   if (alerts.length === 0) return null;
 
   return (
@@ -254,10 +248,13 @@ function HeatAlerts({ alerts }) {
           <div key={alert.id} className="flex items-center justify-between rounded-lg bg-surface p-4 shadow-sm border border-danger/10">
             <div>
               <h4 className="font-black text-brand text-lg">{alert.cowId}</h4>
-              <p className="text-xs font-bold text-danger mt-1">{alert.status}</p>
+              <p className="text-xs font-bold text-danger mt-1">{alert.intensity} heat observed</p>
+              <p className="mt-1 text-xs text-ink-muted">Next watch window: {alert.nextWindowStart} to {alert.nextWindowEnd}</p>
             </div>
             <div className="text-right">
-              <span className="text-sm font-black text-danger block">{alert.action}</span>
+              <button type="button" onClick={() => onLogService(alert)} className="btn-command px-3 py-2 text-xs">
+                <Syringe size={14} /> Log AI
+              </button>
             </div>
           </div>
         ))}
@@ -286,6 +283,12 @@ function VetQueueItem({ log, onOutcome, isUpdating }) {
             <>
               <span aria-hidden="true">•</span>
               <span>Expected Calving: {log.expectedCalvingDate}</span>
+            </>
+          )}
+          {log.pregnancyCheckDate && (
+            <>
+              <span aria-hidden="true">•</span>
+              <span>Pregnancy Check: {log.pregnancyCheckDate}</span>
             </>
           )}
           <span aria-hidden="true">•</span>
@@ -360,7 +363,7 @@ function SemenInventory({ stock, onAddInventory, onRestockInventory, onDeleteInv
                 </span>
               </div>
               <div className="mb-3 font-mono text-[10px] text-ink-muted">CODE: {bull.code}</div>
-              
+
               <div className="flex items-center gap-2 text-xs font-semibold text-ink-strong">
                 <TrendingUp size={14} className="text-accent" /> Best for: {bull.improves}
               </div>
@@ -404,27 +407,30 @@ export default function BreedingHub() {
   const [inventory, setInventory] = useState(bullStock);
   const [infoMessage, setInfoMessage] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
-  const [showError, setShowError] = useState(false);
+  const [, setShowError] = useState(false);
 
   // Mirror to the global Toaster so feedback renders above any open modal.
   const notifyInfo = (msg) => { setInfoMessage(msg); toast.success(msg); };
   const notifyError = (msg) => { setErrorMessage(msg); setShowError(true); toast.error(msg); };
+
+  // Modal visibility states
   const [isLogServiceOpen, setIsLogServiceOpen] = useState(false);
+  const [isHeatObservationOpen, setIsHeatObservationOpen] = useState(false);
+  const [selectedHeatObservation, setSelectedHeatObservation] = useState(null);
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
   const [isInventoryOpen, setIsInventoryOpen] = useState(false);
   const [isRestockOpen, setIsRestockOpen] = useState(false);
   const [selectedInventoryItem, setSelectedInventoryItem] = useState(null);
+
+  // Breeding history filter states
   const [historyFilter, setHistoryFilter] = useState('All');
   const [historySearch, setHistorySearch] = useState('');
   const [historyControlsOpen, setHistoryControlsOpen] = useState(false);
-  const [logForm, setLogForm] = useState({ cowId: '', aiDate: '', sireCode: '', semenSource: 'farm_stock', note: '' });
-  const [inventoryForm, setInventoryForm] = useState({ name: '', code: '', strawsLeft: '', improves: '' });
-  const [restockForm, setRestockForm] = useState({ amount: '' });
-  const [formErrors, setFormErrors] = useState({});
+
+  // Form saving state
   const [isSaving, setIsSaving] = useState(false);
   const [statusUpdatingById, setStatusUpdatingById] = useState({});
-  const [isCowPickerOpen, setIsCowPickerOpen] = useState(false);
-  const cowPickerRef = useRef(null);
+
   const confirmation = useConfirmation();
 
   const { data: herdData = [] } = useQuery({
@@ -453,19 +459,6 @@ export default function BreedingHub() {
         return true;
       });
   }, [herdData]);
-
-  const filteredCowOptions = useMemo(() => {
-    const query = logForm.cowId.trim().toLowerCase();
-    if (!query) return herdOptions.slice(0, 12);
-
-    return herdOptions
-      .filter((option) => (
-        option.id.toLowerCase().includes(query)
-        || option.name.toLowerCase().includes(query)
-        || option.display.toLowerCase().includes(query)
-      ))
-      .slice(0, 12);
-  }, [herdOptions, logForm.cowId]);
 
   const { data: semenInventoryData } = useQuery({
     queryKey: ['breeding', 'semen-inventory', tenantId, farmId],
@@ -506,6 +499,23 @@ export default function BreedingHub() {
     enabled: !!tenantId && !!farmId,
   });
 
+  const { data: heatObservations = [] } = useQuery({
+    queryKey: ['breeding', 'heat-observations', tenantId, farmId],
+    queryFn: () => breedingApi.listHeatObservations(),
+    enabled: !!tenantId && !!farmId,
+  });
+
+  const breedingAlerts = useMemo(() => heatObservations
+    .filter((observation) => !observation.breeding_log_id)
+    .map((observation) => ({
+      id: observation.id,
+      cowId: String(observation.cow_id),
+      observedAt: observation.observed_at,
+      intensity: observation.intensity,
+      nextWindowStart: observation.next_window_start,
+      nextWindowEnd: observation.next_window_end,
+    })), [heatObservations]);
+
   useEffect(() => {
     if (Array.isArray(semenInventoryData) && inventory.length === 0) {
       setInventory(semenInventoryData.map(normalizeSemenInventory));
@@ -524,19 +534,6 @@ export default function BreedingHub() {
     }
   }, [breedingLogsData, tenantId, farmId]);
 
-  useEffect(() => {
-    if (!isLogServiceOpen) return undefined;
-
-    const handleClickOutside = (event) => {
-      if (cowPickerRef.current && !cowPickerRef.current.contains(event.target)) {
-        setIsCowPickerOpen(false);
-      }
-    };
-
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, [isLogServiceOpen]);
-
   // Derived State for KPI Chips
   const metrics = {
     onHeat: breedingAlerts.length,
@@ -548,11 +545,12 @@ export default function BreedingHub() {
   const handleOutcome = async (logId, outcome) => {
     if (statusUpdatingById[logId]) return;
 
-    const status = outcome === 'Pregnant' ? 'Pregnant' : 'Open';
+    const backendStatus = outcome === 'Pregnant' ? 'Pregnant' : 'Failed';
+    const displayStatus = outcome === 'Pregnant' ? 'Pregnant' : 'Open';
     setStatusUpdatingById((current) => ({ ...current, [logId]: true }));
 
     try {
-      await breedingApi.updateLogStatus(logId, status);
+      await breedingApi.updateLogStatus(logId, backendStatus);
       notifyInfo(`Cow marked as ${outcome}. Records updated.`);
       removeBreedingCacheLog(tenantId, farmId, logId);
       setVetQueue((current) => current.filter((log) => log.id !== logId));
@@ -562,8 +560,8 @@ export default function BreedingHub() {
 
           return {
             ...entry,
-            status,
-            outcome: status === 'Pregnant' ? 'Pregnant (In-Calf)' : 'Open (Not Pregnant)',
+            status: displayStatus,
+            outcome: displayStatus === 'Pregnant' ? 'Pregnant (In-Calf)' : 'Open (Not Pregnant)',
             updatedAt: new Date().toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' }),
           };
         })
@@ -584,238 +582,49 @@ export default function BreedingHub() {
     }
   };
 
-  const handleLogService = () => {
-    setIsCowPickerOpen(false);
+  const handleLogService = (heatObservation = null) => {
+    setSelectedHeatObservation(heatObservation);
     setIsLogServiceOpen(true);
+  };
+
+  const handleLogServiceSuccess = (savedLog, message) => {
+    setVetQueue((current) => [...current, savedLog]);
+    const entry = createHistoryEntry(savedLog, 'Pending', '');
+    setVetHistory((current) => [entry, ...current]);
+    setIsLogServiceOpen(false);
+    setSelectedHeatObservation(null);
+    queryClient.invalidateQueries({ queryKey: ['breeding', 'heat-observations', tenantId, farmId] });
+    notifyInfo(message);
+  };
+
+  const handleHeatObservationSuccess = async (_observation, message) => {
+    setIsHeatObservationOpen(false);
+    await queryClient.invalidateQueries({ queryKey: ['breeding', 'heat-observations', tenantId, farmId] });
+    notifyInfo(message);
+  };
+
+  const handleAddInventorySuccess = (nextInventory, message) => {
+    setInventory((current) => [nextInventory, ...current]);
+    setIsInventoryOpen(false);
+    notifyInfo(message);
+  };
+
+  const handleOpenRestock = (inventoryItem) => {
+    setSelectedInventoryItem(inventoryItem);
+    setIsRestockOpen(true);
+  };
+
+  const handleRestockSuccess = (updated, message) => {
+    setInventory((current) => current.map((item) => (item.id === updated.id ? updated : item)));
+    setIsRestockOpen(false);
+    setSelectedInventoryItem(null);
+    notifyInfo(message);
   };
 
   const filteredHistory = getFilteredHistory(vetHistory, historyFilter, historySearch);
   const groupedHistory = groupHistoryByMonth(filteredHistory);
   const hasActiveHistoryFilters = historyFilter !== 'All' || historySearch.trim() !== '';
   const activeHistoryControlCount = [historySearch.trim(), historyFilter !== 'All'].filter(Boolean).length;
-
-  const handleAddHistoryEntry = async (event) => {
-    event.preventDefault();
-    setFormErrors({});
-    setShowError(false);
-
-    // Validate
-    const validationSchema = {
-      cowId: [ValidationRules.required],
-      sireCode: [ValidationRules.required],
-      semenSource: [ValidationRules.required],
-    };
-
-    const errors = validateForm(logForm, validationSchema);
-    if (Object.keys(errors).length > 0) {
-      setFormErrors(errors);
-      setErrorMessage(getFirstErrorMessage(errors));
-      setShowError(true);
-      return;
-    }
-
-    try {
-      setIsSaving(true);
-
-      const resolvedCow = resolveCowIdentity(logForm.cowId, herdOptions);
-
-      const payload = normalizeBreedingLogPayload({
-        cowId: resolvedCow.id,
-        cow_name: resolvedCow.name, // Pass name for context
-        event_date: logForm.aiDate || new Date().toISOString().slice(0, 10),
-        sire_id: logForm.sireCode,
-        notes: logForm.note.trim(),
-        eventType: 'INSEMINATION', // Explicitly set event type for AI Service log
-        semenSource: logForm.semenSource, // Pass the selected semen source
-        // Additional fields can be added here if needed by the normalizer
-      });
-
-      if (!payload) {
-        setErrorMessage('Failed to create a valid breeding log. Please check the required fields.');
-        setShowError(true);
-        setIsSaving(false);
-        return;
-      }
-
-      const createResponse = await breedingApi.createLog(payload);
-
-      const savedLog = normalizeBreedingLog({
-        ...createResponse,
-        cowId: createResponse?.cow_id ?? createResponse?.cowId ?? payload.animal_id,
-        cowName: createResponse?.cow_name ?? createResponse?.cowName ?? resolvedCow.name,
-        aiDate: createResponse?.insemination_date ?? createResponse?.aiDate ?? payload.event_date,
-        sireCode: createResponse?.external_sire_code ?? createResponse?.semen_id ?? createResponse?.sireCode ?? payload.sire_id,
-        semenSource: createResponse?.semen_source
-          ?? (String(createResponse?.provided_by ?? '').toUpperCase() === 'VET' ? 'vet_provided' : null)
-          ?? logForm.semenSource,
-        expectedCalvingDate: createResponse?.expected_calving_date ?? createResponse?.expectedCalvingDate ?? null,
-        status: createResponse?.status ?? 'Pending',
-      });
-
-      upsertBreedingCacheLog(tenantId, farmId, savedLog);
-
-      if (!savedLog.semenSource) {
-        savedLog.semenSource = logForm.semenSource;
-      }
-
-      const entry = createHistoryEntry(savedLog, 'Pending', logForm.note.trim());
-      setVetQueue((current) => [...current, savedLog]);
-      setVetHistory((current) => [entry, ...current]);
-
-      // Keeps other pages/widgets sharing this query key (e.g. Animal Passport) in sync.
-      await queryClient.invalidateQueries({ queryKey: ['breeding', 'logs', tenantId, farmId] });
-
-      logToAuditTrail(
-        createAuditEntry({
-          action: 'create',
-          recordType: 'ai_service',
-          recordId: savedLog.id,
-          userName: 'You',
-          notes: `Logged AI service for ${savedLog.cowId} with sire ${savedLog.sireCode}`,
-        })
-      );
-
-      notifyInfo(`Logged AI service for ${savedLog.cowId}.`);
-      setLogForm({ cowId: '', aiDate: '', sireCode: '', semenSource: 'farm_stock', note: '' });
-      setIsCowPickerOpen(false);
-      setIsLogServiceOpen(false);
-    } catch (error) {
-      console.error('Error logging service:', error);
-      setErrorMessage(error?.response?.data?.error || 'Failed to log AI service. Please try again.');
-      setShowError(true);
-    } finally {
-      setIsSaving(false);
-    }
-  };
-
-  const handleAddInventory = async (event) => {
-    event.preventDefault();
-    setFormErrors({});
-    setShowError(false);
-
-    // Validate
-    const validationSchema = {
-      name: [ValidationRules.required],
-      code: [ValidationRules.required],
-      strawsLeft: [ValidationRules.required, ValidationRules.positiveNumber],
-      improves: [ValidationRules.required],
-    };
-
-    const errors = validateForm(inventoryForm, validationSchema);
-    if (Object.keys(errors).length > 0) {
-      setFormErrors(errors);
-      setErrorMessage(getFirstErrorMessage(errors));
-      setShowError(true);
-      return;
-    }
-
-    try {
-      setIsSaving(true);
-
-      const inventoryPayload = {
-        bull_name: inventoryForm.name.trim(),
-        straw_code: String(inventoryForm.code).trim().toUpperCase().replace(/\s+/g, '-').replace(/[^A-Z0-9-]/g, ''),
-        breed: inventoryForm.improves.trim(),
-        strawsLeft: Number(inventoryForm.strawsLeft) || 0,
-        name: inventoryForm.name.trim(),
-        code: inventoryForm.code.trim(),
-        improves: inventoryForm.improves.trim(),
-      };
-
-      const createdInventory = await breedingApi.createSemenInventory(inventoryPayload);
-      const nextInventory = normalizeSemenInventory({
-        ...inventoryPayload,
-        ...createdInventory,
-        improves: createdInventory?.improves
-          ?? createdInventory?.breed
-          ?? createdInventory?.breed_improvement
-          ?? inventoryPayload.improves,
-      });
-
-      setInventory((current) => [nextInventory, ...current]);
-
-      logToAuditTrail(
-        createAuditEntry({
-          action: 'create',
-          recordType: 'semen_inventory',
-          recordId: nextInventory.id,
-          userName: 'You',
-          notes: `Added ${nextInventory.name} (${nextInventory.code}) - ${nextInventory.strawsLeft} straws`,
-        })
-      );
-
-      notifyInfo(`Added ${nextInventory.name} to inventory.`);
-      setInventoryForm({ name: '', code: '', strawsLeft: '', improves: '' });
-      setIsInventoryOpen(false);
-    } catch (error) {
-      console.error('Error adding inventory:', error);
-      setErrorMessage(error?.response?.data?.error || 'Failed to add inventory. Please try again.');
-      setShowError(true);
-    } finally {
-      setIsSaving(false);
-    }
-  };
-
-  const handleOpenRestock = (bull) => {
-    setSelectedInventoryItem(bull);
-    setRestockForm({ amount: '' });
-    setFormErrors({});
-    setIsRestockOpen(true);
-  };
-
-  const handleConfirmRestock = async (event) => {
-    event.preventDefault();
-    setFormErrors({});
-
-    const amount = Number(restockForm.amount);
-    if (!Number.isFinite(amount) || amount <= 0) {
-      setFormErrors((current) => ({ ...current, restockAmount: 'Enter a quantity greater than 0.' }));
-      return;
-    }
-
-    if (!selectedInventoryItem) {
-      setErrorMessage('Select an inventory item before restocking.');
-      setShowError(true);
-      return;
-    }
-
-    try {
-      setIsSaving(true);
-      const nextStrawCount = Number(selectedInventoryItem.strawsLeft || 0) + amount;
-      const payload = {
-        name: selectedInventoryItem.name,
-        code: selectedInventoryItem.code,
-        improves: selectedInventoryItem.improves,
-        strawsLeft: nextStrawCount,
-      };
-
-      const response = await breedingApi.updateSemenInventory(selectedInventoryItem.id, payload);
-      const updated = normalizeSemenInventory({ ...selectedInventoryItem, ...payload, ...response, strawsLeft: nextStrawCount });
-
-      setInventory((current) => current.map((item) => (item.id === selectedInventoryItem.id ? updated : item)));
-
-      logToAuditTrail(
-        createAuditEntry({
-          action: 'update',
-          recordType: 'semen_inventory',
-          recordId: updated.id,
-          userName: 'You',
-          notes: `Restocked ${updated.name} (${updated.code}) by ${amount} straws`,
-        })
-      );
-
-      notifyInfo(`Restocked ${updated.name} by ${amount} straws.`);
-      setIsRestockOpen(false);
-      setSelectedInventoryItem(null);
-      setRestockForm({ amount: '' });
-    } catch (error) {
-      console.error('Error restocking inventory:', error);
-      setErrorMessage(error?.response?.data?.error || 'Failed to restock semen inventory. Please try again.');
-      setShowError(true);
-    } finally {
-      setIsSaving(false);
-    }
-  };
 
   const handleDeleteInventory = async (bull) => {
     if (!bull?.id) {
@@ -873,15 +682,15 @@ export default function BreedingHub() {
         </div>
       )}
 
-      <BreedingHeader metrics={metrics} onLogService={handleLogService} />
+      <BreedingHeader metrics={metrics} onLogService={() => handleLogService()} onRecordHeat={() => setIsHeatObservationOpen(true)} />
 
       {/* Main Layout Grid: Action (Left) vs Resources (Right) */}
       <div className="grid grid-cols-1 gap-8 lg:grid-cols-3">
-        
+
         {/* LEFT COLUMN: ACTION & TRACKING */}
         <div className="space-y-6 lg:col-span-2">
-          
-          <HeatAlerts alerts={breedingAlerts} />
+
+          <HeatAlerts alerts={breedingAlerts} onLogService={handleLogService} />
 
           <div className="card-machined bg-surface p-6 border border-ink/5 shadow-sm">
             <div className="mb-6 flex items-center justify-between border-b border-ink/10 pb-4">
@@ -955,125 +764,38 @@ export default function BreedingHub() {
 
       </div>
 
-      <Modal isOpen={isLogServiceOpen} onClose={() => setIsLogServiceOpen(false)} title="Log AI Service">
-        <form className="space-y-4" onSubmit={handleAddHistoryEntry}>
-          <SimpleModalSection title="Service Details">
-            <div>
-              <label className="mb-1 block text-xs font-bold uppercase tracking-wider text-ink-muted">Cow ID or Name *</label>
-              <div className="relative" ref={cowPickerRef}>
-                <input
-                  className={`input-machined w-full pr-10 ${formErrors.cowId ? 'border-rose-300 bg-rose-50' : ''}`}
-                  value={logForm.cowId}
-                  onFocus={() => setIsCowPickerOpen(true)}
-                  onChange={(event) => {
-                    setLogForm((current) => ({ ...current, cowId: event.target.value }));
-                    setIsCowPickerOpen(true);
-                    if (formErrors.cowId) setFormErrors({ ...formErrors, cowId: null });
-                  }}
-                  placeholder="Type cow ID or name, or pick from herd list"
-                  aria-invalid={!!formErrors.cowId}
-                  aria-expanded={isCowPickerOpen}
-                  aria-autocomplete="list"
-                />
-                <button
-                  type="button"
-                  onClick={() => setIsCowPickerOpen((current) => !current)}
-                  className="absolute right-2 top-1/2 -translate-y-1/2 rounded p-1 text-ink-muted transition-colors hover:text-brand"
-                  aria-label="Toggle herd suggestions"
-                >
-                  <ChevronDown size={16} />
-                </button>
+      <Modal isOpen={isLogServiceOpen} onClose={() => { setIsLogServiceOpen(false); setSelectedHeatObservation(null); }} title="Log AI Service">
+        <LogAIServiceForm
+          key={selectedHeatObservation?.id || 'unlinked-ai'}
+          herdOptions={herdOptions}
+          onSuccess={handleLogServiceSuccess}
+          onError={(msg) => { setErrorMessage(msg); setShowError(true); }}
+          isSaving={isSaving}
+          onSavingChange={setIsSaving}
+          initialData={selectedHeatObservation ? {
+            cowId: selectedHeatObservation.cowId,
+            aiDate: new Date(selectedHeatObservation.observedAt).toISOString().slice(0, 10),
+            heatObservationId: selectedHeatObservation.id,
+          } : {}}
+        />
+        <div className="flex justify-end gap-3 pt-4 border-t border-ink/10">
+          <button
+            type="button"
+            disabled={isSaving}
+            onClick={() => setIsLogServiceOpen(false)}
+            className="btn-secondary px-4 py-2 text-sm"
+          >
+            Cancel
+          </button>
+        </div>
+      </Modal>
 
-                {isCowPickerOpen && (
-                  <div className="absolute z-30 mt-1 max-h-56 w-full overflow-y-auto rounded-lg border border-ink/10 bg-surface shadow-lg">
-                    {filteredCowOptions.length === 0 ? (
-                      <div className="px-3 py-2 text-xs text-ink-muted">No herd matches found for this tenant.</div>
-                    ) : (
-                      filteredCowOptions.map((option) => (
-                        <button
-                          key={`cow-option-${option.id}`}
-                          type="button"
-                          onClick={() => {
-                            setLogForm((current) => ({ ...current, cowId: option.display }));
-                            setIsCowPickerOpen(false);
-                            if (formErrors.cowId) setFormErrors({ ...formErrors, cowId: null });
-                          }}
-                          className="flex w-full items-center justify-between gap-3 border-b border-ink/5 px-3 py-2 text-left last:border-b-0 hover:bg-brand/5"
-                        >
-                          <span className="text-sm font-semibold text-ink-strong">{option.id}</span>
-                          <span className="truncate text-xs text-ink-muted">{option.name || 'No name'}</span>
-                        </button>
-                      ))
-                    )}
-                  </div>
-                )}
-              </div>
-              {herdOptions.length > 0 && (
-                <p className="mt-1 text-[11px] text-ink-muted">Suggestions include all herd cows in the active tenant/farm. You can enter either cow ID or cow name.</p>
-              )}
-              {formErrors.cowId && <p className="mt-1 text-xs text-rose-600">{formErrors.cowId}</p>}
-            </div>
-            <div className="grid gap-4 md:grid-cols-2">
-              <div>
-                <label className="mb-1 block text-xs font-bold uppercase tracking-wider text-ink-muted">AI Date</label>
-                <input type="date" className="input-machined w-full" value={logForm.aiDate} onChange={(event) => setLogForm((current) => ({ ...current, aiDate: event.target.value }))} />
-              </div>
-              <div>
-                <label className="mb-1 block text-xs font-bold uppercase tracking-wider text-ink-muted">Sire Code</label>
-                <input
-                  className={`input-machined w-full ${formErrors.sireCode ? 'border-rose-300 bg-rose-50' : ''}`}
-                  value={logForm.sireCode}
-                  onChange={(event) => {
-                    setLogForm((current) => ({ ...current, sireCode: normalizeSemenCode(event.target.value) }));
-                    if (formErrors.sireCode) setFormErrors({ ...formErrors, sireCode: null });
-                  }}
-                  placeholder="e.g. FR-889"
-                />
-                {formErrors.sireCode && <p className="mt-1 text-xs text-rose-600">{formErrors.sireCode}</p>}
-              </div>
-            </div>
-            <div>
-              <label className="mb-1 block text-xs font-bold uppercase tracking-wider text-ink-muted">Notes</label>
-              <textarea className="input-machined w-full min-h-[96px]" value={logForm.note} onChange={(event) => setLogForm((current) => ({ ...current, note: event.target.value }))} placeholder="Optional service notes" />
-            </div>
-            <div>
-              <label className="mb-2 block text-xs font-bold uppercase tracking-wider text-ink-muted">Semen Source *</label>
-              <div className={`grid grid-cols-1 gap-2 rounded-lg border p-2 md:grid-cols-2 ${formErrors.semenSource ? 'border-rose-300 bg-rose-50' : 'border-ink/10 bg-surface-raised'}`}>
-                <label className="flex cursor-pointer items-center gap-2 rounded-md border border-ink/10 bg-surface px-3 py-2 text-sm font-semibold text-ink-strong hover:border-brand/30">
-                  <input
-                    type="radio"
-                    name="semen-source"
-                    value="farm_stock"
-                    checked={logForm.semenSource === 'farm_stock'}
-                    onChange={(event) => {
-                      setLogForm((current) => ({ ...current, semenSource: event.target.value }));
-                      if (formErrors.semenSource) setFormErrors({ ...formErrors, semenSource: null });
-                    }}
-                  />
-                  Farm Stock
-                </label>
-                <label className="flex cursor-pointer items-center gap-2 rounded-md border border-ink/10 bg-surface px-3 py-2 text-sm font-semibold text-ink-strong hover:border-brand/30">
-                  <input
-                    type="radio"
-                    name="semen-source"
-                    value="vet_provided"
-                    checked={logForm.semenSource === 'vet_provided'}
-                    onChange={(event) => {
-                      setLogForm((current) => ({ ...current, semenSource: event.target.value }));
-                      if (formErrors.semenSource) setFormErrors({ ...formErrors, semenSource: null });
-                    }}
-                  />
-                  Vet Provided
-                </label>
-              </div>
-              {formErrors.semenSource && <p className="mt-1 text-xs text-rose-600">{formErrors.semenSource}</p>}
-            </div>
-          </SimpleModalSection>
-          <div className="flex justify-end gap-3 pt-2">
-            <button type="button" disabled={isSaving} onClick={() => setIsLogServiceOpen(false)} className="btn-secondary px-4 py-2 text-sm">Cancel</button>
-            <button type="submit" disabled={isSaving} className="btn-command px-4 py-2 text-sm">{isSaving ? 'Saving...' : 'Save Service'}</button>
-          </div>
-        </form>
+      <Modal isOpen={isHeatObservationOpen} onClose={() => setIsHeatObservationOpen(false)} title="Record Heat Observation">
+        <LogHeatObservationForm
+          herdOptions={herdOptions}
+          onSuccess={handleHeatObservationSuccess}
+          onError={(msg) => { setErrorMessage(msg); setShowError(true); }}
+        />
       </Modal>
 
       <Modal isOpen={isHistoryOpen} onClose={() => setIsHistoryOpen(false)} title="Historical Checks">
@@ -1218,73 +940,22 @@ export default function BreedingHub() {
       </Modal>
 
       <Modal isOpen={isInventoryOpen} onClose={() => setIsInventoryOpen(false)} title="Add New Inventory">
-        <form className="space-y-4" onSubmit={handleAddInventory}>
-          <SimpleModalSection title="Inventory Item">
-            <div>
-              <label className="mb-1 block text-xs font-bold uppercase tracking-wider text-ink-muted">Name *</label>
-              <input 
-                className={`input-machined w-full ${formErrors.name ? 'border-rose-300 bg-rose-50' : ''}`}
-                value={inventoryForm.name}
-                onChange={(event) => {
-                  setInventoryForm((current) => ({ ...current, name: event.target.value }));
-                  if (formErrors.name) setFormErrors({ ...formErrors, name: null });
-                }}
-                placeholder="e.g. Jersey Bull"
-                aria-invalid={!!formErrors.name}
-              />
-              {formErrors.name && <p className="mt-1 text-xs text-rose-600">{formErrors.name}</p>}
-            </div>
-            <div className="grid gap-4 md:grid-cols-2">
-              <div>
-                <label className="mb-1 block text-xs font-bold uppercase tracking-wider text-ink-muted">Code *</label>
-                <input 
-                  className={`input-machined w-full ${formErrors.code ? 'border-rose-300 bg-rose-50' : ''}`}
-                  value={inventoryForm.code}
-                  onChange={(event) => {
-                    setInventoryForm((current) => ({ ...current, code: event.target.value }));
-                    if (formErrors.code) setFormErrors({ ...formErrors, code: null });
-                  }}
-                  placeholder="e.g. JY-312"
-                  aria-invalid={!!formErrors.code}
-                />
-                {formErrors.code && <p className="mt-1 text-xs text-rose-600">{formErrors.code}</p>}
-              </div>
-              <div>
-                <label className="mb-1 block text-xs font-bold uppercase tracking-wider text-ink-muted">Straws Left *</label>
-                <input 
-                  type="number" 
-                  min="0" 
-                  className={`input-machined w-full ${formErrors.strawsLeft ? 'border-rose-300 bg-rose-50' : ''}`}
-                  value={inventoryForm.strawsLeft}
-                  onChange={(event) => {
-                    setInventoryForm((current) => ({ ...current, strawsLeft: event.target.value }));
-                    if (formErrors.strawsLeft) setFormErrors({ ...formErrors, strawsLeft: null });
-                  }}
-                  placeholder="e.g. 6"
-                  aria-invalid={!!formErrors.strawsLeft}
-                />
-                {formErrors.strawsLeft && <p className="mt-1 text-xs text-rose-600">{formErrors.strawsLeft}</p>}
-              </div>
-            </div>
-            <div>
-              <label className="mb-1 block text-xs font-bold uppercase tracking-wider text-ink-muted">Breed *</label>
-              <input
-                className={`input-machined w-full ${formErrors.improves ? 'border-rose-300 bg-rose-50' : ''}`}
-                value={inventoryForm.improves}
-                onChange={(event) => {
-                  setInventoryForm((current) => ({ ...current, improves: event.target.value }));
-                  if (formErrors.improves) setFormErrors({ ...formErrors, improves: null });
-                }}
-                placeholder="e.g. Friesian"
-              />
-              {formErrors.improves && <p className="mt-1 text-xs text-rose-600">{formErrors.improves}</p>}
-            </div>
-          </SimpleModalSection>
-          <div className="flex justify-end gap-3 pt-2">
-            <button type="button" disabled={isSaving} onClick={() => setIsInventoryOpen(false)} className="btn-secondary px-4 py-2 text-sm">Cancel</button>
-            <button type="submit" disabled={isSaving} className="btn-command px-4 py-2 text-sm">{isSaving ? 'Saving...' : 'Add Inventory'}</button>
-          </div>
-        </form>
+        <ManageSemenInventoryForm
+          onSuccess={handleAddInventorySuccess}
+          onError={(msg) => { setErrorMessage(msg); setShowError(true); }}
+          isSaving={isSaving}
+          onSavingChange={setIsSaving}
+        />
+        <div className="flex justify-end gap-3 pt-4 border-t border-ink/10">
+          <button
+            type="button"
+            disabled={isSaving}
+            onClick={() => setIsInventoryOpen(false)}
+            className="btn-secondary px-4 py-2 text-sm"
+          >
+            Cancel
+          </button>
+        </div>
       </Modal>
 
       <Modal
@@ -1292,56 +963,29 @@ export default function BreedingHub() {
         onClose={() => {
           setIsRestockOpen(false);
           setSelectedInventoryItem(null);
-          setRestockForm({ amount: '' });
         }}
         title="Restock Semen Inventory"
       >
-        <form className="space-y-4" onSubmit={handleConfirmRestock}>
-          <SimpleModalSection title="Restock Details">
-            <div className="rounded-lg border border-brand/10 bg-brand/5 p-3 text-sm text-ink-strong">
-              <div className="font-bold">{selectedInventoryItem?.name || 'Selected Item'}</div>
-              <div className="text-xs text-ink-muted">Code: {selectedInventoryItem?.code || 'N/A'}</div>
-              <div className="text-xs text-ink-muted">Current stock: {selectedInventoryItem?.strawsLeft ?? 0} straws</div>
-            </div>
-
-            <div>
-              <label className="mb-1 block text-xs font-bold uppercase tracking-wider text-ink-muted">Add Straws *</label>
-              <input
-                type="number"
-                min="1"
-                className={`input-machined w-full ${formErrors.restockAmount ? 'border-rose-300 bg-rose-50' : ''}`}
-                value={restockForm.amount}
-                onChange={(event) => {
-                  setRestockForm({ amount: event.target.value });
-                  if (formErrors.restockAmount) {
-                    setFormErrors((current) => ({ ...current, restockAmount: null }));
-                  }
-                }}
-                placeholder="e.g. 20"
-                aria-invalid={!!formErrors.restockAmount}
-              />
-              {formErrors.restockAmount && <p className="mt-1 text-xs text-rose-600">{formErrors.restockAmount}</p>}
-            </div>
-          </SimpleModalSection>
-
-          <div className="flex justify-end gap-3 pt-2">
-            <button
-              type="button"
-              disabled={isSaving}
-              onClick={() => {
-                setIsRestockOpen(false);
-                setSelectedInventoryItem(null);
-                setRestockForm({ amount: '' });
-              }}
-              className="btn-secondary px-4 py-2 text-sm"
-            >
-              Cancel
-            </button>
-            <button type="submit" disabled={isSaving} className="btn-command px-4 py-2 text-sm">
-              {isSaving ? 'Saving...' : 'Restock'}
-            </button>
-          </div>
-        </form>
+        <RestockSemenInventoryForm
+          inventoryItem={selectedInventoryItem}
+          onSuccess={handleRestockSuccess}
+          onError={(msg) => { setErrorMessage(msg); setShowError(true); }}
+          isSaving={isSaving}
+          onSavingChange={setIsSaving}
+        />
+        <div className="flex justify-end gap-3 pt-4 border-t border-ink/10">
+          <button
+            type="button"
+            disabled={isSaving}
+            onClick={() => {
+              setIsRestockOpen(false);
+              setSelectedInventoryItem(null);
+            }}
+            className="btn-secondary px-4 py-2 text-sm"
+          >
+            Cancel
+          </button>
+        </div>
       </Modal>
 
       <Confirmation

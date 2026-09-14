@@ -38,7 +38,7 @@ export default function StaffRegistry() {
   };
 
   const handleSaveProfile = (staffId, updatedData) => {
-    editEmployee(staffId, updatedData);
+    return editEmployee(staffId, updatedData).catch(() => toast.error('Failed to update employee profile.'));
   };
 
   const handleSaveFinancials = (staffId, updatedData) => {
@@ -48,18 +48,19 @@ export default function StaffRegistry() {
       return;
     }
 
-    editEmployee(staffId, {
+    return editEmployee(staffId, {
       baseSalary: updatedData.baseSalary,
       monthlyDeduction: updatedData.monthlyDeduction,
-    });
-
-    if (updatedData.advanceAmount > 0) {
-      issueAdvance(currentStaff, updatedData.advanceAmount, updatedData.monthlyDeduction);
-    }
+    }).then(() => {
+      if (updatedData.advanceAmount > 0) {
+        return issueAdvance(currentStaff, updatedData.advanceAmount, updatedData.monthlyDeduction);
+      }
+      return null;
+    }).catch(() => toast.error('Failed to update employee financials.'));
   };
 
   const handleSaveMedical = (staffId, updatedData) => {
-    editEmployee(staffId, updatedData);
+    return editEmployee(staffId, updatedData).catch(() => toast.error('Failed to update employee medical details.'));
   };
 
   const handleVerifyReturn = ({ returned, note }) => {
@@ -67,9 +68,12 @@ export default function StaffRegistry() {
       return;
     }
 
-    verifyReturn(selectedVerificationStaff.id, returned, note);
-    setIsVerifyModalOpen(false);
-    setSelectedVerificationStaffId(null);
+    verifyReturn(selectedVerificationStaff.id, returned, note)
+      .then(() => {
+        setIsVerifyModalOpen(false);
+        setSelectedVerificationStaffId(null);
+      })
+      .catch(() => toast.error('Failed to verify staff return.'));
   };
 
   const handleToggleStatus = async (staffMember) => {
@@ -84,7 +88,21 @@ export default function StaffRegistry() {
     if (action === 'deactivate' && staffMember.loanBalance > 0) {
       toast.error(`${staffMember.name} has an outstanding loan balance. Clear it before deactivating.`);
     } else {
-      toggleEmployeeStatus(staffMember.id);
+      try {
+        await toggleEmployeeStatus(staffMember.id);
+      } catch {
+        toast.error(`Failed to ${action} ${staffMember.name}.`);
+      }
+    }
+  };
+
+  const handleAddEmployee = async (employee) => {
+    try {
+      await addEmployee(employee);
+      toast.success('Employee added successfully.');
+    } catch (error) {
+      toast.error(error?.response?.data?.error || 'Failed to add employee.');
+      throw error;
     }
   };
 
@@ -191,7 +209,7 @@ export default function StaffRegistry() {
       <AddEmployeeModal
         isOpen={isAddEmployeeModalOpen}
         onClose={() => setIsAddEmployeeModalOpen(false)}
-        onSave={addEmployee}
+        onSave={handleAddEmployee}
       />
 
       <EmployeeDrawer

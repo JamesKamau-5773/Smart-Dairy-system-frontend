@@ -54,10 +54,15 @@ export function normalizeNutritionRequestPayload(
     };
   });
 
+  const recipeType = recipeData.recipe_type ?? recipeData.recipeType;
+  const feedingGroup = recipeData.feeding_group ?? recipeData.feedingGroup;
+
   return {
     recipe_name: recipeData.recipe_name || recipeData.name || `${recipeData.recipe_type === 'main_meal' ? 'Main' : 'Dairy'} Feed Mix`,
     batch_size_kg: Number(recipeData.batch_size_kg || recipeData.totalWeight || 0),
     target_protein_percent: Number(recipeData.target_protein_percent || recipeData.targetProtein || 0),
+    ...(recipeType ? { recipe_type: recipeType } : {}),
+    ...(feedingGroup ? { feeding_group: feedingGroup } : {}),
     [ingredientKey]: ingredients,
     // Optional: Include if your form has it, otherwise default to null
     yield_target_id: recipeData.yield_target_id || null,

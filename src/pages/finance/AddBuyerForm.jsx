@@ -5,10 +5,10 @@ import { financeApi } from '../../lib/backendApi';
 import { Loader2, ArrowRight } from 'lucide-react';
 
 const COUNTRY_CODES = [
-  { code: '+254', flag: '🇰🇪', name: 'Kenya' },
-  { code: '+256', flag: '🇺🇬', name: 'Uganda' },
-  { code: '+255', flag: '🇹🇿', name: 'Tanzania' },
-  { code: '+250', flag: '🇷🇼', name: 'Rwanda' },
+  { code: '+254', name: 'Kenya' },
+  { code: '+256', name: 'Uganda' },
+  { code: '+255', name: 'Tanzania' },
+  { code: '+250', name: 'Rwanda' },
 ];
 
 export default function AddBuyerForm({ onSuccess, onCancel }) {
@@ -100,7 +100,7 @@ export default function AddBuyerForm({ onSuccess, onCancel }) {
             className="w-[100px] bg-surface-raised border border-ink/20 border-r-0 text-ink font-bold rounded-l-xl px-2 py-3 focus:outline-none focus:ring-2 focus:ring-brand/50 focus:z-10 transition-all cursor-pointer appearance-none text-center"
           >
             {COUNTRY_CODES.map((c) => (
-              <option key={c.code} value={c.code}>{c.flag} {c.code}</option>
+              <option key={c.code} value={c.code}>{c.name} ({c.code})</option>
             ))}
           </select>
           <input

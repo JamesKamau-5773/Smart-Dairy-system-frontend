@@ -22,6 +22,7 @@ import {
   getAnimalActionValidationSchema,
   buildHealthLogPayload,
   buildBreedingLogPayload,
+  buildCalvingEventPayload,
   buildGeneralEventPayload,
 } from '../../lib/animalActionLog';
 import LABELS from '../../lib/labels';
@@ -76,6 +77,11 @@ export default function AnimalPassport() {
     followUp: '',
     sireCode: '',
     semenSource: 'farm_stock',
+    calfTag: '',
+    calfName: '',
+    calfSex: '',
+    birthWeightKg: '',
+    deliveryOutcome: 'live',
   };
   const [newEvent, setNewEvent] = useState(EMPTY_ACTION);
   const [formErrors, setFormErrors] = useState({});
@@ -199,6 +205,30 @@ export default function AnimalPassport() {
         }));
 
         notifySuccess(`Breeding log saved for ${resolvedAnimal.id} — also visible on Breeding & Genetics.`);
+      } else if (actionType === 'Calving') {
+        const payload = buildCalvingEventPayload(newEvent);
+        const savedEvent = await animalsApi.recordCalving(id, payload);
+
+        await Promise.all([
+          queryClient.invalidateQueries({ queryKey: ['animal-passport', tenantId, farmId, id] }),
+          queryClient.invalidateQueries({ queryKey: ['animal-passport-events', tenantId, farmId, id] }),
+          queryClient.invalidateQueries({ queryKey: ['herd', tenantId, farmId] }),
+          queryClient.invalidateQueries({ queryKey: ['breeding', 'logs', tenantId, farmId] }),
+          queryClient.invalidateQueries({ queryKey: ['animal-economics', tenantId, farmId, id] }),
+          queryClient.invalidateQueries({ queryKey: ['feeding-plan-by-group', tenantId, farmId] }),
+          queryClient.invalidateQueries({ queryKey: ['milk-lab-herd', tenantId, farmId] }),
+          queryClient.invalidateQueries({ queryKey: ['milk-lab-target-overview', tenantId, farmId] }),
+        ]);
+
+        logToAuditTrail(createAuditEntry({
+          action: 'create',
+          recordType: 'calving-event',
+          recordId: savedEvent?.id ?? null,
+          userName: 'You',
+          notes: `Recorded calving for ${resolvedAnimal.id}`,
+        }));
+
+        notifySuccess(`Birth recorded for ${resolvedAnimal.id}. Cow status and lactation data were refreshed from the backend.`);
       } else {
         const eventData = buildGeneralEventPayload(newEvent);
         const createdEvent = await createEventMutation.mutateAsync(eventData);
@@ -353,6 +383,7 @@ export default function AnimalPassport() {
             >
               <option value="Health">Health</option>
               <option value="Breeding">Breeding</option>
+              <option value="Calving">Birth / Calving</option>
               <option value="General">General</option>
             </select>
           </div>
@@ -371,7 +402,7 @@ export default function AnimalPassport() {
 
           <div>
             <label className="mb-1 block text-xs font-bold uppercase tracking-wider text-ink-strong">
-              {newEvent.type === 'Health' ? 'Visit date' : newEvent.type === 'Breeding' ? 'Insemination date *' : 'Date'}
+              {newEvent.type === 'Health' ? 'Visit date' : newEvent.type === 'Breeding' ? 'Insemination date *' : newEvent.type === 'Calving' ? 'Calving date *' : 'Date'}
             </label>
             <input
               type="date"
@@ -383,7 +414,7 @@ export default function AnimalPassport() {
 
           <div>
             <label className="mb-1 block text-xs font-bold uppercase tracking-wider text-ink-strong">
-              {newEvent.type === 'Health' ? 'Signs of sickness *' : newEvent.type === 'Breeding' ? 'Notes' : 'Description'}
+              {newEvent.type === 'Health' ? 'Signs of sickness *' : newEvent.type === 'Breeding' ? 'Notes' : newEvent.type === 'Calving' ? 'Calving notes' : 'Description'}
             </label>
             <textarea
               className="input-machined w-full min-h-[110px]"
@@ -484,6 +515,41 @@ export default function AnimalPassport() {
                 </select>
               </div>
             </>
+          )}
+
+          {newEvent.type === 'Calving' && (
+            <div className="space-y-4 rounded-lg border border-brand-100 bg-brand-50/50 p-4">
+              <p className="text-xs text-brand-800">The backend will update the mother, breeding log, lactation cycle, and calf register atomically after saving.</p>
+              <div>
+                <label className="mb-1 block text-xs font-bold uppercase tracking-wider text-ink-strong">Delivery outcome *</label>
+                <select className="input-machined w-full" value={newEvent.deliveryOutcome} onChange={(event) => setNewEvent((current) => ({ ...current, deliveryOutcome: event.target.value }))}>
+                  <option value="live">Live calf</option>
+                  <option value="stillborn">Stillborn</option>
+                </select>
+              </div>
+              {newEvent.deliveryOutcome === 'live' && <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <div>
+                  <label className="mb-1 block text-xs font-bold uppercase tracking-wider text-ink-strong">Calf tag</label>
+                  <input className="input-machined w-full" value={newEvent.calfTag} onChange={(event) => setNewEvent((current) => ({ ...current, calfTag: event.target.value }))} />
+                </div>
+                <div>
+                  <label className="mb-1 block text-xs font-bold uppercase tracking-wider text-ink-strong">Calf name</label>
+                  <input className="input-machined w-full" value={newEvent.calfName} onChange={(event) => setNewEvent((current) => ({ ...current, calfName: event.target.value }))} />
+                </div>
+                <div>
+                  <label className="mb-1 block text-xs font-bold uppercase tracking-wider text-ink-strong">Calf sex</label>
+                  <select className="input-machined w-full" value={newEvent.calfSex} onChange={(event) => setNewEvent((current) => ({ ...current, calfSex: event.target.value }))}>
+                    <option value="">Not recorded</option>
+                    <option value="female">Female</option>
+                    <option value="male">Male</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="mb-1 block text-xs font-bold uppercase tracking-wider text-ink-strong">Birth weight (kg)</label>
+                  <input type="number" min="0" step="0.1" className="input-machined w-full" value={newEvent.birthWeightKg} onChange={(event) => setNewEvent((current) => ({ ...current, birthWeightKg: event.target.value }))} />
+                </div>
+              </div>}
+            </div>
           )}
 
           <div className="flex justify-end gap-3 pt-2">

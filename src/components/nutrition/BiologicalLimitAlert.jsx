@@ -14,7 +14,7 @@ export default function BiologicalLimitAlert({ feedTarget, naturalLimit }) {
     <div className="mt-4 p-4 bg-danger/10 border border-danger/20 rounded-md flex gap-3 shadow-sm">
       <AlertOctagon className="text-danger shrink-0 mt-0.5" size={20} />
       <div>
-        <h4 className="text-sm font-bold text-danger uppercase tracking-wide">⚠️ Wasting Feed (Overfeeding)</h4>
+        <h4 className="text-sm font-bold text-danger uppercase tracking-wide">Wasting Feed (Overfeeding)</h4>
         <p className="text-sm text-danger/90 mt-1">
           Your feed mix is built for <strong>{safeTarget.toFixed(1)}L</strong>, but based on this cow's Days In Milk (DIM), her natural limit today is only <strong>~{safeLimit.toFixed(1)}L</strong>. 
           <br className="my-1"/>

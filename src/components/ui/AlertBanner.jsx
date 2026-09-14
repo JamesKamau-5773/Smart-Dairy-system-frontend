@@ -149,7 +149,7 @@ export default function AlertBanner({
         'border-l-[5px] border-y border-r',
         v.bg,
         v.border,
-        'transition-all duration-[280ms] ease-[cubic-bezier(0.22,1,0.36,1)]',
+        'alert-banner-transition',
         stateClasses,
         className,
       ].join(' ')}
@@ -233,7 +233,7 @@ export default function AlertBanner({
                 {open ? 'less' : 'more info'}
               </button>
               <div
-                className="overflow-hidden transition-all duration-[250ms] ease-in-out"
+                className="alert-banner-details-transition overflow-hidden"
                 style={{ maxHeight: open ? '200px' : '0px', opacity: open ? 1 : 0 }}
               >
                 <p className="font-sans text-xs leading-relaxed text-slate-600 dark:text-slate-400 mt-2 border-l-2 border-current/20 pl-3">

@@ -15,7 +15,7 @@ import CustomerForm from '../../components/finance/CustomerForm';
 /**
  * SRP: Renders a single Financial KPI Widget.
  */
-const KPIWidget = ({ title, value, subtitle, icon: Icon, valueColor = "text-ink" }) => (
+const KPIWidget = ({ title, value, subtitle, icon: Icon, valueColor = "text-brand-700" }) => (
   <div className="bg-surface rounded-2xl p-6 border border-ink/10 shadow-sm relative overflow-hidden group">
     <div className="flex justify-between items-start mb-4">
       <h3 className="text-[11px] font-black uppercase tracking-widest text-ink-muted">
@@ -25,7 +25,7 @@ const KPIWidget = ({ title, value, subtitle, icon: Icon, valueColor = "text-ink"
         <Icon size={18} strokeWidth={2.5} />
       </div>
     </div>
-    <div className={`text-3xl font-black tabular-nums mb-1 ${valueColor}`}>
+    <div className={`text-3xl font-bold tabular-nums mb-1 font-mono ${valueColor}`}>
       {value}
     </div>
     <p className="text-xs font-medium text-ink-muted">{subtitle}</p>
@@ -67,12 +67,12 @@ const BuyerRow = ({ buyer, isExpanded, onToggle }) => {
 
         <div className="flex items-center gap-4 self-start sm:self-auto">
           {balance > 0 ? (
-            <span className="rounded-full bg-danger/10 border border-danger/20 px-3 py-1 text-xs font-bold text-danger flex items-center gap-1.5">
+            <span className="rounded-badge bg-rose-50 border border-rose-100 px-3 py-1 text-xs font-bold text-rose-700 flex items-center gap-1.5 font-mono">
               <AlertCircle size={12} />
               Owes KSh {balance.toLocaleString()}
             </span>
           ) : (
-            <span className="rounded-full bg-brand/10 border border-brand/20 px-3 py-1 text-xs font-bold text-brand flex items-center gap-1.5">
+            <span className="rounded-badge bg-emerald-50 border border-emerald-100 px-3 py-1 text-xs font-bold text-emerald-800 flex items-center gap-1.5">
               <CheckCircle2 size={12} />
               Settled
             </span>
@@ -89,11 +89,11 @@ const BuyerRow = ({ buyer, isExpanded, onToggle }) => {
           <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
             <div>
               <p className="text-[10px] font-black uppercase tracking-widest text-ink-muted mb-1">Agreed Rate</p>
-              <p className="text-sm font-bold text-ink">KSh {rate.toLocaleString()} / Liter</p>
+              <p className="text-sm font-bold text-ink font-mono">KSh {rate.toLocaleString()} / Liter</p>
             </div>
             <div>
               <p className="text-[10px] font-black uppercase tracking-widest text-ink-muted mb-1">Current Balance</p>
-              <p className={`text-sm font-bold ${balance > 0 ? 'text-danger' : 'text-brand'}`}>
+              <p className={`text-sm font-bold font-mono ${balance > 0 ? 'text-danger' : 'text-brand-700'}`}>
                 KSh {balance.toLocaleString(undefined, { minimumFractionDigits: 2 })}
               </p>
             </div>
@@ -174,31 +174,31 @@ export default function BuyersList() {
 
   const handleImport = () => {
     console.log('[BuyersList] Excel import not yet implemented.');
-    toast('Excel import is coming soon.', { icon: 'ℹ️' });
+    toast('Excel import is coming soon.');
   };
 
   return (
     <div className="min-h-[80vh] animate-reveal pb-12">
       
       {/* Header Section with Primary Action */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-end border-b border-ink/10 pb-6 mb-8 gap-4">
-        <div>
-          <div className="inline-flex items-center gap-2 px-3 py-1 bg-brand/5 text-brand border border-brand/10 text-[10px] font-bold uppercase tracking-widest rounded-full mb-3">
-            <Users size={12} /> Finance & Supply
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center rounded-card border border-brand-100 bg-brand-50 p-5 mb-8 gap-4">
+        <div className="flex items-center gap-4">
+          <div className="p-3 bg-white text-brand-700 rounded-lg border border-brand-100"><Users size={20} /></div>
+          <div>
+            <h1 className="font-sans font-bold text-2xl tracking-tight text-brand-900 m-0">
+              Customer Billing
+            </h1>
+            <p className="text-sm text-brand-700/80 mt-1 max-w-xl">
+              Track buyer balances, manage profiles, and share milk statements via WhatsApp.
+            </p>
           </div>
-          <h1 className="font-sans font-black text-3xl tracking-tight text-ink m-0">
-            Customer Billing
-          </h1>
-          <p className="text-sm font-medium text-ink-muted mt-2 max-w-xl">
-            Track buyer balances, manage profiles, and share milk statements via WhatsApp.
-          </p>
         </div>
         
         {/* IMPROVEMENT: Only show the top-right button if data exists */}
         {safeCustomers.length > 0 && (
           <button 
             onClick={() => setIsAddPanelOpen(true)}
-            className="btn-command bg-brand text-white hover:bg-brand/90 px-6 py-2.5 rounded-xl font-bold flex items-center gap-2 shadow-sm transition-all w-full md:w-auto justify-center"
+            className="flex items-center gap-2 rounded-button bg-brand-800 px-6 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-brand-900 w-full md:w-auto justify-center"
           >
             <Plus size={18} />
             Add New Buyer
@@ -297,7 +297,7 @@ export default function BuyersList() {
             <div className="flex flex-col sm:flex-row items-center gap-4 w-full sm:w-auto">
               <button 
                 onClick={() => setIsAddPanelOpen(true)}
-                className="w-full sm:w-auto flex items-center justify-center gap-2 bg-brand text-surface px-6 py-3 rounded-button font-bold text-sm shadow-md hover:bg-brand-dark transition-colors"
+                className="w-full sm:w-auto flex items-center justify-center gap-2 bg-brand-800 text-white px-6 py-3 rounded-button font-bold text-sm shadow-md hover:bg-brand-900 transition-colors"
               >
                 <Plus size={18} /> Add Your First Buyer
               </button>

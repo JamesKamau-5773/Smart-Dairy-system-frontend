@@ -1,7 +1,8 @@
-import React, { useMemo } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useMemo } from 'react';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import { PackagePlus, Wheat } from 'lucide-react';
+import toast from 'react-hot-toast';
 import CurrentMixCard from '../../components/nutrition/CurrentMixCard';
 import ProfitabilityChart from '../../components/nutrition/ProfitabilityChart';
 import TopRecipesList from './TopRecipesList';
@@ -10,6 +11,7 @@ import { useTenant } from '../../hooks/useTenant';
 
 export default function NutritionDashboard() {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const { tenantId, farmId } = useTenant();
 
   const { data: feedCostEfficiency } = useQuery({
@@ -48,14 +50,37 @@ export default function NutritionDashboard() {
     const remainingWeight = Number(batch.remainingWeight ?? batch.remaining_weight ?? (totalWeight - consumedWeight));
 
     return {
+      batchId: batch.batchId,
       name: batch.batchName ?? batch.name ?? 'Feed mix',
       totalWeight: Number(totalWeight.toFixed(2)),
       consumedWeight: Number(consumedWeight.toFixed(2)),
       remainingWeight: Number(remainingWeight.toFixed(2)),
-      dailyFeedingRate: Number(batch.dailyFeedingRate ?? batch.daily_feeding_rate ?? 0),
+      dailyFeedingRate: Number(
+        batch.dailyFeedingRateKg ?? batch.daily_feeding_rate_kg ?? batch.dailyFeedingRate ?? 0
+      ),
+      daysUntilEmpty: batch.daysUntilEmpty ?? batch.days_until_empty ?? null,
+      rateBasis: batch.rateBasis ?? batch.rate_basis ?? null,
       mixedOn: batch.mixedOn ?? batch.mixed_on ?? null,
     };
   }, [feedCostEfficiency]);
+
+  const consumptionMutation = useMutation({
+    mutationFn: ({ batchId, consumedWeight, feedingGroup }) => nutritionApi.createConsumptionEvent(batchId, {
+      consumedWeight,
+      consumedOn: new Date().toISOString().slice(0, 10),
+      feeding_group: feedingGroup,
+    }),
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['nutrition-feed-cost-efficiency', tenantId, farmId] }),
+        queryClient.invalidateQueries({ queryKey: ['nutrition-active-batch-roi-trend-weekly', tenantId, farmId] }),
+      ]);
+      toast.success('Feeding recorded.');
+    },
+    onError: (error) => {
+      toast.error(error?.response?.data?.error ?? 'Unable to record feeding.');
+    },
+  });
 
   // active-batch-roi-trend-weekly returns { rows: [...] } (or a bare array).
   // Each point uses `feedCostPerLiter` + `weekStart`, so read those first.
@@ -130,7 +155,15 @@ export default function NutritionDashboard() {
 
       {/* ── TOP GRID: STATUS & FINANCIALS ── */}
       <div className="grid gap-6 xl:grid-cols-2">
-        <CurrentMixCard mix={currentMix} />
+        <CurrentMixCard
+          mix={currentMix}
+          isRecording={consumptionMutation.isPending}
+          onRecordConsumption={({ consumedWeight, feedingGroup }) => consumptionMutation.mutateAsync({
+            batchId: currentMix.batchId,
+            consumedWeight,
+            feedingGroup,
+          })}
+        />
         <ProfitabilityChart trends={trends} />
       </div>
 

@@ -27,6 +27,7 @@ import { formatValidationErrors, getFirstErrorMessage, validateForm } from '../.
 import { herdApi, medicalApi } from '../../lib/backendApi';
 import { normalizeHerdCow } from '../../lib/herdUtils';
 import { useTenant } from '../../hooks/useTenant';
+import GroupedDateRows from '../../components/ui/GroupedDateRows';
 
 const EMPTY_FORM = {
   cowTag: '',
@@ -694,7 +695,12 @@ export default function VetRecords() {
             </tr>
           </thead>
           <tbody className="divide-y divide-ink/5">
-            {filteredRecords.map((visit) => (
+            <GroupedDateRows
+              items={filteredRecords}
+              getDate={(visit) => visit.date}
+              colSpan={7}
+              renderGroupMeta={(items) => `${items.length} ${items.length === 1 ? 'record' : 'records'}`}
+              renderItem={(visit) => (
               <tr key={visit.id} className="hover:bg-surface/55">
                 <td className="p-4 font-mono text-xs text-ink-strong">{visit.date}</td>
                 <td className="p-4">
@@ -726,9 +732,8 @@ export default function VetRecords() {
                   </button>
                 </td>
               </tr>
-            ))}
-
-            {filteredRecords.length === 0 && (
+              )}
+              empty={filteredRecords.length === 0 && (
               <tr>
                 <td colSpan={7} className="p-8 text-center">
                   <div className="mx-auto max-w-md space-y-3 text-ink-muted">
@@ -743,7 +748,8 @@ export default function VetRecords() {
                   </div>
                 </td>
               </tr>
-            )}
+              )}
+            />
           </tbody>
         </table>
       </div>

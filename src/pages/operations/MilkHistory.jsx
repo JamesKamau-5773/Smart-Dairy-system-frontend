@@ -2,13 +2,36 @@ import React, { useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Link, useParams } from 'react-router-dom';
 import { ArrowLeft, Activity, Calendar, Droplets, ShieldAlert, TrendingUp, Search, Filter, RotateCcw, ChevronDown } from 'lucide-react';
-import { animalsApi } from '../../lib/backendApi';
+import { animalsApi, herdApi } from '../../lib/backendApi';
 import { normalizeAnimal } from '../../lib/animalUtils';
 import {
   filterMilkHistorySessions,
   normalizeMilkHistorySession,
 } from '../../lib/milkUtils';
 import { useTenant } from '../../hooks/useTenant';
+import GroupedDateRows from '../../components/ui/GroupedDateRows';
+import { CartesianGrid, Legend, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
+
+export function buildMilkYieldTrend(sessions, range = 'all') {
+  const dailyTotals = sessions.reduce((totals, entry) => {
+    const date = String(entry.date ?? '').slice(0, 10);
+    const liters = Number(entry.liters);
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || !Number.isFinite(liters)) return totals;
+    totals[date] = (totals[date] ?? 0) + liters;
+    return totals;
+  }, {});
+
+  const records = Object.entries(dailyTotals)
+    .sort(([left], [right]) => left.localeCompare(right))
+    .map(([date, liters]) => ({
+      date,
+      label: new Date(`${date}T00:00:00`).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }),
+      liters: Number(liters.toFixed(1)),
+    }));
+
+  if (range === 'all') return records;
+  return records.slice(-Number(range));
+}
 
 function MetricCard({ label, value, icon: Icon, tone = 'brand' }) {
   const toneStyles = {
@@ -42,14 +65,20 @@ export default function MilkHistory() {
     session: 'all',
   });
 
-  const { data: history, isLoading } = useQuery({
+  const { data: history, isLoading, isError, error, refetch } = useQuery({
     queryKey: ['milk-history', tenantId, farmId, id],
     queryFn: async () => {
-      // GET /animals/<id> only accepts the internal numeric id (404s for an ear tag like "002"),
-      // but the milk-history route resolves either, and already embeds the animal record — prefer that.
+      let resolvedId = id;
+      const herd = await herdApi.list({ per_page: 200 });
+      const selectedCow = herd.find((cow) => [cow.id, cow.recordId, cow.tag, cow.tag_number, cow.tagNumber]
+        .filter(Boolean)
+        .some((value) => String(value).toLowerCase() === String(id).toLowerCase()));
+      if (selectedCow?.id != null) resolvedId = selectedCow.id;
+      else if (selectedCow?.recordId != null) resolvedId = selectedCow.recordId;
+
       const [animal, sessions] = await Promise.all([
-        animalsApi.get(id).catch(() => null),
-        animalsApi.milkHistory(id).catch(() => []),
+        animalsApi.get(resolvedId),
+        animalsApi.milkHistory(resolvedId),
       ]);
 
       const resolvedAnimal = sessions?.animal ?? animal;
@@ -75,6 +104,8 @@ export default function MilkHistory() {
 
   const totalYield = filteredSessions.reduce((sum, entry) => sum + Number(entry.liters || 0), 0).toFixed(1);
   const totalSessions = safeSessions.length;
+  const [trendRange, setTrendRange] = useState('30');
+  const trendData = useMemo(() => buildMilkYieldTrend(safeSessions, trendRange), [safeSessions, trendRange]);
 
   const { averageYield, peakYield } = useMemo(() => {
     const backendStats = resolvedHistory?.stats;
@@ -105,6 +136,18 @@ export default function MilkHistory() {
   }, [resolvedHistory?.stats, safeSessions]);
 
   const clearFilters = () => setFilters({ search: '', date: '', status: 'all', session: 'all' });
+
+  if (isError) {
+    return (
+      <div className="animate-reveal space-y-6 max-w-6xl mx-auto">
+        <div className="rounded-2xl border border-danger/20 bg-danger/5 p-6 text-sm text-danger">
+          <p className="font-semibold">Unable to load this cow&apos;s milk history.</p>
+          <p className="mt-1 text-danger/80">{error?.response?.data?.error || error?.message || 'Please try again.'}</p>
+          <button type="button" onClick={() => refetch()} className="btn-command mt-4">Retry</button>
+        </div>
+      </div>
+    );
+  }
 
   if (!isLoading && !resolvedHistory) {
     return (
@@ -147,6 +190,47 @@ export default function MilkHistory() {
         <MetricCard label="Peak Yield" value={peakYield} icon={Calendar} />
         <MetricCard label="Total Logged" value={`${totalYield} L`} icon={ShieldAlert} tone="accent" />
       </div>
+
+      <section className="card-machined overflow-hidden bg-surface">
+        <div className="flex flex-col gap-3 border-b border-ink/10 bg-surface-raised px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h3 className="flex items-center gap-2 text-lg font-bold text-brand"><TrendingUp size={18} /> Production trend</h3>
+            <p className="mt-1 text-xs text-ink-muted">Daily milk volume for {resolvedHistory?.animal?.name || 'this cow'}.</p>
+          </div>
+          <div className="inline-flex rounded-lg border border-ink/10 bg-surface p-1" role="group" aria-label="Production trend range">
+            {[['30', '30 days'], ['90', '90 days'], ['all', 'All time']].map(([value, label]) => (
+              <button key={value} type="button" onClick={() => setTrendRange(value)} aria-pressed={trendRange === value} className={`rounded-md px-3 py-1.5 text-xs font-semibold transition-colors ${trendRange === value ? 'bg-brand text-surface' : 'text-ink-muted hover:bg-surface-raised hover:text-brand'}`}>
+                {label}
+              </button>
+            ))}
+          </div>
+        </div>
+        <div className="h-96 px-3 py-4 sm:px-5">
+          {trendData.length > 0 ? (
+            <ResponsiveContainer width="100%" height="100%">
+              <LineChart data={trendData} margin={{ top: 5, right: 20, left: -10, bottom: 5 }}>
+                <CartesianGrid strokeDasharray="3 3" strokeOpacity={0.2} />
+                <XAxis dataKey="label" tick={{ fontSize: 12 }} />
+                <YAxis tick={{ fontSize: 12 }} unit=" L" />
+                <Tooltip
+                  formatter={(value) => [`${Number(value).toFixed(1)} L`, 'Daily production']}
+                  labelFormatter={(label) => `Date: ${label}`}
+                  contentStyle={{
+                    backgroundColor: 'rgba(255, 255, 255, 0.8)',
+                    backdropFilter: 'blur(4px)',
+                    border: '1px solid rgba(0, 0, 0, 0.1)',
+                    borderRadius: '0.5rem',
+                  }}
+                />
+                <Legend />
+                <Line type="monotone" dataKey="liters" name="Daily Production" stroke="#3b82f6" strokeWidth={2} />
+              </LineChart>
+            </ResponsiveContainer>
+          ) : (
+            <div className="flex h-full items-center justify-center text-sm text-ink-muted">No dated production data is available for this cow.</div>
+          )}
+        </div>
+      </section>
 
       <div className="card-machined p-5 space-y-4">
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
@@ -256,7 +340,12 @@ export default function MilkHistory() {
               </tr>
             </thead>
             <tbody className="divide-y divide-ink/5 bg-white">
-              {filteredSessions.map((entry, index) => (
+              <GroupedDateRows
+                items={filteredSessions}
+                getDate={(entry) => entry.date}
+                colSpan={5}
+                renderGroupMeta={(items) => `${items.length} ${items.length === 1 ? 'session' : 'sessions'} / ${items.reduce((sum, item) => sum + Number(item.liters || 0), 0).toFixed(1)} L`}
+                renderItem={(entry, index) => (
                 <tr key={`${entry.date}-${entry.session}-${index}`} className="hover:bg-surface-raised transition-colors">
                   <td className="p-4 text-sm text-ink-muted font-medium">{entry.date}</td>
                   <td className="p-4 text-sm font-semibold text-ink">{entry.session}</td>
@@ -268,7 +357,9 @@ export default function MilkHistory() {
                     </span>
                   </td>
                 </tr>
-              ))}
+                )}
+                empty={null}
+              />
             </tbody>
           </table>
         ) : (

@@ -179,7 +179,7 @@ export default {
       fontFamily: {
         sans: ['Inter', 'system-ui', 'sans-serif'],
         display: ['Inter', 'system-ui', 'sans-serif'],
-        mono: ['SFMono-Regular', 'Menlo', 'Monaco', 'Consolas', 'monospace'], // Enterprise standard mono
+        mono: ['"JetBrains Mono"', 'SFMono-Regular', 'Menlo', 'Monaco', 'Consolas', 'monospace'], // Enterprise standard mono
       },
       borderWidth: {
         '3': '1px', // (Note: you might want to rename this key to '1' in the future to avoid confusion!)

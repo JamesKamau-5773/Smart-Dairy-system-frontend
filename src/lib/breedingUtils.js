@@ -8,32 +8,35 @@
  */
 export function normalizeBreedingLogPayload(formData) {
   if (!formData) {
-    console.error("normalizeBreedingLogPayload received null or undefined formData");
+    console.error('normalizeBreedingLogPayload received null or undefined formData');
     return null;
   }
 
-  // Determine the 'provided_by' value based on the form's radio button selection.
-  // The backend expects 'FARM' or 'VET'.
   const providedBy = formData.semenSource === 'vet_provided' ? 'VET' : 'FARM';
+  const cowId = formData.animal_id || formData.cowId || formData.cow_id;
+  const inseminationDate = formData.eventDate || formData.event_date || formData.insemination_date || formData.aiDate;
+  const inseminationTime = formData.insemination_time || formData.aiTime || formData.time || null;
+  const serviceFee = formData.service_fee ?? formData.serviceFee ?? formData.total_cost ?? null;
 
   const payload = {
-    // Map frontend field names to the backend's expected keys
-    cow_id: formData.animal_id || formData.cowId || formData.cow_id,
-    insemination_date: formData.eventDate || formData.event_date || formData.insemination_date,
-
-    // Pass through other relevant fields
+    cow_id: cowId,
+    insemination_date: inseminationDate,
+    insemination_time: inseminationTime,
     event_type: formData.eventType || formData.event_type || 'INSEMINATION',
-    technician: formData.technician || null,
-    notes: formData.notes || '',
-
-    // Add the fields required by the backend for validation
+    technician_name: formData.technician_name || formData.technician || null,
+    owner_name: formData.owner_name || formData.ownerName || null,
+    farm_location: formData.farm_location || formData.farmLocation || null,
+    certificate_number: formData.certificate_number || formData.certificateNumber || null,
+    service_fee: serviceFee == null || serviceFee === '' ? null : Number(serviceFee),
+    is_repeat_service: Boolean(formData.is_repeat_service ?? formData.isRepeatService ?? false),
     provided_by: providedBy,
-    semen_id: formData.sire_id || formData.sireId || formData.semen_id || null,
+    semen_id: formData.sire_id || formData.sireId || formData.semen_id || formData.sireCode || null,
+    notes: formData.notes || formData.note || '',
+    heat_observation_id: formData.heat_observation_id ?? formData.heatObservationId ?? null,
   };
 
-  // Validate against the backend's required fields
   if (!payload.cow_id || !payload.insemination_date) {
-    console.error("Breeding log payload is missing required fields (cow_id, insemination_date).", payload);
+    console.error('Breeding log payload is missing required fields (cow_id, insemination_date).', payload);
     return null;
   }
 
@@ -67,6 +70,7 @@ export function normalizeBreedingLog(log = {}) {
     : 0;
   const daysPostAI = Number(log.daysPostAI ?? log.days_post_ai ?? computedDaysPostAI);
   const expectedCalvingDate = log.expectedCalvingDate ?? log.expected_calving_date ?? log.calving_due_date ?? null;
+  const pregnancyCheckDate = log.pregnancyCheckDate ?? log.pregnancy_check_date ?? log.pregnancy_check ?? null;
   const rawStatus = String(log.status ?? log.check_status ?? log.outcome_status ?? 'Pending').trim().toLowerCase();
   let status = 'Pending';
   const rawProvidedBy = String(log.provided_by ?? '').trim().toLowerCase();
@@ -91,7 +95,7 @@ export function normalizeBreedingLog(log = {}) {
 
   if (['pregnant', 'in-calf', 'incalf', 'confirmed_pregnant'].includes(rawStatus)) {
     status = 'Pregnant';
-  } else if (['open', 'not pregnant', 'not_pregnant', 'negative'].includes(rawStatus)) {
+  } else if (['open', 'not pregnant', 'not_pregnant', 'negative', 'failed', 'failure'].includes(rawStatus)) {
     status = 'Open';
   } else if (['pending', 'pending check', 'pending_check', 'awaiting_check', 'awaiting'].includes(rawStatus)) {
     status = 'Pending';
@@ -116,6 +120,9 @@ export function normalizeBreedingLog(log = {}) {
       || (rawSourceLabel.includes('vet') ? 'vet_provided' : '')
       || (rawSourceLabel.includes('farm') || rawSourceLabel.includes('stock') ? 'farm_stock' : 'unknown'),
     expectedCalvingDate,
+    pregnancyCheckDate,
+    certificateImageUrl: log.certificateImageUrl ?? log.certificate_image_url ?? log.certificate_url ?? null,
+    certificateNumber: log.certificateNumber ?? log.certificate_number ?? null,
     daysPostAI,
     status,
     notes: log.note ?? log.notes ?? '',

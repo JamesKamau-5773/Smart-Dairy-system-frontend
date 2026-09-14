@@ -71,6 +71,21 @@ describe('animalYieldTargetService helpers', () => {
     }));
   });
 
+  it('uses the entered whole-herd target when saved targets are disabled', () => {
+    const payload = buildSchedulePayload({
+      cows: [{ id: 1, current_status: 'LACTATING' }],
+      targets: [{ cowId: '1', targetLiters: 27, isActive: true }],
+      fallbackTargetLiters: 35.5,
+      baselineHerdMealKg: 4,
+      useSavedTargets: false,
+    });
+
+    expect(payload.request.target_liters).toBe(35.5);
+    expect(payload.request.target_mode).toBe('herd_fallback');
+    expect(payload.request.animal_targets).toEqual([]);
+    expect(payload.summary.targetSource).toBe('herd_fallback');
+  });
+
   it('summarizes target visibility for milk lab', () => {
     const cows = [
       { id: 1, name: 'Ruby', current_status: 'LACTATING' },

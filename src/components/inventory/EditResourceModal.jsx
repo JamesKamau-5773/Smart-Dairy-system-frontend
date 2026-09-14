@@ -1,40 +1,25 @@
-import React, { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { X, Save, Edit2 } from 'lucide-react';
 import { resolveIngredientStandards } from '../../lib/feedNutritionStandards';
+import { proteinGramsPerKgToInput, proteinInputToGramsPerKg } from '../../lib/feedNutritionUnits';
 
 export default function EditResourceModal({ isOpen, onClose, item, onSave }) {
-  const [defaultSource, setDefaultSource] = useState('');
-  const [formData, setFormData] = useState({
-    name: '',
-    sku: '',
-    category: '',
-    reorderLevel: 0,
-    proteinGramsPerKg: 0,
-    energyMjPerKg: 0,
-    fiberGramsPerKg: 0,
-    costPerKg: 0,
+  const initialStandards = resolveIngredientStandards({
+    name: item?.name || '',
+    category: item?.category || 'Bulk Feed',
   });
-
-  // Pre-fill the form whenever the modal opens with a selected item
-  useEffect(() => {
-    if (item && isOpen) {
-      const standards = resolveIngredientStandards({
-        name: item.name || '',
-        category: item.category || 'Bulk Feed',
-      });
-      setFormData({
-        name: item.name || '',
-        sku: item.sku || '',
-        category: item.category || 'Bulk Feed',
-        reorderLevel: item.reorderLevel === undefined ? 0 : item.reorderLevel,
-        proteinGramsPerKg: item.protein_grams_per_kg ?? item.proteinGramsPerKg ?? standards?.values?.proteinGramsPerKg ?? 0,
-        energyMjPerKg: item.energy_mj_per_kg ?? item.energyMjPerKg ?? standards?.values?.energyMjPerKg ?? 0,
-        fiberGramsPerKg: item.fiber_grams_per_kg ?? item.fiberGramsPerKg ?? standards?.values?.fiberGramsPerKg ?? 0,
-        costPerKg: item.cost_per_kg ?? item.costPerKg ?? standards?.values?.costPerKg ?? 0,
-      });
-      setDefaultSource(standards?.source || '');
-    }
-  }, [item, isOpen]);
+  const [defaultSource, setDefaultSource] = useState(initialStandards?.source || '');
+  const [proteinUnit, setProteinUnit] = useState('percent');
+  const [formData, setFormData] = useState({
+    name: item?.name || '',
+    sku: item?.sku || '',
+    category: item?.category || 'Bulk Feed',
+    reorderLevel: item?.reorderLevel ?? 0,
+    proteinGramsPerKg: item?.protein_grams_per_kg ?? item?.proteinGramsPerKg ?? initialStandards?.values?.proteinGramsPerKg ?? 0,
+    energyMjPerKg: item?.energy_mj_per_kg ?? item?.energyMjPerKg ?? initialStandards?.values?.energyMjPerKg ?? 0,
+    fiberGramsPerKg: item?.fiber_grams_per_kg ?? item?.fiberGramsPerKg ?? initialStandards?.values?.fiberGramsPerKg ?? 0,
+    costPerKg: item?.cost_per_kg ?? item?.costPerKg ?? initialStandards?.values?.costPerKg ?? 0,
+  });
 
   const handleFieldChange = (name, value) => {
     setFormData((prev) => {
@@ -68,12 +53,14 @@ export default function EditResourceModal({ isOpen, onClose, item, onSave }) {
     onClose();
   };
 
+  const proteinInputValue = proteinGramsPerKgToInput(formData.proteinGramsPerKg, proteinUnit);
+
   if (!isOpen) return null;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-ink-strong/30 backdrop-blur-sm animate-in fade-in duration-200">
       <div className="bg-white rounded-xl shadow-2xl w-full max-w-lg overflow-hidden flex flex-col">
-        
+
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-5 border-b border-slate-100 bg-slate-50">
           <div className="flex items-center gap-3">
@@ -85,7 +72,7 @@ export default function EditResourceModal({ isOpen, onClose, item, onSave }) {
               <p className="text-[10px] font-bold text-ink-muted uppercase mt-0.5">Modify Definition</p>
             </div>
           </div>
-          <button 
+          <button
             onClick={onClose}
             className="text-ink-muted hover:text-danger p-1.5 rounded-md hover:bg-danger/10 transition-colors"
           >
@@ -96,24 +83,24 @@ export default function EditResourceModal({ isOpen, onClose, item, onSave }) {
         {/* Body */}
         <form onSubmit={handleSubmit}>
           <div className="p-6 space-y-5">
-            
+
             <div className="grid grid-cols-2 gap-5">
               <div>
                 <label className="block text-[10px] font-black text-ink-muted uppercase tracking-widest mb-2">Resource Name</label>
-                <input 
-                  required 
+                <input
+                  required
                   value={formData.name}
                   onChange={(e) => handleFieldChange('name', e.target.value)}
-                  className="w-full p-3 border border-slate-200 rounded-lg text-sm font-bold focus:ring-2 focus:ring-brand/20 focus:border-brand outline-none transition-all" 
+                  className="w-full p-3 border border-slate-200 rounded-lg text-sm font-bold focus:ring-2 focus:ring-brand/20 focus:border-brand outline-none transition-all"
                 />
               </div>
               <div>
                 <label className="block text-[10px] font-black text-ink-muted uppercase tracking-widest mb-2">SKU / Code</label>
-                <input 
-                  required 
+                <input
+                  required
                   value={formData.sku}
                   onChange={(e) => setFormData({...formData, sku: e.target.value})}
-                  className="w-full p-3 border border-slate-200 rounded-lg text-sm font-bold font-mono focus:ring-2 focus:ring-brand/20 focus:border-brand outline-none transition-all" 
+                  className="w-full p-3 border border-slate-200 rounded-lg text-sm font-bold font-mono focus:ring-2 focus:ring-brand/20 focus:border-brand outline-none transition-all"
                 />
               </div>
             </div>
@@ -121,7 +108,7 @@ export default function EditResourceModal({ isOpen, onClose, item, onSave }) {
             <div className="grid grid-cols-2 gap-5">
               <div>
                 <label className="block text-[10px] font-black text-ink-muted uppercase tracking-widest mb-2">Category</label>
-                <select 
+                <select
                   value={formData.category}
                   onChange={(e) => handleFieldChange('category', e.target.value)}
                   className="w-full p-3 border border-slate-200 rounded-lg text-sm font-bold focus:ring-2 focus:ring-brand/20 focus:border-brand outline-none transition-all bg-white"
@@ -146,15 +133,27 @@ export default function EditResourceModal({ isOpen, onClose, item, onSave }) {
 
             <div className="grid grid-cols-2 gap-5">
               <div>
-                <label className="block text-[10px] font-black text-ink-muted uppercase tracking-widest mb-2">Protein (g/kg)</label>
+                <div className="mb-2 flex items-center justify-between gap-2">
+                  <label className="block text-[10px] font-black text-ink-muted uppercase tracking-widest">Crude Protein</label>
+                  <select value={proteinUnit} onChange={(e) => setProteinUnit(e.target.value)} className="rounded border border-slate-200 bg-white px-2 py-1 text-[10px] font-bold">
+                    <option value="percent">%</option>
+                    <option value="g_per_kg">g/kg</option>
+                  </select>
+                </div>
                 <input
                   type="number"
                   min="0"
+                  max={proteinUnit === 'percent' ? 100 : 1000}
                   step="0.1"
-                  value={formData.proteinGramsPerKg}
-                  onChange={(e) => setFormData({ ...formData, proteinGramsPerKg: Number(e.target.value) || 0 })}
+                  value={proteinInputValue}
+                  onChange={(e) => setFormData({ ...formData, proteinGramsPerKg: proteinInputToGramsPerKg(e.target.value, proteinUnit) })}
                   className="w-full p-3 border border-slate-200 rounded-lg text-sm font-bold focus:ring-2 focus:ring-brand/20 focus:border-brand outline-none transition-all"
                 />
+                <p className="mt-1 text-[10px] font-semibold text-slate-500">
+                  {proteinUnit === 'percent'
+                    ? `${proteinInputValue}% = ${Number(formData.proteinGramsPerKg).toFixed(1)} g/kg`
+                    : `${proteinInputValue} g/kg = ${(Number(formData.proteinGramsPerKg) / 10).toFixed(1)}%`}
+                </p>
               </div>
               <div>
                 <label className="block text-[10px] font-black text-ink-muted uppercase tracking-widest mb-2">Energy (MJ/kg)</label>
@@ -210,14 +209,14 @@ export default function EditResourceModal({ isOpen, onClose, item, onSave }) {
 
           {/* Footer Actions */}
           <div className="p-6 bg-slate-50 border-t border-slate-100 flex gap-4">
-            <button 
+            <button
               type="button"
               onClick={onClose}
               className="flex-1 py-3 rounded-lg font-black text-xs uppercase tracking-widest text-slate-500 hover:bg-slate-200 hover:text-ink transition-colors"
             >
               Cancel
             </button>
-            <button 
+            <button
               type="submit"
               className="flex-[2] py-3 px-6 rounded-lg font-black text-xs uppercase tracking-widest bg-ink text-white hover:bg-ink-strong transition-all shadow-sm flex items-center justify-center gap-2"
             >

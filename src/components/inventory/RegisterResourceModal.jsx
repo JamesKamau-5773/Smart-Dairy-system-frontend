@@ -1,22 +1,8 @@
 // src/components/inventory/RegisterResourceModal.jsx
-import React, { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { createPortal } from 'react-dom';
 import { X, Check } from 'lucide-react';
-
-// Dummy hook to resolve the import error.
-// This should be replaced with a real implementation that fetches defaults.
-const useIngredientDefaults = (name, category) => {
-  const [defaults, setDefaults] = useState({
-    defaultSource: null,
-    nutritionalDefaults: {},
-  });
-
-  const updateDefaults = (newName, newCategory) => {
-    // In a real implementation, this would fetch defaults based on name/category.
-  };
-
-  return { ...defaults, updateDefaults };
-};
+import { proteinGramsPerKgToInput, proteinInputToGramsPerKg } from '../../lib/feedNutritionUnits';
 
 const INITIAL_STATE = {
   name: '',
@@ -33,22 +19,11 @@ const INITIAL_STATE = {
 
 export default function RegisterResourceModal({ isOpen, onClose, onRegister }) {
   const [formData, setFormData] = useState(INITIAL_STATE); // Initialize with all fields
-  const { defaultSource, nutritionalDefaults, updateDefaults } = useIngredientDefaults(formData.name, formData.category);
-
-  useEffect(() => {
-    if (isOpen) {
-      setFormData(INITIAL_STATE);
-      updateDefaults(INITIAL_STATE.name, INITIAL_STATE.category); // Reset defaults when modal opens
-    }
-  }, [isOpen]);
+  const [proteinUnit, setProteinUnit] = useState('percent');
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setFormData(prev => {
-      const newFormData = { ...prev, [name]: value };
-      updateDefaults(newFormData.name, newFormData.category); // Update defaults based on new form data
-      return newFormData;
-    });
+    setFormData(prev => ({ ...prev, [name]: value }));
   };
 
   const handleSubmit = (e) => {
@@ -59,10 +34,8 @@ export default function RegisterResourceModal({ isOpen, onClose, onRegister }) {
 
   if (!isOpen) return null;
 
-  // Apply nutritional defaults to form data if they haven't been manually overridden
-  // This ensures the form displays the defaults from the hook
-  // User input in `formData` should override any `nutritionalDefaults`.
-  const currentFormData = { ...nutritionalDefaults, ...formData };
+  const currentFormData = formData;
+  const proteinInputValue = proteinGramsPerKgToInput(currentFormData.proteinGramsPerKg, proteinUnit);
 
   const modalContent = (
     <div
@@ -81,7 +54,7 @@ export default function RegisterResourceModal({ isOpen, onClose, onRegister }) {
             <h3 className="font-black text-ink text-lg tracking-tight">Register New Resource</h3>
             <button onClick={onClose} className="text-ink-muted hover:text-ink"><X size={20} /></button>
           </div>
-          
+
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
               <div>
@@ -119,8 +92,28 @@ export default function RegisterResourceModal({ isOpen, onClose, onRegister }) {
 
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="text-[10px] font-black text-ink-muted uppercase tracking-widest mb-1.5 block">Protein (g/kg)</label>
-                <input name="proteinGramsPerKg" value={currentFormData.proteinGramsPerKg || ''} onChange={handleChange} type="number" min="0" step="0.1" className="w-full p-3 border border-slate-200 rounded-[12px] text-sm font-bold focus:ring-2 focus:ring-brand/20 outline-none" />
+                <div className="mb-1.5 flex items-center justify-between gap-2">
+                  <label className="text-[10px] font-black text-ink-muted uppercase tracking-widest">Crude Protein</label>
+                  <select value={proteinUnit} onChange={(e) => setProteinUnit(e.target.value)} className="rounded border border-slate-200 bg-white px-2 py-1 text-[10px] font-bold">
+                    <option value="percent">%</option>
+                    <option value="g_per_kg">g/kg</option>
+                  </select>
+                </div>
+                <input
+                  name="proteinGramsPerKg"
+                  value={proteinInputValue || ''}
+                  onChange={(e) => setFormData((previous) => ({ ...previous, proteinGramsPerKg: proteinInputToGramsPerKg(e.target.value, proteinUnit) }))}
+                  type="number"
+                  min="0"
+                  max={proteinUnit === 'percent' ? 100 : 1000}
+                  step="0.1"
+                  className="w-full p-3 border border-slate-200 rounded-[12px] text-sm font-bold focus:ring-2 focus:ring-brand/20 outline-none"
+                />
+                <p className="mt-1 text-[10px] font-semibold text-slate-500">
+                  {proteinUnit === 'percent'
+                    ? `${proteinInputValue}% = ${Number(currentFormData.proteinGramsPerKg || 0).toFixed(1)} g/kg`
+                    : `${proteinInputValue} g/kg = ${(Number(currentFormData.proteinGramsPerKg || 0) / 10).toFixed(1)}%`}
+                </p>
               </div>
               <div>
                 <label className="text-[10px] font-black text-ink-muted uppercase tracking-widest mb-1.5 block">Energy (MJ/kg)</label>
@@ -137,12 +130,6 @@ export default function RegisterResourceModal({ isOpen, onClose, onRegister }) {
                 <input name="costPerKg" value={currentFormData.costPerKg || ''} onChange={handleChange} type="number" min="0" step="0.1" className="w-full p-3 border border-slate-200 rounded-[12px] text-sm font-bold focus:ring-2 focus:ring-brand/20 outline-none" />
               </div>
             </div>
-
-            {defaultSource && (
-              <p className="text-[10px] text-slate-500 font-semibold pt-2">
-                Defaults applied from {defaultSource.startsWith('ingredient:') ? 'ingredient standard' : 'category baseline'} ({defaultSource.replace('ingredient:', '').replace('category:', '')}).
-              </p>
-            )}
 
             <button type="submit" className="w-full py-4 mt-4 bg-brand text-white rounded-[12px] font-black text-xs uppercase tracking-wider flex items-center justify-center gap-2 hover:bg-brand-dark transition-colors">
               <Check size={16} /> Save Resource

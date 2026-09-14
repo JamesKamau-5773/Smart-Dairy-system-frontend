@@ -7,6 +7,13 @@ import { ValidationRules } from './validation';
 import { normalizeBreedingLogPayload } from './breedingUtils';
 
 export function getAnimalActionValidationSchema(actionType) {
+  if (actionType === 'Calving') {
+    return {
+      date: [ValidationRules.required],
+      description: [ValidationRules.minLength(5)],
+    };
+  }
+
   if (actionType === 'Health') {
     return {
       description: [ValidationRules.required, ValidationRules.minLength(8)],
@@ -69,5 +76,22 @@ export function buildGeneralEventPayload(fields) {
     event_date: fields.date ? new Date(fields.date).toISOString().replace('Z', '+00:00') : undefined,
     event_data: { source: 'animal-passport' },
     metadata: { source: 'animal-passport' },
+  };
+}
+
+export function buildCalvingEventPayload(fields) {
+  const deliveryOutcome = fields.deliveryOutcome || 'live';
+  const isStillborn = deliveryOutcome === 'stillborn';
+
+  return {
+    calving_date: fields.date,
+    delivery_outcome: isStillborn ? 'Stillborn' : 'Live Birth',
+    calving_ease: fields.calvingEase || 'Normal',
+    notes: fields.description.trim(),
+    create_calf: !isStillborn && Boolean(fields.calfTag?.trim()),
+    calf_tag: !isStillborn ? fields.calfTag?.trim() || null : null,
+    calf_name: !isStillborn ? fields.calfName?.trim() || null : null,
+    calf_sex: !isStillborn ? fields.calfSex || null : null,
+    birth_weight: !isStillborn && fields.birthWeightKg ? Number(fields.birthWeightKg) : null,
   };
 }

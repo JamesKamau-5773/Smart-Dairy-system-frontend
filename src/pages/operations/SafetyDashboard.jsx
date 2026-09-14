@@ -3,6 +3,7 @@ import { ShieldAlert, ShieldCheck, Search, Filter, Activity, Milk, X, AlertTrian
 import { useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import { safetyApi } from '../../lib/backendApi';
+import { QUERY_KEYS } from '../../providers/QueryProvider';
 import { Skeleton } from '../../components/ui';
 import Modal from '../../components/ui/Modal';
 import { useTenant } from '../../hooks/useTenant';
@@ -11,20 +12,26 @@ const fetchHardlocks = async () => {
   return safetyApi.activeHardlocks();
 };
 
-function normalizeHardlock(lock) {
+export function normalizeHardlock(lock = {}) {
   return {
-    id: lock.id,
-    cowName: lock.cow_name ?? 'Unknown cow',
-    cowId: lock.cow_id ?? 'Unknown ID',
+    id: lock.id ?? lock.hardlock_id ?? lock.lock_id,
+    cowName: lock.cow_name ?? lock.cowName ?? lock.animal_name ?? lock.animalName ?? 'Unknown cow',
+    cowId: lock.cow_id ?? lock.cowId ?? lock.animal_id ?? lock.animalId ?? 'Unknown ID',
     reason: lock.reason ?? 'Not provided',
-    severity: lock.severity ?? 'WARNING',
-    lockExpires: lock.lock_expires,
-    section: lock.section ?? 'Main herd',
-    medication: lock.medication ?? 'Not specified',
-    updatedAt: lock.updated_at ?? lock.lock_expires,
-    updatedBy: lock.updated_by ?? 'Veterinary team',
+    severity: String(lock.severity ?? lock.status ?? 'WARNING').toUpperCase(),
+    lockExpires: lock.lock_expires ?? lock.lockExpires ?? lock.expires_at ?? lock.expiresAt ?? null,
+    section: lock.section ?? lock.herd_section ?? 'Main herd',
+    medication: lock.medication ?? lock.treatment ?? 'Not specified',
+    updatedAt: lock.updated_at ?? lock.updatedAt ?? lock.lock_expires ?? lock.lockExpires ?? null,
+    updatedBy: lock.updated_by ?? lock.updatedBy ?? 'Veterinary team',
     notes: lock.notes ?? 'No additional notes available.',
   };
+}
+
+export function formatLockExpiry(value) {
+  if (!value) return 'Not available';
+  const parsed = new Date(value);
+  return Number.isNaN(parsed.getTime()) ? 'Not available' : parsed.toLocaleDateString();
 }
 
 export default function MilkSafetyBoard() {
@@ -34,8 +41,8 @@ export default function MilkSafetyBoard() {
   const [selectedLock, setSelectedLock] = useState(null);
   const [controlsOpen, setControlsOpen] = useState(true);
 
-  const { data: hardlocksRaw, isLoading, error } = useQuery({
-    queryKey: ['vet_hardlocks', tenantId, farmId],
+  const { data: hardlocksRaw, isLoading, error, refetch, isFetching } = useQuery({
+    queryKey: QUERY_KEYS.HARDLOCKS(tenantId, farmId),
     queryFn: fetchHardlocks,
     enabled: !!tenantId && !!farmId,
   });
@@ -94,7 +101,7 @@ export default function MilkSafetyBoard() {
 
   const safetyRows = filteredHardlocks.map((lock) => ({
     ...lock,
-    clearanceDate: new Date(lock.lockExpires).toLocaleDateString(),
+    clearanceDate: formatLockExpiry(lock.lockExpires),
   }));
 
   return (
@@ -169,6 +176,14 @@ export default function MilkSafetyBoard() {
             >
               {controlsOpen ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
               {controlsOpen ? 'Hide filters' : 'Show filters'}
+            </button>
+            <button
+              type="button"
+              onClick={() => refetch()}
+              disabled={isFetching}
+              className="inline-flex items-center gap-1.5 rounded-md border border-gray-200 bg-white px-3 py-1.5 text-xs font-semibold text-gray-700 transition-colors hover:bg-gray-50 disabled:cursor-wait disabled:opacity-60"
+            >
+              {isFetching ? 'Refreshing...' : 'Refresh'}
             </button>
           </div>
         </div>

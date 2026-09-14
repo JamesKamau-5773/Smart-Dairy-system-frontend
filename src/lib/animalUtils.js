@@ -62,17 +62,42 @@ export function normalizeTimelineResponse(response, animalId = '') {
   };
 }
 
+function formatParentReference(parent, fallbackName, fallbackId) {
+  if (parent && typeof parent === 'object') {
+    const tag = parent.tag_number ?? parent.tag ?? parent.ear_tag ?? parent.id;
+    const name = parent.name ?? parent.cow_name;
+
+    if (tag && name) return `${tag} (${name})`;
+    return name ?? (tag ? `ID ${tag}` : '--');
+  }
+
+  return parent ?? fallbackName ?? (fallbackId ? `ID ${fallbackId}` : '--');
+}
+
 export function normalizeAnimal(animal = {}, id = '') {
   const ageMonths = Number(animal.ageMonths ?? animal.age_months ?? 0);
+  const yesterdayYieldLiters = Number(
+    animal.yesterdayYieldLiters ?? animal.yesterday_yield_liters ?? 0
+  );
+  const sevenDayAverageLiters = Number(
+    animal.sevenDayAverageLiters ?? animal.seven_day_average_liters ?? 0
+  );
   return {
     id: animal.id ?? animal.cow_id ?? animal.ear_tag ?? id,
     name: animal.name ?? animal.cow_name ?? 'Unnamed',
     breed: animal.breed ?? animal.breed_name ?? 'Unknown',
+    sire: formatParentReference(animal.sire, animal.sire_name, animal.sire_id),
+    dam: formatParentReference(animal.dam, animal.dam_name, animal.dam_id),
+    birthWeightKg: animal.birth_weight_kg ?? animal.birthWeightKg ?? animal.birth_weight ?? null,
     ageMonths,
     status: animal.status ?? animal.current_status ?? animal.currentStatus ?? animal.lactation_status ?? 'Cow',
     current_status: animal.current_status ?? animal.currentStatus ?? animal.status ?? animal.lactation_status ?? 'Cow',
     lastCalved: animal.lastCalved ?? animal.last_calved ?? null,
-    milk: animal.milk ?? animal.daily_milk ?? '0.0 L/day',
+    milk: `${yesterdayYieldLiters.toFixed(1)} L/day`,
+    yesterdayYield: `${yesterdayYieldLiters.toFixed(1)} L`,
+    sevenDayAvg: `${sevenDayAverageLiters.toFixed(1)} L`,
+    yesterdayYieldLiters,
+    sevenDayAverageLiters,
     // Backend-computed (CowStatusService) — trust these, don't re-derive client-side.
     pregnancyStatus: animal.pregnancyStatus ?? animal.pregnancy_status ?? 'Unknown',
     daysInMilk: animal.daysInMilk ?? animal.days_in_milk ?? null,

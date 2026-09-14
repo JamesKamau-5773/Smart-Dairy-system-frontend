@@ -2,17 +2,17 @@ import React, { useRef, useEffect, useState } from 'react';
 
 /* ─── Currency metadata ─────────────────────────────────────────────────── */
 const CURRENCY_META = {
-  KES: { locale: 'en-KE', symbol: 'KSh', decimals: 2, flag: '🇰🇪' },
-  USD: { locale: 'en-US', symbol: '$',   decimals: 2, flag: '🇺🇸' },
-  EUR: { locale: 'de-DE', symbol: '€',   decimals: 2, flag: '🇪🇺' },
-  GBP: { locale: 'en-GB', symbol: '£',   decimals: 2, flag: '🇬🇧' },
-  UGX: { locale: 'en-UG', symbol: 'USh', decimals: 0, flag: '🇺🇬' },
-  TZS: { locale: 'sw-TZ', symbol: 'TSh', decimals: 0, flag: '🇹🇿' },
-  NGN: { locale: 'en-NG', symbol: '₦',   decimals: 2, flag: '🇳🇬' },
-  ZAR: { locale: 'en-ZA', symbol: 'R',   decimals: 2, flag: '🇿🇦' },
-  GHS: { locale: 'en-GH', symbol: 'GH₵', decimals: 2, flag: '🇬🇭' },
-  JPY: { locale: 'ja-JP', symbol: '¥',   decimals: 0, flag: '🇯🇵' },
-  INR: { locale: 'en-IN', symbol: '₹',   decimals: 2, flag: '🇮🇳' },
+  KES: { locale: 'en-KE', symbol: 'KSh', decimals: 2 },
+  USD: { locale: 'en-US', symbol: '$',   decimals: 2 },
+  EUR: { locale: 'de-DE', symbol: '€',   decimals: 2 },
+  GBP: { locale: 'en-GB', symbol: '£',   decimals: 2 },
+  UGX: { locale: 'en-UG', symbol: 'USh', decimals: 0 },
+  TZS: { locale: 'sw-TZ', symbol: 'TSh', decimals: 0 },
+  NGN: { locale: 'en-NG', symbol: '₦',   decimals: 2 },
+  ZAR: { locale: 'en-ZA', symbol: 'R',   decimals: 2 },
+  GHS: { locale: 'en-GH', symbol: 'GH₵', decimals: 2 },
+  JPY: { locale: 'ja-JP', symbol: '¥',   decimals: 0 },
+  INR: { locale: 'en-IN', symbol: '₹',   decimals: 2 },
 };
 
 const DEFAULT_META = { locale: 'en-US', symbol: '', decimals: 2 };
@@ -50,7 +50,6 @@ function formatValue(amount, currency) {
  * Props:
  *  amount        number | null | undefined  — value to display
  *  currency      string                     — ISO-4217 code (default 'KES')
- *  showFlag      boolean                    — prefix country flag emoji
  *  showSign      boolean                    — always show +/- sign
  *  colored       boolean                    — green/red for positive/negative
  *  animate       boolean                    — bounce animation on value change
@@ -62,7 +61,6 @@ function formatValue(amount, currency) {
 export default function Money({
   amount,
   currency  = 'KES',
-  showFlag  = false,
   showSign  = false,
   colored   = false,
   animate   = false,
@@ -141,13 +139,6 @@ export default function Money({
         className,
       ].filter(Boolean).join(' ')}
     >
-      {/* Flag */}
-      {showFlag && meta.flag && (
-        <span className="not-italic mr-0.5 text-[1em]" aria-hidden="true">
-          {meta.flag}
-        </span>
-      )}
-
       {/* Sign */}
       {sign && (
         <span className={`${sz.symbol} font-semibold leading-none self-center`} aria-hidden="true">

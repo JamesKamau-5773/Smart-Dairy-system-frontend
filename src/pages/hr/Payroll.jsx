@@ -1,22 +1,24 @@
-import React, { useState, useMemo, useEffect } from 'react';
-import { hrApi } from '../../lib/backendApi';
+import { useState, useMemo, useEffect } from 'react';
+import { getApiErrorMessage, hrApi } from '../../lib/backendApi';
 import { Calendar, CheckCircle, Clock, Users, Banknote, CalendarClock, History } from 'lucide-react';
 import { useStaff } from '../../providers/StaffProvider';
 import SlidePanel from '../../components/ui/SlidePanel';
+import toast from 'react-hot-toast';
 
 const formatMoney = (value) => Number(value || 0).toLocaleString();
 
-const PayrollActions = ({ onRunPayroll, nextPayrollPeriod }) => (
+const PayrollActions = ({ onRunPayroll, nextPayrollPeriod, isRunning }) => (
   <div className="flex flex-col gap-4 border-b border-gray-200 pb-5 lg:flex-row lg:items-end lg:justify-between">
     <div>
       <h2 className="font-display text-3xl font-extrabold tracking-tight text-gray-900 m-0">Payroll</h2>
       <p className="text-sm font-medium text-gray-600 mt-1">Process and review monthly staff payments, leave adjustments, and advance repayments.</p>
     </div>
     <button 
-      onClick={onRunPayroll} 
+      onClick={onRunPayroll}
+      disabled={isRunning}
       className="flex items-center gap-2 rounded-md bg-slate-900 px-5 py-2.5 text-xs font-semibold uppercase tracking-[0.18em] text-white transition-colors hover:bg-slate-800"
     >
-      Run {nextPayrollPeriod} Payroll
+      {isRunning ? 'Running...' : `Run ${nextPayrollPeriod} Payroll`}
     </button>
   </div>
 );
@@ -33,7 +35,7 @@ const PayrollKPI = ({ title, value, icon: Icon }) => (
   </div>
 );
 
-const PayrollTable = ({ run, onMarkAsPaid }) => {
+const PayrollTable = ({ run }) => {
   const summary = useMemo(() => {
     const rows = Array.isArray(run.lineItems)
       ? run.lineItems
@@ -88,7 +90,7 @@ const PayrollTable = ({ run, onMarkAsPaid }) => {
             <th className="px-5 py-3 text-right tabular-nums w-28">Deductions</th>
             <th className="px-5 py-3 text-right tabular-nums w-28">Net Pay</th>
             <th className="px-5 py-3 text-center w-24">Status</th>
-            <th className="px-5 py-3 text-right w-28">Action</th>
+            <th className="px-5 py-3 text-right w-28">Payment</th>
           </tr>
         </thead>
         <tbody className="divide-y divide-gray-200">
@@ -121,16 +123,7 @@ const PayrollTable = ({ run, onMarkAsPaid }) => {
                   {item.status}
                 </span>
               </td>
-              <td className="px-5 py-4 text-right align-top">
-                {item.status === 'PENDING' && (
-                  <button 
-                    onClick={() => onMarkAsPaid(item.staffId)}
-                    className="rounded-md border border-gray-200 bg-white px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-gray-600 transition-colors hover:bg-gray-50"
-                  >
-                    Mark Paid
-                  </button>
-                )}
-              </td>
+              <td className="px-5 py-4 text-right align-top text-xs text-gray-500">Run-level payment</td>
             </tr>
           ))}
         </tbody>
@@ -153,10 +146,13 @@ const PayrollTable = ({ run, onMarkAsPaid }) => {
 };
 
 export default function Payroll() {
-  const { reduceLoanBalance } = useStaff();
+  useStaff();
   const [allRuns, setAllRuns] = useState([]);
   const [activeRunId, setActiveRunId] = useState(null);
   const [historyOpen, setHistoryOpen] = useState(false);
+  const [loadError, setLoadError] = useState('');
+  const [isRunning, setIsRunning] = useState(false);
+  const [isUpdatingLifecycle, setIsUpdatingLifecycle] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -175,6 +171,7 @@ export default function Payroll() {
       } catch (error) {
         if (!cancelled) {
           console.warn('Failed to load payroll runs.', error);
+          setLoadError(getApiErrorMessage(error) || 'Could not load payroll runs.');
           setAllRuns([]);
           setActiveRunId(null);
         }
@@ -193,53 +190,58 @@ export default function Payroll() {
   const payrollHistory = useMemo(() => (activeRun ? allRuns.filter((r) => r.id !== activeRun.id) : allRuns), [allRuns, activeRun]);
 
   const getNextPayrollPeriod = (latestRun) => {
-      const [monthStr, yearStr] = latestRun.period.split(' ');
-      const date = new Date(`${monthStr} 1, ${yearStr}`);
+    const [monthStr, yearStr] = latestRun?.period?.split(' ') ?? [];
+    const latestDate = new Date(`${monthStr} 1, ${yearStr}`);
+    const date = Number.isNaN(latestDate.getTime()) ? new Date() : latestDate;
+
+    if (!Number.isNaN(latestDate.getTime())) {
       date.setMonth(date.getMonth() + 1);
-      const nextMonth = date.toLocaleString('default', { month: 'long' });
-      const nextYear = date.getFullYear();
-      return { period: `${nextMonth} ${nextYear}`, date: date };
+    }
+
+    return {
+      period: date.toLocaleString('default', { month: 'long', year: 'numeric' }),
+      date,
+      payroll_month: date.getMonth() + 1,
+      payroll_year: date.getFullYear(),
+    };
   };
 
   const handleRunPayroll = () => {
     const runFromBackend = async () => {
+      setIsRunning(true);
       try {
-        const newRun = await hrApi.runPayroll();
+        const { payroll_month, payroll_year } = getNextPayrollPeriod(allRuns[0]);
+        const newRun = await hrApi.runPayroll({ payroll_month, payroll_year });
         setAllRuns((prevRuns) => [newRun, ...prevRuns.filter((run) => run.id !== newRun.id)]);
         setActiveRunId(newRun.id);
+        setLoadError('');
+        toast.success('Payroll run created.');
       } catch (error) {
-        console.warn('Failed to run payroll from backend.', error);
+        setLoadError(getApiErrorMessage(error) || 'Could not run payroll.');
+        toast.error(getApiErrorMessage(error) || 'Could not run payroll.');
+      } finally {
+        setIsRunning(false);
       }
     };
 
     runFromBackend();
   };
 
-  const handleMarkAsPaid = (staffIdToPay) => {
-    setAllRuns(prevRuns => 
-      prevRuns.map(run => {
-        if (run.id === activeRunId) {
-          const updatedDetails = run.details.map(employee => {
-            if (employee.staffId === staffIdToPay) {
-              // When marking as paid, also reduce the central loan balance.
-              reduceLoanBalance(staffIdToPay, employee.advanceDeduction ?? employee.deductions);
-              return { ...employee, status: 'PAID' };
-            }
-            return employee;
-          });
-          const newTotal = updatedDetails
-            .filter(e => e.status === 'PAID')
-            .reduce((acc, emp) => acc + emp.net, 0);
-
-          return { ...run, details: updatedDetails, totalDisbursed: newTotal };
-        }
-        return run;
-      })
-    );
+  const updateRun = async (action, method) => {
+    if (!activeRun?.id) return;
+    setIsUpdatingLifecycle(true);
+    try {
+      const updatedRun = await method(activeRun.id);
+      setAllRuns((current) => current.map((run) => run.id === updatedRun.id ? updatedRun : run));
+      toast.success(action === 'finalize' ? 'Payroll run finalized.' : 'Payroll run paid successfully.');
+    } catch (error) {
+      toast.error(getApiErrorMessage(error) || `Could not ${action} payroll run.`);
+    } finally {
+      setIsUpdatingLifecycle(false);
+    }
   };
 
   const nextPayrollInfo = useMemo(() => {
-    if (!allRuns.length) return { period: 'Next run', displayDate: 'No payroll runs available yet' };
     const { period, date } = getNextPayrollPeriod(allRuns[0]);
     const lastDay = new Date(date.getFullYear(), date.getMonth() + 1, 0).getDate();
     return {
@@ -248,30 +250,24 @@ export default function Payroll() {
     };
   }, [allRuns]);
 
-  if (!activeRun) {
-    return (
-      <div className="animate-reveal min-h-full bg-[#F7F6F3] px-4 py-6 sm:px-6 lg:px-8">
-        <div className="mx-auto max-w-[1600px] rounded-md border border-gray-200 bg-white p-8 text-sm text-gray-600">
-          No payroll runs are available yet.
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div className="animate-reveal min-h-full bg-[#F7F6F3] px-4 py-6 sm:px-6 lg:px-8">
       <div className="mx-auto max-w-[1600px] space-y-5">
-        <PayrollActions onRunPayroll={handleRunPayroll} nextPayrollPeriod={nextPayrollInfo.period} />
+        <PayrollActions onRunPayroll={handleRunPayroll} nextPayrollPeriod={nextPayrollInfo.period} isRunning={isRunning} />
 
-        <section className="overflow-hidden rounded-md border border-gray-200 bg-white shadow-none">
-          <div className="grid divide-y divide-gray-200 md:grid-cols-3 md:divide-x md:divide-y-0">
-            <PayrollKPI title={`Total Payroll (${activeRun.period.split(' ')[0]})`} value={`KSh ${activeRun.totalDisbursed.toLocaleString()}`} icon={Banknote} />
+        {loadError && <div role="alert" className="rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-800">{loadError}</div>}
+
+        {activeRun ? (
+          <>
+            <section className="overflow-hidden rounded-md border border-gray-200 bg-white shadow-none">
+              <div className="grid divide-y divide-gray-200 md:grid-cols-3 md:divide-x md:divide-y-0">
+                <PayrollKPI title={`Total Payroll (${activeRun.period.split(' ')[0]})`} value={`KSh ${activeRun.totalDisbursed.toLocaleString()}`} icon={Banknote} />
             <PayrollKPI title="Active Staff" value={`${activeRun.employees} Employees`} icon={Users} />
             <PayrollKPI title="Next Payroll Date" value={nextPayrollInfo.displayDate} icon={CalendarClock} />
-          </div>
-        </section>
+              </div>
+            </section>
 
-        <section className="space-y-4 rounded-md border border-gray-200 bg-white shadow-none">
+            <section className="space-y-4 rounded-md border border-gray-200 bg-white shadow-none">
           <div className="flex flex-col gap-3 border-b border-gray-200 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <h3 className="flex items-center gap-2 font-semibold text-gray-900">
@@ -279,19 +275,23 @@ export default function Payroll() {
               </h3>
               <p className="mt-1 text-xs font-medium uppercase tracking-[0.18em] text-gray-500">{activeRun.period} • {activeRun.employees} employees</p>
             </div>
-            <button
-              type="button"
-              onClick={() => setHistoryOpen(true)}
-              className="inline-flex items-center gap-2 rounded-md border border-gray-200 bg-white px-3 py-2 text-xs font-semibold uppercase tracking-[0.18em] text-gray-600 transition-colors hover:bg-gray-50"
-            >
-              <History size={12} /> View history
-            </button>
+            <div className="flex flex-wrap justify-end gap-2">
+              {activeRun.status === 'DRAFT' && <button type="button" onClick={() => updateRun('finalize', hrApi.finalizePayrollRun)} disabled={isUpdatingLifecycle} className="rounded-md bg-slate-900 px-3 py-2 text-xs font-semibold uppercase tracking-[0.18em] text-white disabled:opacity-60">{isUpdatingLifecycle ? 'Saving...' : 'Finalize run'}</button>}
+              {activeRun.status === 'FINALIZED' && <button type="button" onClick={() => updateRun('pay', hrApi.payPayrollRun)} disabled={isUpdatingLifecycle} className="rounded-md bg-emerald-700 px-3 py-2 text-xs font-semibold uppercase tracking-[0.18em] text-white disabled:opacity-60">{isUpdatingLifecycle ? 'Saving...' : 'Pay payroll'}</button>}
+              <button type="button" onClick={() => setHistoryOpen(true)} className="inline-flex items-center gap-2 rounded-md border border-gray-200 bg-white px-3 py-2 text-xs font-semibold uppercase tracking-[0.18em] text-gray-600 transition-colors hover:bg-gray-50"><History size={12} /> View history</button>
+            </div>
           </div>
 
           <div className="px-0 pb-0">
-            <PayrollTable run={activeRun} onMarkAsPaid={handleMarkAsPaid} />
+            <PayrollTable run={activeRun} />
           </div>
-        </section>
+            </section>
+          </>
+        ) : (
+          <section className="rounded-md border border-gray-200 bg-white p-8 text-sm text-gray-600">
+            {loadError || 'No payroll runs are available yet. Create the first run to calculate staff payments.'}
+          </section>
+        )}
       </div>
 
       <SlidePanel

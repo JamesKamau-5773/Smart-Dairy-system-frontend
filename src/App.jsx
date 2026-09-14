@@ -35,6 +35,8 @@ const AnimalPassport = lazy(() => import('./pages/operations/AnimalRecord.jsx'))
 const MilkHistory = lazy(() => import('./pages/operations/MilkHistory.jsx'));
 const FeedFormulation = lazy(() => import('./pages/inventory/FeedFormulation.jsx'));
 const MilkInventoryReport = lazy(() => import('./pages/operations/MilkInventoryReport.jsx'));
+const DairyUnitEconomicsReport = lazy(() => import('./pages/finance/DairyUnitEconomicsReport.jsx'));
+const AnimalEconomicsReport = lazy(() => import('./pages/finance/AnimalEconomicsReport.jsx'));
 const CustomersPage = lazy(() => import('./pages/operations/Customers.jsx'));
 const NutritionDashboard = lazy(() => import('./pages/nutrition/NutritionDashboard.jsx'));
 // UPDATED: Pointing to the new correct location in the nutrition folder
@@ -53,7 +55,7 @@ const Payroll = lazy(() => import('./pages/hr/Payroll.jsx'));
  */
 const ProtectedRoute = ({ children }) => {
   const { currentUser, isLoading } = useAuth();
-  
+
   if (isLoading) {
     return (
       <div className="min-h-screen bg-surface-warm flex items-center justify-center">
@@ -63,9 +65,9 @@ const ProtectedRoute = ({ children }) => {
       </div>
     );
   }
-  
+
   if (!currentUser) return <Navigate to="/login" replace />;
-  
+
   return children;
 };
 
@@ -143,7 +145,7 @@ const UnknownRouteRedirect = () => {
 export default function App() {
   return (
     <BrowserRouter>
-      {/* Wrap all routes with StaffProvider. 
+      {/* Wrap all routes with StaffProvider.
         Now any page, including Payroll and StaffRegistry, can call useStaff() without crashing.
       */}
       <StaffProvider>
@@ -194,7 +196,7 @@ export default function App() {
                 </RoleRoute>
               )}
             />
-            
+
             {/* Main Telemetry */}
             <Route
               path="dashboard"
@@ -204,13 +206,13 @@ export default function App() {
                 </CommandCenterRoute>
               )}
             />
-            
+
             {/* Production & Biology */}
             <Route path="operations/yield" element={renderLazyPage(YieldLog, 'Loading yield log…')} />
             <Route path="operations/herd" element={renderLazyPage(HerdRegistry, 'Loading herd registry…')} />
             <Route path="operations/breeding" element={renderLazyPage(BreedingHub, 'Loading breeding hub…')} />
             <Route path="operations/clerk" element={renderLazyPage(ClerkEntry, 'Loading clerk entry…')} />
-            
+
             {/* NEW: Added the Milk Drop Reports route */}
             <Route path="operations/milk-drop-reports" element={renderLazyPage(MilkDropReports, 'Loading milk drop reports…')} />
 
@@ -219,7 +221,7 @@ export default function App() {
             <Route path="operations/lab" element={renderLazyPage(MilkLab, 'Loading milk feeding planner…')} />
             <Route path="operations/nutrition" element={renderLazyPage(NutritionDashboard, 'Loading feed planner…')} />
             <Route path="feed-nutrition" element={renderLazyPage(NutritionDashboard, 'Loading feed planner…')} />
-            
+
             {/* UPDATED: Unit Helpers moved to operations layer to match sidebar UX */}
             <Route
               path="operations/unit-conversions"
@@ -233,16 +235,35 @@ export default function App() {
             <Route path="settings/unit-conversions" element={<Navigate to="/operations/unit-conversions" replace />} />
 
             <Route path="operations/routine" element={renderLazyPage(DailyRoutinePlanner, 'Loading routine planner…')} />
-            <Route path="operations/safety" element={renderLazyPage(SafetyDashboard, 'Loading safety dashboard…')} />
+            <Route
+              path="operations/safety"
+              element={(
+                <RoleRoute allowedRoles={['ADMIN', 'FARM_MANAGER', 'FARMER']}>
+                  {renderLazyPage(SafetyDashboard, 'Loading safety dashboard…')}
+                </RoleRoute>
+              )}
+            />
             <Route path="operations/records" element={renderLazyPage(MedicalRecords, 'Loading medical records…')} />
             <Route path="operations/animal/:id/milk-history" element={renderLazyPage(MilkHistory, 'Loading milk history…')} />
             <Route path="operations/animal/:id" element={renderLazyPage(AnimalPassport, 'Loading animal record…')} />
-            
+
             {/* Reports */}
             <Route
               path="operations/reports/milk-inventory"
               element={
                 <RoleRoute allowedRoles={['ADMIN', 'FARM_MANAGER', 'FARMER']}>{renderLazyPage(MilkInventoryReport, 'Loading milk inventory report…')}</RoleRoute>
+              }
+            />
+            <Route
+              path="finance/reports/dairy-unit-economics"
+              element={
+                <RoleRoute allowedRoles={['SUPER_ADMIN', 'ADMIN', 'FARM_MANAGER']}>{renderLazyPage(DairyUnitEconomicsReport, 'Loading dairy unit economics report…')}</RoleRoute>
+              }
+            />
+            <Route
+              path="finance/reports/animal-economics"
+              element={
+                <RoleRoute allowedRoles={['SUPER_ADMIN', 'ADMIN', 'FARM_MANAGER']}>{renderLazyPage(AnimalEconomicsReport, 'Loading animal economics report...')}</RoleRoute>
               }
             />
 
@@ -280,7 +301,7 @@ export default function App() {
               )}
             />
             <Route path="operations/schedule-planner" element={<Navigate to="/operations/routine" replace />} />
-            
+
             <Route
               path="finance/buyers"
               element={(

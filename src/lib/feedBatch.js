@@ -6,7 +6,11 @@ export function normalizeBatchIngredient(ingredient = {}, batchSizeKg = 0) {
     ingredient.percentage ?? ingredient.inclusion_percentage ?? ingredient.share ?? 0
   );
   const costPerKg = toPositiveNumber(
-    ingredient.costPerKg ?? ingredient.cost_per_kg ?? ingredient.lockedCostPerKg ?? 0
+    ingredient.costPerKg
+      ?? ingredient.cost_per_kg
+      ?? ingredient.pricePerKg
+      ?? ingredient.lockedCostPerKg
+      ?? 0
   );
   const ingredientId = ingredient.ingredientId
     ?? ingredient.ingredient_id
@@ -17,6 +21,7 @@ export function normalizeBatchIngredient(ingredient = {}, batchSizeKg = 0) {
   return {
     ...ingredient,
     ingredientId,
+    inventoryItemId: ingredient.inventoryItemId ?? ingredient.inventory_item_id ?? null,
     name: ingredient.name ?? ingredient.ingredient_name ?? 'Ingredient',
     percentage,
     costPerKg,
@@ -31,12 +36,26 @@ export function calculateBatchTotals(ingredients, batchSizeKg) {
 
   const totalWeight = Math.max(0, Number(batchSizeKg) || 0);
   const totalCost = rows.reduce((sum, ingredient) => sum + (ingredient.weight * ingredient.costPerKg), 0);
+  const stockLimits = rows
+    .map((ingredient) => {
+      const availableStock = Number(
+        ingredient.availableStock
+          ?? ingredient.currentStock
+          ?? ingredient.current_qty
+          ?? ingredient.stock?.value
+      );
+      return Number.isFinite(availableStock) && ingredient.percentage > 0
+        ? (availableStock * 100) / ingredient.percentage
+        : null;
+    })
+    .filter((value) => value !== null);
 
   return {
     rows,
     totalWeight,
     totalCost,
     costPerKg: totalWeight > 0 ? totalCost / totalWeight : 0,
+    maximumFeasibleBatchWeight: stockLimits.length > 0 ? Math.min(...stockLimits) : null,
   };
 }
 
@@ -65,6 +84,7 @@ export function buildBatchPayload({
     costPerKg: resolvedTotalWeight > 0 ? totalCost / resolvedTotalWeight : 0,
     ingredients: rows.map((ingredient) => ({
       ingredientId: ingredient.ingredientId,
+      inventoryItemId: ingredient.inventoryItemId ?? ingredient.inventory_item_id ?? null,
       percentage: Number(ingredient.percentage) || 0,
       weight: Number(ingredient.weight) || 0,
       lockedCostPerKg: Number(ingredient.costPerKg) || 0,

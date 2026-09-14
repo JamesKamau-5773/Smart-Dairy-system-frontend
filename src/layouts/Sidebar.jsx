@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
 import { NavLink, useLocation, useNavigate } from 'react-router-dom';
-import { 
-  LayoutDashboard, Beaker, Pill, Package, Wallet, LogOut, Menu, X, 
-  Users, Dna, Landmark, ShieldCheck, BookHeart, BookOpen, Activity, 
-  Wheat, ChevronRight, ChevronDown, FileWarning, ClipboardList
+import {
+  LayoutDashboard, Beaker, Pill, Package, Wallet, LogOut, Menu, X,
+  Users, Dna, Landmark, ShieldCheck, BookHeart, BookOpen, Activity,
+  Wheat, ChevronRight, ChevronDown, FileWarning, ClipboardList, TrendingUp
 } from 'lucide-react';
 import LABELS from '../lib/labels';
 import { useAuth } from '../contexts/AuthContext';
@@ -21,6 +21,7 @@ export default function Sidebar() {
     'Herd Management': true,
     'Feed Planning': true,
     'Finance & Supply': true,
+    Reports: true,
     Compliance: true,
     'Human Resources': true,
   });
@@ -96,13 +97,20 @@ export default function Sidebar() {
         { label: 'Customer Management', to: '/operations/customers', icon: Users, visible: canViewCustomers },
         { label: 'Inventory', to: '/operations/inventory', icon: Package, visible: showAdminControls },
         { label: 'Ledger', to: '/finance/ledger', icon: Wallet, visible: showAdminControls },
+      ],
+    },
+    {
+      title: 'Reports',
+      items: [
+        { label: 'Customer Economics (CAC & LTV)', to: '/finance/reports/dairy-unit-economics', icon: TrendingUp, visible: showAdminControls },
+        { label: 'Animal Economics', to: '/finance/reports/animal-economics', icon: TrendingUp, visible: showAdminControls },
         { label: 'Milk Inventory Report', to: '/operations/reports/milk-inventory', icon: ClipboardList, visible: canViewMilkReport },
       ],
     },
     {
       title: 'Compliance',
       items: [
-        { label: 'Safety Dashboard', to: '/operations/safety', icon: ShieldCheck, visible: true },
+        { label: 'Safety Dashboard', to: '/operations/safety', icon: ShieldCheck, visible: canViewMilkReport },
       ],
     },
     {
@@ -123,8 +131,8 @@ export default function Sidebar() {
 
   const activeGroupTitle = visibleGroups.find((group) =>
     group.items.some((item) => {
-      return item.exact 
-        ? location.pathname === item.to 
+      return item.exact
+        ? location.pathname === item.to
         : location.pathname === item.to || location.pathname.startsWith(`${item.to}/`);
     })
   )?.title || null;
@@ -152,7 +160,7 @@ export default function Sidebar() {
   return (
     <React.Fragment>
       {/* Mobile Hamburger Button */}
-      <button 
+      <button
         onClick={handleMobileToggle}
         className="md:hidden fixed top-4 left-4 z-30 p-2 min-h-[44px] min-w-[44px] bg-brand text-surface rounded-lg shadow-lg"
         aria-label="Toggle navigation menu"
@@ -162,7 +170,7 @@ export default function Sidebar() {
 
       {/* Mobile Overlay */}
       {mobileOpen && (
-        <div 
+        <div
           className="md:hidden fixed inset-0 z-[19] bg-black/40 animate-reveal"
           onClick={() => setMobileOpen(false)}
         />
@@ -170,22 +178,22 @@ export default function Sidebar() {
 
       {/* Sidebar - Hidden on mobile, visible on md+ */}
       <aside className={`
-        ${mobileOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'} 
-        transition-transform duration-300  
-        fixed md:fixed md:inset-y-0 md:left-0 
-        w-64 md:w-60 xl:w-64 h-screen md:h-screen 
-        bg-white border-r border-gray-200 
+        ${mobileOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}
+        transition-transform duration-300
+        fixed md:fixed md:inset-y-0 md:left-0
+        w-64 md:w-60 xl:w-64 h-screen md:h-screen
+        bg-white border-r border-gray-200
         flex flex-col overflow-hidden
         z-[25] md:z-20
       `}>
-      
+
       {/* Logo Block */}
       <div className="h-16 flex items-center px-6 border-b border-gray-200 bg-slate-900">
         <h1 className="text-white font-display font-semibold text-lg m-0 leading-tight">
           Jivu Smart Dairy
         </h1>
       </div>
-      
+
       <FarmSwitcher />
 
       {/* Navigation */}
@@ -211,9 +219,9 @@ export default function Sidebar() {
             <div className={`flex-col gap-2 ${group.title && isGroupCollapsed(group.title) ? 'hidden md:flex' : 'flex'}`}>
               {group.items.map((item) => {
                 const Icon = item.icon;
-                
-                const itemIsActive = item.exact 
-                  ? location.pathname === item.to 
+
+                const itemIsActive = item.exact
+                  ? location.pathname === item.to
                   : location.pathname === item.to || location.pathname.startsWith(`${item.to}/`);
 
                 return (
@@ -242,7 +250,7 @@ export default function Sidebar() {
         <p className="text-gray-700 font-sans text-xs font-medium mb-3 truncate">
           Operator: {currentUser?.name || 'Unknown'}
         </p>
-        <button 
+        <button
           onClick={handleLogout}
           className="btn-command w-full min-h-[44px] bg-red-600 text-white hover:bg-red-700 flex items-center justify-center text-xs py-2 rounded-md font-semibold"
         >

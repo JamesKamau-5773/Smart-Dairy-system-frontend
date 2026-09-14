@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { FileWarning, Download, Filter, AlertCircle, ChevronRight, Stethoscope, Wheat, ThermometerSun, Settings, X } from 'lucide-react';
 import { productionApi } from '../../lib/backendApi';
 import { useTenant } from '../../hooks/useTenant';
+import GroupedDateRows from '../../components/ui/GroupedDateRows';
 
 const DIAGNOSTIC_CATEGORIES = [
   { id: 'clinical', label: 'Cow Health & Sickness', icon: Stethoscope, options: ['Signs of Mastitis (clots, swelling)', 'Lame or sore hooves', 'Metabolic sickness (Milk fever, etc.)', 'Not eating / Looks weak'] },
@@ -104,23 +105,35 @@ export default function MilkDropReports() {
             </tr>
           </thead>
           <tbody className="divide-y divide-ink/5">
-            {reports.map((report) => (
+            <GroupedDateRows
+              items={reports}
+              getDate={(report) => report.date_time}
+              colSpan={4}
+              renderGroupMeta={(items) => `${items.length} ${items.length === 1 ? 'alert' : 'alerts'}`}
+              renderItem={(report) => (
               <tr key={report.id} className="hover:bg-brand/5">
                 <td className="px-6 py-4">{new Date(report.date_time).toLocaleDateString()}</td>
                 <td className="px-6 py-4 font-bold">{report.cow_tag}</td>
                 <td className="px-6 py-4 text-danger font-bold">-{Number(report.missing_milk).toFixed(1)} L</td>
                 <td className="px-6 py-4">
-                  {report.status === 'Pending' ? <button onClick={() => openInvestigateModal(report)} className="text-brand font-bold">Check Cow</button> : 'Resolved'}
+                  {String(report.status).toUpperCase() === 'OPEN' ? (
+                    <button onClick={() => openInvestigateModal(report)} className="text-brand font-bold">Check Cow</button>
+                  ) : String(report.status).toUpperCase() === 'INVESTIGATING' ? (
+                    <button onClick={() => openInvestigateModal(report)} className="text-amber-700 font-bold">Investigating</button>
+                  ) : (
+                    'Resolved'
+                  )}
                 </td>
               </tr>
-            ))}
-            {reports.length === 0 && (
+              )}
+              empty={reports.length === 0 && (
               <tr>
                 <td className="px-6 py-6 text-center text-ink/50" colSpan={4}>
                   No milk drop alerts recorded yet.
                 </td>
               </tr>
-            )}
+              )}
+            />
           </tbody>
         </table>
       </div>

@@ -2,11 +2,9 @@ import { useQuery } from '@tanstack/react-query';
 import { useTenant } from '../hooks/useTenant';
 import { QUERY_KEYS } from '../providers/QueryProvider';
 import { productionApi } from '../lib/backendApi';
-import { Activity, Droplets, TrendingUp, DollarSign, LineChart as ChartIcon, ShoppingCart, Archive, Calendar as CalendarIcon } from 'lucide-react';
-import React, { Suspense, lazy, useMemo, useState, useRef, useEffect } from 'react';
-import { addDays, format, subDays } from 'date-fns';
-import { DayPicker } from 'react-day-picker';
-import 'react-day-picker/dist/style.css';
+import { Activity, Droplets, TrendingUp, DollarSign, LineChart as ChartIcon, ShoppingCart, Archive } from 'lucide-react';
+import React, { Suspense, lazy, useMemo, useState } from 'react';
+import { subDays } from 'date-fns';
 import { buildTrendData, extractYieldCowId, extractYieldDate, extractYieldAmount, metricFromSummary } from '../lib/dashboardUtils';
 
 // Components
@@ -50,23 +48,10 @@ const SummaryCard = ({ title, value, unit, icon: Icon, trend, loading = false })
 export default function CommandCenter() {
   const { tenantId, farmId } = useTenant();
   const [dateRange, setDateRange] = useState({
-    from: addDays(new Date(), -13),
+    from: subDays(new Date(), 29),
     to: new Date(),
   });
-  const [isPickerOpen, setIsPickerOpen] = useState(false);
-  const pickerRef = useRef(null);
-
-  useEffect(() => {
-    function handleClickOutside(event) {
-      if (pickerRef.current && !pickerRef.current.contains(event.target)) {
-        setIsPickerOpen(false);
-      }
-    }
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
-  }, [pickerRef]);
+  const [selectedRange, setSelectedRange] = useState('30');
 
   const summaryQuery = useQuery({
     queryKey: QUERY_KEYS.YIELD_SUMMARY(tenantId, farmId),
@@ -81,6 +66,23 @@ export default function CommandCenter() {
   });
 
   const trend = useMemo(() => buildTrendData(trendQuery.data, dateRange), [trendQuery.data, dateRange]);
+
+  const selectTrendRange = (range) => {
+    setSelectedRange(range);
+    const today = new Date();
+    if (range === 'all') {
+      const dates = (Array.isArray(trendQuery.data) ? trendQuery.data : [])
+        .map(extractYieldDate)
+        .filter(Boolean)
+        .sort();
+      setDateRange({
+        from: dates.length > 0 ? new Date(`${dates[0]}T00:00:00`) : subDays(today, 29),
+        to: today,
+      });
+      return;
+    }
+    setDateRange({ from: subDays(today, Number(range) - 1), to: today });
+  };
 
   const summary = summaryQuery.data;
   const hasSummaryError = summaryQuery.isError;
@@ -174,10 +176,15 @@ export default function CommandCenter() {
 
       <section className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <div className="card-machined bg-surface p-5 border border-ink/5">
-          <p className="text-xs font-bold text-ink-muted uppercase tracking-wider">Today's Milk Sales</p>
+          <p className="text-xs font-bold text-ink-muted uppercase tracking-wider">Transaction Revenue</p>
           <h3 className="text-2xl font-black text-brand mt-2">
             {summaryQuery.isLoading ? 'Loading...' : hasSummaryError ? 'Unavailable' : `KES ${(summary?.revenue_total_kes ?? 0).toLocaleString()}`}
           </h3>
+          {summary?.revenue_breakdown?.report_sales_revenue_kes != null && (
+            <p className="mt-2 text-[11px] leading-4 text-ink-muted">
+              Report reference: KES {Number(summary.revenue_breakdown.report_sales_revenue_kes).toLocaleString()}
+            </p>
+          )}
         </div>
         <div className="card-machined bg-surface p-5 border border-ink/5">
           <p className="text-xs font-bold text-ink-muted uppercase tracking-wider">Today's Feed Cost</p>
@@ -208,36 +215,12 @@ export default function CommandCenter() {
           <h3 className="font-sans font-bold text-xl text-brand flex items-center gap-2">
             <ChartIcon size={20} className="text-accent" /> Milk Production Trend
           </h3>
-          <div className="relative" ref={pickerRef}>
-            <button
-              type="button"
-              onClick={() => setIsPickerOpen(!isPickerOpen)}
-              className="btn-secondary inline-flex items-center gap-2 px-3 py-2 text-xs font-semibold"
-            >
-              <CalendarIcon size={14} />
-              <span>
-                {dateRange?.from && dateRange?.to
-                  ? `${format(dateRange.from, 'LLL dd, y')} - ${format(dateRange.to, 'LLL dd, y')}`
-                  : 'Select Date Range'}
-              </span>
-            </button>
-            {isPickerOpen && (
-              <div className="absolute top-full right-0 z-10 mt-2 bg-surface rounded-lg border border-ink/10 shadow-lg p-2">
-                <DayPicker
-                  initialFocus
-                  mode="range"
-                  defaultMonth={dateRange?.from}
-                  selected={dateRange}
-                  onSelect={(range) => {
-                    if (range) setDateRange(range);
-                    if (range?.from && range?.to) {
-                      setIsPickerOpen(false);
-                    }
-                  }}
-                  numberOfMonths={2}
-                />
-              </div>
-            )}
+          <div className="inline-flex rounded-lg border border-ink/10 bg-surface p-1" role="group" aria-label="Milk production trend range">
+            {[['30', '30 days'], ['90', '90 days'], ['all', 'All time']].map(([value, label]) => (
+              <button key={value} type="button" onClick={() => selectTrendRange(value)} aria-pressed={selectedRange === value} className={`rounded-md px-3 py-1.5 text-xs font-semibold transition-colors ${selectedRange === value ? 'bg-brand text-surface' : 'text-ink-muted hover:bg-surface-raised hover:text-brand'}`}>
+                {label}
+              </button>
+            ))}
           </div>
         </div>
         <div className="h-80 w-full bg-surface-warm/30 rounded-xl">

@@ -1,27 +1,28 @@
-import React, { useState, useEffect } from 'react';
-import { X, Save, Calendar, Building, CreditCard } from 'lucide-react';
+import React from 'react';
+import { X, Save, Building, CreditCard } from 'lucide-react';
 
 const INITIAL_STATE = {
   date: '',
   amount: '',
   paidTo: '',
+  itemName: '',
+  quantity: '',
   category: 'Feed Purchase',
+  costClass: 'COGS',
   paymentMethod: 'M-Pesa',
   reference: '',
   notes: ''
 };
 
 export default function ExpenseModal({ isOpen, onClose, onSave }) {
-  const [formData, setFormData] = useState(INITIAL_STATE);
-
-  // Reset form state when modal is opened
-  useEffect(() => {
-    if (isOpen) {
-      setFormData(INITIAL_STATE);
-    }
-  }, [isOpen]);
+  const [formData, setFormData] = React.useState(INITIAL_STATE);
 
   if (!isOpen) return null;
+
+  const closeAndReset = () => {
+    setFormData(INITIAL_STATE);
+    onClose();
+  };
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -30,8 +31,13 @@ export default function ExpenseModal({ isOpen, onClose, onSave }) {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    onSave(formData);
-    onClose();
+    onSave({
+      ...formData,
+      item_name: formData.itemName.trim(),
+      quantity: parseFloat(formData.quantity),
+      cost_class: formData.costClass,
+    });
+    closeAndReset();
   };
 
   return (
@@ -39,9 +45,9 @@ export default function ExpenseModal({ isOpen, onClose, onSave }) {
       <div className="bg-white rounded-xl shadow-2xl w-full max-w-xl border border-slate-200 overflow-hidden">
         <div className="flex justify-between items-center px-6 py-4 border-b border-slate-100 bg-slate-50">
           <h3 className="font-black text-ink text-sm uppercase tracking-widest">Log New Expense</h3>
-          <button onClick={onClose} className="p-1 hover:bg-slate-200 rounded transition-colors"><X size={16} /></button>
+          <button onClick={closeAndReset} className="p-1 hover:bg-slate-200 rounded transition-colors"><X size={16} /></button>
         </div>
-        
+
         <form onSubmit={handleSubmit} className="p-6 space-y-5">
           <div className="grid grid-cols-2 gap-4">
             <div>
@@ -55,6 +61,21 @@ export default function ExpenseModal({ isOpen, onClose, onSave }) {
           </div>
 
           <div>
+            <label className="block text-[10px] font-black text-ink-muted uppercase mb-1.5">Cost Classification</label>
+            <select
+              required
+              name="costClass"
+              value={formData.costClass}
+              onChange={handleChange}
+              className="w-full px-3 py-2 border border-slate-300 rounded-lg text-xs font-bold bg-white">
+              <option value="COGS">Production cost</option>
+              <option value="CUSTOMER_ACQUISITION">Customer acquisition</option>
+              <option value="OPERATING">Operating cost</option>
+              <option value="CAPITAL">Capital expenditure</option>
+            </select>
+          </div>
+
+          <div>
             <label className="block text-[10px] font-black text-ink-muted uppercase mb-1.5">Who did you pay?</label>
             <div className="relative">
               <Building className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={14} />
@@ -62,10 +83,37 @@ export default function ExpenseModal({ isOpen, onClose, onSave }) {
             </div>
           </div>
 
+          <div>
+            <label className="block text-[10px] font-black text-ink-muted uppercase mb-1.5">Item / commodity name</label>
+            <input
+              required
+              name="itemName"
+              value={formData.itemName}
+              onChange={handleChange}
+              placeholder="e.g. Maize Meal, Dairy Meal, Vet Drugs"
+              className="w-full px-3 py-2 border border-slate-300 rounded-lg text-xs font-bold"
+            />
+          </div>
+
+          <div>
+            <label className="block text-[10px] font-black text-ink-muted uppercase mb-1.5">Quantity</label>
+            <input
+              required
+              name="quantity"
+              value={formData.quantity}
+              onChange={handleChange}
+              type="number"
+              min="0.001"
+              step="0.001"
+              placeholder="e.g. 50"
+              className="w-full px-3 py-2 border border-slate-300 rounded-lg text-xs font-bold"
+            />
+          </div>
+
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-[10px] font-black text-ink-muted uppercase mb-1.5">What was this for?</label>
-              <select 
+              <select
                 name="category"
                 value={formData.category}
                 onChange={handleChange}
@@ -81,7 +129,7 @@ export default function ExpenseModal({ isOpen, onClose, onSave }) {
             </div>
             <div>
               <label className="block text-[10px] font-black text-ink-muted uppercase mb-1.5">Payment Method</label>
-              <select 
+              <select
                 name="paymentMethod"
                 value={formData.paymentMethod}
                 onChange={handleChange}
@@ -108,9 +156,9 @@ export default function ExpenseModal({ isOpen, onClose, onSave }) {
 
           {/* Footer Actions */}
           <div className="flex justify-end gap-3 pt-2">
-            <button type="button" onClick={onClose} className="px-4 py-2 font-black text-xs text-ink-muted uppercase">Cancel</button>
-            <button type="submit" 
-              disabled={!formData.date || !formData.amount || !formData.paidTo}
+            <button type="button" onClick={closeAndReset} className="px-4 py-2 font-black text-xs text-ink-muted uppercase">Cancel</button>
+            <button type="submit"
+              disabled={!formData.date || !formData.amount || !formData.paidTo || !formData.itemName.trim() || !formData.quantity}
               className="flex items-center px-4 py-2 bg-danger text-white rounded-lg font-black text-xs uppercase shadow-sm hover:bg-danger/90 disabled:bg-slate-300 disabled:cursor-not-allowed">
               <Save size={14} className="mr-2" /> Save Expense
             </button>

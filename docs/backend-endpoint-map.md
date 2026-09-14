@@ -315,18 +315,42 @@ Conflict behavior:
 
 - `409` when phone number already exists for the tenant
 
-Ledger entry create request:
+Income ledger entry create request:
+
+```json
+{
+	"transaction_type": "Revenue",
+	"category": "Milk Sale",
+	"amount": 2500,
+	"date": "2026-08-28",
+	"customer_id": 5,
+	"payment_method": "M-Pesa",
+	"reference_code": "REF-123",
+	"description": "Morning milk payment"
+}
+```
+
+Income requires one of `customer_id`, `buyer_id`, or a free-text `income_source`.
+
+Expense ledger entry create request:
 
 ```json
 {
 	"transaction_type": "Expense",
 	"category": "Feed Purchase",
 	"amount": 1000,
-	"reference_code": "REF-123",
-	"description": "Morning feed",
-	"customer_id": null
+	"date": "2026-08-28",
+	"paid_to": "Feed Supplier",
+	"payment_method": "Cash",
+	"reference_code": "RECEIPT-123",
+	"description": "Morning feed"
 }
 ```
+
+Expense requires `paid_to` and must not include a customer or buyer. Revenue categories are
+`Milk Sale`, `Livestock Sale`, `Other Income`, and `Other`. Expense categories are
+`Feed Purchase`, `Vet Fees`, `Labor / Wages`, `Utilities`, `Equipment Maintenance`,
+`Transport`, `Opening Balance`, `Inventory Write Off`, and `Other`.
 
 ### Milk deliveries (NOT YET IMPLEMENTED — frontend-required)
 

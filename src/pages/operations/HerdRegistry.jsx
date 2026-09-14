@@ -34,6 +34,7 @@ import {
   getHerdSummary,
   isMilkingStatus,
   isDryStatus,
+  normalizeEarTag,
 } from '../../lib/herdUtils';
 
 const INITIAL_HERD = [];
@@ -73,6 +74,7 @@ export default function HerdRegistry() {
     current_status: '', // Will be pre-filled from cow.status
     sire_name: '',
     dam_id: '',
+    birth_weight_kg: '',
   });
   const [herdOptions, setHerdOptions] = useState([]);
   const [loadingHerdOptions, setLoadingHerdOptions] = useState(false);
@@ -82,9 +84,9 @@ export default function HerdRegistry() {
   const confirmation = useConfirmation();
 
   const { data: herdData, isLoading } = useQuery({
-    queryKey: ['herd-registry', tenantId, farmId],
+    queryKey: ['herd', tenantId, farmId],
     queryFn: () => herdApi.list(),
-    enabled: !!tenantId,
+    enabled: !!tenantId && !!farmId,
   });
 
   // Fetch herd data for Dam dropdown
@@ -166,11 +168,18 @@ export default function HerdRegistry() {
     dateOfBirth: [ValidationRules.required, ValidationRules.pastDate],
   };
 
-  const canonicalizeTagNumber = (value = '') => {
-    const normalized = String(value).trim().toUpperCase();
-    if (!normalized) return '';
-    if (/^C-/.test(normalized)) return normalized;
-    return `C-${normalized}`;
+  const refreshHerdViews = async (cowId) => {
+    const invalidations = [
+      queryClient.invalidateQueries({ queryKey: ['herd', tenantId, farmId] }),
+    ];
+
+    if (cowId) {
+      invalidations.push(
+        queryClient.invalidateQueries({ queryKey: ['animal-passport', tenantId, farmId, String(cowId)] })
+      );
+    }
+
+    await Promise.all(invalidations);
   };
 
   // Handlers
@@ -191,7 +200,7 @@ export default function HerdRegistry() {
     try {
       setIsSaving(true);
 
-      const tagNumber = canonicalizeTagNumber(newCow.tagNumber);
+      const tagNumber = normalizeEarTag(newCow.tagNumber);
 
       // Client-side check for immediate feedback, backend will enforce uniqueness definitively.
       if (herdState.some((c) => c.id === tagNumber)) {
@@ -217,7 +226,7 @@ export default function HerdRegistry() {
       const savedCowResponse = await herdApi.create(apiPayload);
       const savedCow = normalizeHerdCow(savedCowResponse);
 
-      await queryClient.invalidateQueries({ queryKey: ['herd-registry', tenantId, farmId] });
+      await refreshHerdViews(savedCow.recordId);
 
       // Log audit entry
       logToAuditTrail(
@@ -258,7 +267,7 @@ export default function HerdRegistry() {
 
       await herdApi.delete(cowId);
 
-      await queryClient.invalidateQueries({ queryKey: ['herd-registry', tenantId, farmId] });
+      await refreshHerdViews(cowId);
 
       // Log audit entry
       logToAuditTrail(
@@ -288,21 +297,34 @@ export default function HerdRegistry() {
     setShowError(false);
   };
 
-  const handleOpenEdit = (cow) => {
-    setEditingCow(cow);
-    setEditCow({
-      tagNumber: cow.id ?? '',
-      name: cow.name ?? '',
-      breed: cow.breed ?? '',
-      dateOfBirth: cow.dateOfBirth ?? '', // Assuming dateOfBirth is already in YYYY-MM-DD format
-      // New fields
-      current_status: cow.status ?? 'Calf', // Pre-fill with current status, fallback to 'Calf'
-      sire_name: cow.sire_name ?? '',
-      dam_id: cow.dam_id ?? '',
-    });
-    setEditFormErrors({});
-    setShowError(false);
-    setIsEditOpen(true);
+  const handleOpenEdit = async (cow) => {
+    const routeId = getCowRouteId(cow);
+    if (!routeId) {
+      notifyError('Failed to resolve animal record for editing.');
+      return;
+    }
+
+    try {
+      const canonicalCow = normalizeHerdCow(await herdApi.get(routeId), cow);
+
+      setEditingCow(canonicalCow);
+      setEditCow({
+        tagNumber: canonicalCow.id,
+        name: canonicalCow.name,
+        breed: canonicalCow.breed,
+        dateOfBirth: canonicalCow.dateOfBirth,
+        current_status: canonicalCow.status,
+        sire_name: canonicalCow.sire_name,
+        dam_id: canonicalCow.dam_id,
+        birth_weight_kg: canonicalCow.birth_weight_kg,
+      });
+      setEditFormErrors({});
+      setShowError(false);
+      setIsEditOpen(true);
+    } catch (error) {
+      console.error('Failed to load animal for editing:', error);
+      notifyError(getApiErrorMessage(error, 'Failed to load the latest animal details. Please retry.'));
+    }
   };
   
   const handleCloseEditModal = () => {
@@ -336,7 +358,7 @@ export default function HerdRegistry() {
       setIsEditSaving(true);
 
       const payload = {
-        tagNumber: canonicalizeTagNumber(editCow.tagNumber),
+        tagNumber: normalizeEarTag(editCow.tagNumber),
         name: editCow.name.trim() || 'Unnamed',
         breed: editCow.breed.trim() || 'Foundation',
         dateOfBirth: editCow.dateOfBirth,
@@ -344,12 +366,13 @@ export default function HerdRegistry() {
         current_status: editCow.current_status,
         sire_name: editCow.sire_name,
         dam_id: editCow.dam_id,
+        birth_weight_kg: editCow.birth_weight_kg,
       };
 
       const updated = await herdApi.update(routeId, payload);
       const normalizedUpdatedCow = normalizeHerdCow(updated, editingCow ?? {});
 
-      await queryClient.invalidateQueries({ queryKey: ['herd-registry', tenantId, farmId] });
+      await refreshHerdViews(routeId);
 
       logToAuditTrail(
         createAuditEntry({
@@ -1033,6 +1056,20 @@ export default function HerdRegistry() {
                 </option>
               ))}
             </select>
+          </div>
+
+          <div>
+            <label className="block text-xs font-bold uppercase text-ink-muted mb-1">Birth Weight (kg)</label>
+            <input
+              type="number"
+              min="0"
+              step="0.01"
+              className="input-machined w-full"
+              value={editCow.birth_weight_kg}
+              onChange={(e) => setEditCow({ ...editCow, birth_weight_kg: e.target.value })}
+              placeholder="Not recorded"
+              aria-label="Birth weight in kilograms"
+            />
           </div>
 
           {/* NEW FIELD: Sire Name */}

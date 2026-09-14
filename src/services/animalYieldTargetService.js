@@ -122,6 +122,7 @@ export function buildSchedulePayload({
   targets = [],
   fallbackTargetLiters,
   baselineHerdMealKg,
+  useSavedTargets = true,
 }) {
   const lactatingCows = cows.filter((cow) => isLactatingStatus(cow.current_status ?? cow.currentStatus ?? cow.status));
   const lactatingCowIds = new Set(lactatingCows.map((cow) => String(cow.id)));
@@ -131,24 +132,25 @@ export function buildSchedulePayload({
 
   const aggregateTargetLiters = activeTargets.reduce((sum, target) => sum + target.targetLiters, 0);
   const fallbackLiters = toFinitePositiveNumber(fallbackTargetLiters) ?? 0;
-  const resolvedTargetLiters = aggregateTargetLiters > 0 ? aggregateTargetLiters : fallbackLiters;
+  const shouldUseSavedTargets = useSavedTargets && aggregateTargetLiters > 0;
+  const resolvedTargetLiters = shouldUseSavedTargets ? aggregateTargetLiters : fallbackLiters;
 
   return {
     request: {
       target_liters: resolvedTargetLiters,
       baseline_herd_meal_kg: baselineHerdMealKg,
-      animal_targets: activeTargets.map((target) => ({
+      animal_targets: shouldUseSavedTargets ? activeTargets.map((target) => ({
         cow_id: target.cowId,
         target_liters: target.targetLiters,
-      })),
+      })) : [],
       lactating_cow_ids: Array.from(lactatingCowIds),
-      target_mode: activeTargets.length > 0 ? 'per_cow' : 'herd_fallback',
+      target_mode: shouldUseSavedTargets ? 'per_cow' : 'herd_fallback',
     },
     summary: {
       targetLiters: resolvedTargetLiters,
-      targetSource: activeTargets.length > 0 ? 'per_cow' : 'herd_fallback',
+      targetSource: shouldUseSavedTargets ? 'per_cow' : 'herd_fallback',
       activeCowCount: lactatingCows.length,
-      targetedCowCount: activeTargets.length,
+      targetedCowCount: shouldUseSavedTargets ? activeTargets.length : 0,
       untargetedCowCount: Math.max(lactatingCows.length - activeTargets.length, 0),
     },
   };

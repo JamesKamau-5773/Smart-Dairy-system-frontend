@@ -74,25 +74,7 @@ export function StaffProvider({ children }) {
       const created = await hrApi.createStaff(payload);
       return mergeStaffRecord(created);
     } catch (error) {
-      console.warn('Falling back to local staff creation.', error);
-
-      return mergeStaffRecord({
-        id: `staff_${Date.now()}`,
-        ...payload,
-        loanBalance: 0,
-        monthlyDeduction: 0,
-        status: 'ACTIVE',
-        leaveType: '',
-        leaveStartDate: null,
-        leaveEndDate: null,
-        actualReturnDate: null,
-        returnVerifiedAt: null,
-        returnVerificationDecision: null,
-        returnVerificationNote: '',
-        unpaidLeaveDaysThisMonth: 0,
-        medicalCertifications: [],
-        medicalNotes: '',
-      });
+      throw error;
     }
   };
 
@@ -113,8 +95,7 @@ export function StaffProvider({ children }) {
       });
       return mergeStaffRecord(saved);
     } catch (error) {
-      console.warn('Falling back to local loan update.', error);
-      return mergeStaffRecord(updatedStaff);
+      throw error;
     }
   };
   
@@ -125,25 +106,7 @@ export function StaffProvider({ children }) {
       const saved = await hrApi.updateStaff(staffId, payload);
       return mergeStaffRecord(saved);
     } catch (error) {
-      console.warn('Falling back to local staff update.', error);
-
-      setStaffData((currentStaff) =>
-        sortStaff(currentStaff.map((staff) =>
-          staff.id === staffId
-            ? {
-                ...staff,
-                ...payload,
-                ...(payload.status === 'ON_LEAVE' || payload.status === 'OVERDUE'
-                  ? {
-                      actualReturnDate: null,
-                      returnVerifiedAt: null,
-                      returnVerificationDecision: null,
-                    }
-                  : {}),
-              }
-            : staff
-        ))
-      );
+      throw error;
     }
   };
 
@@ -155,35 +118,7 @@ export function StaffProvider({ children }) {
       const saved = await hrApi.verifyReturn(staffId, { returned, note });
       return mergeStaffRecord(saved);
     } catch (error) {
-      console.warn('Falling back to local return verification.', error);
-
-      setStaffData((currentStaff) =>
-        sortStaff(currentStaff.map((staff) => {
-          if (staff.id !== staffId) {
-            return staff;
-          }
-
-          if (returned) {
-            return {
-              ...staff,
-              status: 'ACTIVE',
-              actualReturnDate,
-              returnVerifiedAt: timestamp,
-              returnVerificationDecision: 'YES',
-              returnVerificationNote: note,
-            };
-          }
-
-          return {
-            ...staff,
-            status: 'OVERDUE',
-            actualReturnDate: null,
-            returnVerifiedAt: timestamp,
-            returnVerificationDecision: 'NO',
-            returnVerificationNote: note,
-          };
-        }))
-      );
+      throw error;
     }
   };
 
@@ -200,8 +135,7 @@ export function StaffProvider({ children }) {
       const saved = await hrApi.updateStaff(staffId, { status: nextStatus });
       return mergeStaffRecord(saved);
     } catch (error) {
-      console.warn('Falling back to local status toggle.', error);
-      setStaffData((current) => sortStaff(current.map((staff) => (staff.id === staffId ? { ...staff, status: nextStatus } : staff))));
+      throw error;
     }
   };
 

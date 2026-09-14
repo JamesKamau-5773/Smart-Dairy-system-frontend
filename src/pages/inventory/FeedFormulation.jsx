@@ -4,6 +4,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Beaker, Tractor, Save, AlertCircle, XCircle } from 'lucide-react';
 import RecipeBuilder from '../nutrition/RecipeBuilder';
 import CreateBatchModal from '../../components/nutrition/CreateBatchModal';
+import FeedingGroupPlanner from '../../components/nutrition/FeedingGroupPlanner';
 import { nutritionApi, inventoryApi } from '../../lib/backendApi';
 import { useTenant } from '../../hooks/useTenant';
 
@@ -601,7 +602,7 @@ export default function FeedFormulation() {
 
   return (
     <div className="animate-reveal space-y-8 max-w-5xl mx-auto p-4 md:p-8">
-      
+
       {/* Page Header */}
       <div className="border-b border-ink/10 pb-6">
         <h1 className="text-3xl font-black tracking-tight text-ink">Feed Mixing Planner</h1>
@@ -610,7 +611,9 @@ export default function FeedFormulation() {
         </p>
       </div>
 
-      {/* ⚠️ DRAFT WARNING BANNER */}
+      <FeedingGroupPlanner />
+
+      {/* Draft warning banner */}
       {importedDraft && (
         <div className="bg-warning/10 border border-warning/20 p-4 rounded-xl flex items-start gap-3 animate-fade-in">
           <AlertCircle className="text-warning-dark shrink-0 mt-0.5" size={20} />
@@ -643,8 +646,8 @@ export default function FeedFormulation() {
         <button
           onClick={() => setActiveTab('dairy_meal')}
           className={`flex-1 flex items-center justify-center gap-2 py-2.5 text-sm font-bold rounded-md transition-all ${
-            activeTab === 'dairy_meal' 
-              ? 'bg-white text-brand shadow-sm border border-ink/5' 
+            activeTab === 'dairy_meal'
+              ? 'bg-white text-brand shadow-sm border border-ink/5'
               : 'text-ink-muted hover:text-ink-strong'
           }`}
         >
@@ -653,8 +656,8 @@ export default function FeedFormulation() {
         <button
           onClick={() => setActiveTab('main_meal')}
           className={`flex-1 flex items-center justify-center gap-2 py-2.5 text-sm font-bold rounded-md transition-all ${
-            activeTab === 'main_meal' 
-              ? 'bg-white text-brand shadow-sm border border-ink/5' 
+            activeTab === 'main_meal'
+              ? 'bg-white text-brand shadow-sm border border-ink/5'
               : 'text-ink-muted hover:text-ink-strong'
           }`}
         >
@@ -664,7 +667,7 @@ export default function FeedFormulation() {
 
       {/* The Formulation Engine */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        
+
         {/* Left Column: The Interactive Builder */}
         <div className="lg:col-span-2">
           {recipe.length === 0 && !isInventoryLoading && !isRecipeLoading && !importedDraft ? (
@@ -683,7 +686,7 @@ export default function FeedFormulation() {
             </div>
           ) : (
             <div className="animate-in fade-in slide-in-from-bottom-4 duration-300">
-              <RecipeBuilder 
+              <RecipeBuilder
                 recipeType={activeTab}
                 initialIngredients={initialIngredients}
                 ingredients={recipe}
@@ -767,19 +770,19 @@ export default function FeedFormulation() {
                 {formulationError}
               </div>
             )}
-            
+
             <div className="space-y-3">
-              <button 
+              <button
                 onClick={() => saveRecipe.mutate()}
                 disabled={saveRecipe.isPending || !hasValidIngredients}
                 className="w-full bg-brand hover:bg-brand-dark text-white px-4 py-3 rounded-button font-bold text-sm transition-colors shadow-sm flex items-center justify-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed"
               >
-                <Save size={18} /> 
+                <Save size={18} />
                 {saveRecipe.isPending ? 'Saving...' : 'Save As Current Feed Mix'}
               </button>
 
               {importedDraft && (
-                <button 
+                <button
                   onClick={handleDiscardDraft}
                   className="w-full bg-surface-raised hover:bg-ink/5 text-ink-strong px-4 py-3 rounded-button font-bold text-sm transition-colors flex items-center justify-center gap-2"
                 >
@@ -807,13 +810,16 @@ export default function FeedFormulation() {
 
       </div>
 
-      <CreateBatchModal
-        isOpen={isBatchModalOpen}
-        onClose={() => setIsBatchModalOpen(false)}
-        recipeType={activeTab}
-        initialMixSize={batchSizeKg}
-        ingredients={recipe}
-      />
+      {isBatchModalOpen && (
+        <CreateBatchModal
+          isOpen
+          onClose={() => setIsBatchModalOpen(false)}
+          recipeType={activeTab}
+          initialMixSize={batchSizeKg}
+          ingredients={recipe}
+          targetProtein={targetProtein}
+        />
+      )}
     </div>
   );
 }

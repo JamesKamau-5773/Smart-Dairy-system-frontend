@@ -1,7 +1,7 @@
 /* ============================================================
   FONTS: Unified readable UI typography
   ============================================================ */
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Inter+Tight:wght@400;500;600;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Inter+Tight:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap');
 
 @tailwind base;
 @tailwind components;
@@ -145,6 +145,18 @@ h4 {
    COMPONENTS (Replacing Brutalism with Glassmorphism)
    ============================================================ */
 @layer components {
+
+  .alert-banner-transition {
+    transition-property: all;
+    transition-duration: 280ms;
+    transition-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  .alert-banner-details-transition {
+    transition-property: all;
+    transition-duration: 250ms;
+    transition-timing-function: ease-in-out;
+  }
 
   /* ── The Frosted Glass Panel (Replaces Brutalist Card) ── */
   .card-machined {

@@ -8,6 +8,7 @@ import { Plus, Beaker, AlertTriangle, ShieldCheck, Search, Filter, RotateCcw, Ch
 import { useEffect, useMemo, useState } from "react";
 import FastMilkLog from "../../components/operations/FastMilkLog";
 import Confirmation, { useConfirmation } from "../../components/ui/Confirmation";
+import GroupedDateRows from "../../components/ui/GroupedDateRows";
 import toast from "react-hot-toast";
 import { toNormalizedSessionLabel } from "../../lib/milkUtils";
 import { formatDate } from "../../lib/herdUtils";
@@ -567,7 +568,15 @@ export default function YieldLog() {
             </tr>
           </thead>
           <tbody className="divide-y-2 divide-ink/5">
-            {filteredMilkRows.map((row) => (
+            <GroupedDateRows
+              items={filteredMilkRows}
+              getDate={(row) => row.date}
+              colSpan={7}
+              renderGroupMeta={(items) => {
+                const total = items.reduce((sum, item) => sum + (item.amountValue ?? 0), 0);
+                return `${items.length} ${items.length === 1 ? 'entry' : 'entries'} / ${total.toFixed(1)} L`;
+              }}
+              renderItem={(row) => (
               <tr key={row.id} style={{ animationDelay: '0.1s' }} className="animate-stagger group hover:bg-surface-raised transition-colors">
                 <td className="p-5 font-sans text-xs text-ink-muted">{formatDate(row.date)}</td>
                 <td className="p-5 font-sans text-xs font-medium text-ink">{toNormalizedSessionLabel(row.session)}</td>
@@ -626,14 +635,15 @@ export default function YieldLog() {
                   </div>
                 </td>
               </tr>
-            ))}
-            {filteredMilkRows.length === 0 && (
+              )}
+              empty={filteredMilkRows.length === 0 && (
               <tr>
                 <td className="p-6 text-center text-ink-muted" colSpan={7}>
                   No milk log entries match the selected filters.
                 </td>
               </tr>
-            )}
+              )}
+            />
           </tbody>
         </table>
       </div>

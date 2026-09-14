@@ -6,6 +6,7 @@ import { financeApi } from '../../lib/backendApi';
 import { User, Mail, Phone, MapPin, DollarSign, Receipt, ArrowLeft, Edit, Droplets, Plus, Pencil, Trash2 } from 'lucide-react';
 import { Skeleton } from '../../components/ui';
 import Confirmation, { useConfirmation } from '../../components/ui/Confirmation';
+import GroupedDateRows from '../../components/ui/GroupedDateRows';
 import DeliveryModal from '../../components/finance/DeliveryModal';
 
 const ProfileDetail = ({ icon: Icon, label, value }) => (
@@ -291,14 +292,20 @@ export default function CustomerProfile() {
               {isLoadingDeliveries ? (
                 <tr><td colSpan="6" className="p-6 text-center text-ink-muted">Loading deliveries...</td></tr>
               ) : deliveries.length > 0 ? (
-                deliveries.map((delivery) => (
-                  <DeliveryRow
-                    key={delivery.id}
-                    delivery={delivery}
-                    onEdit={handleEditDelivery}
-                    onDelete={handleDeleteDelivery}
-                  />
-                ))
+                <GroupedDateRows
+                  items={deliveries}
+                  getDate={(delivery) => delivery.date}
+                  colSpan={6}
+                  renderGroupMeta={(items) => `${items.length} ${items.length === 1 ? 'delivery' : 'deliveries'}`}
+                  renderItem={(delivery) => (
+                    <DeliveryRow
+                      key={delivery.id}
+                      delivery={delivery}
+                      onEdit={handleEditDelivery}
+                      onDelete={handleDeleteDelivery}
+                    />
+                  )}
+                />
               ) : (
                 <tr><td colSpan="6" className="p-6 text-center text-ink-muted">No deliveries logged for this customer yet.</td></tr>
               )}
@@ -325,7 +332,13 @@ export default function CustomerProfile() {
               {isLoadingTransactions ? (
                 <tr><td colSpan="4" className="p-6 text-center text-ink-muted">Loading transactions...</td></tr>
               ) : transactions.length > 0 ? (
-                transactions.map(tx => <TransactionRow key={tx.id} tx={tx} />)
+                <GroupedDateRows
+                  items={transactions}
+                  getDate={(tx) => tx.date}
+                  colSpan={4}
+                  renderGroupMeta={(items) => `${items.length} ${items.length === 1 ? 'transaction' : 'transactions'}`}
+                  renderItem={(tx) => <TransactionRow key={tx.id} tx={tx} />}
+                />
               ) : (
                 <tr><td colSpan="4" className="p-6 text-center text-ink-muted">No transactions found for this customer.</td></tr>
               )}

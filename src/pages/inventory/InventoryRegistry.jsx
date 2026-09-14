@@ -201,15 +201,15 @@ export default function InventoryRegistry() {
   // Filter data based on search term
   const filteredInventoryData = useMemo(() => {
     const term = searchTerm.trim().toLowerCase();
-    
+
     return (backendInventory || []).filter(item => {
-      const matchesSearch = term ? 
-        item.name.toLowerCase().includes(term) || 
-        item.sku.toLowerCase().includes(term) : 
+      const matchesSearch = term ?
+        item.name.toLowerCase().includes(term) ||
+        item.sku.toLowerCase().includes(term) :
         true;
 
       const matchesCategory = categoryFilter === 'All' ? true : item.category === categoryFilter;
-      
+
       return matchesSearch && matchesCategory;
     });
   }, [backendInventory, searchTerm, categoryFilter]);
@@ -229,19 +229,19 @@ export default function InventoryRegistry() {
       )}
 
       {/* HEADER SECTION */}
-      <div className="flex justify-between items-start mb-8">
-        <div>
-          <div className="inline-flex items-center gap-2 px-2 py-1 bg-brand/5 text-brand text-[10px] font-black uppercase tracking-widest mb-3 rounded-md border border-brand/10">
-            <Package size={12} /> Resource Management
+      <div className="flex justify-between items-center mb-8 rounded-card border border-brand-100 bg-brand-50 p-5">
+        <div className="flex items-center gap-4">
+          <div className="p-3 bg-white text-brand-700 rounded-lg border border-brand-100"><Package size={20} /></div>
+          <div>
+            <h2 className="font-sans font-bold text-2xl tracking-tight text-brand-900 m-0">Stock Registry</h2>
+            <p className="text-sm text-brand-700/80 mt-1">Manage stock levels, new receipts, and resource definitions.</p>
           </div>
-          <h2 className="font-sans font-black text-3xl tracking-tight text-ink m-0">Stock Registry</h2>
-          <p className="text-slate-500 font-bold text-sm mt-1">Manage stock levels, new receipts, and resource definitions.</p>
         </div>
-        <button 
-          onClick={() => setIsRegisterModalOpen(true)} 
-          className="flex items-center px-5 py-2.5 bg-brand text-white rounded-lg font-black text-xs uppercase hover:bg-brand-dark transition-all shadow-sm"
+        <button
+          onClick={() => setIsRegisterModalOpen(true)}
+          className="flex items-center gap-2 rounded-button bg-brand-800 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-brand-900"
         >
-          <Plus size={14} className="mr-2" /> Add to Feedstore
+          <Plus size={16} /> Add to Feedstore
         </button>
       </div>
 
@@ -249,8 +249,8 @@ export default function InventoryRegistry() {
       <div className="flex gap-4 mb-6">
         <div className="flex-1 relative">
             <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
-            <input 
-                placeholder="Search items by name or SKU..." 
+            <input
+                placeholder="Search items by name or SKU..."
                 className="w-full pl-12 pr-4 py-3 border border-slate-200 rounded-lg text-xs font-bold outline-none focus:border-brand/50"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
@@ -258,7 +258,7 @@ export default function InventoryRegistry() {
         </div>
         <div className="relative">
             <Filter size={14} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
-            <select 
+            <select
                 className="w-full pl-10 pr-10 py-3 bg-white border border-slate-200 rounded-lg font-black text-xs uppercase text-slate-600 hover:bg-slate-50 appearance-none focus:outline-none focus:border-brand/50 cursor-pointer"
                 value={categoryFilter}
                 onChange={(e) => setCategoryFilter(e.target.value)}
@@ -279,7 +279,7 @@ export default function InventoryRegistry() {
           </div>
         ) : (
         <table className="w-full min-w-[680px] text-left border-collapse">
-          <thead className="bg-slate-50 text-[10px] uppercase font-black text-slate-500">
+          <thead className="bg-brand-800 text-[10px] uppercase font-bold text-white">
             <tr>
               <th className="px-6 py-4">Item Details</th>
               <th className="px-6 py-4">Category</th>
@@ -296,7 +296,7 @@ export default function InventoryRegistry() {
                   <div className="text-[11px] font-bold text-slate-400 font-mono">{item.sku}</div>
                 </td>
                 <td className="px-6 py-4 text-xs font-bold text-slate-600">{item.category}</td>
-                <td className="px-6 py-4 text-xs font-black text-ink">
+                <td className="px-6 py-4 text-xs font-black text-ink font-mono">
                   {item.stock?.value ?? 0} <span className="text-slate-400">{item.stock?.unit || 'units'}</span>
                 </td>
                 <td className="px-6 py-4">
@@ -313,20 +313,20 @@ export default function InventoryRegistry() {
                   })()}
                 </td>
                 <td className="px-6 py-4 text-right space-x-1 flex justify-end items-center">
-                  <button 
+                  <button
                     onClick={() => handleRestock(item)}
                     className="px-3 py-1 bg-slate-100 text-slate-600 rounded text-[10px] font-black uppercase hover:bg-slate-200 transition-colors mr-2"
                   >
                     Restock
                   </button>
-                  <button 
+                  <button
                     onClick={() => handleEdit(item)}
                     className="p-2 text-slate-400 hover:text-ink transition-colors"
                     title="Edit Item"
                   >
                     <Edit2 size={14} />
                   </button>
-                  <button 
+                  <button
                     onClick={() => handleDelete(item)}
                     className="p-2 text-slate-400 hover:text-red-500 transition-colors"
                     title="Delete Item"
@@ -342,13 +342,15 @@ export default function InventoryRegistry() {
       </div>
 
       {/* MODALS SECTION */}
-      <RegisterResourceModal 
-        isOpen={isRegisterModalOpen} 
-        onClose={() => setIsRegisterModalOpen(false)} 
-        onRegister={handleRegisterResource}
-      />
-      
-      <StandardDeliveryModal 
+      {isRegisterModalOpen && (
+        <RegisterResourceModal
+          isOpen
+          onClose={() => setIsRegisterModalOpen(false)}
+          onRegister={handleRegisterResource}
+        />
+      )}
+
+      <StandardDeliveryModal
         isOpen={isRestockModalOpen}
         onClose={() => setIsRestockModalOpen(false)}
         item={selectedItem}
@@ -357,12 +359,14 @@ export default function InventoryRegistry() {
         farmId={farmId}
       />
 
-      <EditResourceModal 
-        isOpen={isEditModalOpen}
-        onClose={() => setIsEditModalOpen(false)}
-        item={selectedItem}
-        onSave={handleSaveEdit}
-      />
+      {isEditModalOpen && (
+        <EditResourceModal
+          isOpen
+          onClose={() => setIsEditModalOpen(false)}
+          item={selectedItem}
+          onSave={handleSaveEdit}
+        />
+      )}
     </div>
   );
 }

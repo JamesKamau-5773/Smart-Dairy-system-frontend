@@ -105,14 +105,14 @@ const EmptyCalculatorState = () => (
  */
 const ResultsDashboard = ({ data, targetLiters, targetSource, activeCowCount, targetedCowCount, untargetedCowCount }) => {
   if (!data) return null;
-  
+
   // Dynamic protein logic: High yielders (>10L) require higher protein density
   const proteinTarget = targetLiters > 10 ? '16.5%' : '14.5%';
 
   return (
     <div className="space-y-6 animate-reveal">
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
-        
+
         {/* Target Milk Card */}
         <div className="bg-surface rounded-2xl shadow-sm border border-brand/20 p-6 relative overflow-hidden">
           <div className="absolute top-0 left-0 w-1 h-full bg-brand rounded-l-2xl"></div>
@@ -177,7 +177,7 @@ const ResultsDashboard = ({ data, targetLiters, targetSource, activeCowCount, ta
         <p className="mt-2 text-sm text-ink font-semibold">
           {targetSource === 'per_cow'
             ? `Using saved goals for ${targetedCowCount} out of ${activeCowCount} cows that are currently milking.`
-            : 'No active cow goals were found, so we used the whole-herd goal you entered.'}
+            : 'Using the whole-herd goal you entered in the calculator.'}
         </p>
         {targetSource === 'per_cow' && untargetedCowCount > 0 && (
           <p className="mt-2 text-sm text-ink-muted">
@@ -230,6 +230,7 @@ export default function MilkLab() {
         targets,
         fallbackTargetLiters: parseFloat(liters),
         baselineHerdMealKg: baseline,
+        useSavedTargets: false,
       });
       const schedule = await feedApi.calculateSchedule(schedulePayload.request);
 
@@ -345,9 +346,9 @@ export default function MilkLab() {
                 </>
               )}
             </button>
-            
-            <Link 
-              to="/operations/feed-formulation" 
+
+            <Link
+              to="/operations/feed-formulation"
               className="w-full sm:w-auto px-4 py-3 text-sm font-bold text-ink-muted hover:text-brand transition-colors text-center sm:text-left underline underline-offset-2"
             >
               Edit Current Feed Mix
@@ -355,7 +356,7 @@ export default function MilkLab() {
           </form>
 
           <div className="mt-4 rounded-xl border border-brand/10 bg-brand/5 px-4 py-3 text-sm text-ink-muted">
-            Saved cow goals are added up automatically for cows that are milking. The input above is your backup whole-herd goal if no cow goals are active.
+            The calculator uses the whole-herd goal entered above. Saved cow goals remain available for cow-by-cow planning and review.
           </div>
         </div>
 

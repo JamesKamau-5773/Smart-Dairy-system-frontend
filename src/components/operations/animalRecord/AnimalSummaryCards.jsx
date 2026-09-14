@@ -25,7 +25,7 @@ export default function AnimalSummaryCards({ animal, isLoading }) {
           {isLoading ? <Skeleton className="mx-auto h-6 w-32" /> : displayAnimal.breed}
         </div>
         <div className="text-xs font-medium leading-relaxed text-ink-muted">
-          {isLoading ? <Skeleton className="mx-auto h-4 w-40" /> : <>Sire: {displayAnimal.sire} <br /> Dam: {displayAnimal.dam}</>}
+          {isLoading ? <Skeleton className="mx-auto h-4 w-40" /> : <>Sire: {displayAnimal.sire} <br /> Dam: {displayAnimal.dam} <br /> Birth weight: {displayAnimal.birthWeightKg ?? 'Not recorded'}{displayAnimal.birthWeightKg !== null && displayAnimal.birthWeightKg !== undefined ? ' kg' : ''}</>}
         </div>
       </div>
 
@@ -52,9 +52,11 @@ export default function AnimalSummaryCards({ animal, isLoading }) {
               {isLoading ? (
                 <Skeleton className="h-6 w-12" />
               ) : (
-                <span className="text-xl font-black text-ink-strong">{displayAnimal.daysInMilk ?? 'N/A'}</span>
+                <span className="text-xl font-black text-ink-strong">{displayAnimal.daysInMilk ?? 'Not recorded'}</span>
               )}
-              {!isLoading && <span className="text-xs font-bold text-ink-muted">Days</span>}
+              {!isLoading && displayAnimal.daysInMilk !== null && displayAnimal.daysInMilk !== undefined && (
+                <span className="text-xs font-bold text-ink-muted">Days</span>
+              )}
             </div>
             <div className="mt-0.5 text-[11px] font-medium text-ink-muted">Since her last calf</div>
           </div>

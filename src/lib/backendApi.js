@@ -61,6 +61,16 @@ const toArray = (value) => {
   return [];
 };
 
+const normalizeSemenInventoryPayload = (payload = {}) => ({
+  bull_name: payload.bull_name ?? payload.name ?? '',
+  straw_code: payload.straw_code ?? payload.code ?? '',
+  breed: payload.breed ?? payload.improves ?? '',
+  provider: payload.provider ?? null,
+  cost: payload.cost ?? null,
+  stock_level: Number(payload.stock_level ?? payload.strawsLeft ?? payload.quantity ?? 0),
+  traits_to_improve: payload.traits_to_improve ?? payload.traitsToImprove ?? [],
+});
+
 const toObject = (value) => {
   if (!value) {
     return null;
@@ -496,6 +506,10 @@ const buildHerdPayload = (payload = {}) => {
     request.dam_id = payload.dam_id === '' ? null : payload.dam_id;
   }
 
+  if (payload.birth_weight_kg !== undefined) {
+    request.birth_weight_kg = payload.birth_weight_kg;
+  }
+
   return request;
 };
 
@@ -797,8 +811,14 @@ export const hrApi = {
     return toArray(response.data).map(normalizeStaffRecord);
   },
   async createStaff(payload) {
-    const response = await requestWithFallback(apiClient, staffRoutes().map((url) => ({ method: 'post', url, data: payload })));
-    return normalizeStaffRecord(toObject(response.data) ?? payload);
+    const apiPayload = {
+      ...payload,
+      full_name: payload.full_name ?? payload.name,
+      hire_date: payload.hire_date ?? payload.hireDate,
+      base_salary: payload.base_salary ?? payload.baseSalary,
+    };
+    const response = await requestWithFallback(apiClient, staffRoutes().map((url) => ({ method: 'post', url, data: apiPayload })));
+    return normalizeStaffRecord(toObject(response.data) ?? apiPayload);
   },
   async getStaff(staffId) {
     const response = await requestWithFallback(apiClient, staffRoutes(staffId).map((url) => ({ method: 'get', url })));
@@ -821,6 +841,14 @@ export const hrApi = {
     const run = toObject(response.data) ?? response.data;
     return normalizePayrollRun(run);
   },
+  async finalizePayrollRun(runId) {
+    const response = await apiClient.post(`/hr/payroll/runs/${runId}/finalize`);
+    return normalizePayrollRun(toObject(response.data) ?? response.data);
+  },
+  async payPayrollRun(runId) {
+    const response = await apiClient.post(`/hr/payroll/runs/${runId}/pay`);
+    return normalizePayrollRun(toObject(response.data) ?? response.data);
+  },
   async listPayrollRecords() {
     const response = await requestWithFallback(apiClient, ['/hr/payroll-records', '/hr/payroll'].map((url) => ({ method: 'get', url })));
     return toArray(response.data).map(normalizePayrollRun);
@@ -829,16 +857,19 @@ export const hrApi = {
 
 export const financeApi = {
   listCustomers() {
-    return apiClient.get('/customers').then((response) => toArray(response.data));
+    return apiClient.get('/finance/customers').then((response) => toArray(response.data));
   },
   createCustomer(payload) {
-    return apiClient.post('/customers', payload).then((response) => toObject(response.data));
+    return apiClient.post('/finance/customers', payload).then((response) => toObject(response.data));
   },
   getCustomer(id) {
-    return apiClient.get(`/customers/${id}`).then((response) => toObject(response.data));
+    return apiClient.get(`/finance/customers/${id}`).then((response) => toObject(response.data));
   },
   updateCustomer(id, payload) {
-    return apiClient.patch(`/customers/${id}`, payload).then((response) => toObject(response.data));
+    return apiClient.patch(`/finance/customers/${id}`, payload).then((response) => toObject(response.data));
+  },
+  recordCustomerPayment(customerId, payload) {
+    return apiClient.post(`/finance/customers/${customerId}/payments`, payload).then((response) => toObject(response.data));
   },
   deleteCustomer(id) {
     return apiClient.delete(`/customers/${id}`);
@@ -856,7 +887,7 @@ export const financeApi = {
     // The backend returns a structured object { items, meta, summary }.
     // We return the whole object so the UI can access both the transaction
     // list (`items`) and the financial summary (`summary`).
-    return apiClient.get('/ledger', { params }).then((response) => response.data);
+    return apiClient.get('/finance/ledger', { params }).then((response) => response.data);
   },
   createLedgerEntry(payload) {
     // The backend expects `transaction_type` as 'Revenue' or 'Expense', but older
@@ -875,23 +906,34 @@ export const financeApi = {
       reference_code: reference_code ?? reference,
     };
 
-    return apiClient.post('/ledger', apiPayload).then((response) => toObject(response.data));
+    return apiClient.post('/finance/ledger', apiPayload).then((response) => toObject(response.data));
+  },
+  voidAndReplaceExpense(transactionId, payload) {
+    return apiClient.post(`/finance/transactions/${transactionId}/void-and-replace`, payload)
+      .then((response) => response.data);
+  },
+  getReceipt(receiptId) {
+    return apiClient.get(`/finance/receipts/${receiptId}`).then((response) => toObject(response.data));
+  },
+  downloadReceiptPdf(receiptId) {
+    return apiClient.get(`/finance/receipts/${receiptId}/pdf`, { responseType: 'blob' })
+      .then((response) => response.data);
   },
   // Daily milk delivery records: the backend is the sole source of truth for
   // billable_liters/amount — it must compute those from liters_delivered minus
   // personal_consumption_liters (the farmer's own, non-billable, use) and the
   // customer's agreed rate. The frontend only submits the raw inputs.
   listDeliveries(params = {}) {
-    return apiClient.get('/deliveries', { params }).then((response) => toArray(response.data));
+    return apiClient.get('/finance/deliveries', { params }).then((response) => toArray(response.data));
   },
   createDelivery(payload) {
-    return apiClient.post('/deliveries', payload).then((response) => toObject(response.data));
+    return apiClient.post('/finance/deliveries', payload).then((response) => toObject(response.data));
   },
   updateDelivery(id, payload) {
-    return apiClient.patch(`/deliveries/${id}`, payload).then((response) => toObject(response.data));
+    return apiClient.patch(`/finance/deliveries/${id}`, payload).then((response) => toObject(response.data));
   },
   deleteDelivery(id) {
-    return apiClient.delete(`/deliveries/${id}`);
+    return apiClient.delete(`/finance/deliveries/${id}`);
   },
   unitCost() {
     return apiClient.get('/unit-cost').then((response) => toObject(response.data));
@@ -971,14 +1013,36 @@ export const herdApi = {
 };
 
 export const breedingApi = {
+  listHeatObservations(params = {}) {
+    return apiClient.get('/v1/breeding/heat-observations', { params }).then((response) => toArray(response.data?.items));
+  },
+  createHeatObservation(payload) {
+    return apiClient.post('/v1/breeding/heat-observations', payload).then((response) => toObject(response.data));
+  },
   listLogs() {
     return apiClient.get('/operations/breeding-logs').then((response) => extractBreedingLogsArray(response.data));
   },
   createLog(payload) {
     return apiClient.post('/operations/breeding-logs', payload).then((response) => toObject(response.data));
   },
+  uploadCertificate(logId, certificateFile) {
+    const formData = new FormData();
+    formData.append('certificate', certificateFile);
+    return apiClient.post(`/operations/breeding-logs/${logId}/certificate`, formData).then((response) => toObject(response.data));
+  },
   updateLogStatus(logId, status) {
-    return apiClient.put(`/operations/breeding-logs/${logId}/status`, { status }).then((response) => toObject(response.data));
+    return requestWithFallback(apiClient, [
+      {
+        method: 'patch',
+        url: `/v1/breeding/insemination/${logId}/outcome`,
+        data: { status },
+      },
+      {
+        method: 'put',
+        url: `/operations/breeding-logs/${logId}/status`,
+        data: { status },
+      },
+    ]).then((response) => toObject(response.data));
   },
   listSemenInventory() {
     return apiClient.get('/operations/semen-inventory').then((response) => toArray(response.data));
@@ -1052,6 +1116,20 @@ export const animalsApi = {
   },
   createEvent(id, payload) {
     return apiClient.post(`/animals/${id}/events`, payload).then((response) => toObject(response.data));
+  },
+  recordCalving(id, payload) {
+    return requestWithFallback(apiClient, [
+      {
+        method: 'post',
+        url: `/animals/${id}/calving`,
+        data: payload,
+      },
+      {
+        method: 'post',
+        url: `/animals/${id}/events`,
+        data: { ...payload, event_type: 'calving' },
+      },
+    ]).then((response) => toObject(response.data));
   },
 };
 
@@ -1288,6 +1366,29 @@ export const nutritionApi = {
   dashboard() {
     return apiClient.get('/nutrition/dashboard').then((response) => toObject(response.data));
   },
+  listFeedingGroupProfiles() {
+    return apiClient.get('/v1/nutrition/feeding-groups/profiles')
+      .then((response) => Array.isArray(response.data?.profiles) ? response.data.profiles : toArray(response.data));
+  },
+  updateFeedingGroupProfile(feedingGroup, payload) {
+    return apiClient.put(`/v1/nutrition/feeding-groups/profiles/${encodeURIComponent(feedingGroup)}`, payload)
+      .then((response) => toObject(response.data));
+  },
+  getFeedingPlanByGroup(params = {}) {
+    return requestWithFallback(apiClient, [
+      {
+        method: 'get',
+        url: '/v1/nutrition/herd/feeding-plan/by-group',
+        params,
+      },
+      {
+        method: 'get',
+        url: '/v1/herd/feeding-plan/by-group',
+        params,
+      },
+    ])
+      .then((response) => toObject(response.data));
+  },
   listRecipes() {
     return apiClient.get('/feed/recipes')
       .then((response) => validateResponse(API_CONTRACTS.RECIPES, toArray(response.data), 'RECIPES'));
@@ -1479,5 +1580,33 @@ export const reportsApi = {
       params.append('end_date', endDate);
     }
     return apiClient.get(`/reports/milk-inventory?${params.toString()}`).then((res) => res.data);
+  },
+  getDairyUnitEconomics: (params = {}) => {
+    const query = new URLSearchParams();
+    if (params.start_date) query.append('start_date', params.start_date);
+    if (params.end_date) query.append('end_date', params.end_date);
+    if (params.marketing_spend_kes != null && params.marketing_spend_kes !== '') query.append('marketing_spend_kes', params.marketing_spend_kes);
+    if (params.new_customers_acquired != null && params.new_customers_acquired !== '') query.append('new_customers_acquired', params.new_customers_acquired);
+    if (params.customer_lifespan_months != null && params.customer_lifespan_months !== '') query.append('customer_lifespan_months', params.customer_lifespan_months);
+
+    const queryString = query.toString();
+    return apiClient.get(`/reports/dairy-unit-economics${queryString ? `?${queryString}` : ''}`).then((res) => res.data);
+  },
+  getDairyUnitEconomicsByFarm: (params = {}) => {
+    const query = new URLSearchParams();
+    if (params.start_date) query.append('start_date', params.start_date);
+    if (params.end_date) query.append('end_date', params.end_date);
+    if (params.marketing_spend_kes != null && params.marketing_spend_kes !== '') query.append('marketing_spend_kes', params.marketing_spend_kes);
+    if (params.new_customers_acquired != null && params.new_customers_acquired !== '') query.append('new_customers_acquired', params.new_customers_acquired);
+    if (params.customer_lifespan_months != null && params.customer_lifespan_months !== '') query.append('customer_lifespan_months', params.customer_lifespan_months);
+
+    const queryString = query.toString();
+    return apiClient.get(`/reports/dairy-unit-economics/by-farm${queryString ? `?${queryString}` : ''}`).then((res) => res.data);
+  },
+  calculateDairyUnitEconomics: (data) => {
+    return apiClient.post('/reports/dairy-unit-economics/calculator', data).then((res) => res.data);
+  },
+  getAnimalEconomics: (animalId) => {
+    return apiClient.get(`/reports/animal-economics/${animalId}`).then((res) => res.data);
   },
 };

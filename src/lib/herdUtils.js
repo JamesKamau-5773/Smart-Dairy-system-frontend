@@ -58,12 +58,35 @@ export function hasValidTimestamp(timestamp) {
   return !Number.isNaN(parsedDate.getTime());
 }
 
+export function normalizeEarTag(value = '') {
+  return String(value ?? '').trim().toUpperCase();
+}
+
+function getRelatedRecordId(value) {
+  if (value && typeof value === 'object') {
+    return value.id ?? value.cow_id ?? value.animal_id ?? '';
+  }
+
+  return value ?? '';
+}
+
+function getRelatedRecordName(value) {
+  if (value && typeof value === 'object') {
+    return value.name ?? value.sire_name ?? value.bull_name ?? value.code ?? value.bull_code ?? '';
+  }
+
+  return value ?? '';
+}
+
 export function normalizeHerdCow(cow = {}, fallback = {}) {
   const ageMonths = Number(cow.ageMonths ?? cow.age_months ?? fallback.ageMonths ?? 0);
   const status = cow.current_status ?? cow.currentStatus ?? cow.status ?? cow.lactation_status ?? fallback.status ?? 'Cow';
   const displayId = cow.tag_number ?? cow.tagNumber ?? cow.tag ?? cow.ear_tag ?? cow.id ?? cow.cow_id ?? fallback.id ?? '';
   const recordId = cow.id ?? cow.cow_id ?? cow.tag_number ?? cow.tagNumber ?? cow.tag ?? cow.ear_tag ?? fallback.recordId ?? fallback.id ?? '';
   const dateOfBirth = cow.dateOfBirth ?? cow.date_of_birth ?? cow.dob ?? fallback.dateOfBirth ?? '';
+  const damId = getRelatedRecordId(cow.dam_id ?? cow.damId ?? cow.dam ?? fallback.dam_id ?? fallback.damId ?? fallback.dam);
+  const sireName = getRelatedRecordName(cow.sire_name ?? cow.sireName ?? cow.sire ?? fallback.sire_name ?? fallback.sireName ?? fallback.sire);
+  const birthWeightKg = cow.birth_weight_kg ?? cow.birthWeightKg ?? cow.birth_weight ?? fallback.birth_weight_kg ?? fallback.birthWeightKg ?? fallback.birth_weight ?? '';
 
   return {
     id: String(displayId ?? '').trim(),
@@ -73,6 +96,9 @@ export function normalizeHerdCow(cow = {}, fallback = {}) {
     ageMonths,
     status,
     dateOfBirth,
+    sire_name: String(sireName ?? ''),
+    dam_id: damId === '' || damId === null || damId === undefined ? '' : String(damId),
+    birth_weight_kg: birthWeightKg === null || birthWeightKg === undefined ? '' : String(birthWeightKg),
     lastCalved: cow.lastCalved ?? cow.last_calved ?? fallback.lastCalved ?? null,
     milk: cow.milk ?? cow.daily_milk ?? fallback.milk ?? '0.0 L/day',
     createdAt: cow.createdAt ?? cow.created_at ?? fallback.createdAt ?? new Date().toISOString(),

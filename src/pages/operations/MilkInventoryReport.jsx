@@ -9,6 +9,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Button } from '@/components/ui/button';
 import { Calendar } from '@/components/ui/calendar';
 import { cn } from '@/lib/utils';
+import GroupedDateRows from '@/components/ui/GroupedDateRows';
 
 
 export default function MilkInventoryReport() {
@@ -37,20 +38,24 @@ export default function MilkInventoryReport() {
     setVisibleLines(prev => ({ ...prev, [line]: !prev[line] }));
   };
 
-  const chartData = useMemo(() => {
+  const dailyRecords = useMemo(() => {
     const dailyRecords = reportData?.daily_records;
     if (!dailyRecords || !Array.isArray(dailyRecords)) return [];
-    // Sort records chronologically to ensure the chart's x-axis flows correctly from left (oldest) to right (newest).
     return dailyRecords
       .slice()
       .sort((a, b) => new Date(a.date) - new Date(b.date))
       .map(item => ({
-      date: format(new Date(item.date), 'MMM d'),
+      date: String(item.date).slice(0, 10),
       produced: item.total_produced ?? item.produced ?? 0,
       sold: item.total_sold ?? item.sold ?? 0,
       unsold: item.total_unsold ?? item.unsold ?? item.remaining ?? 0,
-    }));
+      }));
   }, [reportData]);
+
+  const chartData = useMemo(() => dailyRecords.map((record) => ({
+    ...record,
+    label: format(new Date(`${record.date}T00:00:00`), 'MMM d'),
+  })), [dailyRecords]);
 
   return (
     <div className="animate-reveal space-y-6 max-w-7xl mx-auto">
@@ -134,7 +139,7 @@ export default function MilkInventoryReport() {
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={chartData} margin={{ top: 5, right: 20, left: -10, bottom: 5 }}>
                 <CartesianGrid strokeDasharray="3 3" strokeOpacity={0.2} />
-                <XAxis dataKey="date" tick={{ fontSize: 12 }} />
+                <XAxis dataKey="label" tick={{ fontSize: 12 }} />
                 <YAxis tick={{ fontSize: 12 }} unit=" L" />
                 <Tooltip
                   contentStyle={{
@@ -181,14 +186,27 @@ export default function MilkInventoryReport() {
               ) : isError ? (
                 <tr><td colSpan="4" className="p-6 text-center text-danger">Error loading report data.</td></tr>
               ) : chartData.length > 0 ? (
-                chartData.map((record) => (
+                <GroupedDateRows
+                  items={dailyRecords}
+                  getDate={(record) => record.date}
+                  colSpan={4}
+                  renderGroupMeta={(items) => {
+                    const totals = items.reduce((sum, item) => ({
+                      produced: sum.produced + Number(item.produced || 0),
+                      sold: sum.sold + Number(item.sold || 0),
+                      unsold: sum.unsold + Number(item.unsold || 0),
+                    }), { produced: 0, sold: 0, unsold: 0 });
+                    return `${totals.produced.toFixed(1)} L produced / ${totals.sold.toFixed(1)} L sold / ${totals.unsold.toFixed(1)} L unsold`;
+                  }}
+                  renderItem={(record) => (
                   <tr key={record.date} className="hover:bg-surface-raised transition-colors">
-                    <td className="p-4 text-sm font-medium text-ink">{record.date}</td>
+                    <td className="p-4 text-sm font-medium text-ink">{format(new Date(`${record.date}T00:00:00`), 'MMM d, yyyy')}</td>
                     <td className="p-4 text-sm font-semibold text-ink text-right tabular-nums">{record.produced.toFixed(1)}</td>
                     <td className="p-4 text-sm font-semibold text-success text-right tabular-nums">{record.sold.toFixed(1)}</td>
                     <td className="p-4 text-sm font-semibold text-danger text-right tabular-nums">{record.unsold.toFixed(1)}</td>
                   </tr>
-                ))
+                  )}
+                />
               ) : (
                 <tr><td colSpan="4" className="p-6 text-center text-ink-muted">No data available for the selected date range.</td></tr>
               )}

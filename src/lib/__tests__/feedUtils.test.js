@@ -3,6 +3,7 @@ import { normalizeNutritionRequestPayload } from '../feedUtils';
 
 const recipe = {
   recipe_name: 'Main Feed Mix',
+  recipe_type: 'main_meal',
   batch_size_kg: 2000,
   target_protein_percent: 10,
   ingredients: [
@@ -38,5 +39,16 @@ describe('normalizeNutritionRequestPayload', () => {
       { ingredient_id: 27, percentage: 0 },
       { ingredient_id: 18, percentage: 0 },
     ]);
+  });
+
+  it('preserves dairy-meal recipe type and feeding group', () => {
+    const payload = normalizeNutritionRequestPayload({
+      ...recipe,
+      recipe_type: 'dairy_meal',
+      feeding_group: 'lactating',
+    }, 'ingredients', { forceZeroPercentages: true });
+
+    expect(payload.recipe_type).toBe('dairy_meal');
+    expect(payload.feeding_group).toBe('lactating');
   });
 });
