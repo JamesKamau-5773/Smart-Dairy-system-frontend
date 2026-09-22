@@ -4,10 +4,10 @@ import { httpClientConfig } from './httpClientConfig';
 import { getPermissionSet, getRoleSet, normalizeRole } from './roles';
 import { API_CONTRACTS, validateResponse } from './apiContracts';
 import { buildCalfMilkFeedPayload, normalizeMilkDisposition } from './milkDisposition';
+import { API_BASE_URL, BACKEND_BASE_URL } from './apiBaseUrl';
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
 import { normalizeNutritionRequestPayload } from './feedUtils';
-const HEALTH_BASE_URL = API_BASE_URL.replace(/\/api\/?$/, '');
+const HEALTH_BASE_URL = BACKEND_BASE_URL;
 
 const authClient = axios.create({
   baseURL: API_BASE_URL,

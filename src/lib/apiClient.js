@@ -3,8 +3,7 @@ import { enqueueRequest, isSerializablePayload } from './offlineMutationStore';
 import { isReplayableMutation } from './offlinePolicy';
 import { tenantRef } from './tenantRef';
 import { httpClientConfig } from './httpClientConfig';
-
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
+import { API_BASE_URL } from './apiBaseUrl';
 
 export function resolveBackendAssetUrl(value) {
   if (!value || typeof value !== 'string') return null;
