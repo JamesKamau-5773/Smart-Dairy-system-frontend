@@ -10,8 +10,8 @@ export default function AnimalSummaryCards({ animal, isLoading }) {
 
   return (
     <div className="grid grid-cols-1 gap-6 mb-8 md:grid-cols-2 lg:grid-cols-4">
-      <div className="card-machined flex flex-col items-center justify-center rounded-2xl border border-ink/5 bg-surface p-6 text-center shadow-sm">
-        <div className="relative mb-4 flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-full border border-brand/10 bg-gradient-to-br from-brand/15 via-accent/10 to-surface text-xl font-black text-brand shadow-sm">
+      <div className="card-machined flex flex-col items-center justify-center rounded-2xl border border-ink/5 bg-surface p-6 text-center ">
+        <div className="relative mb-4 flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-full border border-brand/10 bg-gradient-to-br from-brand/15 via-accent/10 to-surface text-xl font-black text-brand ">
           {isLoading ? (
             <Skeleton className="h-full w-full rounded-full" />
           ) : displayAnimal.photoUrl ? (
@@ -29,7 +29,7 @@ export default function AnimalSummaryCards({ animal, isLoading }) {
         </div>
       </div>
 
-      <div className="card-machined flex flex-col justify-between rounded-2xl border border-ink/5 bg-surface p-6 shadow-sm">
+      <div className="card-machined flex flex-col justify-between rounded-2xl border border-ink/5 bg-surface p-6 ">
         <div>
           <div className="mb-4 text-[10px] font-bold uppercase tracking-widest text-brand">Age & Status</div>
           <div className="mb-4">
@@ -43,7 +43,7 @@ export default function AnimalSummaryCards({ animal, isLoading }) {
         </div>
       </div>
 
-      <div className="card-machined flex flex-col justify-between rounded-2xl border border-ink/5 bg-surface p-6 shadow-sm">
+      <div className="card-machined flex flex-col justify-between rounded-2xl border border-ink/5 bg-surface p-6 ">
         <div>
           <div className="mb-4 text-[10px] font-bold uppercase tracking-widest text-brand">Milk Yield</div>
           <div className="mb-4">
@@ -74,7 +74,7 @@ export default function AnimalSummaryCards({ animal, isLoading }) {
         </div>
       </div>
 
-      <div className="card-machined flex flex-col justify-between rounded-2xl border border-ink/5 bg-surface p-6 shadow-sm">
+      <div className="card-machined flex flex-col justify-between rounded-2xl border border-ink/5 bg-surface p-6 ">
         <div>
           <div className="mb-4 text-[10px] font-bold uppercase tracking-widest text-brand">Breeding Status</div>
           <div className="mb-4">

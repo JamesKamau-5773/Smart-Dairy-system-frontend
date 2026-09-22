@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import toast from 'react-hot-toast';
@@ -14,15 +14,20 @@ import {
   AlertCircle,
   Trash2,
   Pencil,
-  Undo2,
+  ImagePlus,
+  Upload,
+  MoreVertical,
 } from 'lucide-react';
 import { Skeleton } from '../../components/ui';
 import Modal from '../../components/ui/Modal';
 import AlertBanner from '../../components/ui/AlertBanner';
 import Confirmation, { useConfirmation } from '../../components/ui/Confirmation';
+import { Popover, PopoverContent, PopoverTrigger } from '../../components/ui/popover';
 import { validateForm, ValidationRules, getFirstErrorMessage } from '../../lib/validation';
 import { formatDateTime, getRelativeTime, createAuditEntry, logToAuditTrail } from '../../lib/audit';
 import { getApiErrorMessage, herdApi } from '../../lib/backendApi'; 
+import { ANIMAL_PHOTO_ACCEPT, getAnimalPhotoValidationError } from '../../lib/animalPhoto';
+import { formatCowIdentity } from '../../lib/cowIdentity';
 import { useTenant } from '../../hooks/useTenant';
 import {
   formatAge,
@@ -80,7 +85,10 @@ export default function HerdRegistry() {
   const [loadingHerdOptions, setLoadingHerdOptions] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [isEditSaving, setIsEditSaving] = useState(false);
+  const [editPhotoFile, setEditPhotoFile] = useState(null);
+  const [isPhotoSaving, setIsPhotoSaving] = useState(false);
   const searchInputRef = useRef(null);
+  const photoInputRef = useRef(null);
   const confirmation = useConfirmation();
 
   const { data: herdData, isLoading } = useQuery({
@@ -99,7 +107,7 @@ export default function HerdRegistry() {
         setHerdOptions(
           response.map((cow) => ({
             value: cow.id, // Assuming 'id' is the unique identifier for a cow
-            label: `${cow.tag_number || cow.id}${cow.name ? ` (${cow.name})` : ''}`,
+            label: formatCowIdentity(cow),
           }))
         );
       } catch (err) {
@@ -240,7 +248,7 @@ export default function HerdRegistry() {
         })
       );
 
-      notifySuccess(`Successfully added ${savedCow.id} — ${savedCow.name}`);
+      notifySuccess(`Successfully added ${formatCowIdentity({ name: savedCow.name, earTag: savedCow.id })}`);
       handleCloseModal();
     } catch (error) {
       console.error('Error adding cow:', error);
@@ -319,6 +327,7 @@ export default function HerdRegistry() {
         birth_weight_kg: canonicalCow.birth_weight_kg,
       });
       setEditFormErrors({});
+      setEditPhotoFile(null);
       setShowError(false);
       setIsEditOpen(true);
     } catch (error) {
@@ -331,7 +340,87 @@ export default function HerdRegistry() {
     setIsEditOpen(false);
     setEditingCow(null);
     setEditCow({ tagNumber: '', name: '', breed: '', dateOfBirth: '' });
+    setEditPhotoFile(null);
+    if (photoInputRef.current) photoInputRef.current.value = '';
     setEditFormErrors({});
+  };
+
+  const handlePhotoSelection = (event) => {
+    const photoFile = event.target.files?.[0] ?? null;
+    const validationError = getAnimalPhotoValidationError(photoFile);
+
+    if (validationError) {
+      setEditPhotoFile(null);
+      event.target.value = '';
+      notifyError(validationError);
+      return;
+    }
+
+    setEditPhotoFile(photoFile);
+  };
+
+  const handleUploadPhoto = async () => {
+    const validationError = getAnimalPhotoValidationError(editPhotoFile);
+    if (validationError) {
+      notifyError(validationError);
+      return;
+    }
+
+    const routeId = getCowRouteId(editingCow);
+    if (!routeId) {
+      notifyError('Failed to resolve animal record for photo upload.');
+      return;
+    }
+
+    try {
+      setIsPhotoSaving(true);
+      const savedCow = normalizeHerdCow(await herdApi.uploadPhoto(routeId, editPhotoFile), editingCow);
+      setEditingCow(savedCow);
+      setEditPhotoFile(null);
+      if (photoInputRef.current) photoInputRef.current.value = '';
+      await refreshHerdViews(routeId);
+      notifySuccess(`Updated photo for ${savedCow.name}`);
+    } catch (error) {
+      console.error('Error uploading animal photo:', error);
+      notifyError(getApiErrorMessage(error, 'Failed to upload animal photo. Please try again.'));
+    } finally {
+      setIsPhotoSaving(false);
+    }
+  };
+
+  const handleDeletePhoto = async () => {
+    const routeId = getCowRouteId(editingCow);
+    if (!routeId) {
+      notifyError('Failed to resolve animal record for photo removal.');
+      return;
+    }
+
+    const confirmed = await confirmation.confirm({
+      title: 'Remove Animal Photo?',
+      message: `Remove the current photo for ${editingCow.name}?`,
+      type: 'danger',
+      confirmText: 'Remove Photo',
+      cancelText: 'Keep Photo',
+    });
+    if (!confirmed) return;
+
+    try {
+      setIsPhotoSaving(true);
+      confirmation.setLoading(true);
+      const savedCow = normalizeHerdCow(await herdApi.deletePhoto(routeId), editingCow);
+      setEditingCow(savedCow);
+      setEditPhotoFile(null);
+      if (photoInputRef.current) photoInputRef.current.value = '';
+      await refreshHerdViews(routeId);
+      notifySuccess(`Removed photo for ${savedCow.name}`);
+    } catch (error) {
+      console.error('Error removing animal photo:', error);
+      notifyError(getApiErrorMessage(error, 'Failed to remove animal photo. Please try again.'));
+    } finally {
+      setIsPhotoSaving(false);
+      confirmation.setLoading(false);
+      confirmation.close();
+    }
   };
 
   const handleEditCow = async (event) => {
@@ -384,7 +473,7 @@ export default function HerdRegistry() {
         })
       );
 
-      notifySuccess(`Updated ${normalizedUpdatedCow.id} - ${normalizedUpdatedCow.name}`);
+      notifySuccess(`Updated ${formatCowIdentity({ name: normalizedUpdatedCow.name, earTag: normalizedUpdatedCow.id })}`);
       handleCloseEditModal();
     } catch (error) {
       console.error('Error editing cow:', error);
@@ -514,7 +603,7 @@ export default function HerdRegistry() {
         </div>
 
         {/* Controls */}
-        <div className="mb-6 rounded-2xl border border-ink/10 bg-surface/90 p-4 shadow-sm">
+        <div className="mb-6 rounded-2xl border border-ink/10 bg-surface/90 p-4 ">
           <div className="flex flex-col gap-3 border-b border-ink/10 pb-4 lg:flex-row lg:items-center lg:justify-between">
             <div className="flex items-center gap-2 text-ink-strong font-bold text-sm">
               <Filter size={18} className="text-ink-strong" />
@@ -529,7 +618,7 @@ export default function HerdRegistry() {
                 type="button"
                 onClick={() => setControlsOpen((current) => !current)}
                 aria-expanded={controlsOpen}
-                className="inline-flex items-center gap-1.5 rounded-lg border border-ink/10 bg-surface px-3 py-1.5 text-xs font-semibold text-ink shadow-sm transition-all hover:border-brand/20 hover:bg-brand/5 hover:text-brand"
+                className="inline-flex items-center gap-1.5 rounded-lg border border-ink/10 bg-surface px-3 py-1.5 text-xs font-semibold text-ink  transition-all hover:border-brand/20 hover:bg-brand/5 hover:text-brand"
               >
                 {controlsOpen ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
                 {controlsOpen ? 'Hide filters' : 'Show filters'}
@@ -747,24 +836,15 @@ export default function HerdRegistry() {
                           >
                             View
                           </Link>
-                          <button
-                            type="button"
-                            onClick={() => handleOpenEdit(cow)}
-                            className="btn-secondary gap-1 px-2 py-2 text-[11px]"
-                            aria-label={`Edit ${cow.name}`}
-                            title={`Edit ${cow.name}`}
-                          >
-                            <Pencil size={14} />
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => handleDeleteCow(routeId, cow.name, cow.id)}
-                            className="btn-danger gap-1 px-2 py-2 text-[11px]"
-                            aria-label={`Delete ${cow.name}`}
-                            title={`Delete ${cow.name} from herd`}
-                          >
-                            <Trash2 size={14} />
-                          </button>
+                          <Popover>
+                            <PopoverTrigger asChild>
+                              <button type="button" className="inline-flex h-8 w-8 items-center justify-center rounded-button border border-slate-300 text-slate-600 hover:border-brand-400 hover:text-brand-700" aria-label={`Actions for ${cow.name}`}><MoreVertical size={16} /></button>
+                            </PopoverTrigger>
+                            <PopoverContent align="end" className="w-40 p-1.5">
+                              <button type="button" onClick={() => handleOpenEdit(cow)} className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm text-ink-900 hover:bg-brand-50"><Pencil size={14} /> Edit</button>
+                              <button type="button" onClick={() => handleDeleteCow(routeId, cow.name, cow.id)} className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm text-danger hover:bg-danger/10"><Trash2 size={14} /> Delete</button>
+                            </PopoverContent>
+                          </Popover>
                         </div>
                       </td>
                     </tr>
@@ -970,6 +1050,61 @@ export default function HerdRegistry() {
         subtitle="Update cow details in your herd registry"
       >
         <form className="space-y-4" onSubmit={handleEditCow}>
+          <div className="rounded-lg border border-ink/10 bg-surface-raised p-4">
+            <div className="flex items-center gap-4">
+              <div className="flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-ink/10 bg-surface text-brand">
+                {editingCow?.photoUrl ? (
+                  <img
+                    src={editingCow.photoUrl}
+                    alt={`${editingCow.name} profile`}
+                    className="h-full w-full object-cover"
+                  />
+                ) : (
+                  <ImagePlus size={28} aria-hidden="true" />
+                )}
+              </div>
+              <div className="min-w-0 flex-1">
+                <label className="mb-1 block text-xs font-bold uppercase text-ink-muted" htmlFor="edit-animal-photo">
+                  Animal Photo
+                </label>
+                <input
+                  ref={photoInputRef}
+                  id="edit-animal-photo"
+                  type="file"
+                  accept={ANIMAL_PHOTO_ACCEPT}
+                  onChange={handlePhotoSelection}
+                  disabled={isPhotoSaving}
+                  className="block w-full text-xs text-ink-muted file:mr-3 file:rounded-md file:border-0 file:bg-brand/10 file:px-3 file:py-2 file:font-bold file:text-brand hover:file:bg-brand/15"
+                />
+                <p className="mt-1 truncate text-xs text-ink-muted">
+                  {editPhotoFile ? editPhotoFile.name : 'JPG, PNG, or WebP. Maximum 3 MB.'}
+                </p>
+              </div>
+            </div>
+            <div className="mt-3 flex flex-wrap justify-end gap-2 border-t border-ink/10 pt-3">
+              {editingCow?.photoUrl && (
+                <button
+                  type="button"
+                  onClick={handleDeletePhoto}
+                  disabled={isPhotoSaving}
+                  className="btn-secondary inline-flex items-center gap-2 text-danger disabled:opacity-50"
+                >
+                  <Trash2 size={15} aria-hidden="true" /> Remove
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={handleUploadPhoto}
+                disabled={!editPhotoFile || isPhotoSaving}
+                className="btn-command inline-flex items-center gap-2 disabled:opacity-50"
+                aria-busy={isPhotoSaving}
+              >
+                <Upload size={15} aria-hidden="true" />
+                {isPhotoSaving ? 'Uploading...' : editingCow?.photoUrl ? 'Replace Photo' : 'Upload Photo'}
+              </button>
+            </div>
+          </div>
+
           <div>
             <label className="block text-xs font-bold uppercase text-ink-muted mb-1">
               Ear Tag Number *
@@ -1122,14 +1257,14 @@ export default function HerdRegistry() {
             <button
               type="button"
               onClick={handleCloseEditModal}
-              disabled={isEditSaving}
+              disabled={isEditSaving || isPhotoSaving}
               className="btn-secondary"
             >
               Cancel
             </button>
             <button
               type="submit"
-              disabled={isEditSaving}
+              disabled={isEditSaving || isPhotoSaving}
               className="btn-command disabled:opacity-50"
               aria-busy={isEditSaving}
             >

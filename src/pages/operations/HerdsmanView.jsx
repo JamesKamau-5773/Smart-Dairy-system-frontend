@@ -166,31 +166,31 @@ export default function HerdsmanView() {
       </div>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-        <div className="rounded-2xl border border-ink/10 bg-surface/90 p-4 shadow-[0_10px_30px_rgba(15,23,42,0.06)]">
+        <div className="rounded-2xl border border-ink/10 bg-surface/90 p-4 ">
           <div className="flex items-start justify-between gap-3">
             <div>
               <p className="text-[10px] font-bold uppercase tracking-widest text-ink-muted">Active alerts</p>
               <p className="mt-2 text-3xl font-black text-ink">{priorityAlerts.length}</p>
             </div>
-            <div className="rounded-2xl border border-white/60 bg-white/70 p-3 text-danger shadow-sm"><AlertTriangle size={18} /></div>
+            <div className="rounded-2xl border border-slate-200 bg-white/90 p-3 text-danger"><AlertTriangle size={18} /></div>
           </div>
         </div>
-        <div className="rounded-2xl border border-ink/10 bg-surface/90 p-4 shadow-[0_10px_30px_rgba(15,23,42,0.06)]">
+        <div className="rounded-2xl border border-ink/10 bg-surface/90 p-4 ">
           <div className="flex items-start justify-between gap-3">
             <div>
               <p className="text-[10px] font-bold uppercase tracking-widest text-ink-muted">Feed tasks</p>
               <p className="mt-2 text-3xl font-black text-ink">{feedInstructions.length}</p>
             </div>
-            <div className="rounded-2xl border border-white/60 bg-white/70 p-3 text-brand shadow-sm"><Wheat size={18} /></div>
+            <div className="rounded-2xl border border-slate-200 bg-white/90 p-3 text-brand-400"><Wheat size={18} /></div>
           </div>
         </div>
-        <div className="rounded-2xl border border-ink/10 bg-surface/90 p-4 shadow-[0_10px_30px_rgba(15,23,42,0.06)]">
+        <div className="rounded-2xl border border-ink/10 bg-surface/90 p-4 ">
           <div className="flex items-start justify-between gap-3">
             <div>
               <p className="text-[10px] font-bold uppercase tracking-widest text-ink-muted">Undo queue</p>
               <p className="mt-2 text-3xl font-black text-ink">{pendingDismissals.length}</p>
             </div>
-            <div className="rounded-2xl border border-white/60 bg-white/70 p-3 text-success shadow-sm"><CheckCircle2 size={18} /></div>
+            <div className="rounded-2xl border border-slate-200 bg-white/90 p-3 text-brand-400"><CheckCircle2 size={18} /></div>
           </div>
         </div>
       </div>
@@ -255,7 +255,7 @@ export default function HerdsmanView() {
                 const context = getContextForFeed(feed);
                 const conv = convertKgToLocal(context, feed.numeric_quantity);
                 return (
-                  <div key={feed.cow} className="rounded-xl border border-ink/5 bg-surface-warm p-5 shadow-sm hover:shadow-md transition-shadow">
+                  <div key={feed.cow} className="rounded-xl border border-ink/5 bg-surface-warm p-5  hover: transition-shadow">
                     <div className="flex justify-between items-start mb-4 gap-3">
                       <Link to={`/operations/animal/${feed.cow}`} className="font-bold text-brand hover:underline text-base">
                         {feed.cow}
@@ -298,7 +298,7 @@ export default function HerdsmanView() {
 
           <div className="space-y-5">
             {priorityAlerts.map((alert) => (
-              <div key={alert.id} className="card-machined p-5 bg-surface flex flex-col lg:flex-row lg:items-center justify-between gap-5 border-l-4 border-l-brand hover:bg-surface-raised transition-colors shadow-sm">
+              <div key={alert.id} className="card-machined p-5 bg-surface flex flex-col lg:flex-row lg:items-center justify-between gap-5 border-l-4 border-l-brand hover:bg-surface-raised transition-colors ">
                 <div className="flex items-start gap-4 flex-1">
                   <div className={`p-3 rounded-lg flex-shrink-0 ${
                     alert.type === 'heat' ? 'bg-accent/20 text-accent-dark' :
@@ -343,12 +343,12 @@ export default function HerdsmanView() {
                 }}
                 onAutoDismiss={() => handleFinalizeDismissal(p.id, p.alert)}
                 autoDismiss={6000}
-                className="shadow-2xl"
+                className=""
               />
             ))}
           </div>
 
-          <div className="mt-10 p-6 bg-brand/8 border border-brand/25 rounded-xl flex flex-col gap-4 shadow-sm">
+          <div className="mt-10 p-6 bg-brand/8 border border-brand/25 rounded-xl flex flex-col gap-4 ">
             <div>
               <h4 className="font-bold text-brand text-base">Ready to Milk?</h4>
               <p className="text-sm text-ink-muted mt-1.5">Check the alerts above, then enter the milk amounts.</p>

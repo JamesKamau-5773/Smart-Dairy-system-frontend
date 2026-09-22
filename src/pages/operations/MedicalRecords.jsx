@@ -25,6 +25,7 @@ import Modal from '../../components/ui/Modal';
 import { createAuditEntry, getRelativeTime, logToAuditTrail } from '../../lib/audit';
 import { formatValidationErrors, getFirstErrorMessage, validateForm } from '../../lib/validation';
 import { herdApi, medicalApi } from '../../lib/backendApi';
+import { formatCowIdentity, resolveCowIdentityFromHerd } from '../../lib/cowIdentity';
 import { normalizeHerdCow } from '../../lib/herdUtils';
 import { useTenant } from '../../hooks/useTenant';
 import GroupedDateRows from '../../components/ui/GroupedDateRows';
@@ -90,22 +91,13 @@ export default function VetRecords() {
   const resolveCowLabel = (record) => {
     const rawCow = String(record?.cow ?? record?.cowTag ?? record?.cow_tag ?? record?.animalId ?? record?.animal_id ?? '').trim();
     if (!rawCow) return '';
+    const identity = resolveCowIdentityFromHerd({
+      cowId: rawCow,
+      cowTag: record?.cowTag ?? record?.cow_tag,
+      cowName: record?.cowName ?? record?.cow_name,
+    }, Array.isArray(herdData) ? herdData : []);
 
-    if (!Array.isArray(herdData) || herdData.length === 0) {
-      return rawCow;
-    }
-
-    const normalizedRawCow = rawCow.toLowerCase();
-    const matchedCow = herdData.find((cow) => {
-      const candidates = [cow?.name, cow?.cow_name, cow?.id, cow?.tagNumber, cow?.tag_number, cow?.tag]
-        .filter(Boolean)
-        .map((value) => String(value).trim().toLowerCase());
-
-      return candidates.includes(normalizedRawCow);
-    });
-
-    const matchedName = String(matchedCow?.name ?? matchedCow?.cow_name ?? '').trim();
-    return matchedName || rawCow;
+    return formatCowIdentity(identity, rawCow);
   };
 
   const createRecordMutation = useMutation({
@@ -361,7 +353,7 @@ export default function VetRecords() {
         </div>
       )}
 
-      <div className="rounded-[28px] border border-ink/10 bg-[linear-gradient(135deg,rgba(223,249,255,0.95),rgba(255,255,255,0.98))] p-5 sm:p-6 shadow-[0_20px_60px_rgba(15,23,42,0.08)]">
+      <div className="rounded-[28px] border border-ink/10 bg-[linear-gradient(135deg,rgba(223,249,255,0.95),rgba(255,255,255,0.98))] p-5 sm:p-6 ">
         <div className="flex flex-col gap-4 border-b border-ink/10 pb-5 lg:flex-row lg:items-end lg:justify-between">
           <div className="space-y-2">
             <div className="inline-flex items-center gap-2 rounded-full bg-brand/10 px-3 py-1 text-[11px] font-bold uppercase tracking-widest text-brand">
@@ -390,46 +382,46 @@ export default function VetRecords() {
         </div>
 
         <div className="mt-5 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-          <div className="rounded-2xl border border-ink/10 bg-surface/90 p-4 shadow-[0_10px_30px_rgba(15,23,42,0.06)]">
+          <div className="rounded-2xl border border-ink/10 bg-surface/90 p-4 ">
             <div className="flex items-start justify-between gap-3">
               <div>
                 <p className="text-[10px] font-bold uppercase tracking-widest text-ink-muted">Open cases</p>
                 <p className="mt-2 text-3xl font-black text-ink">{stats.open}</p>
               </div>
-              <div className="rounded-2xl border border-white/60 bg-white/70 p-3 text-brand shadow-sm"><Clock3 size={18} /></div>
+              <div className="rounded-2xl border border-slate-200 bg-white/90 p-3 text-brand-400"><Clock3 size={18} /></div>
             </div>
           </div>
-          <div className="rounded-2xl border border-ink/10 bg-surface/90 p-4 shadow-[0_10px_30px_rgba(15,23,42,0.06)]">
+          <div className="rounded-2xl border border-ink/10 bg-surface/90 p-4 ">
             <div className="flex items-start justify-between gap-3">
               <div>
                 <p className="text-[10px] font-bold uppercase tracking-widest text-ink-muted">Critical cases</p>
                 <p className="mt-2 text-3xl font-black text-ink">{stats.critical}</p>
               </div>
-              <div className="rounded-2xl border border-white/60 bg-white/70 p-3 text-danger shadow-sm"><ShieldAlert size={18} /></div>
+              <div className="rounded-2xl border border-slate-200 bg-white/90 p-3 text-danger"><ShieldAlert size={18} /></div>
             </div>
           </div>
-          <div className="rounded-2xl border border-ink/10 bg-surface/90 p-4 shadow-[0_10px_30px_rgba(15,23,42,0.06)]">
+          <div className="rounded-2xl border border-ink/10 bg-surface/90 p-4 ">
             <div className="flex items-start justify-between gap-3">
               <div>
                 <p className="text-[10px] font-bold uppercase tracking-widest text-ink-muted">Follow-ups due</p>
                 <p className="mt-2 text-3xl font-black text-ink">{stats.dueToday}</p>
               </div>
-              <div className="rounded-2xl border border-white/60 bg-white/70 p-3 text-brand shadow-sm"><CalendarDays size={18} /></div>
+              <div className="rounded-2xl border border-slate-200 bg-white/90 p-3 text-brand-400"><CalendarDays size={18} /></div>
             </div>
           </div>
-          <div className="rounded-2xl border border-ink/10 bg-surface/90 p-4 shadow-[0_10px_30px_rgba(15,23,42,0.06)]">
+          <div className="rounded-2xl border border-ink/10 bg-surface/90 p-4 ">
             <div className="flex items-start justify-between gap-3">
               <div>
                 <p className="text-[10px] font-bold uppercase tracking-widest text-ink-muted">Resolved</p>
                 <p className="mt-2 text-3xl font-black text-ink">{stats.resolved}</p>
               </div>
-              <div className="rounded-2xl border border-white/60 bg-white/70 p-3 text-success shadow-sm"><CheckCircle2 size={18} /></div>
+              <div className="rounded-2xl border border-slate-200 bg-white/90 p-3 text-brand-400"><CheckCircle2 size={18} /></div>
             </div>
           </div>
         </div>
       </div>
 
-      <div className="rounded-[28px] border border-ink/10 bg-surface/90 p-4 sm:p-5 shadow-[0_14px_40px_rgba(15,23,42,0.06)]">
+      <div className="rounded-[28px] border border-ink/10 bg-surface/90 p-4 sm:p-5 ">
         <div className="flex flex-col gap-3 border-b border-ink/10 pb-4 sm:flex-row sm:items-center sm:justify-between">
           <div className="space-y-1">
             <div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest text-ink-muted">
@@ -446,7 +438,7 @@ export default function VetRecords() {
               type="button"
               onClick={() => setFiltersOpen((current) => !current)}
               aria-expanded={filtersOpen}
-                className="inline-flex items-center gap-1.5 rounded-lg border border-ink/10 bg-surface px-3 py-1.5 text-xs font-semibold text-ink shadow-sm transition-all hover:border-brand/20 hover:bg-brand/5 hover:text-brand"
+                className="inline-flex items-center gap-1.5 rounded-lg border border-ink/10 bg-surface px-3 py-1.5 text-xs font-semibold text-ink  transition-all hover:border-brand/20 hover:bg-brand/5 hover:text-brand"
             >
               {filtersOpen ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
               {filtersOpen ? 'Hide filters' : 'Show filters'}
@@ -503,7 +495,7 @@ export default function VetRecords() {
       </div>
 
       {showForm && (
-        <div className="card-machined border-brand/20 bg-surface/90 p-6 shadow-[0_16px_50px_rgba(15,23,42,0.08)]">
+        <div className="card-machined border-brand/20 bg-surface/90 p-6 ">
           <div className="mb-6 flex items-center gap-3">
             <div className="rounded-2xl bg-brand/10 p-3 text-brand"><Stethoscope size={18} /></div>
             <div>
@@ -521,10 +513,10 @@ export default function VetRecords() {
 
           <form className="grid grid-cols-1 gap-6 md:grid-cols-2" onSubmit={handleSaveRecord}>
             <div className="space-y-2">
-              <label className="text-[10px] font-bold uppercase tracking-wider text-ink-strong">Cow Tag or Name *</label>
+              <label className="text-[10px] font-bold uppercase tracking-wider text-ink-strong">Cow name or ear tag *</label>
               <input
                 className={`input-machined w-full ${formErrors.cowTag ? 'border-rose-300 bg-rose-50' : ''}`}
-                placeholder="e.g. C-101 or Bella"
+                placeholder="e.g. Malaika or KE-0046"
                 value={form.cowTag}
                 onChange={(event) => handleFieldChange('cowTag', event.target.value)}
                 list="tenant-cow-options"
@@ -533,14 +525,9 @@ export default function VetRecords() {
               />
               <datalist id="tenant-cow-options">
                 {tenantCows.map((cow, index) => (
-                  <React.Fragment key={`${cow.tag || 'no-tag'}-${cow.name || 'no-name'}-${index}`}>
-                    {cow.tag && (
-                      <option value={cow.tag}>{cow.name ? `${cow.name} (name)` : 'Cow tag'}</option>
-                    )}
-                    {cow.name && (
-                      <option value={cow.name}>{cow.tag ? `${cow.tag} (tag)` : 'Cow name'}</option>
-                    )}
-                  </React.Fragment>
+                  <option key={`${cow.tag || 'no-tag'}-${cow.name || 'no-name'}-${index}`} value={cow.tag || cow.name}>
+                    {formatCowIdentity({ name: cow.name, earTag: cow.tag })}
+                  </option>
                 ))}
               </datalist>
               <p className="text-[11px] text-ink-muted">Start typing and select a registered tenant cow from the dropdown.</p>
@@ -675,7 +662,7 @@ export default function VetRecords() {
         </div>
       )}
 
-      <div className="card-machined bg-surface/90 overflow-hidden shadow-[0_14px_40px_rgba(15,23,42,0.06)]">
+      <div className="card-machined bg-surface/90 overflow-hidden ">
         <div className="border-b border-ink/10 px-4 py-3 sm:px-6">
           <div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest text-ink-muted">
             <Eye size={12} /> Clinical registry

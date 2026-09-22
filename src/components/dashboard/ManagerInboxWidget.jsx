@@ -50,7 +50,7 @@ export default function ManagerInboxWidget() {
         {activeAlerts.map((alert) => (
           <div 
             key={alert.id} 
-            className="bg-surface rounded-2xl border border-ink/10 shadow-sm flex items-start gap-4 p-5 relative overflow-hidden"
+            className="bg-surface rounded-2xl border border-ink/10  flex items-start gap-4 p-5 relative overflow-hidden"
           >
             {/* Left Vertical Brand Bar */}
             <div className="absolute left-0 top-0 bottom-0 w-1.5 bg-brand rounded-l-2xl"></div>
@@ -76,7 +76,7 @@ export default function ManagerInboxWidget() {
               <div className="mt-4">
                 <Link 
                   to={alert.actionLink}
-                  className="inline-flex items-center gap-1.5 px-4 py-2 bg-brand text-surface text-xs font-bold rounded-lg hover:bg-brand/90 transition-colors shadow-sm"
+                  className="inline-flex items-center gap-1.5 px-4 py-2 bg-brand text-surface text-xs font-bold rounded-lg hover:bg-brand/90 transition-colors "
                 >
                   <Settings size={14} /> {alert.actionText}
                 </Link>

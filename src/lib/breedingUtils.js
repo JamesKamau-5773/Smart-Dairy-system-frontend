@@ -1,3 +1,9 @@
+import {
+  formatCowIdentity,
+  normalizeCowIdentity,
+  resolveCowIdentityFromHerd,
+} from './cowIdentity';
+
 /**
  * Takes a raw form data object for a breeding log entry and transforms it
  * into a clean, consistent payload suitable for the backend API.
@@ -31,6 +37,7 @@ export function normalizeBreedingLogPayload(formData) {
     is_repeat_service: Boolean(formData.is_repeat_service ?? formData.isRepeatService ?? false),
     provided_by: providedBy,
     semen_id: formData.sire_id || formData.sireId || formData.semen_id || formData.sireCode || null,
+    sire_pta_scores: formData.sire_pta_scores ?? formData.sirePTAScores ?? null,
     notes: formData.notes || formData.note || '',
     heat_observation_id: formData.heat_observation_id ?? formData.heatObservationId ?? null,
   };
@@ -130,14 +137,29 @@ export function normalizeBreedingLog(log = {}) {
 }
 
 export function normalizeHerdOption(cow = {}) {
-  const id = String(cow.tag_number ?? cow.tagNumber ?? cow.tag ?? cow.cow_id ?? cow.ear_tag ?? cow.id ?? '').trim();
-  const name = String(cow.name ?? cow.cow_name ?? cow.animal_name ?? '').trim();
-  const display = name ? `${id} (${name})` : id;
+  const { recordId, earTag: tagNumber, name } = normalizeCowIdentity(cow);
+  const id = tagNumber || recordId;
+  const display = formatCowIdentity({ name, earTag: tagNumber }, name || id);
 
   return {
     id,
+    recordId,
+    tagNumber,
     name,
     display,
+  };
+}
+
+export function enrichBreedingLogCowIdentity(log = {}, herdOptions = []) {
+  const identity = resolveCowIdentityFromHerd(
+    { cowId: log.cowId, cowName: log.cowName, cowTag: log.cowTag },
+    herdOptions,
+  );
+
+  return {
+    ...log,
+    cowName: identity.name,
+    cowTag: identity.earTag,
   };
 }
 
@@ -186,16 +208,22 @@ export function resolveCowId(rawValue = '', herdOptions = []) {
 
 export function resolveCowIdentity(rawValue = '', herdOptions = []) {
   const input = String(rawValue).trim();
-  if (!input) return { id: '', name: '' };
+  if (!input) return { id: '', name: '', earTag: '' };
 
   const exact = herdOptions.find((option) => (
     option.id.toLowerCase() === input.toLowerCase()
+    || option.recordId.toLowerCase() === input.toLowerCase()
+    || option.tagNumber.toLowerCase() === input.toLowerCase()
     || option.name.toLowerCase() === input.toLowerCase()
     || option.display.toLowerCase() === input.toLowerCase()
   ));
 
   if (exact) {
-    return { id: exact.id, name: exact.name || '' };
+    return {
+      id: exact.recordId || exact.id,
+      name: exact.name || '',
+      earTag: exact.tagNumber || exact.id,
+    };
   }
 
   const parsedFromDisplay = input.match(/^([^()]+)\s*\(([^)]+)\)$/);
@@ -203,8 +231,9 @@ export function resolveCowIdentity(rawValue = '', herdOptions = []) {
     return {
       id: parsedFromDisplay[1].trim(),
       name: parsedFromDisplay[2].trim(),
+      earTag: parsedFromDisplay[1].trim(),
     };
   }
 
-  return { id: resolveCowId(input, herdOptions), name: '' };
+  return { id: resolveCowId(input, herdOptions), name: '', earTag: '' };
 }

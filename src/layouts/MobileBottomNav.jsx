@@ -15,7 +15,7 @@ export default function MobileBottomNav() {
 
   return (
     <nav
-      className="md:hidden fixed inset-x-0 bottom-0 z-30 border-t border-ink/10 bg-surface/95 backdrop-blur-md shadow-[0_-10px_30px_rgba(15,23,42,0.08)]"
+      className="fixed inset-x-0 bottom-0 z-30 border-t border-slate-200 bg-white/90 backdrop-blur md:hidden"
       aria-label="Mobile navigation"
     >
       <div className="grid grid-cols-2 gap-2 px-3 py-2">
@@ -24,8 +24,8 @@ export default function MobileBottomNav() {
           className={({ isActive }) =>
             `min-h-[56px] rounded-xl border px-3 py-2 flex items-center justify-center gap-2 text-xs font-semibold transition-colors ${
               isActive
-                ? 'bg-brand text-surface border-brand/20 shadow-[0_10px_20px_rgba(2,132,199,0.18)]'
-                : 'bg-surface text-ink border-ink/10'
+                ? 'border-brand-400 bg-ink-900 text-white'
+                : 'border-slate-200 bg-white/90 text-slate-600'
             }`
           }
         >
@@ -39,8 +39,8 @@ export default function MobileBottomNav() {
             className={({ isActive }) =>
               `min-h-[56px] rounded-xl border px-3 py-2 flex items-center justify-center gap-2 text-xs font-semibold transition-colors ${
                 isActive
-                  ? 'bg-brand text-surface border-brand/20 shadow-[0_10px_20px_rgba(2,132,199,0.18)]'
-                  : 'bg-surface text-ink border-ink/10'
+                  ? 'border-brand-400 bg-ink-900 text-white'
+                  : 'border-slate-200 bg-white/90 text-slate-600'
               }`
             }
           >
@@ -48,7 +48,7 @@ export default function MobileBottomNav() {
             <span>{taskLabel}</span>
           </NavLink>
         ) : (
-          <div className="min-h-[56px] rounded-xl border border-ink/10 bg-surface px-3 py-2 flex items-center justify-center gap-2 text-xs font-semibold text-ink/40">
+          <div className="flex min-h-[56px] items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white/90 px-3 py-2 text-xs font-semibold text-slate-600">
             <Activity size={18} />
             <span>{taskLabel}</span>
           </div>

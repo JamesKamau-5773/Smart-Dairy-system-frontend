@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
-import { NavLink, useLocation, useNavigate } from 'react-router-dom';
+import { NavLink, useLocation } from 'react-router-dom';
 import {
-  LayoutDashboard, Beaker, Pill, Package, Wallet, LogOut, Menu, X,
+  LayoutDashboard, Beaker, Pill, Package, Wallet, Menu, X,
   Users, Dna, Landmark, ShieldCheck, BookHeart, BookOpen, Activity,
-  Wheat, ChevronRight, ChevronDown, FileWarning, ClipboardList, TrendingUp
+  Wheat, ChevronRight, ChevronDown, FileWarning, ClipboardList, TrendingUp, Droplets
 } from 'lucide-react';
 import LABELS from '../lib/labels';
 import { useAuth } from '../contexts/AuthContext';
@@ -11,9 +11,8 @@ import FarmSwitcher from './FarmSwitcher';
 import { canAccessCommandCenter, canViewAdminControls, isCooperativeAdmin, isSuperAdmin, hasRole } from '../lib/roles';
 
 export default function Sidebar() {
-  const { currentUser, logout } = useAuth();
+  const { currentUser } = useAuth();
   const location = useLocation();
-  const navigate = useNavigate();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [collapsedGroups, setCollapsedGroups] = useState({});
 
@@ -26,20 +25,17 @@ export default function Sidebar() {
     'Human Resources': true,
   });
 
-  const handleLogout = async () => {
-    await logout();
-    navigate('/login');
-  };
-
   const showAdminControls = canViewAdminControls(currentUser);
   const canViewBreeding = true;
   const canViewBuyers = showAdminControls;
-  const canViewHR = showAdminControls;
+  const canViewStaffRegistry = showAdminControls || hasRole(currentUser, ['FARMER']);
+  const canViewPayroll = showAdminControls;
   const canViewHerdsmanView = true;
   const canViewFeedNutrition = showAdminControls || Boolean(currentUser);
   const herdsmanViewLabel = 'Farm Task View';
   const isPlatformAdmin = isSuperAdmin(currentUser);
   const isCoopAdmin = isCooperativeAdmin(currentUser);
+  const canManageMemberAccess = isCoopAdmin || hasRole(currentUser, ['FARM_ADMIN']);
   const showCommandCenter = canAccessCommandCenter(currentUser);
   const canViewCustomers = showAdminControls || hasRole(currentUser, ['FARMER']);
   const canViewMilkReport = hasRole(currentUser, ['ADMIN', 'FARM_MANAGER', 'FARMER']);
@@ -54,7 +50,7 @@ export default function Sidebar() {
     {
       title: 'Cooperative Admin',
       items: [
-        { label: 'Member Onboarding', to: '/cooperative-admin/members', icon: Users, visible: isCoopAdmin },
+        { label: 'Member Onboarding', to: '/cooperative-admin/members', icon: Users, visible: canManageMemberAccess },
       ],
     },
     {
@@ -67,6 +63,7 @@ export default function Sidebar() {
       title: LABELS.OPERATIONS,
       items: [
         { label: LABELS.PRODUCTION_LOG, to: '/operations/yield', icon: Beaker, visible: true },
+        { label: 'Milk Usage', to: '/operations/milk-usage', icon: Droplets, visible: true },
         { label: LABELS.DAILY_ROUTINE, to: '/operations/routine', icon: Activity, visible: true },
         { label: herdsmanViewLabel, to: '/tasks', icon: Activity, visible: canViewHerdsmanView },
       ],
@@ -102,8 +99,8 @@ export default function Sidebar() {
     {
       title: 'Reports',
       items: [
-        { label: 'Customer Economics (CAC & LTV)', to: '/finance/reports/dairy-unit-economics', icon: TrendingUp, visible: showAdminControls },
-        { label: 'Animal Economics', to: '/finance/reports/animal-economics', icon: TrendingUp, visible: showAdminControls },
+        { label: 'Customer Value & Profit', to: '/finance/reports/dairy-unit-economics', icon: TrendingUp, visible: showAdminControls },
+        { label: 'Cow Profitability', to: '/finance/reports/animal-economics', icon: TrendingUp, visible: showAdminControls },
         { label: 'Milk Inventory Report', to: '/operations/reports/milk-inventory', icon: ClipboardList, visible: canViewMilkReport },
       ],
     },
@@ -116,8 +113,8 @@ export default function Sidebar() {
     {
       title: 'Human Resources',
       items: [
-        { label: 'Staff Registry', to: '/hr/staff', icon: Users, visible: canViewHR },
-        { label: 'Payroll', to: '/hr/payroll', icon: Landmark, visible: canViewHR },
+        { label: 'Staff Registry', to: '/hr/staff', icon: Users, visible: canViewStaffRegistry },
+        { label: 'Payroll', to: '/hr/payroll', icon: Landmark, visible: canViewPayroll },
       ],
     },
   ];
@@ -162,7 +159,7 @@ export default function Sidebar() {
       {/* Mobile Hamburger Button */}
       <button
         onClick={handleMobileToggle}
-        className="md:hidden fixed top-4 left-4 z-30 p-2 min-h-[44px] min-w-[44px] bg-brand text-surface rounded-lg shadow-lg"
+        className="md:hidden fixed top-4 left-4 z-30 p-2 min-h-[44px] min-w-[44px] bg-brand text-surface rounded-lg "
         aria-label="Toggle navigation menu"
       >
         {mobileOpen ? <X size={20} /> : <Menu size={20} />}
@@ -232,11 +229,11 @@ export default function Sidebar() {
                     onClick={() => setMobileOpen(false)}
                     className={({ isActive }) => `flex items-center px-4 py-3 min-h-[44px] font-sans font-semibold text-sm transition-colors duration-100 border-l-2 rounded-md relative ${
                       isActive
-                        ? 'bg-gray-50 text-gray-900 border-slate-900 pl-4'
-                        : `border-transparent text-gray-700 hover:border-gray-200 hover:bg-gray-50 ${itemIsActive ? 'bg-gray-50 text-gray-900' : ''}`
+                        ? 'border-brand-400 bg-ink-900 pl-4 text-white'
+                        : `border-transparent text-slate-600 hover:border-brand-400/50 hover:bg-brand-50 hover:text-ink-900 ${itemIsActive ? 'border-brand-400 bg-ink-900 text-white' : ''}`
                     }`}
                   >
-                    <Icon size={18} className="mr-3 shrink-0 text-slate-500" /> {item.label}
+                    <Icon size={18} className={`mr-3 shrink-0 ${itemIsActive ? 'text-brand-400' : 'text-slate-600'}`} /> {item.label}
                   </NavLink>
                 );
               })}
@@ -245,18 +242,6 @@ export default function Sidebar() {
         ))}
       </nav>
 
-      {/* Bottom Operator Info */}
-      <div className="p-4 border-t border-gray-200 bg-gray-50">
-        <p className="text-gray-700 font-sans text-xs font-medium mb-3 truncate">
-          Operator: {currentUser?.name || 'Unknown'}
-        </p>
-        <button
-          onClick={handleLogout}
-          className="btn-command w-full min-h-[44px] bg-red-600 text-white hover:bg-red-700 flex items-center justify-center text-xs py-2 rounded-md font-semibold"
-        >
-          <LogOut size={14} className="mr-2 shrink-0" /> Sign out
-        </button>
-      </div>
     </aside>
     </React.Fragment>
   );

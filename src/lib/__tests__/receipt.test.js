@@ -19,7 +19,7 @@ describe('receipt utilities', () => {
     const text = formatReceiptText(receipt);
     expect(text).toContain('RCPT-2026-000101');
     expect(text).toContain('Payment reference: REF-123');
-    expect(text).toContain('KSh 1,250.50');
+    expect(text).toContain('KES 1,250.50');
   });
 
   it('formats readable receipt text for sharing', () => {
@@ -40,6 +40,6 @@ describe('receipt utilities', () => {
     expect(text).toContain('RCPT-2026-000202');
     expect(text).toContain('Jivu Farm');
     expect(text).toContain('County show');
-    expect(text).toContain('KSh 500.00');
+    expect(text).toContain('KES 500.00');
   });
 });

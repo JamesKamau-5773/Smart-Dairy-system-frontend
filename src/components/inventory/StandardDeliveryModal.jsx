@@ -57,7 +57,7 @@ export default function StandardDeliveryModal({ isOpen, onClose, item, onRestock
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-sm p-4">
-      <div className="bg-white rounded-2xl shadow-xl w-full max-w-2xl overflow-hidden animate-reveal">
+      <div className="bg-white rounded-2xl  w-full max-w-2xl overflow-hidden animate-reveal">
         
         {/* HEADER */}
         <div className="flex justify-between items-center p-6 border-b border-slate-100">
@@ -144,13 +144,13 @@ export default function StandardDeliveryModal({ isOpen, onClose, item, onRestock
               <button 
                 type="button"
                 onClick={decreaseAmount}
-                className="w-12 h-12 flex items-center justify-center rounded-full border border-slate-200 bg-white text-slate-400 hover:text-slate-600 hover:border-slate-300 transition-all shadow-sm"
+                className="w-12 h-12 flex items-center justify-center rounded-full border border-slate-200 bg-white text-slate-400 hover:text-slate-600 hover:border-slate-300 transition-all "
               >
                 <Minus size={20} />
               </button>
               
               <div className="flex items-baseline gap-2 min-w-[100px] justify-center">
-                <span className="text-6xl font-black text-slate-800 tabular-nums tracking-tighter">
+                <span className="text-3xl font-black text-slate-800 tabular-nums tracking-tighter">
                   {amount}
                 </span>
                 <span className="text-xl font-bold text-slate-400">{selectedStock.unit ?? selectedItem?.unit ?? 'units'}</span>
@@ -159,7 +159,7 @@ export default function StandardDeliveryModal({ isOpen, onClose, item, onRestock
               <button 
                 type="button"
                 onClick={() => increaseAmount(1)}
-                className="w-12 h-12 flex items-center justify-center rounded-full border border-slate-200 bg-white text-slate-400 hover:text-slate-600 hover:border-slate-300 transition-all shadow-sm"
+                className="w-12 h-12 flex items-center justify-center rounded-full border border-slate-200 bg-white text-slate-400 hover:text-slate-600 hover:border-slate-300 transition-all "
               >
                 <Plus size={20} />
               </button>
@@ -169,14 +169,14 @@ export default function StandardDeliveryModal({ isOpen, onClose, item, onRestock
               <button 
                 type="button"
                 onClick={() => increaseAmount(50)}
-                className="px-5 py-2.5 bg-white border border-slate-200 rounded-lg text-xs font-black text-slate-600 hover:bg-slate-50 transition-all shadow-sm"
+                className="px-5 py-2.5 bg-white border border-slate-200 rounded-lg text-xs font-black text-slate-600 hover:bg-slate-50 transition-all "
               >
                 + 50kg Bag
               </button>
               <button 
                 type="button"
                 onClick={() => increaseAmount(70)}
-                className="px-5 py-2.5 bg-white border border-slate-200 rounded-lg text-xs font-black text-slate-600 hover:bg-slate-50 transition-all shadow-sm"
+                className="px-5 py-2.5 bg-white border border-slate-200 rounded-lg text-xs font-black text-slate-600 hover:bg-slate-50 transition-all "
               >
                 + 70kg Bag
               </button>
@@ -198,7 +198,7 @@ export default function StandardDeliveryModal({ isOpen, onClose, item, onRestock
             type="button"
             onClick={handleConfirm}
             disabled={amount === 0 || !selectedItem}
-            className="flex items-center gap-2 px-6 py-3 rounded-xl font-black text-xs uppercase transition-all shadow-sm bg-brand text-white hover:bg-brand-dark disabled:bg-slate-200 disabled:text-slate-400 disabled:cursor-not-allowed"
+            className="flex items-center gap-2 px-6 py-3 rounded-xl font-black text-xs uppercase transition-all  bg-brand text-white hover:bg-brand-dark disabled:bg-slate-200 disabled:text-slate-400 disabled:cursor-not-allowed"
           >
             <CheckCircle2 size={16} />
             Confirm Delivery

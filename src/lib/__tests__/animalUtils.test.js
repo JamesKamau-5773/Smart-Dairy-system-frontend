@@ -39,13 +39,19 @@ describe('normalizeAnimal', () => {
       },
     });
 
-    expect(animal.dam).toBe('001 (Princess)');
+    expect(animal.dam).toBe('Princess · 001');
   });
 
   it('preserves the backend-owned birth weight', () => {
     const animal = normalizeAnimal({ birth_weight_kg: 32.5 });
 
     expect(animal.birthWeightKg).toBe(32.5);
+  });
+
+  it('resolves a backend-hosted photo URL', () => {
+    const animal = normalizeAnimal({ photo_url: '/uploads/animal_photos/tenant_1/cow.webp' });
+
+    expect(animal.photoUrl).toBe('http://localhost:5000/uploads/animal_photos/tenant_1/cow.webp');
   });
 
 });

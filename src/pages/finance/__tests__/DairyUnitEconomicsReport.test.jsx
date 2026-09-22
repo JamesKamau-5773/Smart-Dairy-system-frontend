@@ -29,7 +29,7 @@ describe('DairyUnitEconomicsReport', () => {
     vi.clearAllMocks();
   });
 
-  it('renders tenant overview with CAC, LTV and ratio', async () => {
+  it('renders a plain-language tenant overview with contextual help', async () => {
     reportsApi.getDairyUnitEconomics.mockResolvedValueOnce({
       inputs: {
         new_customers_acquired: 3,
@@ -69,12 +69,15 @@ describe('DairyUnitEconomicsReport', () => {
     renderWithClient(createElement(DairyUnitEconomicsReport));
 
     await waitFor(() => {
-      expect(screen.getByText(/Customer Economics/i)).toBeTruthy();
+      expect(screen.getByText('Customer Value & Profit')).toBeTruthy();
+      expect(screen.getByText(/You gained/).textContent).toContain('You gained 3 new customers this period!');
       expect(screen.getByText(/KES 1,200/i)).toBeTruthy();
-      expect(screen.getByText('Realized LTV')).toBeTruthy();
+      expect(screen.getByText('Total Profit per Customer')).toBeTruthy();
+      expect(screen.getByRole('button', { name: 'About Cost to Get a Customer' })).toBeTruthy();
+      expect(screen.getByRole('button', { name: 'About Total Profit per Customer' })).toBeTruthy();
+      expect(screen.getByRole('button', { name: 'About Profit vs. Cost Ratio' })).toBeTruthy();
       expect(screen.getByText(/KES 2,400/i)).toBeTruthy();
       expect(screen.getByText('11')).toBeTruthy();
-      expect(screen.getByText('3')).toBeTruthy();
       expect(screen.getAllByText(/KES 13,200/i)).toHaveLength(2);
       expect(screen.getByText(/KES 24,780/i)).toBeTruthy();
       expect(screen.getAllByText('N/A').length).toBeGreaterThan(0);

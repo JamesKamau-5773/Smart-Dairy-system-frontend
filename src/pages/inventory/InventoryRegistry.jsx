@@ -1,11 +1,12 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Search, Plus, Filter, Edit2, Package, Trash2, ChevronDown } from 'lucide-react';
+import { Search, Plus, Filter, Edit2, Package, Trash2, ChevronDown, MoreVertical } from 'lucide-react';
 import AlertBanner from '../../components/ui/AlertBanner';
 import Confirmation, { useConfirmation } from '../../components/ui/Confirmation';
 import RegisterResourceModal from '../../components/inventory/RegisterResourceModal';
 import StandardDeliveryModal from '../../components/inventory/StandardDeliveryModal';
 import EditResourceModal from '../../components/inventory/EditResourceModal';
+import { Popover, PopoverContent, PopoverTrigger } from '../../components/ui/popover';
 import { getApiErrorMessage, inventoryApi } from '../../lib/backendApi';
 import { useTenant } from '../../hooks/useTenant';
 
@@ -239,7 +240,7 @@ export default function InventoryRegistry() {
         </div>
         <button
           onClick={() => setIsRegisterModalOpen(true)}
-          className="flex items-center gap-2 rounded-button bg-brand-800 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-brand-900"
+          className="flex items-center gap-2 rounded-button bg-brand-800 px-5 py-2.5 text-sm font-semibold text-white  transition-colors hover:bg-brand-900"
         >
           <Plus size={16} /> Add to Feedstore
         </button>
@@ -272,7 +273,7 @@ export default function InventoryRegistry() {
       </div>
 
       {/* STOCK TABLE */}
-      <div className="bg-white border border-slate-100 rounded-xl shadow-sm overflow-x-auto">
+      <div className="bg-white border border-slate-100 rounded-xl  overflow-x-auto">
         {filteredInventoryData.length === 0 ? (
           <div className="p-8 text-center text-sm text-slate-500">
             No inventory items are available yet.
@@ -312,27 +313,19 @@ export default function InventoryRegistry() {
                     );
                   })()}
                 </td>
-                <td className="px-6 py-4 text-right space-x-1 flex justify-end items-center">
-                  <button
-                    onClick={() => handleRestock(item)}
-                    className="px-3 py-1 bg-slate-100 text-slate-600 rounded text-[10px] font-black uppercase hover:bg-slate-200 transition-colors mr-2"
-                  >
-                    Restock
-                  </button>
-                  <button
-                    onClick={() => handleEdit(item)}
-                    className="p-2 text-slate-400 hover:text-ink transition-colors"
-                    title="Edit Item"
-                  >
-                    <Edit2 size={14} />
-                  </button>
-                  <button
-                    onClick={() => handleDelete(item)}
-                    className="p-2 text-slate-400 hover:text-red-500 transition-colors"
-                    title="Delete Item"
-                  >
-                    <Trash2 size={14} />
-                  </button>
+                <td className="px-6 py-4 text-right">
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <button type="button" className="inline-flex h-8 w-8 items-center justify-center rounded-button border border-slate-300 text-slate-600 hover:border-brand-400 hover:text-brand-700" aria-label={`Actions for ${item.name}`}>
+                        <MoreVertical size={16} />
+                      </button>
+                    </PopoverTrigger>
+                    <PopoverContent align="end" className="w-44 p-1.5">
+                      <button type="button" onClick={() => handleRestock(item)} className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm text-ink-900 hover:bg-brand-50"><Plus size={14} /> Restock</button>
+                      <button type="button" onClick={() => handleEdit(item)} className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm text-ink-900 hover:bg-brand-50"><Edit2 size={14} /> Edit</button>
+                      <button type="button" onClick={() => handleDelete(item)} className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm text-danger hover:bg-danger/10"><Trash2 size={14} /> Delete</button>
+                    </PopoverContent>
+                  </Popover>
                 </td>
               </tr>
             ))}

@@ -642,12 +642,12 @@ export default function FeedFormulation() {
       )}
 
       {/* Strategic Toggle Tabs */}
-      <div className="flex p-1.5 bg-surface-raised border border-ink/5 rounded-lg max-w-md shadow-sm">
+      <div className="flex p-1.5 bg-surface-raised border border-ink/5 rounded-lg max-w-md ">
         <button
           onClick={() => setActiveTab('dairy_meal')}
           className={`flex-1 flex items-center justify-center gap-2 py-2.5 text-sm font-bold rounded-md transition-all ${
             activeTab === 'dairy_meal'
-              ? 'bg-white text-brand shadow-sm border border-ink/5'
+              ? 'bg-white text-brand  border border-ink/5'
               : 'text-ink-muted hover:text-ink-strong'
           }`}
         >
@@ -657,7 +657,7 @@ export default function FeedFormulation() {
           onClick={() => setActiveTab('main_meal')}
           className={`flex-1 flex items-center justify-center gap-2 py-2.5 text-sm font-bold rounded-md transition-all ${
             activeTab === 'main_meal'
-              ? 'bg-white text-brand shadow-sm border border-ink/5'
+              ? 'bg-white text-brand  border border-ink/5'
               : 'text-ink-muted hover:text-ink-strong'
           }`}
         >
@@ -702,7 +702,7 @@ export default function FeedFormulation() {
 
         {/* Right Column: Strategic Actions & Context */}
         <div className="space-y-6">
-          <div className="bg-surface p-6 border border-ink/5 rounded-card shadow-sm">
+          <div className="bg-surface p-6 border border-ink/5 rounded-card ">
             <h4 className="text-sm font-black text-ink-strong mb-2">Save This Feed Mix</h4>
             <p className="text-xs text-ink-muted mb-6">
               Save these feed shares so this becomes your current farm mix.
@@ -775,7 +775,7 @@ export default function FeedFormulation() {
               <button
                 onClick={() => saveRecipe.mutate()}
                 disabled={saveRecipe.isPending || !hasValidIngredients}
-                className="w-full bg-brand hover:bg-brand-dark text-white px-4 py-3 rounded-button font-bold text-sm transition-colors shadow-sm flex items-center justify-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed"
+                className="w-full bg-brand hover:bg-brand-dark text-white px-4 py-3 rounded-button font-bold text-sm transition-colors  flex items-center justify-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed"
               >
                 <Save size={18} />
                 {saveRecipe.isPending ? 'Saving...' : 'Save As Current Feed Mix'}
@@ -793,7 +793,7 @@ export default function FeedFormulation() {
               <button
                 onClick={() => setIsBatchModalOpen(true)}
                 disabled={saveRecipe.isPending}
-                className="w-full mt-3 bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-3 rounded-button font-bold text-sm transition-colors shadow-sm flex items-center justify-center gap-2 disabled:opacity-70"
+                className="w-full mt-3 bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-3 rounded-button font-bold text-sm transition-colors  flex items-center justify-center gap-2 disabled:opacity-70"
               >
                 Create Batch From This Mix
               </button>

@@ -1,4 +1,3 @@
-import React from 'react';
 import { X } from 'lucide-react';
 
 export default function Modal({ isOpen, onClose, title, children }) {
@@ -13,7 +12,7 @@ export default function Modal({ isOpen, onClose, title, children }) {
       />
       
       {/* 3D Machined Modal Body with Glass Entrance */}
-      <div className="card-machined w-full max-w-2xl bg-surface animate-glass-in relative z-10 !shadow-[0_20px_50px_rgba(2,132,199,0.22)] max-h-[90vh] overflow-y-auto">
+      <div className="card-machined relative z-10 max-h-[90vh] w-full max-w-2xl overflow-y-auto border-slate-200 bg-white/90 backdrop-blur animate-glass-in">
         <header className="flex justify-between items-center gap-4 border-b border-ink/10 p-4 sm:p-6 bg-surface-raised sticky top-0">
           <h3 className="font-sans font-black text-lg sm:text-xl normal-case tracking-tight text-brand flex-1 min-w-0">
             {title}

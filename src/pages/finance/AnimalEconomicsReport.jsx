@@ -1,47 +1,231 @@
-import { useState } from 'react';
+import React from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Activity, CircleDollarSign, Milk, Sprout, Wallet } from 'lucide-react';
+import { Activity, AlertTriangle, CircleDollarSign, Milk, RefreshCw, Sprout, Wallet } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import { herdApi, reportsApi } from '../../lib/backendApi';
+import MetricLabel from '../../components/finance/MetricLabel';
 import Money from '../../components/ui/Money';
 import { useTenant } from '../../hooks/useTenant';
+import { formatCowIdentity } from '../../lib/cowIdentity';
+import { cn } from '../../lib/utils';
 
-const Metric = ({ label, value, icon: Icon }) => (
-  <div className="card-machined p-5">
-    <div className="flex items-center gap-3 text-brand"><Icon size={18} /><span className="text-xs font-bold uppercase tracking-wider">{label}</span></div>
-    <div className="mt-3 text-2xl font-black text-ink">{value}</div>
+function getValueTone(value, { cost = false } = {}) {
+  const amount = Number(value ?? 0);
+  if (amount === 0) return 'text-amber-800';
+  if (cost) return 'text-slate-900';
+  return amount > 0 ? 'text-emerald-700' : 'text-red-700';
+}
+
+function toReadableLabel(value) {
+  return value ? String(value).replaceAll('_', ' ') : 'Not recorded';
+}
+
+const Metric = ({ label, explanation, amount, icon: Icon, cost = false }) => (
+  <div className="card-machined flex flex-col justify-between border border-slate-300 bg-white p-5 ">
+    <div className="mb-2 flex items-start justify-between gap-3 text-slate-700">
+      <span className="text-xs font-bold uppercase tracking-wider">
+        <MetricLabel explanation={explanation}>{label}</MetricLabel>
+      </span>
+      <Icon size={16} className="shrink-0 text-slate-900" />
+    </div>
+    <div className={cn('text-2xl font-black font-mono tabular-nums', getValueTone(amount, { cost }))}>
+      <Money amount={amount} className="!font-mono" />
+    </div>
   </div>
 );
 
+function AnimalSummary({ animal, netContribution }) {
+  if (!animal) {
+    return (
+      <section aria-label="Animal summary" className="border-l-4 border-cyan-400 bg-slate-900 px-4 py-4 text-white sm:px-5">
+        <p className="text-xs font-bold uppercase text-cyan-300">Animal summary</p>
+        <p className="mt-1 text-base font-bold sm:text-lg">Choose an animal to see its costs and profit.</p>
+      </section>
+    );
+  }
+
+  const amount = Number(netContribution ?? 0);
+  const animalName = formatCowIdentity(animal);
+  const summary = amount > 0
+    ? <>{animalName} has produced <Money amount={amount} className="!font-mono" /> in profit after recorded costs.</>
+    : amount < 0
+      ? <>{animalName} is <Money amount={Math.abs(amount)} className="!font-mono" /> below recorded costs.</>
+      : <>{animalName} has not yet produced profit above recorded costs.</>;
+
+  return (
+    <section
+      aria-label="Animal summary"
+      className={cn(
+        'flex flex-col gap-3 border-l-4 bg-slate-900 px-4 py-4 text-white sm:flex-row sm:items-center sm:justify-between sm:px-5',
+        amount > 0 ? 'border-emerald-500' : amount < 0 ? 'border-red-500' : 'border-amber-400'
+      )}
+    >
+      <div>
+        <p className="text-xs font-bold uppercase text-cyan-300">Animal summary</p>
+        <p className="mt-1 text-base font-bold sm:text-lg">{summary}</p>
+      </div>
+      <p className="text-sm font-medium text-slate-200">Review the breakdown below to see where costs and income came from.</p>
+    </section>
+  );
+}
+
 export default function AnimalEconomicsReport() {
   const { tenantId, farmId } = useTenant();
-  const [animalId, setAnimalId] = useState('');
+  const [animalId, setAnimalId] = React.useState('');
   const { data: animals = [] } = useQuery({ queryKey: ['herd', tenantId, farmId], queryFn: () => herdApi.list(), enabled: !!tenantId && !!farmId });
   const report = useQuery({ queryKey: ['animal-economics', tenantId, farmId, animalId], queryFn: () => reportsApi.getAnimalEconomics(animalId), enabled: !!tenantId && !!farmId && !!animalId });
   const data = report.data;
+  const isMissingData = data?.data_quality?.attribution_quality?.toUpperCase() === 'INCOMPLETE'
+    || data?.data_quality?.first_calving_recorded === false
+    || (data && !data.animal?.first_calving_date);
 
-  return <div className="animate-reveal space-y-6 max-w-7xl mx-auto">
-    <div className="border-b border-ink/10 pb-6">
-      <div className="flex items-center gap-2 text-brand text-xs font-bold uppercase tracking-wider"><Activity size={15} /> Animal Economics</div>
-      <h1 className="font-sans font-black text-3xl text-ink mt-2">Heifer Rearing Cost & Lifetime Contribution</h1>
-      <p className="text-sm text-ink-muted mt-2">Direct animal costs are exact. Milk revenue is allocated from each day&apos;s saleable herd output.</p>
-    </div>
-    <label className="form-control max-w-md"><span className="label-text">Select animal</span><select value={animalId} onChange={(event) => setAnimalId(event.target.value)} className="input-machined"><option value="">Choose an animal</option>{animals.map((animal) => <option key={animal.id} value={animal.id}>{animal.tag_number || animal.tag || animal.id}{animal.name ? ` - ${animal.name}` : ''}</option>)}</select></label>
-    {report.isLoading && <p className="text-sm text-ink-muted">Calculating lifecycle economics...</p>}
-    {report.isError && <p className="text-sm text-danger">Unable to load animal economics.</p>}
-    {data && <>
-      <div className="flex flex-wrap gap-x-6 gap-y-2 text-sm text-ink-muted"><span><strong className="text-ink">{data.animal.tag_number}</strong>{data.animal.name ? ` - ${data.animal.name}` : ''}</span><span>First calving: {data.animal.first_calving_date || 'Not recorded'}</span><span className="font-bold text-ink">Attribution: {data.data_quality.attribution_quality}</span></div>
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4"><Metric label="Heifer Rearing Cost" value={<Money amount={data.rearing_cost.amount_kes} />} icon={Sprout} /><Metric label="Lifetime Milk Contribution" value={<Money amount={data.lifetime_milk_contribution.amount_kes} />} icon={Milk} /><Metric label="Lifetime Net Contribution" value={<Money amount={data.lifetime_net_contribution_kes} />} icon={CircleDollarSign} /></div>
-      <div className="card-machined p-5 grid grid-cols-1 sm:grid-cols-4 gap-4 text-sm"><div><p className="text-ink-muted">Saleable milk</p><p className="font-bold text-lg">{data.lifetime_milk_contribution.saleable_milk_liters} L</p></div><div><p className="text-ink-muted">Allocated milk revenue</p><p className="font-bold text-lg"><Money amount={data.lifetime_milk_contribution.allocated_milk_revenue_kes} /></p></div><div><p className="text-ink-muted">Post-calving costs</p><p className="font-bold text-lg"><Money amount={data.lifetime_milk_contribution.post_calving_cost_kes} /></p></div><div><p className="text-ink-muted">Unpriced saleable milk</p><p className="font-bold text-lg">{data.data_quality.unpriced_saleable_liters} L</p></div></div>
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <section className="card-machined p-5">
-          <h2 className="flex items-center gap-2 text-sm font-bold text-ink"><Wallet size={16} /> Attributable costs by type</h2>
-          {Object.keys(data.costs_by_type_kes || {}).length === 0 ? <p className="mt-4 text-sm text-ink-muted">No direct animal costs have been recorded.</p> : <dl className="mt-4 space-y-2 text-sm">{Object.entries(data.costs_by_type_kes).map(([type, amount]) => <div key={type} className="flex items-center justify-between border-b border-ink/10 pb-2"><dt className="text-ink-muted">{type.replaceAll('_', ' ')}</dt><dd className="font-bold text-ink"><Money amount={amount} /></dd></div>)}</dl>}
-        </section>
-        <section className="card-machined p-5">
-          <h2 className="text-sm font-bold text-ink">Data quality</h2>
-          <dl className="mt-4 space-y-2 text-sm"><div><dt className="text-ink-muted">Cost attribution</dt><dd className="font-bold text-ink">{data.data_quality.cost_attribution.replaceAll('_', ' ')}</dd></div><div><dt className="text-ink-muted">Milk revenue attribution</dt><dd className="font-bold text-ink">{data.data_quality.milk_revenue_attribution.replaceAll('_', ' ')}</dd></div><div><dt className="text-ink-muted">First calving record</dt><dd className="font-bold text-ink">{data.data_quality.first_calving_recorded ? 'Recorded' : 'Not recorded'}</dd></div></dl>
-        </section>
+  return (
+    <div className="animate-reveal mx-auto max-w-7xl space-y-6">
+      <div className="border-b border-slate-300 pb-6">
+        <div className="inline-flex items-center gap-2 rounded-full border border-slate-900 bg-slate-900 px-3 py-1 text-[10px] font-bold uppercase tracking-widest text-white">
+          <Activity size={12} /> Cow Profitability
+        </div>
+        <h1 className="mt-3 font-sans text-3xl font-black tracking-tight text-slate-900">Cost to Raise vs. Total Earnings</h1>
+        <p className="mt-2 max-w-2xl text-sm font-medium text-slate-700">
+          See what each animal has cost to raise and how much income it has generated from milk.
+        </p>
       </div>
-    </>}
-  </div>;
+
+      <div className="card-machined border border-slate-300 bg-white p-5 ">
+        <label className="block max-w-md">
+          <span className="mb-1 block text-[10px] font-bold uppercase text-slate-700">Select animal</span>
+          <select value={animalId} onChange={(event) => setAnimalId(event.target.value)} className="input-machined w-full">
+            <option value="">Choose an animal</option>
+            {animals.map((animal) => <option key={animal.id} value={animal.id}>{formatCowIdentity(animal)}</option>)}
+          </select>
+        </label>
+      </div>
+
+      {!animalId && <AnimalSummary />}
+
+      {report.isLoading && (
+        <div className="card-machined animate-pulse border border-slate-300 bg-white p-8 text-center text-sm font-medium text-slate-700">Calculating cow profitability...</div>
+      )}
+      {report.isError && (
+        <div className="card-machined border-2 border-red-900 bg-red-700 p-6 text-white">
+          <p className="font-bold">Unable to load cow profitability.</p>
+          <button onClick={() => report.refetch()} className="mt-2 flex items-center gap-1 text-xs font-semibold text-white underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2">
+            <RefreshCw size={12} /> Try again
+          </button>
+        </div>
+      )}
+
+      {data && (
+        <>
+          <AnimalSummary animal={data.animal} netContribution={data.lifetime_net_contribution_kes} />
+
+          <div className="flex flex-col gap-2 border-y border-slate-300 py-3 text-sm text-slate-700 sm:flex-row sm:flex-wrap sm:gap-x-6">
+            <strong className="text-slate-900">{formatCowIdentity(data.animal)}</strong>
+            <span>First calving: <span className="font-medium text-slate-900">{data.animal.first_calving_date || 'Not recorded'}</span></span>
+            <span>Record Status: <span className={cn('font-bold', isMissingData ? 'text-red-700' : 'text-emerald-700')}>{isMissingData ? 'Missing Data' : 'Complete'}</span></span>
+          </div>
+
+          {isMissingData && (
+            <Link
+              to={`/operations/animal/${encodeURIComponent(animalId)}?action=calving`}
+              className="flex items-start gap-3 border-2 border-red-700 bg-white p-4 text-sm font-bold text-red-700  transition-colors hover:bg-red-700 hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-700"
+            >
+              <AlertTriangle size={20} className="mt-0.5 shrink-0" />
+              <span>Missing first calving date. Click here to add it to calculate exact costs.</span>
+            </Link>
+          )}
+
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+            <Metric
+              label="Cost to Raise (Before Calving)"
+              explanation="All recorded feed, health, breeding, and other direct costs before the animal's first calving."
+              amount={data.rearing_cost.amount_kes}
+              icon={Sprout}
+              cost
+            />
+            <Metric
+              label="Total Milk Income"
+              explanation="Milk income credited to this animal minus its recorded costs after first calving."
+              amount={data.lifetime_milk_contribution.amount_kes}
+              icon={Milk}
+            />
+            <Metric
+              label="Total Profit (Income minus Costs)"
+              explanation="The animal's milk profit after subtracting all recorded raising costs."
+              amount={data.lifetime_net_contribution_kes}
+              icon={CircleDollarSign}
+            />
+          </div>
+
+          <div className="card-machined grid grid-cols-1 gap-5 border border-slate-300 bg-white p-5 text-sm  sm:grid-cols-2 lg:grid-cols-4">
+            <div>
+              <p className="text-slate-700">Total Milk Sold</p>
+              <p className="mt-1 font-mono text-lg font-bold tabular-nums tracking-tight text-slate-900">{data.lifetime_milk_contribution.saleable_milk_liters} L</p>
+            </div>
+            <div>
+              <p className="text-slate-700">Estimated Milk Revenue</p>
+              <p className={cn('mt-1 text-lg font-bold', getValueTone(data.lifetime_milk_contribution.allocated_milk_revenue_kes))}>
+                <Money amount={data.lifetime_milk_contribution.allocated_milk_revenue_kes} className="!font-mono" />
+              </p>
+            </div>
+            <div>
+              <p className="text-slate-700">Care &amp; Feed Costs (After Calving)</p>
+              <p className={cn('mt-1 text-lg font-bold', getValueTone(data.lifetime_milk_contribution.post_calving_cost_kes, { cost: true }))}>
+                <Money amount={data.lifetime_milk_contribution.post_calving_cost_kes} className="!font-mono" />
+              </p>
+            </div>
+            <div>
+              <p className="text-slate-700">Milk Sold (Awaiting Price)</p>
+              <p className={cn(
+                'mt-1 font-mono text-lg font-bold tabular-nums tracking-tight',
+                Number(data.data_quality.unpriced_saleable_liters ?? 0) > 0 ? 'text-red-700' : 'text-emerald-700'
+              )}>
+                {data.data_quality.unpriced_saleable_liters} L
+              </p>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+            <section className="card-machined space-y-4 border border-slate-300 bg-white p-6 ">
+              <h2 className="flex items-center gap-2 border-b border-slate-300 pb-3 text-lg font-bold text-slate-900">
+                <Wallet size={18} className="text-slate-900" /> Expense Breakdown
+              </h2>
+              {Object.keys(data.costs_by_type_kes || {}).length === 0 ? (
+                <p className="text-sm font-bold text-red-700">No direct animal costs have been recorded.</p>
+              ) : (
+                <dl className="divide-y divide-slate-300 text-sm">
+                  {Object.entries(data.costs_by_type_kes).map(([type, amount]) => (
+                    <div key={type} className="flex items-center justify-between gap-4 py-2.5">
+                      <dt className="capitalize text-slate-700">{type.replaceAll('_', ' ')}</dt>
+                      <dd className="font-bold text-slate-900"><Money amount={amount} className="!font-mono" /></dd>
+                    </div>
+                  ))}
+                </dl>
+              )}
+            </section>
+
+            <section className="card-machined space-y-4 border border-slate-300 bg-white p-6 ">
+              <h2 className="border-b border-slate-300 pb-3 text-lg font-bold text-slate-900">Record Completeness</h2>
+              <dl className="divide-y divide-slate-300 text-sm">
+                <div className="py-2.5">
+                  <dt className="text-slate-700">How costs were matched</dt>
+                  <dd className="mt-1 font-bold capitalize text-slate-900">{toReadableLabel(data.data_quality.cost_attribution)}</dd>
+                </div>
+                <div className="py-2.5">
+                  <dt className="text-slate-700">How milk income was matched</dt>
+                  <dd className="mt-1 font-bold capitalize text-slate-900">{toReadableLabel(data.data_quality.milk_revenue_attribution)}</dd>
+                </div>
+                <div className="py-2.5">
+                  <dt className="text-slate-700">First calving date</dt>
+                  <dd className={cn('mt-1 font-bold', data.data_quality.first_calving_recorded ? 'text-emerald-700' : 'text-red-700')}>
+                    {data.data_quality.first_calving_recorded ? 'Recorded' : 'Not recorded'}
+                  </dd>
+                </div>
+              </dl>
+            </section>
+          </div>
+        </>
+      )}
+    </div>
+  );
 }

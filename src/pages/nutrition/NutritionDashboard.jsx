@@ -133,7 +133,7 @@ export default function NutritionDashboard() {
   return (
     <div className="animate-reveal space-y-8 max-w-7xl mx-auto">
       {/* ── HEADER ── */}
-      <div className="flex flex-col gap-4 border-b border-ink/10 pb-6 sm:flex-row sm:items-end sm:justify-between">
+      <div className="flex flex-col gap-4 border-b border-slate-300 pb-6 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <div className="inline-flex items-center gap-2 rounded-full bg-brand/10 px-3 py-1 text-[10px] font-bold uppercase tracking-widest text-brand">
             <Wheat size={12} /> Feed Planner
@@ -147,7 +147,7 @@ export default function NutritionDashboard() {
         <button
           type="button"
           onClick={handleCreateBatch}
-          className="btn-command flex items-center gap-2 bg-brand text-surface shadow-md hover:bg-brand-dark transition-colors px-4 py-2.5 rounded-button font-bold text-sm"
+          className="btn-command gap-2 px-4 py-2.5 text-sm"
         >
           <PackagePlus size={18} /> Create New Feed Batch
         </button>

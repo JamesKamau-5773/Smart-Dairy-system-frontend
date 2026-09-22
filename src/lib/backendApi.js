@@ -1,8 +1,9 @@
 import axios from 'axios';
-import apiClient from './apiClient';
+import apiClient, { resolveBackendAssetUrl } from './apiClient';
 import { httpClientConfig } from './httpClientConfig';
 import { getPermissionSet, getRoleSet, normalizeRole } from './roles';
 import { API_CONTRACTS, validateResponse } from './apiContracts';
+import { buildCalfMilkFeedPayload, normalizeMilkDisposition } from './milkDisposition';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
 import { normalizeNutritionRequestPayload } from './feedUtils';
@@ -167,6 +168,7 @@ export function normalizeSessionUser(payload) {
     farm_id: session.farm_id ?? session.farmId ?? null,
     farm_name: session.farm_name ?? session.farmName ?? null,
     available_farms: session.available_farms ?? session.availableFarms ?? [],
+    requires_password_reset: Boolean(session.requires_password_reset ?? session.requiresPasswordReset),
   };
 }
 
@@ -205,6 +207,9 @@ export function normalizeStaffRecord(record = {}) {
     id: record.id ?? record.staffId ?? record.employee_id ?? record.employeeId ?? null,
     name: record.name ?? '',
     role: record.role ?? '',
+    phoneNumber: record.phoneNumber ?? record.phone_number ?? '',
+    userId: record.userId ?? record.user_id ?? null,
+    accountStatus: String(record.accountStatus ?? record.account_status ?? 'NONE').trim().replace(/\s+/g, '_').toUpperCase(),
     status: record.status ?? 'ACTIVE',
     baseSalary: Number(record.baseSalary ?? record.base_salary ?? record.salary ?? 0),
     loanBalance: Number(record.loanBalance ?? record.loan_balance ?? 0),
@@ -231,7 +236,7 @@ export function normalizePayrollRow(row = {}) {
   return {
     ...row,
     staffId: row.staffId ?? row.staff_id ?? row.id ?? null,
-    name: row.name ?? '',
+    name: row.name ?? row.staffName ?? row.staff_name ?? '',
     role: row.role ?? '',
     base,
     approvedLeaveDays: Number(row.approvedLeaveDays ?? row.approved_leave_days ?? 0),
@@ -246,31 +251,51 @@ export function normalizePayrollRow(row = {}) {
   };
 }
 
-export function normalizePayrollRun(run = {}) {
+export function normalizePayrollRun(payload = {}) {
+  const envelopeRun = payload?.run && typeof payload.run === 'object' ? payload.run : null;
+  const run = envelopeRun
+    ? {
+        ...envelopeRun,
+        lineItems: payload.lineItems ?? payload.line_items ?? envelopeRun.lineItems ?? envelopeRun.line_items,
+        summary: payload.summary ?? envelopeRun.summary,
+      }
+    : payload;
   const lineItems = toArray(run.lineItems ?? run.line_items ?? run.details).map(normalizePayrollRow);
   const backendSummary = run.summary ?? run.payroll_summary ?? run.payrollSummary ?? null;
   const summary = backendSummary
     ? {
-        totalBase: Number(backendSummary.totalBase ?? backendSummary.total_base ?? 0),
-        totalLeave: Number(backendSummary.totalLeave ?? backendSummary.total_leave ?? 0),
-        totalGross: Number(backendSummary.totalGross ?? backendSummary.total_gross ?? 0),
+        totalBase: Number(backendSummary.totalBase ?? backendSummary.total_base ?? lineItems.reduce((total, row) => total + row.base, 0)),
+        totalLeave: Number(backendSummary.totalLeave ?? backendSummary.total_leave ?? backendSummary.total_leave_deductions ?? 0),
+        totalGross: Number(backendSummary.totalGross ?? backendSummary.total_gross ?? backendSummary.total_gross_pay ?? 0),
         totalDeductions: Number(backendSummary.totalDeductions ?? backendSummary.total_deductions ?? 0),
-        totalNet: Number(backendSummary.totalNet ?? backendSummary.total_net ?? backendSummary.netPay ?? backendSummary.net_pay ?? 0),
+        totalNet: Number(backendSummary.totalNet ?? backendSummary.total_net ?? backendSummary.total_net_pay ?? backendSummary.netPay ?? backendSummary.net_pay ?? 0),
       }
     : null;
-  const employees = Number(run.employees ?? run.employeeCount ?? lineItems.length);
+  const employees = Number(run.employees ?? run.employeeCount ?? run.staffCount ?? run.staff_count ?? backendSummary?.staff_count ?? lineItems.length);
   const totalDisbursed = Number(
     run.totalDisbursed
       ?? run.total_disbursed
+      ?? run.totalNetPay
+      ?? run.total_net_pay
       ?? summary?.totalNet
       ?? lineItems.reduce((acc, row) => acc + Number(row.net || 0), 0)
   );
+  const payrollMonth = run.payrollMonth ?? run.payroll_month;
+  const payrollYear = run.payrollYear ?? run.payroll_year;
+  const period = run.period
+    ?? run.payPeriod
+    ?? run.label
+    ?? (payrollMonth && payrollYear
+      ? new Date(Number(payrollYear), Number(payrollMonth) - 1, 1).toLocaleString('default', { month: 'long', year: 'numeric' })
+      : '');
 
   return {
     ...run,
     id: run.id ?? run.runId ?? run.payrollRunId ?? `run_${Date.now()}`,
-    date: run.date ?? run.runDate ?? run.payrollDate ?? null,
-    period: run.period ?? run.payPeriod ?? run.label ?? '',
+    message: payload.message ?? run.message ?? null,
+    date: run.date ?? run.runDate ?? run.payrollDate ?? run.generatedAt ?? run.generated_at ?? null,
+    period,
+    status: String(run.status ?? 'DRAFT').toUpperCase(),
     employees,
     totalDisbursed,
     summary,
@@ -471,6 +496,7 @@ const normalizeHerdRecord = (cow = {}) => {
     breed_status: breedStatus,
     current_status: currentStatus,
     currentStatus,
+    photoUrl: resolveBackendAssetUrl(cow.photo_url ?? cow.photoUrl),
   };
 };
 
@@ -627,6 +653,8 @@ export const extractBreedingLogsArray = (data) => {
   return [];
 };
 
+const REQUIRED_PASSWORD_RESET_ENDPOINT = '/auth/change-password';
+
 export const authApi = {
   login(credentials) {
     const payload = {
@@ -657,6 +685,12 @@ export const authApi = {
   },
   claimAccount(payload) {
     return authClient.post('/auth/claim-account', payload).then((response) => normalizeSessionUser(response.data));
+  },
+  completeRequiredPasswordReset(payload) {
+    return authClient.post(REQUIRED_PASSWORD_RESET_ENDPOINT, {
+      password: payload?.password ?? '',
+      confirm_password: payload?.confirm_password ?? payload?.confirmPassword ?? '',
+    }).then((response) => normalizeSessionUser(response.data));
   },
   switchFarm(farmId) {
     return authClient.post('/auth/switch-farm', { farm_id: farmId }).then((response) => normalizeSessionUser(response.data));
@@ -696,6 +730,14 @@ export const productionApi = {
   },
   createYield(payload, config = {}) {
     return apiClient.post('/production/yield', buildProductionYieldPayload(payload), config).then((response) => toObject(response.data));
+  },
+  listMilkDispositions(params = {}) {
+    return apiClient.get('/production/milk-dispositions', { params })
+      .then((response) => toArray(response.data).map(normalizeMilkDisposition));
+  },
+  createMilkDisposition(payload) {
+    return apiClient.post('/production/milk-dispositions', buildCalfMilkFeedPayload(payload))
+      .then((response) => normalizeMilkDisposition(response.data?.disposition ?? response.data));
   },
   getYield(yieldId) {
     return apiClient.get(`/production/yield/${yieldId}`).then((response) => toObject(response.data));
@@ -805,6 +847,23 @@ export const onboardingApi = {
   },
 };
 
+export const staffOnboardingApi = {
+  invite(payload) {
+    return apiClient.post('/onboarding/invite', {
+      employee_id: payload?.employee_id ?? payload?.employeeId,
+      role: payload?.role,
+    }).then((response) => toObject(response.data));
+  },
+  provision(payload) {
+    return apiClient.post('/onboarding/provision', {
+      employee_id: payload?.employee_id ?? payload?.employeeId,
+      role: payload?.role,
+      password: payload?.password,
+      requires_password_reset: payload?.requires_password_reset ?? payload?.requiresPasswordReset ?? true,
+    }).then((response) => toObject(response.data));
+  },
+};
+
 export const hrApi = {
   async listStaff() {
     const response = await requestWithFallback(apiClient, staffRoutes().map((url) => ({ method: 'get', url })));
@@ -814,19 +873,29 @@ export const hrApi = {
     const apiPayload = {
       ...payload,
       full_name: payload.full_name ?? payload.name,
+      phone_number: payload.phone_number ?? payload.phoneNumber,
       hire_date: payload.hire_date ?? payload.hireDate,
       base_salary: payload.base_salary ?? payload.baseSalary,
     };
     const response = await requestWithFallback(apiClient, staffRoutes().map((url) => ({ method: 'post', url, data: apiPayload })));
     return normalizeStaffRecord(toObject(response.data) ?? apiPayload);
   },
+  async getStaffingRecommendations() {
+    const response = await apiClient.get('/hr/staffing-recommendations');
+    return toObject(response.data);
+  },
   async getStaff(staffId) {
     const response = await requestWithFallback(apiClient, staffRoutes(staffId).map((url) => ({ method: 'get', url })));
     return normalizeStaffRecord(toObject(response.data) ?? response.data);
   },
   async updateStaff(staffId, payload) {
-    const response = await apiClient.patch(`/hr/staff/${staffId}`, payload);
-    return normalizeStaffRecord(toObject(response.data) ?? payload);
+    const { phoneNumber, ...remainingPayload } = payload;
+    const apiPayload = {
+      ...remainingPayload,
+      ...(phoneNumber !== undefined ? { phone_number: phoneNumber } : {}),
+    };
+    const response = await apiClient.patch(`/hr/staff/${staffId}`, apiPayload);
+    return normalizeStaffRecord(toObject(response.data) ?? apiPayload);
   },
   async verifyReturn(staffId, payload) {
     const response = await requestWithFallback(apiClient, verifyRoutes(staffId).map((url) => ({ method: 'post', url, data: payload })));
@@ -834,20 +903,24 @@ export const hrApi = {
   },
   async listPayrollRuns() {
     const response = await requestWithFallback(apiClient, payrollRoutes().map((url) => ({ method: 'get', url })));
-    return toArray(response.data).map(normalizePayrollRun);
+    const runs = toArray(response.data).map(normalizePayrollRun);
+    return Promise.all(runs.map((run) => hrApi.getPayrollRun(run.id)));
+  },
+  async getPayrollRun(runId) {
+    const response = await apiClient.get(`/hr/payroll/runs/${encodeURIComponent(runId)}`);
+    return normalizePayrollRun(response.data);
   },
   async runPayroll(payload = {}) {
     const response = await requestWithFallback(apiClient, payrollRoutes().map((url) => ({ method: 'post', url, data: payload })));
-    const run = toObject(response.data) ?? response.data;
-    return normalizePayrollRun(run);
+    return normalizePayrollRun(response.data);
   },
   async finalizePayrollRun(runId) {
     const response = await apiClient.post(`/hr/payroll/runs/${runId}/finalize`);
-    return normalizePayrollRun(toObject(response.data) ?? response.data);
+    return normalizePayrollRun(response.data);
   },
   async payPayrollRun(runId) {
     const response = await apiClient.post(`/hr/payroll/runs/${runId}/pay`);
-    return normalizePayrollRun(toObject(response.data) ?? response.data);
+    return normalizePayrollRun(response.data);
   },
   async listPayrollRecords() {
     const response = await requestWithFallback(apiClient, ['/hr/payroll-records', '/hr/payroll'].map((url) => ({ method: 'get', url })));
@@ -883,11 +956,31 @@ export const financeApi = {
   createBuyer(payload) {
     return apiClient.post('/buyers', payload).then((response) => toObject(response.data));
   },
-  listLedgerEntries(params = {}) {
-    // The backend returns a structured object { items, meta, summary }.
-    // We return the whole object so the UI can access both the transaction
-    // list (`items`) and the financial summary (`summary`).
-    return apiClient.get('/finance/ledger', { params }).then((response) => response.data);
+  async listLedgerEntries(params = {}) {
+    const fetchPage = (page) => apiClient.get('/finance/ledger', {
+      params: { ...params, page, per_page: params.per_page ?? 100 },
+    }).then((response) => response.data);
+    const firstPage = await fetchPage(1);
+    const pageCount = Number(firstPage?.meta?.pages) || 1;
+
+    if (pageCount === 1) return firstPage;
+
+    const remainingPages = await Promise.all(
+      Array.from({ length: pageCount - 1 }, (_, index) => fetchPage(index + 2))
+    );
+    const items = [firstPage, ...remainingPages].flatMap((page) => page?.items ?? []);
+
+    return {
+      ...firstPage,
+      items,
+      meta: {
+        ...firstPage.meta,
+        page: 1,
+        pages: 1,
+        per_page: items.length,
+        total: Number(firstPage?.meta?.total) || items.length,
+      },
+    };
   },
   createLedgerEntry(payload) {
     // The backend expects `transaction_type` as 'Revenue' or 'Expense', but older
@@ -997,6 +1090,16 @@ export const herdApi = {
   },
   delete(id) {
     return apiClient.delete(`/herd/${id}`);
+  },
+  uploadPhoto(id, photoFile) {
+    const formData = new FormData();
+    formData.append('photo', photoFile);
+    return apiClient.post(`/herd/${id}/photo`, formData)
+      .then((response) => normalizeHerdRecord(toObject(response.data) ?? {}));
+  },
+  deletePhoto(id) {
+    return apiClient.delete(`/herd/${id}/photo`)
+      .then((response) => normalizeHerdRecord(toObject(response.data) ?? {}));
   },
   geneticProgress() {
     return apiClient.get('/herd/genetic-progress').then((response) => toArray(response.data));
@@ -1130,6 +1233,10 @@ export const animalsApi = {
         data: { ...payload, event_type: 'calving' },
       },
     ]).then((response) => toObject(response.data));
+  },
+  downloadPassportPdf(id) {
+    return apiClient.get(`/v1/export/animal/${id}/pdf`, { responseType: 'blob' })
+      .then((response) => response.data);
   },
 };
 

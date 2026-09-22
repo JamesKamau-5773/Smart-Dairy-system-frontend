@@ -140,7 +140,7 @@ export default function StandardBatchLog({ onCancel, onSaveComplete }) {
                 onClick={() => handleSelectItem(item)}
                 className={`text-left p-4 rounded-card border-2 transition-all ${
                   selectedItem.id === item.id 
-                    ? 'border-brand bg-brand/5 shadow-sm' 
+                    ? 'border-brand bg-brand/5'
                     : 'border-ink/5 bg-surface-raised hover:border-brand/30'
                 }`}
               >
@@ -164,7 +164,7 @@ export default function StandardBatchLog({ onCancel, onSaveComplete }) {
              
              <input 
                 type="text"
-                className={`w-full pl-10 pr-4 py-3 bg-white border rounded-input text-sm font-bold text-ink-strong focus:outline-none focus:ring-1 focus:ring-brand shadow-sm transition-colors ${isSearchOpen ? 'border-brand' : 'border-ink/10'}`}
+                className={`w-full pl-10 pr-4 py-3 bg-white border rounded-input text-sm font-bold text-ink-strong focus:outline-none focus:ring-1 focus:ring-brand  transition-colors ${isSearchOpen ? 'border-brand' : 'border-ink/10'}`}
                 placeholder="Search inventory or type a new item..."
                 value={searchTerm}
                 onChange={(e) => {
@@ -179,7 +179,7 @@ export default function StandardBatchLog({ onCancel, onSaveComplete }) {
 
              {/* Dropdown Results */}
              {isSearchOpen && (
-               <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-ink/10 rounded-input shadow-xl z-20 max-h-60 overflow-y-auto animate-in fade-in slide-in-from-top-2">
+               <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-ink/10 rounded-input  z-20 max-h-60 overflow-y-auto animate-in fade-in slide-in-from-top-2">
                   {filteredInventory.length > 0 ? (
                     filteredInventory.map(item => (
                       <button
@@ -215,25 +215,25 @@ export default function StandardBatchLog({ onCancel, onSaveComplete }) {
           </label>
           <div className="flex flex-col items-center">
             <div className="flex items-center justify-center gap-6 mb-6">
-              <button onClick={() => decrementQuantity(50)} className="w-12 h-12 rounded-full bg-white border border-ink/10 flex items-center justify-center text-ink-muted hover:text-danger hover:border-danger hover:bg-danger/5 shadow-sm transition-colors">
+              <button onClick={() => decrementQuantity(50)} className="w-12 h-12 rounded-full bg-white border border-ink/10 flex items-center justify-center text-ink-muted hover:text-danger hover:border-danger hover:bg-danger/5  transition-colors">
                 <Minus size={24} />
               </button>
               
               <div className="text-center min-w-[120px]">
-                <span className="text-5xl font-black text-ink-strong">{quantity}</span>
+                <span className="text-3xl font-black text-ink-strong">{quantity}</span>
                 <span className="text-sm font-bold text-ink-muted ml-1">{selectedItem?.unit || 'kg'}</span>
               </div>
               
-              <button onClick={() => incrementQuantity(50)} className="w-12 h-12 rounded-full bg-white border border-ink/10 flex items-center justify-center text-ink-muted hover:text-brand hover:border-brand hover:bg-brand/5 shadow-sm transition-colors">
+              <button onClick={() => incrementQuantity(50)} className="w-12 h-12 rounded-full bg-white border border-ink/10 flex items-center justify-center text-ink-muted hover:text-brand hover:border-brand hover:bg-brand/5  transition-colors">
                 <Plus size={24} />
               </button>
             </div>
             
             <div className="flex gap-3">
-              <button onClick={() => incrementQuantity(50)} className="px-4 py-2 bg-white border border-ink/10 rounded-button text-sm font-black text-ink-strong hover:border-brand/30 shadow-sm transition-colors">
+              <button onClick={() => incrementQuantity(50)} className="px-4 py-2 bg-white border border-ink/10 rounded-button text-sm font-black text-ink-strong hover:border-brand/30  transition-colors">
                 + 50kg Bag
               </button>
-              <button onClick={() => incrementQuantity(70)} className="px-4 py-2 bg-white border border-ink/10 rounded-button text-sm font-black text-ink-strong hover:border-brand/30 shadow-sm transition-colors">
+              <button onClick={() => incrementQuantity(70)} className="px-4 py-2 bg-white border border-ink/10 rounded-button text-sm font-black text-ink-strong hover:border-brand/30  transition-colors">
                 + 70kg Bag
               </button>
             </div>
@@ -255,7 +255,7 @@ export default function StandardBatchLog({ onCancel, onSaveComplete }) {
           <button 
             onClick={handleInitialConfirm}
             disabled={quantity === 0 || !selectedItem}
-            className="bg-brand hover:bg-brand-dark disabled:bg-ink-muted disabled:opacity-50 text-white px-8 py-3 rounded-button font-black text-sm shadow-sm flex items-center gap-2 transition-colors"
+            className="bg-brand hover:bg-brand-dark disabled:bg-ink-muted disabled:opacity-50 text-white px-8 py-3 rounded-button font-black text-sm  flex items-center gap-2 transition-colors"
           >
             <CheckCircle2 size={18} /> Confirm Delivery
           </button>
@@ -265,7 +265,7 @@ export default function StandardBatchLog({ onCancel, onSaveComplete }) {
       {/* The Undo Buffer Overlay */}
       {isStaged && (
         <div className="absolute inset-0 flex items-end justify-center pb-6">
-          <div className="bg-ink-strong text-white p-4 rounded-card shadow-2xl flex items-center gap-6 animate-in slide-in-from-bottom-8">
+          <div className="bg-ink-strong text-white p-4 rounded-card  flex items-center gap-6 animate-in slide-in-from-bottom-8">
             <div className="flex items-center gap-3">
               <Loader2 size={20} className="animate-spin text-brand" />
               <div>

@@ -3,7 +3,7 @@ import { Activity, Milk, ShieldCheck } from 'lucide-react';
 
 export default function MemberDashboard() {
   return (
-    <div className="rounded-2xl border border-[#215057]/15 bg-[linear-gradient(130deg,#f5fffd_0%,#f4fbff_55%,#fefbf2_100%)] p-6 shadow-[0_16px_32px_rgba(33,80,87,0.10)]">
+    <div className="rounded-2xl border border-[#215057]/15 bg-[linear-gradient(130deg,#f5fffd_0%,#f4fbff_55%,#fefbf2_100%)] p-6 ">
       <header className="mb-6">
         <p className="inline-flex items-center gap-2 rounded-full bg-[#2d7d84]/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.14em] text-[#235f64]">
           <Milk size={14} /> Member Workspace

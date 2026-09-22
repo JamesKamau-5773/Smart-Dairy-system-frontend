@@ -46,7 +46,7 @@ export default function RegisterResourceModal({ isOpen, onClose, onRegister }) {
     >
       <div className="min-h-full flex items-start sm:items-center justify-center p-4">
         <div
-          className="bg-white rounded-[24px] w-full max-w-sm shadow-2xl max-h-[calc(100vh-2rem)] overflow-y-auto animate-in zoom-in-95 duration-200"
+          className="bg-white rounded-[24px] w-full max-w-sm  max-h-[calc(100vh-2rem)] overflow-y-auto animate-in zoom-in-95 duration-200"
           onClick={(e) => e.stopPropagation()}
         >
           <div className="p-8">

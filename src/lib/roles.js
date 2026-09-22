@@ -1,11 +1,22 @@
 const SUPER_ADMIN_VALUES = new Set(['SUPER_ADMIN', 'SUPERADMIN']);
 const ADMIN_VALUES = new Set(['ADMIN', 'PRIMARY_ADMIN', 'OWNER', 'COOP_ADMIN', 'COOPERATIVE_ADMIN']);
-const FARM_ADMIN_VALUES = new Set(['FARM_ADMIN', 'FARM_MANAGER']);
-const FARMER_VALUES = new Set(['FARMER', 'HERDSMAN', 'MEMBER']);
+const FARM_ADMIN_VALUES = new Set(['FARM_ADMIN']);
+const FARMER_VALUES = new Set(['FARMER', 'MEMBER']);
 const ORGANIZATIONAL_ROLES = new Set(['SUPER_ADMIN', 'ADMIN', 'FARM_ADMIN']);
+const ROLE_INHERITANCE = new Map([
+  ['FARM_MANAGER', ['SUPERVISOR', 'FARM_HAND']],
+  ['SUPERVISOR', ['FARM_HAND']],
+]);
 const OPERATIONAL_ROLE_ALIASES = new Map([
-  ['HERDSMAN', 'HERDSMAN'],
-  ['VET_ASSISTANT', 'VET_ASSISTANT'],
+  ['FARM_MANAGER', 'FARM_MANAGER'],
+  ['MANAGER', 'FARM_MANAGER'],
+  ['FARM_SUPERVISOR', 'SUPERVISOR'],
+  ['SUPERVISOR', 'SUPERVISOR'],
+  ['FARM_HAND', 'FARM_HAND'],
+  ['FARMHAND', 'FARM_HAND'],
+  ['HERDSMAN', 'FARM_HAND'],
+  ['VETERINARY_DOCTOR', 'VETERINARY_DOCTOR'],
+  ['VET_ASSISTANT', 'VETERINARY_DOCTOR'],
   ['CLERK', 'CLERK'],
   ['FINANCE', 'FINANCE'],
   ['FARMER', 'FARMER'],
@@ -21,7 +32,7 @@ export const isSingleTenantUser = (user) => {
   if (tenantType === 'single') return true;
 
   // Backward-compatibility for older sessions that have tenant scope but no cooperative scope.
-  return Boolean(user.tenant_id || user.tenantId) && !Boolean(user.cooperative_id || user.cooperativeId);
+  return Boolean(user.tenant_id || user.tenantId) && !(user.cooperative_id || user.cooperativeId);
 };
 
 const pickPrimaryRole = (user) => {
@@ -90,7 +101,8 @@ const collectRoleTokens = (user) => {
 
 export const getRoleSet = (user) => {
   const allRoleTokens = collectRoleTokens(user);
-  return [...new Set(allRoleTokens)];
+  const effectiveRoles = allRoleTokens.flatMap((role) => [role, ...(ROLE_INHERITANCE.get(role) ?? [])]);
+  return [...new Set(effectiveRoles)];
 };
 
 export const getPermissionSet = (user) => {
@@ -154,6 +166,7 @@ export const hasPermission = (user, permission) => {
 export const canAccessCommandCenter = (user) => {
   if (isSingleTenantUser(user)) return true;
   if (isSuperAdmin(user) || isCooperativeAdmin(user) || isFarmAdmin(user)) return true;
+  if (hasRole(user, ['FARM_MANAGER'])) return true;
 
   return hasPermission(user, 'command_center:view')
     || hasPermission(user, 'dashboard:view')
@@ -167,6 +180,8 @@ export const getDefaultLandingPath = (user) => {
   if (isSuperAdmin(user)) return '/system-admin/dashboard';
   if (isCooperativeAdmin(user)) return '/cooperative-admin/members';
   if (canAccessCommandCenter(user)) return '/dashboard';
-  if (isFarmer(user)) return '/member/dashboard';
+  if (isFarmer(user) || hasRole(user, ['SUPERVISOR', 'FARM_HAND', 'VETERINARY_DOCTOR', 'CLERK', 'FINANCE'])) {
+    return '/member/dashboard';
+  }
   return '/dashboard';
 };

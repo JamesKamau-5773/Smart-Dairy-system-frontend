@@ -3,11 +3,12 @@ import { useParams, Link } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'react-hot-toast';
 import { financeApi } from '../../lib/backendApi';
-import { User, Mail, Phone, MapPin, DollarSign, Receipt, ArrowLeft, Edit, Droplets, Plus, Pencil, Trash2 } from 'lucide-react';
+import { User, Mail, Phone, MapPin, DollarSign, Receipt, ArrowLeft, Edit, Droplets, Plus, Pencil, Trash2, MoreVertical } from 'lucide-react';
 import { Skeleton } from '../../components/ui';
 import Confirmation, { useConfirmation } from '../../components/ui/Confirmation';
 import GroupedDateRows from '../../components/ui/GroupedDateRows';
 import DeliveryModal from '../../components/finance/DeliveryModal';
+import { Popover, PopoverContent, PopoverTrigger } from '../../components/ui/popover';
 
 const ProfileDetail = ({ icon: Icon, label, value }) => (
   <div className="flex items-start gap-4">
@@ -24,7 +25,7 @@ const TransactionRow = ({ tx }) => (
       <td className="p-4 text-sm text-ink-muted">{new Date(tx.date).toLocaleDateString()}</td>
       <td className="p-4 text-sm font-medium text-ink">{tx.description || tx.category || 'N/A'}</td>
       <td className={`p-4 text-sm font-bold text-right ${tx.amount > 0 ? 'text-brand' : 'text-danger'}`}>
-        {tx.amount.toLocaleString('en-US', { style: 'currency', currency: 'KSH' })}
+        KES {Number(tx.amount || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
       </td>
       <td className="p-4 text-sm text-ink-muted text-right">{tx.reference || 'N/A'}</td>
     </tr>
@@ -46,27 +47,18 @@ const DeliveryRow = ({ delivery, onEdit, onDelete }) => {
       <td className="p-4 text-sm font-medium text-ink-muted text-right">{personalUse.toFixed(1)} L</td>
       <td className="p-4 text-sm font-bold text-ink text-right">{Number(billableLiters).toFixed(1)} L</td>
       <td className="p-4 text-sm font-bold text-brand text-right">
-        {amount != null ? `KSh ${Number(amount).toLocaleString(undefined, { minimumFractionDigits: 2 })}` : '—'}
+        {amount != null ? `KES ${Number(amount).toLocaleString(undefined, { minimumFractionDigits: 2 })}` : '—'}
       </td>
       <td className="p-4 text-right">
-        <div className="flex justify-end gap-1">
-          <button
-            type="button"
-            onClick={() => onEdit(delivery)}
-            className="p-1.5 rounded-md hover:bg-surface-raised text-ink-muted hover:text-ink transition-colors"
-            aria-label="Edit delivery"
-          >
-            <Pencil size={14} />
-          </button>
-          <button
-            type="button"
-            onClick={() => onDelete(delivery)}
-            className="p-1.5 rounded-md hover:bg-danger/10 text-ink-muted hover:text-danger transition-colors"
-            aria-label="Delete delivery"
-          >
-            <Trash2 size={14} />
-          </button>
-        </div>
+        <Popover>
+          <PopoverTrigger asChild>
+            <button type="button" className="inline-flex h-8 w-8 items-center justify-center rounded-button border border-slate-300 text-slate-600 hover:border-brand-400 hover:text-brand-700" aria-label={`Actions for delivery on ${delivery.date}`}><MoreVertical size={16} /></button>
+          </PopoverTrigger>
+          <PopoverContent align="end" className="w-40 p-1.5">
+            <button type="button" onClick={() => onEdit(delivery)} className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm text-ink-900 hover:bg-brand-50"><Pencil size={14} /> Edit</button>
+            <button type="button" onClick={() => onDelete(delivery)} className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm text-danger hover:bg-danger/10"><Trash2 size={14} /> Delete</button>
+          </PopoverContent>
+        </Popover>
       </td>
     </tr>
   );
@@ -249,13 +241,13 @@ export default function CustomerProfile() {
         <div className="card-machined p-6">
           <h4 className="text-xs font-bold uppercase text-ink-muted flex items-center gap-2"><DollarSign size={14}/> Current Balance</h4>
           <p className={`text-3xl font-black mt-2 ${(customer.account_balance ?? customer.balance ?? 0) > 0 ? 'text-danger' : 'text-brand'}`}>
-            KSh {(customer.account_balance ?? customer.balance ?? 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+            KES {(customer.account_balance ?? customer.balance ?? 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}
           </p>
         </div>
         <div className="card-machined p-6">
           <h4 className="text-xs font-bold uppercase text-ink-muted flex items-center gap-2"><Receipt size={14}/> Agreed Rate</h4>
           <p className="text-3xl font-black mt-2 text-ink">
-            KSh {(customer.agreed_rate_per_liter ?? customer.agreed_rate ?? 0).toLocaleString(undefined, { minimumFractionDigits: 2 })} / L
+            KES {(customer.agreed_rate_per_liter ?? customer.agreed_rate ?? 0).toLocaleString(undefined, { minimumFractionDigits: 2 })} / L
           </p>
         </div>
         <div className="card-machined p-6">

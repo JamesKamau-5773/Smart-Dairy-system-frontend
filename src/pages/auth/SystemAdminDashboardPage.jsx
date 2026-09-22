@@ -25,7 +25,7 @@ const controlCards = [
 export default function SystemAdminDashboardPage() {
   return (
     <div className="animate-reveal space-y-8 max-w-7xl mx-auto">
-      <header className="rounded-[28px] border border-brand/15 bg-[linear-gradient(135deg,rgba(20,184,166,0.12),rgba(255,255,255,0.96))] p-6 sm:p-8 shadow-[0_20px_60px_rgba(15,23,42,0.08)]">
+      <header className="rounded-[28px] border border-brand/15 bg-[linear-gradient(135deg,rgba(20,184,166,0.12),rgba(255,255,255,0.96))] p-6 sm:p-8 ">
         <div className="inline-flex items-center gap-2 rounded-full border border-brand/20 bg-brand/5 px-3 py-1 text-[10px] font-bold uppercase tracking-widest text-brand">
           <Building2 size={12} /> System Admin
         </div>
@@ -50,7 +50,7 @@ export default function SystemAdminDashboardPage() {
             <Link
               key={card.title}
               to={card.to}
-              className="card-machined group rounded-[24px] border border-ink/10 bg-surface p-6 shadow-[0_14px_36px_rgba(15,23,42,0.08)] transition-transform hover:-translate-y-1"
+              className="card-machined group rounded-[24px] border border-ink/10 bg-surface p-6  transition-transform hover:-translate-y-1"
             >
               <div className="flex items-start justify-between gap-4">
                 <div>

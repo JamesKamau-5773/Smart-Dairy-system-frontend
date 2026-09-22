@@ -172,6 +172,7 @@ export function summarizeTargets({ cows = [], targets = [] }) {
     return {
       cowId,
       cowName: cow?.name ?? cow?.cow_name ?? cowId,
+      cowTag: cow?.tag_number ?? cow?.tagNumber ?? cow?.cow_tag ?? cow?.cowTag ?? cow?.tag ?? '',
       currentStatus,
       isLactating,
       hasTarget: Boolean(target?.targetLiters),

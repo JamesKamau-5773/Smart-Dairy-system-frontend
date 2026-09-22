@@ -2,7 +2,8 @@ import { useMemo, useState } from 'react';
 import { ShieldAlert, ShieldCheck, Search, Filter, Activity, Milk, X, AlertTriangle, CheckCircle2, ChevronDown, ChevronUp } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
-import { safetyApi } from '../../lib/backendApi';
+import { herdApi, safetyApi } from '../../lib/backendApi';
+import { formatCowIdentity, resolveCowIdentityFromHerd } from '../../lib/cowIdentity';
 import { QUERY_KEYS } from '../../providers/QueryProvider';
 import { Skeleton } from '../../components/ui';
 import Modal from '../../components/ui/Modal';
@@ -13,10 +14,14 @@ const fetchHardlocks = async () => {
 };
 
 export function normalizeHardlock(lock = {}) {
+  const cowId = lock.cow_id ?? lock.cowId ?? lock.animal_id ?? lock.animalId ?? '';
+
   return {
     id: lock.id ?? lock.hardlock_id ?? lock.lock_id,
     cowName: lock.cow_name ?? lock.cowName ?? lock.animal_name ?? lock.animalName ?? 'Unknown cow',
-    cowId: lock.cow_id ?? lock.cowId ?? lock.animal_id ?? lock.animalId ?? 'Unknown ID',
+    cowId,
+    cowRecordId: cowId,
+    cowTag: lock.cow_tag ?? lock.cowTag ?? lock.tag_number ?? lock.tagNumber ?? '',
     reason: lock.reason ?? 'Not provided',
     severity: String(lock.severity ?? lock.status ?? 'WARNING').toUpperCase(),
     lockExpires: lock.lock_expires ?? lock.lockExpires ?? lock.expires_at ?? lock.expiresAt ?? null,
@@ -46,6 +51,11 @@ export default function MilkSafetyBoard() {
     queryFn: fetchHardlocks,
     enabled: !!tenantId && !!farmId,
   });
+  const { data: herdData = [] } = useQuery({
+    queryKey: ['herd', tenantId, farmId],
+    queryFn: () => herdApi.list(),
+    enabled: !!tenantId && !!farmId,
+  });
 
   const hardlocks = Array.isArray(hardlocksRaw)
     ? hardlocksRaw
@@ -55,13 +65,27 @@ export default function MilkSafetyBoard() {
         ? hardlocksRaw.data
         : [];
 
-  const normalizedHardlocks = useMemo(() => hardlocks.map(normalizeHardlock), [hardlocks]);
+  const normalizedHardlocks = useMemo(() => hardlocks.map((rawLock) => {
+    const lock = normalizeHardlock(rawLock);
+    const identity = resolveCowIdentityFromHerd({
+      cowId: lock.cowRecordId,
+      cowTag: lock.cowTag,
+      cowName: lock.cowName === 'Unknown cow' ? '' : lock.cowName,
+    }, herdData);
+
+    return {
+      ...lock,
+      cowName: identity.name,
+      cowTag: identity.earTag,
+      cowRecordId: identity.recordId || lock.cowRecordId,
+    };
+  }), [hardlocks, herdData]);
 
   const filteredHardlocks = useMemo(() => {
     const search = query.trim().toLowerCase();
 
     return normalizedHardlocks.filter((lock) => {
-      const matchesSearch = !search || [lock.cowName, lock.cowId, lock.reason, lock.section, lock.medication, lock.notes]
+      const matchesSearch = !search || [lock.cowName, lock.cowTag, lock.reason, lock.section, lock.medication, lock.notes]
         .join(' ')
         .toLowerCase()
         .includes(search);
@@ -106,7 +130,7 @@ export default function MilkSafetyBoard() {
 
   return (
     <div className="animate-reveal mx-auto max-w-7xl space-y-4 px-4 pb-6 pt-4 sm:px-6 lg:px-8">
-      <section className="rounded-md border border-gray-200 bg-white shadow-sm">
+      <section className="rounded-md border border-gray-200 bg-white ">
         <div className="flex flex-col gap-4 border-b border-gray-200 px-5 py-5 lg:flex-row lg:items-end lg:justify-between">
           <div className="space-y-2">
             <div className="inline-flex items-center gap-2 rounded-full bg-slate-100 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-600">
@@ -155,7 +179,7 @@ export default function MilkSafetyBoard() {
         </div>
       </section>
 
-      <section className="rounded-md border border-gray-200 bg-white shadow-sm">
+      <section className="rounded-md border border-gray-200 bg-white ">
         <div className="flex flex-col gap-3 border-b border-gray-200 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <div className="flex items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.22em] text-gray-500">
@@ -268,16 +292,16 @@ export default function MilkSafetyBoard() {
                   className="cursor-pointer transition-colors hover:bg-gray-50 focus:bg-gray-50"
                 >
                   <td className="px-5 py-4 align-top">
-                    <p className="font-semibold text-gray-900">{lock.cowName}</p>
+                    <p className="font-semibold text-gray-900">{formatCowIdentity(lock)}</p>
                     <p className="mt-1 text-xs text-gray-500">Section: {lock.section}</p>
                   </td>
                   <td className="px-5 py-4 align-top">
                     <Link
-                      to={`/operations/animal/${lock.cowId}`}
+                      to={`/operations/animal/${lock.cowRecordId}`}
                       className="text-sm font-semibold text-slate-700 hover:text-slate-900 hover:underline"
                       onClick={(event) => event.stopPropagation()}
                     >
-                      {lock.cowId}
+                      {lock.cowTag || 'Tag unavailable'}
                     </Link>
                   </td>
                   <td className="px-5 py-4 align-top">
@@ -320,11 +344,11 @@ export default function MilkSafetyBoard() {
                   <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
                     <div>
                       <p className="mb-1 text-[10px] font-bold uppercase tracking-wider text-gray-500">Cow</p>
-                      <p className="text-sm font-semibold text-gray-900">{selectedLock.cowName}</p>
+                      <p className="text-sm font-semibold text-gray-900">{formatCowIdentity(selectedLock)}</p>
                     </div>
                     <div>
                       <p className="mb-1 text-[10px] font-bold uppercase tracking-wider text-gray-500">Tag</p>
-                      <p className="text-sm text-gray-900">{selectedLock.cowId}</p>
+                      <p className="text-sm text-gray-900">{selectedLock.cowTag || 'Unavailable'}</p>
                     </div>
                     <div>
                       <p className="mb-1 text-[10px] font-bold uppercase tracking-wider text-gray-500">Severity</p>

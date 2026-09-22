@@ -1,7 +1,7 @@
-import { useState, useMemo } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { format, parseISO } from 'date-fns';
-import { Wallet, TrendingUp, TrendingDown, ChevronsRight, Plus, X, Search, Filter, RotateCcw, ChevronDown, ChevronUp, PencilLine } from 'lucide-react';
+import { Wallet, TrendingUp, TrendingDown, ChevronsRight, ListChecks, BadgeDollarSign, Info, Plus, X, Search, Filter, RotateCcw, ChevronDown, ChevronUp, PencilLine } from 'lucide-react';
 import { useTenant } from '../../hooks/useTenant';
 import { useAuth } from '../../contexts/AuthContext';
 import { hasRole } from '../../lib/roles';
@@ -13,27 +13,63 @@ import { buildLedgerEntryPayload } from '../../lib/ledgerEntryPayload';
 import { downloadReceiptPdf, shareReceiptText } from '../../lib/receipt';
 import toast from 'react-hot-toast';
 import GroupedDateRows from '../../components/ui/GroupedDateRows';
+import { formatCowIdentity } from '../../lib/cowIdentity';
 
-const SummaryCard = ({ title, value, icon: Icon, tone = 'default' }) => {
+const SummaryTooltip = ({ text, label }) => (
+  <span className="group relative inline-flex cursor-help items-center" aria-label={label}>
+    <Info size={14} aria-hidden="true" />
+    <span role="tooltip" className="pointer-events-none absolute left-0 top-full z-30 mt-2 w-64 rounded-lg bg-gray-900 px-3 py-2 text-xs font-normal normal-case leading-relaxed tracking-normal text-white opacity-0  transition-opacity duration-200 group-hover:opacity-100">
+      {text}
+    </span>
+  </span>
+);
+
+const CurrencyValue = ({ amount, inverse = false }) => (
+  amount == null
+    ? <span className={`text-base font-semibold ${inverse ? 'text-white/70' : 'text-gray-500'}`}>Not available</span>
+    : <Money amount={amount} size="lg" className={`!font-mono text-2xl font-bold tracking-tight ${inverse ? 'text-white' : 'text-gray-950'}`} />
+);
+
+const SummaryCard = ({ title, value, icon: Icon, tone = 'default', tooltip }) => {
   const tones = {
-    default: 'text-ink',
-    success: 'text-success',
-    danger: 'text-danger',
+    default: 'text-gray-700',
+    success: 'text-emerald-700',
+    danger: 'text-rose-700',
   };
   return (
-    <div className="card-machined p-5">
-      <div className="flex items-center gap-4">
-        <div className={`p-3 rounded-lg bg-surface-raised border border-ink/10 ${tones[tone]}`}>
+    <div className="rounded-xl border border-gray-200 bg-white p-5">
+      <div className="flex items-start gap-4">
+        <div className={`rounded-lg border border-gray-200 bg-gray-50 p-3 ${tones[tone]}`}>
           <Icon size={20} />
         </div>
-        <div>
-          <p className="text-xs font-bold uppercase tracking-wider text-ink-muted">{title}</p>
-          <p className="text-2xl font-bold text-brand-700">{value}</p>
+        <div className="min-w-0">
+          <div className="mb-2 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-gray-500">
+            <span>{title}</span>
+            {tooltip && <SummaryTooltip text={tooltip} label={`About ${title}`} />}
+          </div>
+          {value}
         </div>
       </div>
     </div>
   );
 };
+
+const LiquidityCard = ({ title, value, icon: Icon, tooltip }) => (
+  <div className="rounded-lg border border-white/20 bg-white/10 p-5 sm:rounded-none sm:first:rounded-l-lg sm:last:rounded-r-lg">
+    <div className="flex items-start gap-4">
+      <div className="rounded-lg border border-white/20 bg-white/10 p-3 text-white">
+        <Icon size={20} />
+      </div>
+      <div className="min-w-0">
+        <div className="mb-2 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-white/70">
+          <span>{title}</span>
+          {tooltip && <SummaryTooltip text={tooltip} label={`About ${title}`} />}
+        </div>
+        {value}
+      </div>
+    </div>
+  </div>
+);
 
 const StatusBadge = ({ status }) => {
   const normalizedStatus = String(status || '').toLowerCase();
@@ -93,7 +129,7 @@ const LedgerCorrectionModal = ({ transaction, onClose, onSubmit, isPending }) =>
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
-      <form onSubmit={handleSubmit} className="w-full max-w-md rounded-lg bg-white shadow-xl">
+      <form onSubmit={handleSubmit} className="w-full max-w-md rounded-lg bg-white ">
         <div className="flex items-center justify-between border-b p-5">
           <div>
             <h3 className="text-lg font-bold text-ink">Correct expense classification</h3>
@@ -198,7 +234,7 @@ const LedgerEntryFormModal = ({ onClose, transactionType, farmId, tenantId }) =>
 
   return (
     <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 animate-reveal-fast">
-      <div className="bg-white rounded-lg shadow-xl w-full max-w-lg">
+      <div className="bg-white rounded-lg  w-full max-w-lg">
         <div className="p-5 border-b flex justify-between items-center">
           <h3 className="text-lg font-bold text-ink">
             {transactionType === 'income' ? 'Record Income or Customer Payment' : 'Log New Expense'}
@@ -213,7 +249,7 @@ const LedgerEntryFormModal = ({ onClose, transactionType, farmId, tenantId }) =>
               <>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <label className="form-control"><span className="label-text">Date received</span><input type="date" name="date" value={formData.date} onChange={handleChange} className="input-machined" required /></label>
-                  <label className="form-control"><span className="label-text">Income amount (KSh)</span><input type="number" min="0.01" step="0.01" name="amount" value={formData.amount} onChange={handleChange} className="input-machined" placeholder="e.g., 5000" required /></label>
+                  <label className="form-control"><span className="label-text">Income amount (KES)</span><input type="number" min="0.01" step="0.01" name="amount" value={formData.amount} onChange={handleChange} className="input-machined" placeholder="e.g., 5000" required /></label>
                 </div>
                 <fieldset className="space-y-2">
                   <legend className="label-text">Payment source</legend>
@@ -258,7 +294,7 @@ const LedgerEntryFormModal = ({ onClose, transactionType, farmId, tenantId }) =>
               <>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <label className="form-control"><span className="label-text">Expense date</span><input type="date" name="date" value={formData.date} onChange={handleChange} className="input-machined" required /></label>
-                  <label className="form-control"><span className="label-text">Amount paid (KSh)</span><input type="number" min="0.01" step="0.01" name="amount" value={formData.amount} onChange={handleChange} className="input-machined" placeholder="e.g., 2500" required /></label>
+                  <label className="form-control"><span className="label-text">Amount paid (KES)</span><input type="number" min="0.01" step="0.01" name="amount" value={formData.amount} onChange={handleChange} className="input-machined" placeholder="e.g., 2500" required /></label>
                 </div>
                 <label className="form-control"><span className="label-text">Supplier or payee</span><input type="text" name="party" value={formData.party} onChange={handleChange} className="input-machined" placeholder="e.g., Agrovet Store or employee name" required /></label>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -301,7 +337,7 @@ const LedgerEntryFormModal = ({ onClose, transactionType, farmId, tenantId }) =>
                     <span className="label-text">Animal (optional direct cost)</span>
                     <select name="animal_id" value={formData.animal_id} onChange={handleChange} className="input-machined">
                       <option value="">Farm-wide expense</option>
-                      {animals.map((animal) => <option key={animal.id} value={animal.id}>{animal.tag_number || animal.tag || animal.id}{animal.name ? ` - ${animal.name}` : ''}</option>)}
+                      {animals.map((animal) => <option key={animal.id} value={animal.id}>{formatCowIdentity(animal)}</option>)}
                     </select>
                   </label>
                   <label className="form-control">
@@ -334,8 +370,9 @@ const FinancialLedger = () => {
   const { tenantId, farmId } = useTenant();
   const { currentUser } = useAuth();
   const queryClient = useQueryClient();
-  const [filters] = useState({ page: 1, per_page: 20 });
+  const [filters] = useState({ per_page: 100 });
   const [ledgerFilters, setLedgerFilters] = useState({ search: '', type: 'all', category: 'all', from: '', to: '' });
+  const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('');
   const [isFiltersOpen, setIsFiltersOpen] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [modalTransactionType, setModalTransactionType] = useState(null);
@@ -344,46 +381,44 @@ const FinancialLedger = () => {
   const [isReceiptDownloading, setIsReceiptDownloading] = useState(false);
   const [transactionToCorrect, setTransactionToCorrect] = useState(null);
   const canCorrectExpenses = hasRole(currentUser, ['FARMER']);
+  const searchQuery = ledgerFilters.search.trim();
+
+  useEffect(() => {
+    const timeoutId = window.setTimeout(() => setDebouncedSearchQuery(searchQuery), 300);
+    return () => window.clearTimeout(timeoutId);
+  }, [searchQuery]);
 
   const { data, isLoading, isError, error } = useQuery({
-    queryKey: [QUERY_KEYS.LEDGER_ENTRIES, tenantId, farmId, filters],
+    queryKey: [QUERY_KEYS.LEDGER_ENTRIES, tenantId, farmId, filters, debouncedSearchQuery],
     // The backend endpoint for the general ledger requires a scope. While this should
     // be handled by the tenant/farm ID in the headers, the ledger endpoint specifically
     // seems to require them as query parameters to return the farm-wide view instead
     // of demanding a `customer_id`.
-    queryFn: () => financeApi.listLedgerEntries({ ...filters, farm_id: farmId, tenant_id: tenantId }),
+    queryFn: () => financeApi.listLedgerEntries({
+      ...filters,
+      farm_id: farmId,
+      tenant_id: tenantId,
+      ...(debouncedSearchQuery ? { search_query: debouncedSearchQuery } : {}),
+    }),
     enabled: !!tenantId && !!farmId,
     keepPreviousData: true,
   });
 
   const transactions = useMemo(() => data?.items || [], [data]);
   const filteredTransactions = useMemo(() => {
-    const search = ledgerFilters.search.trim().toLowerCase();
-
     return transactions.filter((tx) => {
-      const searchable = [
-        tx.counterparty_name,
-        tx.customer_name,
-        tx.buyer_name,
-        tx.category,
-        tx.item_name,
-        tx.description,
-        tx.reference_code,
-        tx.status,
-        tx.transaction_type,
-      ].filter(Boolean).join(' ').toLowerCase();
       const transactionType = String(tx.transaction_type || tx.type || '').toLowerCase();
-      const matchesSearch = !search || searchable.includes(search);
       const matchesType = ledgerFilters.type === 'all' || transactionType === ledgerFilters.type.toLowerCase();
       const matchesCategory = ledgerFilters.category === 'all' || String(tx.category || '').toLowerCase() === ledgerFilters.category.toLowerCase();
       const matchesFrom = !ledgerFilters.from || String(tx.date || '').slice(0, 10) >= ledgerFilters.from;
       const matchesTo = !ledgerFilters.to || String(tx.date || '').slice(0, 10) <= ledgerFilters.to;
 
-      return matchesSearch && matchesType && matchesCategory && matchesFrom && matchesTo;
+      return matchesType && matchesCategory && matchesFrom && matchesTo;
     });
   }, [transactions, ledgerFilters]);
   const ledgerCategories = useMemo(() => [...new Set(transactions.map((tx) => tx.category).filter(Boolean))].sort(), [transactions]);
   const summary = useMemo(() => data?.summary || {}, [data]);
+  const transactionTotal = summary.ledger_records ?? summary.transaction_count ?? data?.meta?.total ?? transactions.length;
   const correctionMutation = useMutation({
     mutationFn: ({ transactionId, payload }) => financeApi.voidAndReplaceExpense(transactionId, payload),
     onSuccess: () => {
@@ -447,16 +482,48 @@ const FinancialLedger = () => {
           </div>
         </div>
         <div className="flex items-center gap-2">
-          <button onClick={() => handleOpenModal('income')} className="flex items-center gap-2 rounded-button bg-brand-800 px-4 py-2 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-brand-900"><Plus size={16} /><span>Log Income</span></button>
-          <button onClick={() => handleOpenModal('expense')} className="flex items-center gap-2 rounded-button bg-brand-800 px-4 py-2 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-brand-900"><Plus size={16} /><span>Log Expense</span></button>
+          <button onClick={() => handleOpenModal('income')} className="flex items-center gap-2 rounded-button bg-brand-800 px-4 py-2 text-sm font-semibold text-white  transition-colors hover:bg-brand-900"><Plus size={16} /><span>Log Income</span></button>
+          <button onClick={() => handleOpenModal('expense')} className="flex items-center gap-2 rounded-button bg-brand-800 px-4 py-2 text-sm font-semibold text-white  transition-colors hover:bg-brand-900"><Plus size={16} /><span>Log Expense</span></button>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <SummaryCard title="Total Income" value={<Money amount={summary.total_income ?? 0} />} icon={TrendingUp} tone="success" />
-        <SummaryCard title="Total Costs" value={<Money amount={summary.total_costs ?? 0} />} icon={TrendingDown} tone="danger" />
-        <SummaryCard title="Net Profit" value={<Money amount={summary.total_profit ?? 0} />} icon={ChevronsRight} />
-        <SummaryCard title="Profit Per Liter" value={<Money amount={summary.profit_per_liter ?? summary.profitPerLiter ?? 0} />} icon={ChevronsRight} />
+      <div className={`grid grid-cols-1 gap-4 sm:grid-cols-2 ${searchQuery ? '' : 'lg:grid-cols-3'}`}>
+        <SummaryCard
+          title="Total Sales"
+          value={<CurrencyValue amount={summary.recognized_sales} />}
+          icon={TrendingUp}
+          tone="success"
+          tooltip="The total value of all milk billed through this ledger, whether the buyer has paid yet or not."
+        />
+        {!searchQuery && (
+          <SummaryCard title="Posted Costs" value={<CurrencyValue amount={summary.posted_costs} />} icon={TrendingDown} tone="danger" />
+        )}
+        {!searchQuery && (
+          <SummaryCard title="Net Profit" value={<CurrencyValue amount={summary.net_profit} />} icon={ChevronsRight} />
+        )}
+      </div>
+
+      <div className="rounded-xl bg-brand-900 p-4 ">
+        <div className="grid grid-cols-1 gap-px rounded-lg bg-white/20 sm:grid-cols-3">
+          <LiquidityCard
+            title="Customer Credit"
+            value={<CurrencyValue amount={summary.customer_credit} inverse />}
+            icon={BadgeDollarSign}
+          />
+          <LiquidityCard
+            title="Unpaid Money"
+            value={<CurrencyValue amount={summary.outstanding_receivables} inverse />}
+            icon={TrendingDown}
+            tooltip="The total amount buyers currently owe you. This includes older debts that were added to a buyer's profile before you started using this daily ledger."
+          />
+          <LiquidityCard
+            title="Ledger Records"
+            value={transactionTotal == null
+              ? <span className="text-base font-semibold text-white/70">Not available</span>
+              : <span className="font-mono text-2xl font-bold tabular-nums tracking-tight text-white">{Number(transactionTotal).toLocaleString()}</span>}
+            icon={ListChecks}
+          />
+        </div>
       </div>
 
       <div className="card-machined p-4 space-y-3">
@@ -499,7 +566,7 @@ const FinancialLedger = () => {
           </div>
         </div>
         )}
-        <div className="flex items-center gap-2 text-xs text-ink-muted"><Search size={14} /> Showing {filteredTransactions.length} of {transactions.length} loaded transactions</div>
+        <div className="flex items-center gap-2 text-xs text-ink-muted"><Search size={14} /> Showing {filteredTransactions.length} of {transactionTotal} ledger records. Summary cards follow the customer or buyer search; other filters affect rows only.</div>
       </div>
 
       <div className="card-machined overflow-hidden !p-0">

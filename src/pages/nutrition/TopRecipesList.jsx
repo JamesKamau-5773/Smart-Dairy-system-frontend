@@ -6,10 +6,10 @@ import { useNavigate } from 'react-router-dom';
  * SRP: Handles ONLY the friendly empty state for the farmer.
  */
 const EmptyMixState = () => (
-  <div className="bg-surface-raised rounded-xl border border-ink/5 p-8 flex flex-col items-center justify-center text-center">
-    <Info className="w-8 h-8 text-ink-muted mb-3 opacity-50" />
-    <h4 className="text-ink-strong font-semibold mb-1">No feed records found</h4>
-    <p className="text-sm text-ink-muted max-w-sm">
+  <div className="flex flex-col items-center justify-center p-8 text-center">
+    <Info className="mb-3 h-8 w-8 text-slate-500" />
+    <h4 className="mb-1 font-semibold text-slate-900">No feed records found</h4>
+    <p className="max-w-sm text-sm text-slate-600">
       Once you log your daily feed and milk yields, your top performing mixes will appear here.
     </p>
   </div>
@@ -28,8 +28,6 @@ const FeedMixRow = ({ recipe, index, isExpanded, onToggle, onLoadToLab }) => {
   const perf = recipe?.performance ?? {};
   const yieldAvg = Number(perf.avgDailyYieldLiters ?? perf.avg_daily_yield_liters ?? recipe?.yieldAvg ?? 0);
   const costPerLiter = Number(perf.costPerLiter ?? perf.cost_per_liter ?? recipe?.costPerLiter ?? 0);
-  const hasPerformance = Number.isFinite(yieldAvg) && yieldAvg > 0;
-  
   // Safely check for either 'ingredients' or 'formula' depending on the payload shape
   const ingredientsList = Array.isArray(recipe?.ingredients) 
     ? recipe.ingredients 
@@ -40,45 +38,31 @@ const FeedMixRow = ({ recipe, index, isExpanded, onToggle, onLoadToLab }) => {
   const lastUsed = perf.lastFedOn ?? perf.last_fed_on ?? recipe?.lastUsed ?? 'Not recorded';
 
   return (
-    <div className="bg-surface-raised rounded-lg transition-all duration-200 border border-transparent hover:border-ink/10 overflow-hidden shadow-sm">
-      <button 
-        type="button"
-        onClick={() => onToggle(recipeId)}
-        className="w-full flex items-center justify-between p-4 cursor-pointer select-none text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-brand/50"
-        aria-expanded={isExpanded}
-      >
-        <div className="flex items-center gap-4">
-          <span className="text-brand/50 font-black text-lg w-6 text-center">
-            {index + 1}.
-          </span>
-          <div>
-            <h4 className="font-bold text-ink-strong text-sm">{name}</h4>
-            <p className="text-xs font-medium text-ink-muted mt-0.5">
-              Daily Milk Average: <span className="text-ink-strong">{yieldAvg.toFixed(1)} L</span>
-            </p>
-          </div>
-        </div>
-        
-        <div className="flex items-center gap-4">
-          <div className="bg-white px-3 py-1.5 rounded-md border border-ink/5 shadow-sm hidden sm:block">
-            <span className="text-xs font-black text-ink-strong tracking-wide">
-              KES {costPerLiter.toFixed(2)} / L
-            </span>
-          </div>
-          <div className="text-ink-muted hover:text-ink-strong transition-colors p-1">
+    <React.Fragment>
+      <tr className="border-b border-slate-300 hover:bg-slate-50">
+        <td className="w-20 px-4 py-3 font-mono text-sm font-bold tabular-nums tracking-tight text-slate-700">{index + 1}</td>
+        <td className="min-w-[280px] px-4 py-3">
+          <button
+            type="button"
+            onClick={() => onToggle(recipeId)}
+            className="flex w-full items-center justify-between gap-4 text-left font-bold text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900"
+            aria-expanded={isExpanded}
+          >
+            <span>{name}</span>
             {isExpanded ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
-          </div>
-        </div>
-      </button>
-
-      {/* Expandable Details Section */}
+          </button>
+        </td>
+        <td className="min-w-[180px] px-4 py-3 font-mono text-sm font-bold tabular-nums tracking-tight text-slate-900">{yieldAvg.toFixed(1)} L</td>
+        <td className="min-w-[180px] px-4 py-3 font-mono text-sm font-bold tabular-nums tracking-tight text-slate-900">KES {costPerLiter.toFixed(2)} / L</td>
+      </tr>
       {isExpanded && (
-        <div className="px-4 pb-5 pt-2 animate-in slide-in-from-top-2 duration-200">
-          <div className="border-t border-ink/5 pt-4 flex flex-col sm:flex-row gap-6 sm:gap-12">
+        <tr className="border-b border-slate-300 bg-slate-50">
+          <td colSpan={4} className="px-4 py-5">
+          <div className="flex flex-col gap-6 sm:flex-row sm:gap-12">
             
             {/* Left: Ingredient List */}
             <div className="flex-1">
-              <p className="text-[10px] font-black uppercase tracking-widest text-ink-muted mb-3">
+              <p className="mb-3 text-xs font-bold uppercase tracking-wider text-slate-500">
                 Formula Breakdown
               </p>
               <div className="space-y-2">
@@ -88,14 +72,14 @@ const FeedMixRow = ({ recipe, index, isExpanded, onToggle, onLoadToLab }) => {
                     const ingPct = Number(ing?.percentage ?? ing?.inclusion_percentage ?? ing?.inclusionPercentage ?? 0);
                     return (
                       <div key={idx} className="flex items-center text-sm">
-                        <span className="text-ink-strong flex-1">{ingName}</span>
-                        <div className="flex-1 border-b border-dotted border-ink/20 mx-3 opacity-50"></div>
-                        <span className="font-bold text-ink-strong">{ingPct}%</span>
+                        <span className="flex-1 text-slate-900">{ingName}</span>
+                        <div className="mx-3 flex-1 border-b border-dotted border-slate-400"></div>
+                        <span className="font-mono font-bold tabular-nums tracking-tight text-slate-900">{ingPct}%</span>
                       </div>
                     );
                   })
                 ) : (
-                  <p className="text-xs text-ink-muted italic">No formula data available for this mix.</p>
+                  <p className="text-xs italic text-slate-600">No formula data available for this mix.</p>
                 )}
               </div>
             </div>
@@ -104,12 +88,12 @@ const FeedMixRow = ({ recipe, index, isExpanded, onToggle, onLoadToLab }) => {
             <div className="sm:w-48 shrink-0 flex flex-col justify-between">
               <div className="flex gap-6 mb-4 sm:mb-0">
                 <div>
-                  <p className="text-[10px] font-black uppercase tracking-widest text-ink-muted mb-1">Protein</p>
-                  <p className="text-sm font-bold text-ink-strong">{protein}%</p>
+                  <p className="mb-1 text-xs font-bold uppercase tracking-wider text-slate-500">Protein</p>
+                  <p className="font-mono text-sm font-bold tabular-nums tracking-tight text-slate-900">{protein}%</p>
                 </div>
                 <div>
-                  <p className="text-[10px] font-black uppercase tracking-widest text-ink-muted mb-1">Last Fed</p>
-                  <p className="text-sm font-bold text-ink-strong">{lastUsed}</p>
+                  <p className="mb-1 text-xs font-bold uppercase tracking-wider text-slate-500">Last Fed</p>
+                  <p className="text-sm font-bold text-slate-900">{lastUsed}</p>
                 </div>
               </div>
 
@@ -117,16 +101,17 @@ const FeedMixRow = ({ recipe, index, isExpanded, onToggle, onLoadToLab }) => {
                 type="button"
                 // Pass the ENTIRE recipe object up to the handler
                 onClick={(e) => onLoadToLab(e, recipe)}
-                className="text-brand hover:text-brand/80 text-sm font-bold flex items-center gap-1.5 transition-colors group mt-2 w-fit"
+                className="group mt-2 flex w-fit items-center gap-1.5 text-sm font-bold text-slate-900 underline transition-colors hover:text-brand"
               >
                 Load into Lab 
                 <ArrowRight size={14} className="group-hover:translate-x-1 transition-transform" />
               </button>
             </div>
           </div>
-        </div>
+          </td>
+        </tr>
       )}
-    </div>
+    </React.Fragment>
   );
 };
 
@@ -209,31 +194,43 @@ export default function TopRecipesList({ recipes }) {
   };
 
   return (
-    <div className="bg-surface p-6 md:p-8 rounded-card border border-ink/5 shadow-sm mt-8">
+    <div className="mt-8 border border-slate-300 bg-white p-6 md:p-8">
       <div className="flex items-center gap-2 mb-2">
-        <Trophy size={18} className="text-brand" />
-        <h3 className="text-[10px] font-black uppercase tracking-widest text-ink-strong">
+        <Trophy size={18} className="text-slate-900" />
+        <h3 className="text-xs font-bold uppercase tracking-wider text-slate-500">
           Best Performing Feed Mixes
         </h3>
       </div>
-      <p className="text-sm font-medium text-ink-muted mb-6">
+      <p className="mb-6 text-sm font-medium text-slate-600">
         The feed mixes giving you the most milk for the least amount of money.
       </p>
 
-      <div className="space-y-3">
+      <div className="overflow-x-auto border border-slate-300">
         {safeRecipes.length === 0 ? (
           <EmptyMixState />
         ) : (
-          safeRecipes.map((recipe, index) => (
-            <FeedMixRow
-              key={recipe?.id || `fallback-${index}`}
-              recipe={recipe}
-              index={index}
-              isExpanded={expandedId === recipe?.id}
-              onToggle={handleToggle}
-              onLoadToLab={handleLoadRecipe}
-            />
-          ))
+          <table className="min-w-[760px] w-full border-collapse text-left">
+            <thead className="bg-slate-100">
+              <tr className="border-b border-slate-300">
+                <th scope="col" className="w-20 px-4 py-3 text-xs font-bold uppercase tracking-wider text-slate-500">Rank</th>
+                <th scope="col" className="min-w-[280px] px-4 py-3 text-xs font-bold uppercase tracking-wider text-slate-500">Mix Name</th>
+                <th scope="col" className="min-w-[180px] px-4 py-3 text-xs font-bold uppercase tracking-wider text-slate-500">Daily Milk Average</th>
+                <th scope="col" className="min-w-[180px] px-4 py-3 text-xs font-bold uppercase tracking-wider text-slate-500">Cost per Liter</th>
+              </tr>
+            </thead>
+            <tbody>
+              {safeRecipes.map((recipe, index) => (
+                <FeedMixRow
+                  key={recipe?.id || `fallback-${index}`}
+                  recipe={recipe}
+                  index={index}
+                  isExpanded={expandedId === recipe?.id}
+                  onToggle={handleToggle}
+                  onLoadToLab={handleLoadRecipe}
+                />
+              ))}
+            </tbody>
+          </table>
         )}
       </div>
     </div>

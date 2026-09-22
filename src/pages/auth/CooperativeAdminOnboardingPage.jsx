@@ -2,17 +2,22 @@ import { useState } from 'react';
 import { FileSpreadsheet, Mail, Upload, UserPlus } from 'lucide-react';
 import AlertBanner from '../../components/ui/AlertBanner';
 import InviteClaimPreview from '../../components/auth/InviteClaimPreview';
+import { useAuth } from '../../contexts/AuthContext';
 import { onboardingApi } from '../../lib/backendApi';
+import { getAssignableFarmMemberRoles } from '../../lib/staffOnboarding';
 
 export default function CooperativeAdminOnboardingPage() {
+  const { currentUser } = useAuth();
+  const roleOptions = getAssignableFarmMemberRoles(currentUser);
   const [manualInvite, setManualInvite] = useState({
     full_name: '',
     email: '',
     phone_number: '',
-    role: 'FARMER',
+    role: 'FARM_HAND',
   });
-  const [csvDefaultRole, setCsvDefaultRole] = useState('FARMER');
+  const [csvDefaultRole, setCsvDefaultRole] = useState('FARM_HAND');
   const [csvFile, setCsvFile] = useState(null);
+  const [createdInvite, setCreatedInvite] = useState(null);
   const [isInviting, setIsInviting] = useState(false);
   const [isUploadingCsv, setIsUploadingCsv] = useState(false);
   const [message, setMessage] = useState({ type: '', text: '' });
@@ -23,15 +28,16 @@ export default function CooperativeAdminOnboardingPage() {
     setIsInviting(true);
 
     try {
-      await onboardingApi.inviteMember({
+      const invite = await onboardingApi.inviteMember({
         ...manualInvite,
         full_name: manualInvite.full_name.trim(),
         email: manualInvite.email.trim(),
         phone_number: manualInvite.phone_number.trim(),
       });
 
-      setManualInvite({ full_name: '', email: '', phone_number: '', role: 'FARMER' });
-      setMessage({ type: 'success', text: 'Member invite sent. They can claim via the invite link.' });
+      setCreatedInvite(invite);
+      setManualInvite({ full_name: '', email: '', phone_number: '', role: 'FARM_HAND' });
+      setMessage({ type: 'success', text: 'Member invitation created. Share the server-issued claim link below.' });
     } catch (error) {
       const serverMessage = error?.response?.data?.message || error?.response?.data?.error;
       setMessage({ type: 'danger', text: serverMessage || 'Member invite failed.' });
@@ -67,7 +73,7 @@ export default function CooperativeAdminOnboardingPage() {
   return (
     <div className="min-h-[calc(100dvh-10rem)] rounded-2xl border border-[#602f1f]/10 bg-[linear-gradient(135deg,#fff4ec_0%,#fff8ea_36%,#f2f4ff_100%)] p-4 md:p-8">
       <div className="mx-auto grid max-w-6xl gap-6 lg:grid-cols-2">
-        <section className="rounded-2xl border border-[#7a3e1f]/20 bg-white/90 p-6 shadow-[0_14px_36px_rgba(122,62,31,0.12)]">
+        <section className="rounded-2xl border border-[#7a3e1f]/20 bg-white/90 p-6 ">
           <header className="mb-5">
             <p className="inline-flex items-center gap-2 rounded-full bg-[#7a3e1f]/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.15em] text-[#5a2e16]">
               <UserPlus size={14} /> Manual Invite
@@ -110,6 +116,7 @@ export default function CooperativeAdminOnboardingPage() {
                 value={manualInvite.phone_number}
                 onChange={(event) => setManualInvite((prev) => ({ ...prev, phone_number: event.target.value }))}
                 placeholder="+254722000000"
+                required
               />
             </label>
 
@@ -120,18 +127,19 @@ export default function CooperativeAdminOnboardingPage() {
                 value={manualInvite.role}
                 onChange={(event) => setManualInvite((prev) => ({ ...prev, role: event.target.value }))}
               >
-                <option value="FARM_ADMIN">FARM_ADMIN</option>
-                <option value="FARMER">FARMER</option>
-                <option value="HERDSMAN">HERDSMAN</option>
-                <option value="VET_ASSISTANT">VET_ASSISTANT</option>
-                <option value="CLERK">CLERK</option>
-                <option value="FINANCE">FINANCE</option>
+                {roleOptions.map((option) => (
+                  <option key={option.value} value={option.value}>{option.label}</option>
+                ))}
               </select>
+              <span className="mt-2 block text-xs normal-case tracking-normal text-[#79513c]">
+                {roleOptions.find((option) => option.value === manualInvite.role)?.description}
+              </span>
             </label>
 
             <InviteClaimPreview
-              title="Member Claim Preview"
-              description="Preview the claim link a member will use before you send the invite."
+              invite={createdInvite}
+              title="Member claim link"
+              description="For security, this link is generated only after the server accepts the invitation."
             />
 
             <button type="submit" className="btn-command w-full" disabled={isInviting}>
@@ -140,7 +148,7 @@ export default function CooperativeAdminOnboardingPage() {
           </form>
         </section>
 
-        <section className="rounded-2xl border border-[#224f87]/20 bg-white/90 p-6 shadow-[0_14px_36px_rgba(34,79,135,0.11)]">
+        <section className="rounded-2xl border border-[#224f87]/20 bg-white/90 p-6 ">
           <header className="mb-5">
             <p className="inline-flex items-center gap-2 rounded-full bg-[#224f87]/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.15em] text-[#1d4370]">
               <FileSpreadsheet size={14} /> Bulk Import
@@ -157,11 +165,9 @@ export default function CooperativeAdminOnboardingPage() {
                 value={csvDefaultRole}
                 onChange={(event) => setCsvDefaultRole(event.target.value)}
               >
-                <option value="FARMER">FARMER</option>
-                <option value="HERDSMAN">HERDSMAN</option>
-                <option value="VET_ASSISTANT">VET_ASSISTANT</option>
-                <option value="CLERK">CLERK</option>
-                <option value="FINANCE">FINANCE</option>
+                {roleOptions.map((option) => (
+                  <option key={option.value} value={option.value}>{option.label}</option>
+                ))}
               </select>
             </label>
 

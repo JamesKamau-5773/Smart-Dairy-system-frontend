@@ -64,7 +64,7 @@ function ProteinMeter({ averageProtein, targetProtein, hasWarning }) {
           Current Mix: {averageProtein.toFixed(1)}%
         </span>
       </div>
-      <div className="h-2.5 w-full bg-white rounded-full overflow-hidden shadow-inner">
+      <div className="h-2.5 w-full bg-white rounded-full overflow-hidden ">
         <div
           className={`h-full transition-all duration-500 ease-out ${hasWarning ? 'bg-warning' : 'bg-brand'}`}
           style={{ width: `${Math.min((averageProtein / targetProtein) * 100, 100)}%` }}
@@ -79,7 +79,7 @@ function IngredientAllocationRow({ item, onPercentageChange }) {
   const showStock = Number.isFinite(availableStock) && availableStock > 0;
 
   return (
-    <div className="grid grid-cols-12 gap-2 items-center bg-white p-3 rounded-md border border-ink/10 hover:border-brand/30 transition-colors focus-within:border-brand focus-within:ring-1 focus-within:ring-brand shadow-sm">
+    <div className="grid grid-cols-12 gap-2 items-center bg-white p-3 rounded-md border border-ink/10 hover:border-brand/30 transition-colors focus-within:border-brand focus-within:ring-1 focus-within:ring-brand ">
       <div className="col-span-5 pr-2">
         <div className="text-sm font-bold text-ink-strong truncate">{item.name}</div>
         {showStock && (
@@ -202,7 +202,7 @@ export default function RecipeBuilder({
   };
 
   return (
-    <div className="bg-surface p-6 border border-ink/5 rounded-card shadow-sm">
+    <div className="bg-surface p-6 border border-ink/5 rounded-card ">
       {/* Header Area */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between mb-6 border-b border-ink/5 pb-4">
         <h3 className="flex items-center gap-2 text-sm font-black uppercase tracking-wide text-brand-dark">

@@ -1,5 +1,5 @@
 export function formatMoney(value) {
-  return `KSh ${Number(value || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  return `KES ${Number(value || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
 
 export function buildWhatsAppInvoiceMessage(profile) {

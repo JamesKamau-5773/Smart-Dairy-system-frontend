@@ -4,15 +4,19 @@ import { useAuth } from "../../contexts/AuthContext";
 import { canViewAdminControls } from "../../lib/roles";
 import { QUERY_KEYS } from "../../providers/QueryProvider";
 import { financeApi, productionApi, safetyApi } from "../../lib/backendApi";
-import { Plus, Beaker, AlertTriangle, ShieldCheck, Search, Filter, RotateCcw, ChevronDown, Pencil, Trash2 } from "lucide-react";
+import { Plus, Beaker, AlertTriangle, ShieldCheck, Search, Filter, RotateCcw, ChevronDown, Pencil, Trash2, Baby, MoreVertical } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import FastMilkLog from "../../components/operations/FastMilkLog";
+import CalfMilkFeedModal from "../../components/operations/CalfMilkFeedModal";
+import MilkDispositionHistory from "../../components/operations/MilkDispositionHistory";
 import Confirmation, { useConfirmation } from "../../components/ui/Confirmation";
 import GroupedDateRows from "../../components/ui/GroupedDateRows";
 import toast from "react-hot-toast";
 import { toNormalizedSessionLabel } from "../../lib/milkUtils";
 import { formatDate } from "../../lib/herdUtils";
+import { formatCowIdentity } from "../../lib/cowIdentity";
 import { Link } from "react-router-dom";
+import { Popover, PopoverContent, PopoverTrigger } from "../../components/ui/popover";
 
 const AMOUNT_FIELD_CANDIDATES = [
   'amount',
@@ -119,6 +123,7 @@ export default function YieldLog() {
   const canVerify = canViewAdminControls(currentUser);
   const queryClient = useQueryClient();
   const [showFastLog, setShowFastLog] = useState(false);
+  const [showCalfMilkFeed, setShowCalfMilkFeed] = useState(false);
   const [selectedRecord, setSelectedRecord] = useState(null);
   const [fastLogInitialDate, setFastLogInitialDate] = useState('');
   const [fastLogMode, setFastLogMode] = useState('create');
@@ -147,6 +152,16 @@ export default function YieldLog() {
   const { data: productionSummary, isLoading: isLoadingProductionSummary } = useQuery({
     queryKey: ['production-summary', tenantId, farmId],
     queryFn: () => productionApi.summary(), // Calls GET /api/production/summary
+    enabled: !!tenantId && !!farmId,
+  });
+
+  const {
+    data: milkDispositions = [],
+    isLoading: isLoadingMilkDispositions,
+    error: milkDispositionsError,
+  } = useQuery({
+    queryKey: QUERY_KEYS.MILK_DISPOSITIONS(tenantId, farmId),
+    queryFn: () => productionApi.listMilkDispositions(),
     enabled: !!tenantId && !!farmId,
   });
 
@@ -350,7 +365,7 @@ export default function YieldLog() {
   const handleDeleteFromTable = async (row) => {
     const confirmed = await confirmation.confirm({
       title: 'Delete Milk Record',
-      message: `Delete milk record for ${row.cowId}? This action cannot be undone.`,
+      message: `Delete milk record for ${formatCowIdentity({ cowName: row.cowName, cowTag: row.cowId })}? This action cannot be undone.`,
       confirmText: 'Delete',
       type: 'danger',
     });
@@ -382,7 +397,7 @@ export default function YieldLog() {
   return (
     <div className="animate-reveal space-y-6">
       <Confirmation {...confirmation} />
-      <div className="rounded-[28px] border border-ink/10 bg-[linear-gradient(135deg,rgba(223,249,255,0.95),rgba(255,255,255,0.98))] p-5 sm:p-6 shadow-[0_20px_60px_rgba(15,23,42,0.08)]">
+      <div className="rounded-[28px] border border-ink/10 bg-[linear-gradient(135deg,rgba(223,249,255,0.95),rgba(255,255,255,0.98))] p-5 sm:p-6 ">
         <div className="flex flex-col gap-4 border-b border-ink/10 pb-5 lg:flex-row lg:items-end lg:justify-between">
           <div className="min-w-0">
             <div className="inline-flex items-center gap-2 px-2 py-1 bg-brand/10 text-brand text-[10px] font-semibold tracking-normal mb-4 rounded-md border border-brand/20">
@@ -395,7 +410,15 @@ export default function YieldLog() {
               Review milk entries, keep withdrawals visible, and work from a single place with filters and edit history.
             </p>
           </div>
-          <div className="flex">
+          <div className="flex flex-col gap-2 sm:flex-row">
+            <button
+              type="button"
+              onClick={() => setShowCalfMilkFeed(true)}
+              className="btn-secondary w-full justify-center gap-2 whitespace-nowrap px-4 py-3 sm:w-auto"
+            >
+              <Baby size={16} className="shrink-0" />
+              <span className="text-sm sm:text-base">Feed Calf</span>
+            </button>
             <button
               type="button"
               onClick={openCreateLog}
@@ -414,7 +437,7 @@ export default function YieldLog() {
             { label: 'Pending entries', value: summary.pending, tone: 'warning' },
             { label: 'Flagged entries', value: summary.flagged, tone: 'danger' },
           ].map((item) => (
-            <div key={item.label} className="rounded-2xl border border-ink/10 bg-surface p-4 shadow-[0_10px_30px_rgba(15,23,42,0.05)]">
+            <div key={item.label} className="rounded-2xl border border-ink/10 bg-surface p-4 ">
               <p className="text-[10px] font-bold uppercase tracking-widest text-ink-muted">{item.label}</p>
               <p className={`mt-2 text-3xl font-black ${summaryTone[item.tone]}`}>{item.value}</p>
             </div>
@@ -433,8 +456,14 @@ export default function YieldLog() {
         />
       )}
 
+      <CalfMilkFeedModal
+        isOpen={showCalfMilkFeed}
+        onClose={() => setShowCalfMilkFeed(false)}
+        initialDate={filters.date}
+      />
+
       {hardlocks?.length > 0 && (
-        <div className="card-machined bg-danger/5 border-danger !shadow-[0_10px_28px_rgba(239,68,68,0.22)] p-6 flex gap-6 items-start">
+        <div className="card-machined bg-danger/5 border-danger  p-6 flex gap-6 items-start">
           <div className="p-3 bg-danger text-surface">
             <AlertTriangle size={24} />
           </div>
@@ -450,12 +479,23 @@ export default function YieldLog() {
         </div>
       )}
 
+      <MilkDispositionHistory
+        records={milkDispositions.slice(0, 5)}
+        isLoading={isLoadingMilkDispositions}
+        error={milkDispositionsError}
+        onRecord={() => setShowCalfMilkFeed(true)}
+        title="Recent calf milk allocations"
+        totalCount={milkDispositions.length}
+        totalLiters={milkDispositions.reduce((total, record) => total + record.liters, 0)}
+        viewAllHref="/operations/milk-usage"
+      />
+
       <div className="card-machined p-5 space-y-4">
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
           <button
             type="button"
             onClick={() => setFiltersOpen((prev) => !prev)}
-            className="inline-flex items-center gap-1.5 rounded-lg border border-ink/10 bg-surface px-3 py-1.5 text-xs font-semibold text-ink shadow-sm transition-all hover:border-brand/20 hover:bg-brand/5 hover:text-brand"
+            className="inline-flex items-center gap-1.5 rounded-lg border border-ink/10 bg-surface px-3 py-1.5 text-xs font-semibold text-ink  transition-all hover:border-brand/20 hover:bg-brand/5 hover:text-brand"
             aria-expanded={filtersOpen}
             aria-controls="production-filter-panel"
           >
@@ -492,12 +532,12 @@ export default function YieldLog() {
                 />
               </label>
               <label className="space-y-1 text-xs font-semibold text-ink-muted">
-                Cow ID
+                Cow name or ear tag
                 <input
                   type="text"
                   value={filters.cowId}
                   onChange={(e) => updateFilter('cowId', e.target.value)}
-                  placeholder="e.g. C-102"
+                  placeholder="e.g. Malaika or KE-0046"
                   className="input-machined"
                 />
               </label>
@@ -561,7 +601,7 @@ export default function YieldLog() {
               <th className="p-5 font-sans text-xs font-semibold uppercase tracking-[0.12em] text-surface/95">Date</th>
               <th className="p-5 font-sans text-xs font-semibold uppercase tracking-[0.12em] text-surface/95">Session</th>
               <th className="p-5 font-sans text-xs font-semibold uppercase tracking-[0.12em] text-surface/95">Milker</th>
-              <th className="p-5 font-sans text-xs font-semibold uppercase tracking-[0.12em] text-surface/95">Cow ID</th>
+              <th className="p-5 font-sans text-xs font-semibold uppercase tracking-[0.12em] text-surface/95">Cow</th>
               <th className="p-5 font-sans text-xs font-semibold uppercase tracking-[0.12em] text-right text-surface/95">Amount</th>
               <th className="p-5 font-sans text-xs font-semibold uppercase tracking-[0.12em] text-center text-surface/95">Status</th>
               <th className="p-5 font-sans text-xs font-semibold uppercase tracking-[0.12em] text-right text-surface/95">Actions</th>
@@ -585,7 +625,7 @@ export default function YieldLog() {
                   <div className="flex items-center gap-3">
                     <div className="w-2 h-2 rounded-full bg-accent"></div>
                     <Link to={`/operations/animal/${row.animalRefId ?? row.cowId}/milk-history`} className="p-3 text-right font-sans text-1.8xl font-medium text-brand tabular-nums">
-                      {row.cowId} ({row.cowName})
+                      {formatCowIdentity({ cowName: row.cowName, cowTag: row.cowId })}
                     </Link>
                   </div>
                 </td>
@@ -618,20 +658,15 @@ export default function YieldLog() {
                         <ShieldCheck size={12} /> Verify
                       </button>
                     )}
-                    <button
-                      type="button"
-                      onClick={() => openEditLog(row)}
-                      className="btn-secondary gap-1 px-3 py-2 text-xs"
-                    >
-                      <Pencil size={12} /> Edit
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => handleDeleteFromTable(row)}
-                      className="btn-danger gap-1 px-3 py-2 text-xs"
-                    >
-                      <Trash2 size={12} /> Delete
-                    </button>
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <button type="button" className="inline-flex h-8 w-8 items-center justify-center rounded-button border border-slate-300 text-slate-600 hover:border-brand-400 hover:text-brand-700" aria-label={`Actions for milk record ${row.id}`}><MoreVertical size={16} /></button>
+                      </PopoverTrigger>
+                      <PopoverContent align="end" className="w-40 p-1.5">
+                        <button type="button" onClick={() => openEditLog(row)} className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm text-ink-900 hover:bg-brand-50"><Pencil size={14} /> Edit</button>
+                        <button type="button" onClick={() => handleDeleteFromTable(row)} className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm text-danger hover:bg-danger/10"><Trash2 size={14} /> Delete</button>
+                      </PopoverContent>
+                    </Popover>
                   </div>
                 </td>
               </tr>

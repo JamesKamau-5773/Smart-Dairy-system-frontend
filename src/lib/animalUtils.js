@@ -3,6 +3,8 @@
  */
 
 import { formatDateTime } from './audit';
+import { resolveBackendAssetUrl } from './apiClient';
+import { formatCowIdentity, normalizeCowIdentity } from './cowIdentity';
 
 export function getAvatarLabel(animal) {
   const nameInitial = animal?.name?.trim()?.charAt(0)?.toUpperCase();
@@ -67,14 +69,14 @@ function formatParentReference(parent, fallbackName, fallbackId) {
     const tag = parent.tag_number ?? parent.tag ?? parent.ear_tag ?? parent.id;
     const name = parent.name ?? parent.cow_name;
 
-    if (tag && name) return `${tag} (${name})`;
-    return name ?? (tag ? `ID ${tag}` : '--');
+    return formatCowIdentity({ name, earTag: tag }, '--');
   }
 
   return parent ?? fallbackName ?? (fallbackId ? `ID ${fallbackId}` : '--');
 }
 
 export function normalizeAnimal(animal = {}, id = '') {
+  const identity = normalizeCowIdentity({ ...animal, id: animal.id ?? animal.cow_id ?? id });
   const ageMonths = Number(animal.ageMonths ?? animal.age_months ?? 0);
   const yesterdayYieldLiters = Number(
     animal.yesterdayYieldLiters ?? animal.yesterday_yield_liters ?? 0
@@ -83,8 +85,10 @@ export function normalizeAnimal(animal = {}, id = '') {
     animal.sevenDayAverageLiters ?? animal.seven_day_average_liters ?? 0
   );
   return {
-    id: animal.id ?? animal.cow_id ?? animal.ear_tag ?? id,
-    name: animal.name ?? animal.cow_name ?? 'Unnamed',
+    id: identity.recordId || identity.earTag || id,
+    recordId: identity.recordId || id,
+    earTag: identity.earTag,
+    name: identity.name || 'Unnamed',
     breed: animal.breed ?? animal.breed_name ?? 'Unknown',
     sire: formatParentReference(animal.sire, animal.sire_name, animal.sire_id),
     dam: formatParentReference(animal.dam, animal.dam_name, animal.dam_id),
@@ -102,5 +106,6 @@ export function normalizeAnimal(animal = {}, id = '') {
     pregnancyStatus: animal.pregnancyStatus ?? animal.pregnancy_status ?? 'Unknown',
     daysInMilk: animal.daysInMilk ?? animal.days_in_milk ?? null,
     daysOpen: animal.daysOpen ?? animal.days_open ?? null,
+    photoUrl: resolveBackendAssetUrl(animal.photoUrl ?? animal.photo_url),
   };
 }

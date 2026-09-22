@@ -71,7 +71,7 @@ export default function StandardBatchLog({ onCancel, onSaveComplete }) {
         
         {/* STEP 1: Quick-Select Grid */}
         <div className="mb-8">
-          <label className="block text-[10px] font-black uppercase tracking-normal text-ink-muted mb-3 drop-shadow-[0_1px_1px_rgba(0,0,0,0.1)]">
+          <label className="block text-[10px] font-black uppercase tracking-normal text-ink-muted mb-3 ">
             1. What arrived?
           </label>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
@@ -81,7 +81,7 @@ export default function StandardBatchLog({ onCancel, onSaveComplete }) {
                 onClick={() => setSelectedItem(item)}
                 className={`text-left p-4 rounded-card border-2 transition-all ${
                   selectedItem.id === item.id 
-                    ? 'border-brand bg-brand/5 shadow-sm' 
+                    ? 'border-brand bg-brand/5'
                     : 'border-ink/5 bg-surface-raised hover:border-brand/30'
                 }`}
               >
@@ -100,7 +100,7 @@ export default function StandardBatchLog({ onCancel, onSaveComplete }) {
 
         {/* STEP 2: The "Tap" Entry System */}
         <div className="mb-8 bg-surface-raised p-6 rounded-card border border-ink/5">
-          <label className="block text-[10px] font-black uppercase tracking-normal text-ink-muted mb-4 text-center drop-shadow-[0_1px_1px_rgba(0,0,0,0.1)]">
+          <label className="block text-[10px] font-black uppercase tracking-normal text-ink-muted mb-4 text-center ">
             2. How much was delivered?
           </label>
           <div className="flex flex-col items-center">
@@ -109,13 +109,13 @@ export default function StandardBatchLog({ onCancel, onSaveComplete }) {
             <div className="flex items-center justify-center gap-6 mb-6">
               <button 
                 onClick={() => decrementQuantity(50)} 
-                className="w-12 h-12 rounded-full bg-white border border-ink/10 flex items-center justify-center text-ink-muted hover:text-danger hover:border-danger hover:bg-danger/5 transition-colors shadow-sm"
+                className="w-12 h-12 rounded-full bg-white border border-ink/10 flex items-center justify-center text-ink-muted hover:text-danger hover:border-danger hover:bg-danger/5 transition-colors "
               >
                 <Minus size={24} />
               </button>
               
               <div className="text-center min-w-[120px]">
-                <span className="text-5xl font-black tracking-normal text-ink-strong drop-shadow-[0_1px_1px_rgba(0,0,0,0.1)]">
+                <span className="text-3xl font-black tracking-normal text-ink-strong ">
                   {quantity}
                 </span>
                 <span className="text-sm font-bold text-ink-muted ml-1">{selectedItem.unit}</span>
@@ -123,7 +123,7 @@ export default function StandardBatchLog({ onCancel, onSaveComplete }) {
               
               <button 
                 onClick={() => incrementQuantity(50)} 
-                className="w-12 h-12 rounded-full bg-white border border-ink/10 flex items-center justify-center text-ink-muted hover:text-brand hover:border-brand hover:bg-brand/5 transition-colors shadow-sm"
+                className="w-12 h-12 rounded-full bg-white border border-ink/10 flex items-center justify-center text-ink-muted hover:text-brand hover:border-brand hover:bg-brand/5 transition-colors "
               >
                 <Plus size={24} />
               </button>
@@ -131,10 +131,10 @@ export default function StandardBatchLog({ onCancel, onSaveComplete }) {
             
             {/* Standard Farm Packaging Shortcuts */}
             <div className="flex gap-3">
-              <button onClick={() => incrementQuantity(50)} className="px-4 py-2 bg-white border border-ink/10 rounded-button text-sm font-black text-ink-strong hover:border-brand/30 shadow-sm transition-colors">
+              <button onClick={() => incrementQuantity(50)} className="px-4 py-2 bg-white border border-ink/10 rounded-button text-sm font-black text-ink-strong hover:border-brand/30  transition-colors">
                 + 50kg Bag
               </button>
-              <button onClick={() => incrementQuantity(70)} className="px-4 py-2 bg-white border border-ink/10 rounded-button text-sm font-black text-ink-strong hover:border-brand/30 shadow-sm transition-colors">
+              <button onClick={() => incrementQuantity(70)} className="px-4 py-2 bg-white border border-ink/10 rounded-button text-sm font-black text-ink-strong hover:border-brand/30  transition-colors">
                 + 70kg Bag
               </button>
             </div>
@@ -160,7 +160,7 @@ export default function StandardBatchLog({ onCancel, onSaveComplete }) {
           <button 
             onClick={handleInitialConfirm}
             disabled={quantity === 0}
-            className="bg-brand hover:bg-brand-dark disabled:bg-ink-muted disabled:opacity-50 text-white px-8 py-3 rounded-button font-black tracking-normal text-sm shadow-sm flex items-center gap-2 transition-colors"
+            className="bg-brand hover:bg-brand-dark disabled:bg-ink-muted disabled:opacity-50 text-white px-8 py-3 rounded-button font-black tracking-normal text-sm  flex items-center gap-2 transition-colors"
           >
             <CheckCircle2 size={18} /> Confirm Delivery
           </button>
@@ -170,7 +170,7 @@ export default function StandardBatchLog({ onCancel, onSaveComplete }) {
       {/* THE UNDO TOAST: Overlays the form when staged */}
       {isStaged && (
         <div className="absolute inset-0 flex items-end justify-center pb-6">
-          <div className="bg-ink-strong text-white p-4 rounded-card shadow-2xl flex items-center gap-6 animate-in slide-in-from-bottom-8">
+          <div className="bg-ink-strong text-white p-4 rounded-card  flex items-center gap-6 animate-in slide-in-from-bottom-8">
             <div className="flex items-center gap-3">
               <Loader2 size={20} className="animate-spin text-brand" />
               <div>

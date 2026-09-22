@@ -15,14 +15,14 @@ export default function CurrentMixCard({ mix, onRecordConsumption, isRecording =
 
   if (!mix || !mix.totalWeight || mix.totalWeight <= 0) {
     return (
-      <div className="card-machined bg-surface p-6 shadow-sm border border-ink/5 flex flex-col justify-center min-h-[240px] text-center">
-        <h3 className="flex items-center justify-center gap-2 text-[10px] font-black uppercase tracking-normal text-brand-dark mb-4 drop-shadow-[0_1px_1px_rgba(0,0,0,0.1)]">
+      <div className="flex min-h-[240px] flex-col justify-center border border-slate-300 bg-white p-6 text-center">
+        <h3 className="mb-4 flex items-center justify-center gap-2 text-xs font-bold uppercase tracking-wider text-slate-500">
           <PackageCheck size={16} /> What We're Feeding Now
         </h3>
-        <p className="text-sm font-semibold text-ink-strong">
+        <p className="text-sm font-semibold text-slate-900">
           No feed batch is active yet.
         </p>
-        <p className="mt-2 text-xs leading-5 text-ink-muted">
+        <p className="mt-2 text-xs leading-5 text-slate-600">
           A saved mix is a recipe only. Create a feed batch from that recipe to track what is currently in store and being fed.
         </p>
       </div>
@@ -56,53 +56,55 @@ export default function CurrentMixCard({ mix, onRecordConsumption, isRecording =
   };
 
   return (
-    <div className="card-machined bg-surface p-6 shadow-sm border border-ink/5 flex flex-col justify-between">
+    <div className="flex flex-col justify-between border border-slate-300 bg-white p-6">
       <div>
-        <h3 className="flex items-center gap-2 text-[10px] font-black uppercase tracking-normal text-brand-dark mb-4 drop-shadow-[0_1px_1px_rgba(0,0,0,0.1)]">
+        <h3 className="mb-4 flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-slate-500">
           <PackageCheck size={16} /> What We're Feeding Now
         </h3>
 
-        <h4 className="text-xl font-black text-ink-strong">{mix.name}</h4>
-        <p className="text-xs font-medium text-ink-muted mt-1">Mixed on {mix.mixedOn}</p>
+        <h4 className="text-xl font-black text-slate-900">{mix.name}</h4>
+        <p className="mt-1 text-xs font-medium text-slate-600">
+          Mixed on <span className="font-mono tabular-nums tracking-tight">{mix.mixedOn}</span>
+        </p>
 
         <div className="mt-6">
-          <div className="flex justify-between text-xs font-bold text-ink-strong mb-2">
+          <div className="mb-2 flex justify-between text-xs font-bold text-slate-900">
             <span>Stock Level</span>
-            <span>{stockPercentage}%</span>
+            <span className="font-mono tabular-nums tracking-tight">{stockPercentage}%</span>
           </div>
-          <div className="h-2 w-full bg-surface-raised rounded-full overflow-hidden">
+          <div className="h-2 w-full overflow-hidden bg-slate-200">
             <div
-              className={`h-full rounded-full transition-all duration-500 ${isLowStock ? 'bg-danger' : 'bg-brand'}`}
+              className={`h-full transition-all duration-500 ${isLowStock ? 'bg-red-700' : 'bg-brand'}`}
               style={{ width: `${stockPercentage}%` }}
             />
           </div>
         </div>
 
-        <div className={`mt-4 rounded-lg p-4 border ${isLowStock ? 'bg-danger/5 border-danger/20 text-danger' : 'bg-surface-raised border-ink/10 text-ink-strong'}`}>
+        <div className={`mt-4 border border-slate-300 border-l-4 bg-white p-4 text-slate-900 ${isLowStock ? 'border-l-red-700' : 'border-l-amber-500'}`}>
           <div className="flex items-center gap-2 font-bold text-sm mb-1">
             {isLowStock && <AlertCircle size={16} />}
             {hasRecordedPace && daysLeft !== null
-              ? `About ${daysLeft} days remaining at the recorded pace`
+              ? <>About <span className="font-mono tabular-nums tracking-tight">{daysLeft}</span> days remaining at the recorded pace</>
               : 'No depletion forecast yet'}
           </div>
-          <p className="text-xs font-medium opacity-80">
+          <p className="text-xs font-medium text-slate-700">
             {hasRecordedPace
-              ? `Based on recorded feed use of ${feedingRate} kg per day.`
+              ? <>Based on recorded feed use of <span className="font-mono tabular-nums tracking-tight">{feedingRate} kg</span> per day.</>
               : 'Record feeding as it happens to calculate the daily rate and remaining days.'}
           </p>
         </div>
 
         {mix.remainingWeight > 0 && onRecordConsumption && (
-          <form onSubmit={handleRecordConsumption} className="mt-4 border-t border-ink/10 pt-4">
-            <label htmlFor={`consumption-${mix.batchId}`} className="mb-2 block text-[10px] font-bold uppercase text-ink-muted">
+          <form onSubmit={handleRecordConsumption} className="mt-4 border-t border-slate-300 pt-4">
+            <label htmlFor={`consumption-${mix.batchId}`} className="mb-2 block text-xs font-bold uppercase tracking-wider text-slate-500">
               Feed used today (kg)
             </label>
-            <div className="flex gap-2">
+            <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto]">
               <select
                 value={feedingGroup}
                 onChange={(event) => setFeedingGroup(event.target.value)}
                 aria-label="Animal feeding group"
-                className="min-w-0 flex-1 rounded-lg border border-ink/20 bg-surface px-3 py-2 text-sm font-semibold outline-none focus:border-brand"
+                className="min-w-0 rounded-md border border-slate-400 bg-white px-3 py-2 text-sm font-semibold text-slate-900 focus:border-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-900"
                 required
               >
                 <option value="">Select animal group</option>
@@ -119,12 +121,12 @@ export default function CurrentMixCard({ mix, onRecordConsumption, isRecording =
                 value={consumedWeight}
                 onChange={(event) => setConsumedWeight(event.target.value)}
                 placeholder={`Up to ${mix.remainingWeight} kg`}
-                className="min-w-0 flex-1 rounded-lg border border-ink/20 bg-surface px-3 py-2 text-sm font-semibold outline-none focus:border-brand"
+                className="min-w-0 rounded-md border border-slate-400 bg-white px-3 py-2 font-mono text-sm font-semibold tabular-nums tracking-tight text-slate-900 focus:border-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-900"
               />
               <button
                 type="submit"
                 disabled={isRecording || !feedingGroup || !Number(consumedWeight) || Number(consumedWeight) > mix.remainingWeight}
-                className="btn-command flex items-center gap-2 px-3 py-2 text-xs disabled:opacity-50"
+                className="btn-command gap-2 px-4 py-2.5 text-sm disabled:cursor-not-allowed disabled:opacity-50 sm:col-span-2 lg:col-span-1"
               >
                 <Utensils size={15} /> {isRecording ? 'Recording' : 'Record feeding'}
               </button>
@@ -133,14 +135,14 @@ export default function CurrentMixCard({ mix, onRecordConsumption, isRecording =
         )}
       </div>
 
-      <div className="grid grid-cols-2 gap-4 mt-6">
-        <div className="bg-surface-raised rounded-lg p-4 text-center border border-ink/5">
-          <span className="block text-[10px] font-bold uppercase text-ink-muted mb-1">Fed So Far</span>
-          <span className="text-lg font-black text-ink-strong">{mix.consumedWeight} kg</span>
+      <div className="mt-6 grid grid-cols-2 gap-4">
+        <div className="border border-slate-300 bg-white p-4 text-center">
+          <span className="mb-1 block text-xs font-bold uppercase tracking-wider text-slate-500">Fed So Far</span>
+          <span className="font-mono text-lg font-black tabular-nums tracking-tight text-slate-900">{mix.consumedWeight} kg</span>
         </div>
-        <div className="bg-surface-raised rounded-lg p-4 text-center border border-ink/5">
-          <span className="block text-[10px] font-bold uppercase text-ink-muted mb-1">Still In Store</span>
-          <span className="text-lg font-black text-brand">{mix.remainingWeight} kg</span>
+        <div className="border border-slate-300 bg-white p-4 text-center">
+          <span className="mb-1 block text-xs font-bold uppercase tracking-wider text-slate-500">Still In Store</span>
+          <span className="font-mono text-lg font-black tabular-nums tracking-tight text-slate-900">{mix.remainingWeight} kg</span>
         </div>
       </div>
     </div>

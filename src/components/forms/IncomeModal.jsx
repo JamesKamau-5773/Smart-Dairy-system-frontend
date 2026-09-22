@@ -37,7 +37,7 @@ export default function IncomeModal({ isOpen, onClose, onSave, customers = [] })
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-ink-strong/30 backdrop-blur-sm">
-      <div className="bg-white rounded-xl shadow-2xl w-full max-w-xl border border-slate-200 overflow-hidden">
+      <div className="bg-white rounded-xl  w-full max-w-xl border border-slate-200 overflow-hidden">
         {/* Header */}
         <div className="flex justify-between items-center px-6 py-4 border-b border-slate-100 bg-slate-50">
           <h3 className="font-black text-ink text-sm uppercase tracking-widest">Log New Income</h3>
@@ -52,7 +52,7 @@ export default function IncomeModal({ isOpen, onClose, onSave, customers = [] })
               <input required name="date" value={formData.date} onChange={handleChange} type="date" className="w-full px-3 py-2 border border-slate-300 rounded-lg text-xs font-bold" />
             </div>
             <div>
-              <label className="block text-[10px] font-black text-ink-muted uppercase mb-1.5">Amount Received (KSh)</label>
+              <label className="block text-[10px] font-black text-ink-muted uppercase mb-1.5">Amount Received (KES)</label>
               <input required name="amount" value={formData.amount} onChange={handleChange} type="number" placeholder="0.00" className="w-full px-3 py-2 border border-slate-300 rounded-lg text-xs font-bold" />
             </div>
           </div>
@@ -127,7 +127,7 @@ export default function IncomeModal({ isOpen, onClose, onSave, customers = [] })
             <button type="button" onClick={onClose} className="px-4 py-2 font-black text-xs text-ink-muted uppercase">Cancel</button>
             <button type="submit" 
               disabled={!formData.date || !formData.amount || !formData.source}
-              className="flex items-center px-4 py-2 bg-brand text-white rounded-lg font-black text-xs uppercase shadow-sm hover:bg-brand-dark disabled:bg-slate-300 disabled:cursor-not-allowed">
+              className="flex items-center px-4 py-2 bg-brand text-white rounded-lg font-black text-xs uppercase  hover:bg-brand-dark disabled:bg-slate-300 disabled:cursor-not-allowed">
               <Save size={14} className="mr-2" /> Log Income
             </button>
           </div>

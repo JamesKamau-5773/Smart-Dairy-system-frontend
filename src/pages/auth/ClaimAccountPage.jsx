@@ -53,7 +53,7 @@ export default function ClaimAccountPage() {
   return (
     <div className="min-h-screen bg-[radial-gradient(circle_at_top_right,#ffe7d4_0%,#f6f4ff_42%,#e6f9f0_100%)] px-4 py-8">
       <div className="mx-auto flex min-h-[85vh] max-w-xl items-center">
-        <section className="w-full rounded-2xl border border-[#5a3b8d]/20 bg-white/90 p-8 shadow-[0_18px_50px_rgba(90,59,141,0.14)]">
+        <section className="w-full rounded-2xl border border-[#5a3b8d]/20 bg-white/90 p-8 ">
           <header className="mb-7 text-center">
             <p className="inline-flex items-center gap-2 rounded-full bg-[#5a3b8d]/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.14em] text-[#4d3276]">
               <ShieldCheck size={14} /> Secure Claim

@@ -8,7 +8,7 @@ import { useTenant } from '../../hooks/useTenant';
  * SRP: Renders the informative banner explaining how the data is stored.
  */
 const StorageInfoBanner = () => (
-  <div className="bg-brand/5 border border-brand/15 rounded-xl p-4 flex gap-3 shadow-sm mb-6 animate-reveal">
+  <div className="bg-brand/5 border border-brand/15 rounded-xl p-4 flex gap-3  mb-6 animate-reveal">
     <Info className="w-5 h-5 text-brand shrink-0 mt-0.5" />
     <p className="text-sm text-ink-muted leading-relaxed">
       <strong className="text-ink font-bold">Local Storage Notice:</strong> Saved conversions are currently stored locally on this device. They will be applied automatically when showing feed quantities on barn-floor screens.
@@ -36,7 +36,7 @@ const ConversionRow = ({ conversion, onRemove }) => {
   const { id, material, localUnit, baseUnit, ratio } = conversion;
 
   return (
-    <div className="flex items-center justify-between p-4 bg-surface-raised border border-ink/5 rounded-xl shadow-sm hover:border-ink/15 transition-colors group">
+    <div className="flex items-center justify-between p-4 bg-surface-raised border border-ink/5 rounded-xl  hover:border-ink/15 transition-colors group">
       <div>
         <p className="text-sm font-bold text-ink mb-0.5">{material}</p>
         <p className="text-xs font-medium text-ink-muted">
@@ -142,7 +142,7 @@ export default function UnitConversions() {
         <StorageInfoBanner />
 
         {/* Card 1: Add New Conversion Form */}
-        <div className="bg-surface rounded-2xl shadow-sm border border-ink/10 p-6 md:p-8">
+        <div className="bg-surface rounded-2xl  border border-ink/10 p-6 md:p-8">
           <div className="flex items-center gap-2 mb-6 text-ink">
             <Plus className="w-5 h-5 text-brand" />
             <h2 className="text-sm font-bold uppercase tracking-widest">Add New Unit Helper</h2>
@@ -232,7 +232,7 @@ export default function UnitConversions() {
         </div>
 
         {/* Card 2: Existing Conversions List */}
-        <div className="bg-surface rounded-2xl shadow-sm border border-ink/10 p-6 md:p-8">
+        <div className="bg-surface rounded-2xl  border border-ink/10 p-6 md:p-8">
           <div className="flex items-center justify-between mb-6">
             <h3 className="text-sm font-bold text-ink uppercase tracking-widest">
               Saved Unit Helpers

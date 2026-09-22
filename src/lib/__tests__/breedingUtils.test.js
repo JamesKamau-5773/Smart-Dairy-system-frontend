@@ -1,5 +1,11 @@
 import { describe, it, expect } from 'vitest';
-import { normalizeBreedingLogPayload, normalizeBreedingLog } from '../breedingUtils';
+import {
+  enrichBreedingLogCowIdentity,
+  normalizeBreedingLogPayload,
+  normalizeBreedingLog,
+  normalizeHerdOption,
+  resolveCowIdentity,
+} from '../breedingUtils';
 
 describe('breedingUtils', () => {
   it('includes AI certificate metadata and derived dates in the payload', () => {
@@ -56,5 +62,26 @@ describe('breedingUtils', () => {
     });
 
     expect(normalized.status).toBe('Open');
+  });
+
+  it('enriches a system cow ID with the farmer-facing name and ear tag', () => {
+    const log = normalizeBreedingLog({ cow_id: 46 });
+    const herdOptions = [normalizeHerdOption({ id: 46, tag_number: 'KE-0046', name: 'Malaika' })];
+
+    expect(enrichBreedingLogCowIdentity(log, herdOptions)).toMatchObject({
+      cowId: '46',
+      cowName: 'Malaika',
+      cowTag: 'KE-0046',
+    });
+  });
+
+  it('uses the backend record ID for writes while retaining the display identity', () => {
+    const herdOptions = [normalizeHerdOption({ id: 46, tag_number: 'KE-0046', name: 'Malaika' })];
+
+    expect(resolveCowIdentity('Malaika · KE-0046', herdOptions)).toEqual({
+      id: '46',
+      name: 'Malaika',
+      earTag: 'KE-0046',
+    });
   });
 });

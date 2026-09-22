@@ -20,6 +20,7 @@ import { reportsApi } from '@/lib/backendApi';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Button } from '@/components/ui/button';
 import { Calendar } from '@/components/ui/calendar';
+import MetricLabel from '@/components/finance/MetricLabel';
 import { cn } from '@/lib/utils';
 import toast from 'react-hot-toast';
 
@@ -65,6 +66,26 @@ function getStatusBadge(status) {
         icon: HelpCircle,
       };
   }
+}
+
+function CustomerSummary({ customerCount }) {
+  const count = Number(customerCount ?? 0);
+  const customerWord = count === 1 ? 'customer' : 'customers';
+
+  return (
+    <section
+      aria-label="Customer summary"
+      className="flex flex-col gap-3 border-l-4 border-brand bg-brand/5 px-4 py-4 text-ink sm:flex-row sm:items-center sm:justify-between sm:px-5"
+    >
+      <div>
+        <p className="text-xs font-bold uppercase text-brand">This period at a glance</p>
+        <p className="mt-1 text-base font-bold sm:text-lg">
+          You gained <span className="font-mono tabular-nums text-brand">{count}</span> new {customerWord} this period!
+        </p>
+      </div>
+      <p className="text-sm font-medium text-ink-muted">Use the figures below to see what each customer costs and earns.</p>
+    </section>
+  );
 }
 
 function normalizeDairyUnitEconomics(response) {
@@ -164,7 +185,7 @@ export default function DairyUnitEconomicsReport() {
     mutationFn: (payload) => reportsApi.calculateDairyUnitEconomics(payload),
     onSuccess: (data) => {
       setCalcResult(normalizeDairyUnitEconomics(data));
-      toast.success('Unit economics calculated successfully!');
+      toast.success('Customer profit calculated successfully!');
     },
     onError: (err) => {
       const msg = err?.response?.data?.error || err?.message || 'Calculation failed';
@@ -195,10 +216,10 @@ export default function DairyUnitEconomicsReport() {
             <TrendingUp size={12} /> Financial Analytics
           </div>
           <h1 className="font-sans font-black text-3xl tracking-tight text-ink m-0">
-            Customer Economics (CAC & LTV)
+            Customer Value & Profit
           </h1>
           <p className="text-sm font-medium text-ink-muted mt-2 max-w-2xl">
-            Evaluate Customer Acquisition Cost (CAC), Lifetime Value (LTV), and LTV:CAC ratios to gauge farm growth sustainability.
+            See how much it costs to gain customers, how much profit they bring, and whether growth is paying off.
           </p>
         </div>
 
@@ -208,7 +229,7 @@ export default function DairyUnitEconomicsReport() {
             onClick={() => setActiveTab('tenant')}
             className={cn(
               'px-4 py-2 rounded-lg transition-all',
-              activeTab === 'tenant' ? 'bg-surface-warm shadow-sm text-brand font-bold' : 'text-ink-muted hover:text-ink'
+              activeTab === 'tenant' ? 'bg-surface-warm  text-brand font-bold' : 'text-ink-muted hover:text-ink'
             )}
           >
             Tenant Overview
@@ -217,7 +238,7 @@ export default function DairyUnitEconomicsReport() {
             onClick={() => setActiveTab('by-farm')}
             className={cn(
               'px-4 py-2 rounded-lg transition-all',
-              activeTab === 'by-farm' ? 'bg-surface-warm shadow-sm text-brand font-bold' : 'text-ink-muted hover:text-ink'
+              activeTab === 'by-farm' ? 'bg-surface-warm  text-brand font-bold' : 'text-ink-muted hover:text-ink'
             )}
           >
             By Farm View
@@ -226,13 +247,17 @@ export default function DairyUnitEconomicsReport() {
             onClick={() => setActiveTab('calculator')}
             className={cn(
               'px-4 py-2 rounded-lg transition-all flex items-center gap-1.5',
-              activeTab === 'calculator' ? 'bg-surface-warm shadow-sm text-brand font-bold' : 'text-ink-muted hover:text-ink'
+              activeTab === 'calculator' ? 'bg-surface-warm  text-brand font-bold' : 'text-ink-muted hover:text-ink'
             )}
           >
             <Calculator size={14} /> Calculator
           </button>
         </div>
       </div>
+
+      {activeTab === 'tenant' && !isTenantLoading && !isTenantError && (
+        <CustomerSummary customerCount={activeData.new_customers_acquired} />
+      )}
 
       {/* Date & Parameter Controls for Reports */}
       {activeTab !== 'calculator' && (
@@ -327,11 +352,11 @@ export default function DairyUnitEconomicsReport() {
         <div className="space-y-6">
           {isTenantLoading ? (
             <div className="card-machined p-8 text-center text-ink-muted animate-pulse">
-              Calculating tenant dairy unit economics…
+              Calculating customer value and profit…
             </div>
           ) : isTenantError ? (
             <div className="card-machined p-6 bg-rose-50 border-rose-200 text-rose-700">
-              <p className="font-bold">Failed to load unit economics data.</p>
+              <p className="font-bold">Failed to load customer value and profit data.</p>
               <button
                 onClick={() => refetchTenant()}
                 className="mt-2 text-xs text-rose-800 underline font-semibold flex items-center gap-1"
@@ -346,15 +371,22 @@ export default function DairyUnitEconomicsReport() {
                 {/* CAC Card */}
                 <div className="card-machined p-5 bg-surface-warm flex flex-col justify-between">
                   <div className="flex items-center justify-between text-ink-muted mb-2">
-                    <span className="text-xs font-bold uppercase tracking-wider">CAC (Acquisition Cost)</span>
+                    <span className="text-xs font-bold uppercase tracking-wider">
+                      <MetricLabel explanation="The marketing amount spent for each new customer gained during this period.">
+                        Cost to Get a Customer
+                      </MetricLabel>
+                    </span>
                     <DollarSign size={16} className="text-brand" />
                   </div>
                   <div>
-                    <div className="text-2xl font-black text-ink">
+                    <div className={cn(
+                      'text-2xl font-black font-mono tabular-nums',
+                      Number(activeData.cac_kes ?? 0) > 0 ? 'text-ink' : 'text-amber-700'
+                    )}>
                       {activeData.cac_kes != null ? `KES ${Number(activeData.cac_kes).toLocaleString(undefined, { maximumFractionDigits: 2 })}` : 'N/A'}
                     </div>
                     <p className="text-[11px] text-ink-muted mt-1">
-                      Spend ÷ New Customers
+                      Marketing spend divided by new customers
                     </p>
                   </div>
                 </div>
@@ -362,15 +394,24 @@ export default function DairyUnitEconomicsReport() {
                 {/* LTV Card */}
                 <div className="card-machined p-5 bg-surface-warm flex flex-col justify-between">
                   <div className="flex items-center justify-between text-ink-muted mb-2">
-                    <span className="text-xs font-bold uppercase tracking-wider">Realized LTV</span>
+                    <span className="text-xs font-bold uppercase tracking-wider">
+                      <MetricLabel explanation="The profit already earned from each current customer based on recorded sales and costs.">
+                        Total Profit per Customer
+                      </MetricLabel>
+                    </span>
                     <TrendingUp size={16} className="text-accent" />
                   </div>
                   <div>
-                    <div className="text-2xl font-black text-ink">
+                    <div className={cn(
+                      'text-2xl font-black font-mono tabular-nums',
+                      Number(activeData.realized_ltv_kes ?? 0) > 0
+                        ? 'text-emerald-700'
+                        : Number(activeData.realized_ltv_kes ?? 0) < 0 ? 'text-rose-700' : 'text-ink-muted'
+                    )}>
                       KES {(activeData.realized_ltv_kes ?? 0).toLocaleString(undefined, { maximumFractionDigits: 2 })}
                     </div>
                     <p className="text-[11px] text-ink-muted mt-1">
-                      Observed contribution per active account
+                      Recorded profit from each current customer
                     </p>
                   </div>
                 </div>
@@ -378,11 +419,20 @@ export default function DairyUnitEconomicsReport() {
                 {/* LTV:CAC Ratio Card */}
                 <div className="card-machined p-5 bg-surface-warm flex flex-col justify-between">
                   <div className="flex items-center justify-between text-ink-muted mb-2">
-                    <span className="text-xs font-bold uppercase tracking-wider">LTV : CAC Ratio</span>
+                    <span className="text-xs font-bold uppercase tracking-wider">
+                      <MetricLabel explanation="Compares the profit from a customer with what you spent to gain that customer.">
+                        Profit vs. Cost Ratio
+                      </MetricLabel>
+                    </span>
                     <ArrowUpRight size={16} className="text-brand" />
                   </div>
                   <div>
-                    <div className="text-3xl font-black text-brand">
+                    <div className={cn(
+                      'text-3xl font-black font-mono tabular-nums',
+                      Number(activeData.ltv_to_cac_ratio ?? 0) >= 3
+                        ? 'text-emerald-700'
+                        : activeData.ltv_to_cac_ratio != null ? 'text-amber-700' : 'text-ink-muted'
+                    )}>
                       {activeData.ltv_to_cac_ratio != null
                         ? Number(activeData.ltv_to_cac_ratio).toFixed(2)
                         : 'N/A'}{activeData.ltv_to_cac_ratio != null && 'x'}
@@ -410,11 +460,11 @@ export default function DairyUnitEconomicsReport() {
                 {/* Operational Volume Card */}
                 <div className="card-machined p-5 bg-surface-warm flex flex-col justify-between">
                   <div className="flex items-center justify-between text-ink-muted mb-2">
-                    <span className="text-xs font-bold uppercase tracking-wider">Active Accounts</span>
+                    <span className="text-xs font-bold uppercase tracking-wider">Current Customers</span>
                     <Users size={16} className="text-ink-muted" />
                   </div>
                   <div>
-                    <div className="text-2xl font-black text-ink">
+                    <div className="text-2xl font-black text-ink font-mono tabular-nums">
                       {activeData.active_accounts ?? 0}
                     </div>
                     <p className="text-[11px] text-ink-muted mt-1">
@@ -433,10 +483,10 @@ export default function DairyUnitEconomicsReport() {
                 <div className="border border-amber-200 bg-amber-50 p-4 text-xs text-amber-900">
                   <p className="font-bold">Data quality notes</p>
                   <ul className="mt-2 list-disc space-y-1 pl-4">
-                    {activeData.data_quality.zero_price_delivery_count > 0 && <li>{activeData.data_quality.zero_price_delivery_count} delivery records have no price.</li>}
-                    {activeData.data_quality.zero_price_billable_liters > 0 && <li>{activeData.data_quality.zero_price_billable_liters} billable liters have no price.</li>}
+                    {activeData.data_quality.zero_price_delivery_count > 0 && <li><span className="font-mono tabular-nums">{activeData.data_quality.zero_price_delivery_count}</span> delivery records have no price.</li>}
+                    {activeData.data_quality.zero_price_billable_liters > 0 && <li><span className="font-mono tabular-nums">{activeData.data_quality.zero_price_billable_liters}</span> billable liters have no price.</li>}
                     {activeData.data_quality.has_recorded_production_costs === false && <li>No production costs are recorded for this period.</li>}
-                    {activeData.data_quality.has_recorded_marketing_spend === false && <li>No marketing spend is recorded, so CAC and LTV:CAC are unavailable.</li>}
+                    {activeData.data_quality.has_recorded_marketing_spend === false && <li>No marketing spend is recorded, so customer cost and the profit-to-cost comparison are unavailable.</li>}
                   </ul>
                 </div>
               )}
@@ -445,12 +495,17 @@ export default function DairyUnitEconomicsReport() {
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 <div className="card-machined p-6 space-y-4">
                   <h3 className="font-sans font-bold text-lg text-ink border-b border-ink/10 pb-3">
-                    Acquisition & Volume Factors
+                    Sales & Marketing Details
                   </h3>
-                  <dl className="divide-y divide-ink/10 text-sm">
+                  <dl className="divide-y divide-ink/10 text-sm [&_dd]:font-mono [&_dd]:tabular-nums">
                     <div className="py-2.5 flex justify-between">
                       <dt className="text-ink-muted">Sales & Marketing Spend</dt>
-                      <dd className="font-bold text-ink">
+                      <dd className={cn(
+                        'font-bold',
+                        activeData.data_quality.has_recorded_marketing_spend === false || Number(activeData.marketing_spend_kes ?? 0) === 0
+                          ? 'text-amber-700'
+                          : 'text-ink'
+                      )}>
                         {activeData.data_quality.has_recorded_marketing_spend === false
                           ? 'Not recorded'
                           : (activeData.marketing_spend_kes != null ? `KES ${Number(activeData.marketing_spend_kes).toLocaleString()}` : 'Not recorded')}
@@ -481,12 +536,17 @@ export default function DairyUnitEconomicsReport() {
 
                 <div className="card-machined p-6 space-y-4">
                   <h3 className="font-sans font-bold text-lg text-ink border-b border-ink/10 pb-3">
-                    Financial Margins & Lifespan
+                    Profitability & Customer Loyalty
                   </h3>
-                  <dl className="divide-y divide-ink/10 text-sm">
+                  <dl className="divide-y divide-ink/10 text-sm [&_dd]:font-mono [&_dd]:tabular-nums">
                     <div className="py-2.5 flex justify-between">
-                      <dt className="text-ink-muted">Gross Margin per Liter</dt>
-                      <dd className="font-bold text-emerald-700">
+                      <dt className="text-ink-muted">Profit per Liter</dt>
+                      <dd className={cn(
+                        'font-bold',
+                        Number(activeData.gross_margin_per_liter_kes ?? 0) > 0
+                          ? 'text-emerald-700'
+                          : Number(activeData.gross_margin_per_liter_kes ?? 0) < 0 ? 'text-rose-700' : 'text-amber-700'
+                      )}>
                         KES {activeData.gross_margin_per_liter_kes != null
                           ? Number(activeData.gross_margin_per_liter_kes).toFixed(2)
                           : '0.00'}
@@ -499,7 +559,7 @@ export default function DairyUnitEconomicsReport() {
                       </dd>
                     </div>
                     <div className="py-2.5 flex justify-between">
-                      <dt className="text-ink-muted">Forecast LTV</dt>
+                      <dt className="text-ink-muted">Projected Profit per Customer</dt>
                       <dd className="font-bold text-ink">
                         {activeData.forecast_ltv_kes != null ? `KES ${Number(activeData.forecast_ltv_kes).toLocaleString()}` : 'N/A'}
                       </dd>
@@ -568,7 +628,7 @@ export default function DairyUnitEconomicsReport() {
 
           {isByFarmLoading ? (
             <div className="card-machined p-8 text-center text-ink-muted animate-pulse">
-              Loading by-farm unit economics data…
+              Loading customer value and profit by farm…
             </div>
           ) : isByFarmError ? (
             <div className="card-machined p-6 bg-rose-50 border-rose-200 text-rose-700">
@@ -586,11 +646,11 @@ export default function DairyUnitEconomicsReport() {
                 <thead>
                   <tr className="border-b border-ink/10 text-[11px] font-bold uppercase text-ink-muted">
                     <th className="py-3 px-4">Farm Name</th>
-                    <th className="py-3 px-4">CAC (KES)</th>
-                    <th className="py-3 px-4">LTV (KES)</th>
-                    <th className="py-3 px-4">LTV : CAC</th>
+                    <th className="py-3 px-4">Customer Cost (KES)</th>
+                    <th className="py-3 px-4">Profit per Customer (KES)</th>
+                    <th className="py-3 px-4">Profit vs. Cost</th>
                     <th className="py-3 px-4">Status Benchmark</th>
-                    <th className="py-3 px-4">Gross Margin/L</th>
+                    <th className="py-3 px-4">Profit/L</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-ink/10">
@@ -605,13 +665,21 @@ export default function DairyUnitEconomicsReport() {
                           <td className="py-3 px-4 font-bold text-ink">
                             {farm.farm_name || farm.name || 'Primary Farm'}
                           </td>
-                          <td className="py-3 px-4 text-ink font-mono">
+                          <td className={cn(
+                            'py-3 px-4 font-mono tabular-nums',
+                            Number(farm.cac_kes ?? farm.cac ?? 0) > 0 ? 'text-ink' : 'text-amber-700'
+                          )}>
                             {(farm.cac_kes ?? farm.cac ?? 0).toLocaleString(undefined, { maximumFractionDigits: 2 })}
                           </td>
-                          <td className="py-3 px-4 text-ink font-mono">
+                          <td className={cn(
+                            'py-3 px-4 font-mono tabular-nums',
+                            Number(farm.ltv_kes ?? farm.ltv ?? 0) > 0
+                              ? 'text-emerald-700'
+                              : Number(farm.ltv_kes ?? farm.ltv ?? 0) < 0 ? 'text-rose-700' : 'text-amber-700'
+                          )}>
                             {(farm.ltv_kes ?? farm.ltv ?? 0).toLocaleString(undefined, { maximumFractionDigits: 2 })}
                           </td>
-                          <td className="py-3 px-4 font-bold text-brand font-mono">
+                          <td className="py-3 px-4 font-bold text-brand font-mono tabular-nums">
                             {farm.ltv_to_cac_ratio != null
                               ? Number(farm.ltv_to_cac_ratio).toFixed(2)
                               : '0.00'}x
@@ -621,7 +689,12 @@ export default function DairyUnitEconomicsReport() {
                               <Icon size={12} /> {badge.label}
                             </span>
                           </td>
-                          <td className="py-3 px-4 text-emerald-700 font-mono">
+                          <td className={cn(
+                            'py-3 px-4 font-mono tabular-nums',
+                            Number(farm.gross_margin_per_liter_kes ?? 0) > 0
+                              ? 'text-emerald-700'
+                              : Number(farm.gross_margin_per_liter_kes ?? 0) < 0 ? 'text-rose-700' : 'text-amber-700'
+                          )}>
                             KES {farm.gross_margin_per_liter_kes != null ? Number(farm.gross_margin_per_liter_kes).toFixed(2) : '0.00'}
                           </td>
                         </tr>
@@ -648,10 +721,10 @@ export default function DairyUnitEconomicsReport() {
           <div className="card-machined p-6 space-y-5">
             <div className="border-b border-ink/10 pb-3">
               <h3 className="font-sans font-bold text-lg text-ink flex items-center gap-2">
-                <Calculator size={18} className="text-brand" /> Direct Unit Economics Calculator
+                <Calculator size={18} className="text-brand" /> Customer Profit Calculator
               </h3>
               <p className="text-xs text-ink-muted mt-1">
-                Input custom operational parameters to simulate CAC, LTV, and benchmark status manually.
+                Enter your own sales figures to compare customer profit with customer cost.
               </p>
             </div>
 
@@ -704,7 +777,7 @@ export default function DairyUnitEconomicsReport() {
 
               <div>
                 <label className="block font-bold text-ink-muted uppercase mb-1">
-                  Gross Margin per Liter (KES) *
+                  Profit per Liter (KES) *
                 </label>
                 <input
                   type="number"
@@ -739,7 +812,7 @@ export default function DairyUnitEconomicsReport() {
                   disabled={calcMutation.isPending}
                   className="btn-command w-full py-2.5 text-sm font-bold flex items-center justify-center gap-2"
                 >
-                  {calcMutation.isPending ? 'Calculating…' : 'Calculate Unit Economics'}
+                  {calcMutation.isPending ? 'Calculating…' : 'Calculate Customer Profit'}
                 </button>
               </div>
             </form>
@@ -761,23 +834,36 @@ export default function DairyUnitEconomicsReport() {
                 <div className="mt-5 space-y-6">
                   <div className="grid grid-cols-2 gap-4">
                     <div className="p-4 bg-surface-subtle rounded-xl border border-ink/10">
-                      <span className="text-[11px] font-bold text-ink-muted uppercase block">Calculated CAC</span>
-                      <span className="text-2xl font-black text-ink font-mono mt-1 block">
+                      <span className="text-[11px] font-bold text-ink-muted uppercase block">Cost to Get a Customer</span>
+                      <span className={cn(
+                        'text-2xl font-black font-mono tabular-nums mt-1 block',
+                        Number(calcResult.cac_kes ?? calcResult.cac ?? 0) > 0 ? 'text-ink' : 'text-amber-700'
+                      )}>
                         KES {(calcResult.cac_kes ?? calcResult.cac ?? 0).toLocaleString(undefined, { maximumFractionDigits: 2 })}
                       </span>
                     </div>
 
                     <div className="p-4 bg-surface-subtle rounded-xl border border-ink/10">
-                      <span className="text-[11px] font-bold text-ink-muted uppercase block">Calculated LTV</span>
-                      <span className="text-2xl font-black text-ink font-mono mt-1 block">
+                      <span className="text-[11px] font-bold text-ink-muted uppercase block">Total Profit per Customer</span>
+                      <span className={cn(
+                        'text-2xl font-black font-mono tabular-nums mt-1 block',
+                        Number(calcResult.ltv_kes ?? calcResult.ltv ?? 0) > 0
+                          ? 'text-emerald-700'
+                          : Number(calcResult.ltv_kes ?? calcResult.ltv ?? 0) < 0 ? 'text-rose-700' : 'text-amber-700'
+                      )}>
                         KES {(calcResult.ltv_kes ?? calcResult.ltv ?? 0).toLocaleString(undefined, { maximumFractionDigits: 2 })}
                       </span>
                     </div>
                   </div>
 
                   <div className="p-5 bg-surface-subtle rounded-xl border border-ink/10 space-y-3">
-                    <span className="text-[11px] font-bold text-ink-muted uppercase block">LTV : CAC Ratio</span>
-                    <div className="text-4xl font-black text-brand font-mono">
+                    <span className="text-[11px] font-bold text-ink-muted uppercase block">Profit vs. Cost Ratio</span>
+                    <div className={cn(
+                      'font-mono text-3xl font-semibold tabular-nums',
+                      Number(calcResult.ltv_to_cac_ratio ?? 0) >= 3
+                        ? 'text-emerald-700'
+                        : calcResult.ltv_to_cac_ratio != null ? 'text-amber-700' : 'text-ink-muted'
+                    )}>
                       {calcResult.ltv_to_cac_ratio != null
                         ? Number(calcResult.ltv_to_cac_ratio).toFixed(2)
                         : '0.00'}x
@@ -799,13 +885,13 @@ export default function DairyUnitEconomicsReport() {
               ) : (
                 <div className="py-16 text-center text-ink-muted text-xs space-y-2">
                   <Calculator size={32} className="mx-auto text-ink-muted/50" />
-                  <p>Fill in the parameters on the left and click "Calculate Unit Economics" to simulate outcomes.</p>
+                  <p>Fill in the details on the left and select "Calculate Customer Profit" to see the result.</p>
                 </div>
               )}
             </div>
 
             <div className="p-3 bg-brand/5 border border-brand/10 rounded-lg text-[11px] text-ink-muted">
-              <span className="font-bold text-brand">Benchmark Rule of Thumb:</span> A healthy subscription or recurring dairy supply relationship aims for an LTV:CAC ratio of <span className="font-bold text-ink">3:1 or higher</span>.
+              <span className="font-bold text-brand">Healthy target:</span> Aim to earn at least <span className="font-bold text-ink font-mono tabular-nums">3:1</span> for every shilling spent gaining a customer.
             </div>
           </div>
         </div>

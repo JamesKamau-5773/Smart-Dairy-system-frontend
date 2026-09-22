@@ -36,7 +36,7 @@ export default function EditEmployeeModal({ isOpen, onClose, onSave, staff }) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-ink-strong/30 backdrop-blur-sm">
-      <div className="bg-white rounded-xl shadow-2xl w-full max-w-md border border-slate-200 overflow-hidden">
+      <div className="bg-white rounded-xl  w-full max-w-md border border-slate-200 overflow-hidden">
         <div className="flex justify-between items-center px-6 py-4 border-b border-slate-100 bg-slate-50">
           <h3 className="font-black text-ink text-sm uppercase tracking-widest flex items-center gap-2"><User size={16}/> Edit Employee Profile</h3>
           <button onClick={onClose} className="p-1 hover:bg-slate-200 rounded transition-colors"><X size={16} /></button>
@@ -54,13 +54,13 @@ export default function EditEmployeeModal({ isOpen, onClose, onSave, staff }) {
           </div>
 
           <div>
-            <label className="block text-[10px] font-black text-ink-muted uppercase mb-1.5">Base Salary (KSh)</label>
+            <label className="block text-[10px] font-black text-ink-muted uppercase mb-1.5">Base Salary (KES)</label>
             <input required name="baseSalary" type="number" value={formData.baseSalary} onChange={handleChange} placeholder="e.g. 35000" className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm font-bold" />
           </div>
 
           <div className="flex justify-end gap-3 pt-2">
             <button type="button" onClick={onClose} className="px-4 py-2 font-black text-xs text-ink-muted uppercase">Cancel</button>
-            <button type="submit" disabled={!formData.name || !formData.role || !formData.baseSalary} className="flex items-center px-4 py-2 bg-brand text-white rounded-lg font-black text-xs uppercase shadow-sm hover:bg-brand-dark disabled:bg-slate-300 disabled:cursor-not-allowed">
+            <button type="submit" disabled={!formData.name || !formData.role || !formData.baseSalary} className="flex items-center px-4 py-2 bg-brand text-white rounded-lg font-black text-xs uppercase  hover:bg-brand-dark disabled:bg-slate-300 disabled:cursor-not-allowed">
               <Save size={14} className="mr-2" /> Save Changes
             </button>
           </div>

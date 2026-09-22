@@ -26,7 +26,7 @@ const SummaryCard = ({ title, value, unit, icon: Icon, trend, loading = false })
         </span>
         <div className="h-1 w-8 bg-brand rounded-full"></div>
       </div>
-      <div className="p-2 border border-ink/10 bg-surface rounded-lg shadow-sm">
+      <div className="p-2 border border-ink/10 bg-surface rounded-lg ">
         <Icon size={18} className="text-brand" />
       </div>
     </div>
@@ -36,7 +36,7 @@ const SummaryCard = ({ title, value, unit, icon: Icon, trend, loading = false })
         <Skeleton className="h-12 w-3/5" />
       ) : (
         <>
-          <div className="font-sans text-5xl font-black text-brand tracking-tight flex items-baseline">
+          <div className="font-sans text-3xl font-black text-brand tracking-tight flex items-baseline">
             {value}
             <span className="text-sm ml-2 font-bold text-ink-muted">{unit}</span>
           </div>
@@ -192,7 +192,7 @@ export default function CommandCenter() {
             {summaryQuery.isLoading ? 'Loading...' : hasSummaryError ? 'Unavailable' : `KES ${(summary?.feed_cost_total_kes ?? 0).toLocaleString()}`}
           </h3>
         </div>
-        <div className="card-machined bg-brand/5 p-5 border-2 border-brand/20 shadow-sm">
+        <div className="card-machined bg-brand/5 p-5 border-2 border-brand/20 ">
           <p className="text-xs font-bold text-brand uppercase tracking-wider">Daily Profit</p>
           <h3 className="text-2xl font-black text-brand mt-2">
             {summaryQuery.isLoading ? 'Loading...' : hasSummaryError ? 'Unavailable' : `KES ${(summary?.net_margin_kes ?? 0).toLocaleString()}`}

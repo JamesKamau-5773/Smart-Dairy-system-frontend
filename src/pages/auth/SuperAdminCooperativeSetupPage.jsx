@@ -5,7 +5,7 @@ import AlertBanner from '../../components/ui/AlertBanner';
 import InviteClaimPreview from '../../components/auth/InviteClaimPreview';
 import { onboardingApi } from '../../lib/backendApi';
 
-const panelClassName = 'rounded-2xl border border-ink/10 bg-white/90 shadow-[0_18px_55px_rgba(31,59,47,0.12)] backdrop-blur';
+const panelClassName = 'rounded-2xl border border-ink/10 bg-white/90  backdrop-blur';
 const inputClassName = 'mt-2 w-full rounded-lg border border-ink/10 bg-[#fbfcfa] px-4 py-3 text-sm text-ink-strong outline-none transition focus:border-brand focus:ring-2 focus:ring-brand/15';
 
 const extractCooperativeId = (response) => (
@@ -218,7 +218,7 @@ export default function SuperAdminCooperativeSetupPage() {
         </div>
       )}
 
-      <div className="mx-auto mt-6 max-w-6xl rounded-xl border border-ink/10 bg-white/75 p-4 text-sm text-ink-muted shadow-sm backdrop-blur">
+      <div className="mx-auto mt-6 max-w-6xl rounded-xl border border-ink/10 bg-white/75 p-4 text-sm text-ink-muted  backdrop-blur">
         Next: cooperative admins continue member onboarding in
         {' '}
         <Link to="/cooperative-admin/members" className="font-semibold text-brand underline underline-offset-4">

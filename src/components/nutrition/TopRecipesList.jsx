@@ -3,8 +3,8 @@ import { Trophy } from 'lucide-react';
 
 export default function TopRecipesList({ recipes }) {
   return (
-    <div className="card-machined bg-surface p-6 shadow-sm border border-ink/5 mt-8">
-      <h3 className="flex items-center gap-2 text-[10px] font-black uppercase tracking-normal text-brand-dark mb-2 drop-shadow-[0_1px_1px_rgba(0,0,0,0.1)]">
+    <div className="card-machined bg-surface p-6  border border-ink/5 mt-8">
+      <h3 className="flex items-center gap-2 text-[10px] font-black uppercase tracking-normal text-brand-dark mb-2 ">
         <Trophy size={16} /> Best Performing Feed Mixes
       </h3>
       <p className="text-xs font-medium text-ink-muted mb-6">
@@ -24,7 +24,7 @@ export default function TopRecipesList({ recipes }) {
               </div>
             </div>
             
-            <div className="bg-white px-3 py-1.5 rounded text-xs font-black text-brand shadow-sm border border-brand/10">
+            <div className="bg-white px-3 py-1.5 rounded text-xs font-black text-brand  border border-brand/10">
               KES {mix.costPerLiter.toFixed(2)} / L
             </div>
           </div>

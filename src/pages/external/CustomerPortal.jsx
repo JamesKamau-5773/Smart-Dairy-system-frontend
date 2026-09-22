@@ -1,4 +1,3 @@
-import React from 'react';
 import { useParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { Droplets, Calendar, Receipt, ShieldCheck, Download, CheckCircle2 } from 'lucide-react';
@@ -60,7 +59,7 @@ export default function CustomerPortal() {
               <h3 className="font-semibold text-brand flex items-center gap-2 mb-4 text-sm uppercase tracking-wide">
                 <CheckCircle2 size={16} className="text-brand" /> Today's Received Volume
               </h3>
-              <div className="text-5xl font-bold tracking-tight text-ink-strong mb-2">
+              <div className="text-3xl font-bold tracking-tight text-ink-strong mb-2">
                 {portalData.todaysDelivery.volume} <span className="text-xl text-ink-muted font-medium">Litres</span>
               </div>
               <div>
@@ -74,8 +73,8 @@ export default function CustomerPortal() {
             <h3 className="font-semibold text-ink-muted flex items-center gap-2 mb-4 text-sm uppercase tracking-wide">
               <Receipt size={16} /> Current Billing Cycle
             </h3>
-            <div className="text-4xl font-bold tracking-tight text-ink-strong mb-2">
-              KSh {portalData.totalAmountDue.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+            <div className="mb-2 font-mono text-3xl font-semibold tracking-tight text-ink-strong tabular-nums">
+              KES {portalData.totalAmountDue.toLocaleString(undefined, { minimumFractionDigits: 2 })}
             </div>
             <div className="flex items-center gap-2 text-sm text-ink-muted mb-6">
               <Calendar size={14} /> {portalData.billingCycle} &mdash; {portalData.paymentTerms}
@@ -100,7 +99,7 @@ export default function CustomerPortal() {
                   <th className="p-4 font-semibold text-xs uppercase tracking-wider text-ink-muted">Date</th>
                   <th className="p-4 font-semibold text-xs uppercase tracking-wider text-ink-muted">Status</th>
                   <th className="p-4 font-semibold text-xs uppercase tracking-wider text-right text-ink-muted">Volume (L)</th>
-                  <th className="p-4 font-semibold text-xs uppercase tracking-wider text-right text-ink-muted">Rate (KSh)</th>
+                  <th className="p-4 font-semibold text-xs uppercase tracking-wider text-right text-ink-muted">Rate (KES)</th>
                   <th className="p-4 font-semibold text-xs uppercase tracking-wider text-right text-ink-muted">Daily Total</th>
                 </tr>
               </thead>

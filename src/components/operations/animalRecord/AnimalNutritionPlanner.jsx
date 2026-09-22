@@ -53,7 +53,7 @@ export default function AnimalNutritionPlanner({ animal, tenantId, farmId }) {
   });
 
   return (
-    <div className="rounded-2xl border border-ink/10 bg-surface p-6 shadow-sm">
+    <div className="rounded-2xl border border-ink/10 bg-surface p-6 ">
       <div className="grid grid-cols-1 gap-8 lg:grid-cols-2">
         <div className="space-y-6 lg:border-r lg:border-ink/10 lg:pr-8">
           <div>

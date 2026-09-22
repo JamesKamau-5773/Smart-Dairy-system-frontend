@@ -1,4 +1,5 @@
-import React, { useEffect } from 'react';
+import { useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { X } from 'lucide-react';
 
 export default function SlidePanel({ isOpen, onClose, title, subtitle, headerMeta, children }) {
@@ -25,7 +26,7 @@ export default function SlidePanel({ isOpen, onClose, title, subtitle, headerMet
 
   if (!isOpen) return null;
 
-  return (
+  return createPortal(
     <div className="fixed inset-0 z-50">
       <div 
         className="absolute inset-0 bg-slate-900/35 transition-opacity"
@@ -33,7 +34,7 @@ export default function SlidePanel({ isOpen, onClose, title, subtitle, headerMet
         aria-hidden="true"
       />
 
-      <aside className="absolute right-0 top-0 flex h-full w-full max-w-[44rem] flex-col border-l border-gray-200 bg-white shadow-2xl">
+      <aside className="absolute right-0 top-0 flex h-full w-full max-w-[44rem] flex-col border-l border-slate-200 bg-white/95 backdrop-blur">
         <div className="flex items-start justify-between border-b border-gray-200 bg-gray-50 px-6 py-5">
           <div className="min-w-0">
             <h2 className="truncate text-xl font-semibold text-gray-900">{title}</h2>
@@ -54,6 +55,7 @@ export default function SlidePanel({ isOpen, onClose, title, subtitle, headerMet
         </div>
 
       </aside>
-    </div>
+    </div>,
+    document.body,
   );
 }

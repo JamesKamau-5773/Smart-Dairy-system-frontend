@@ -59,7 +59,7 @@ export default function DeliveryModal({ isOpen, onClose, onSave, delivery, custo
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-ink-strong/30 backdrop-blur-sm">
-      <div className="bg-white rounded-xl shadow-2xl w-full max-w-xl border border-slate-200 overflow-hidden">
+      <div className="bg-white rounded-xl  w-full max-w-xl border border-slate-200 overflow-hidden">
         <div className="flex justify-between items-center px-6 py-4 border-b border-slate-100 bg-slate-50">
           <h3 className="font-black text-ink text-sm uppercase tracking-widest flex items-center gap-2">
             <Droplets size={16} className="text-brand" />
@@ -133,7 +133,7 @@ export default function DeliveryModal({ isOpen, onClose, onSave, delivery, custo
             </div>
             <div>
               <p className="text-[10px] font-black text-ink-muted uppercase">Estimated Amount</p>
-              <p className="text-sm font-black text-ink">KSh {estimatedAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
+              <p className="text-sm font-black text-ink">KES {estimatedAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
               <p className="text-[9px] text-ink-muted">Final amount is confirmed by the backend.</p>
             </div>
           </div>
@@ -156,7 +156,7 @@ export default function DeliveryModal({ isOpen, onClose, onSave, delivery, custo
             <button
               type="submit"
               disabled={isSaving || !formData.date || !formData.liters_delivered || personalUseExceedsDelivered}
-              className="flex items-center px-4 py-2 bg-brand text-white rounded-lg font-black text-xs uppercase shadow-sm hover:bg-brand-dark disabled:bg-slate-300 disabled:cursor-not-allowed"
+              className="flex items-center px-4 py-2 bg-brand text-white rounded-lg font-black text-xs uppercase  hover:bg-brand-dark disabled:bg-slate-300 disabled:cursor-not-allowed"
             >
               <Save size={14} className="mr-2" /> {isEditMode ? 'Save Changes' : 'Log Delivery'}
             </button>

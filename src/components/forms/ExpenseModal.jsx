@@ -42,7 +42,7 @@ export default function ExpenseModal({ isOpen, onClose, onSave }) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-ink-strong/30 backdrop-blur-sm">
-      <div className="bg-white rounded-xl shadow-2xl w-full max-w-xl border border-slate-200 overflow-hidden">
+      <div className="bg-white rounded-xl  w-full max-w-xl border border-slate-200 overflow-hidden">
         <div className="flex justify-between items-center px-6 py-4 border-b border-slate-100 bg-slate-50">
           <h3 className="font-black text-ink text-sm uppercase tracking-widest">Log New Expense</h3>
           <button onClick={closeAndReset} className="p-1 hover:bg-slate-200 rounded transition-colors"><X size={16} /></button>
@@ -55,7 +55,7 @@ export default function ExpenseModal({ isOpen, onClose, onSave }) {
               <input required name="date" value={formData.date} onChange={handleChange} type="date" className="w-full px-3 py-2 border border-slate-300 rounded-lg text-xs font-bold" />
             </div>
             <div>
-              <label className="block text-[10px] font-black text-ink-muted uppercase mb-1.5">Amount Spent (KSh)</label>
+              <label className="block text-[10px] font-black text-ink-muted uppercase mb-1.5">Amount Spent (KES)</label>
               <input required name="amount" value={formData.amount} onChange={handleChange} type="number" placeholder="0.00" className="w-full px-3 py-2 border border-slate-300 rounded-lg text-xs font-bold" />
             </div>
           </div>
@@ -159,7 +159,7 @@ export default function ExpenseModal({ isOpen, onClose, onSave }) {
             <button type="button" onClick={closeAndReset} className="px-4 py-2 font-black text-xs text-ink-muted uppercase">Cancel</button>
             <button type="submit"
               disabled={!formData.date || !formData.amount || !formData.paidTo || !formData.itemName.trim() || !formData.quantity}
-              className="flex items-center px-4 py-2 bg-danger text-white rounded-lg font-black text-xs uppercase shadow-sm hover:bg-danger/90 disabled:bg-slate-300 disabled:cursor-not-allowed">
+              className="flex items-center px-4 py-2 bg-danger text-white rounded-lg font-black text-xs uppercase  hover:bg-danger/90 disabled:bg-slate-300 disabled:cursor-not-allowed">
               <Save size={14} className="mr-2" /> Save Expense
             </button>
           </div>

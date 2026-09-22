@@ -28,9 +28,7 @@ export default function LoginPage() {
     const result = await login({ username, password });
 
     if (result.success) {
-      const savedUser = sessionStorage.getItem('jivu_user');
-      const user = savedUser ? JSON.parse(savedUser) : null;
-      navigate(resolveLandingPath(user), { replace: true });
+      navigate(result.user?.requires_password_reset ? '/reset-required-password' : resolveLandingPath(result.user), { replace: true });
     } else {
       setError(result.error);
       setIsSubmitting(false);

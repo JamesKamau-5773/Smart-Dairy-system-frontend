@@ -70,7 +70,7 @@ export default function DailyRoutinePlanner() {
 
   return (
     <div className="max-w-6xl mx-auto space-y-6 animate-reveal">
-      <div className="rounded-[28px] border border-ink/10 bg-[linear-gradient(135deg,rgba(223,249,255,0.94),rgba(255,255,255,0.98))] p-5 sm:p-6 shadow-[0_20px_60px_rgba(15,23,42,0.08)]">
+      <div className="rounded-[28px] border border-ink/10 bg-[linear-gradient(135deg,rgba(223,249,255,0.94),rgba(255,255,255,0.98))] p-5 sm:p-6 ">
         <div className="flex flex-col gap-4 border-b border-ink/10 pb-5 lg:flex-row lg:items-end lg:justify-between">
           <div>
             <h2 className="font-sans text-3xl font-black tracking-tight text-brand">Daily Routine Planner</h2>
@@ -95,7 +95,7 @@ export default function DailyRoutinePlanner() {
       {/* Main Grid Layout */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
         {/* LEFT COLUMN: The Schedule List */}
-        <div className="lg:col-span-2 card-machined bg-surface p-6 shadow-sm border border-ink/10">
+        <div className="lg:col-span-2 card-machined bg-surface p-6  border border-ink/10">
           <div className="flex items-center justify-between mb-4 border-b border-ink/5 pb-4">
             <h3 className="text-xs font-bold uppercase tracking-widest text-ink-muted flex items-center gap-2">
               <Clock size={16} /> Daily Tasks
@@ -114,7 +114,7 @@ export default function DailyRoutinePlanner() {
                 onClick={() => setActiveTaskId(task.id)}
                 className={`w-full text-left p-4 rounded-xl border transition-all duration-200 ${
                   activeTaskId === task.id 
-                    ? 'bg-brand/5 border-brand/30 shadow-sm' 
+                    ? 'bg-brand/5 border-brand/30'
                     : 'bg-surface hover:bg-surface-raised border-ink/10'
                 }`}
               >
@@ -151,7 +151,7 @@ export default function DailyRoutinePlanner() {
 
         {/* RIGHT COLUMN: The Sticky Notes Editor */}
         <div className="lg:col-span-1 sticky top-6">
-          <div className="card-machined bg-surface-warm/40 p-6 border border-brand/15 shadow-sm rounded-2xl">
+          <div className="card-machined bg-surface-warm/40 p-6 border border-brand/15  rounded-2xl">
             <h3 className="text-[10px] font-bold uppercase tracking-widest text-brand mb-1">
               Herdsman Instructions For:
             </h3>

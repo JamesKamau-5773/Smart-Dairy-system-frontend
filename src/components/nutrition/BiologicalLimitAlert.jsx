@@ -11,7 +11,7 @@ export default function BiologicalLimitAlert({ feedTarget, naturalLimit }) {
   if (safeTarget <= safeLimit) return null;
 
   return (
-    <div className="mt-4 p-4 bg-danger/10 border border-danger/20 rounded-md flex gap-3 shadow-sm">
+    <div className="mt-4 p-4 bg-danger/10 border border-danger/20 rounded-md flex gap-3 ">
       <AlertOctagon className="text-danger shrink-0 mt-0.5" size={20} />
       <div>
         <h4 className="text-sm font-bold text-danger uppercase tracking-wide">Wasting Feed (Overfeeding)</h4>

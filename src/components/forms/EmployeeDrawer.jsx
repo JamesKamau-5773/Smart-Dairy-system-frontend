@@ -1,14 +1,14 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import { useState } from 'react';
 import {
   BadgeDollarSign,
   User,
-  BadgeCheck,
   HeartPulse,
 } from 'lucide-react';
-import SlidePanel from '../ui/SlidePanel';
+import BaseModal from '../ui/BaseModal';
 import ProfileStatusTab from './employeeDrawer/ProfileStatusTab';
 import FinancialsTab from './employeeDrawer/FinancialsTab';
 import MedicalCertificationsTab from './employeeDrawer/MedicalCertificationsTab';
+import { formatKenyanPhoneInput, normalizeEmployeeRole, normalizeKenyanPhone } from '../../lib/staffAccessForm';
 
 const tabs = [
   { id: 'profile', label: 'Profile & Status', icon: User },
@@ -26,6 +26,19 @@ function toDateInput(value) {
   return String(value).slice(0, 10);
 }
 
+function createProfileData(staff) {
+  return {
+    name: staff.name ?? '',
+    role: normalizeEmployeeRole(staff.role),
+    phoneNumber: formatKenyanPhoneInput(staff.phoneNumber ?? ''),
+    status: staff.status ?? 'ACTIVE',
+    leaveType: staff.leaveType ?? '',
+    leaveStartDate: toDateInput(staff.leaveStartDate),
+    leaveEndDate: toDateInput(staff.leaveEndDate),
+    unpaidLeaveDaysThisMonth: staff.unpaidLeaveDaysThisMonth ?? 0,
+  };
+}
+
 export default function EmployeeDrawer({
   isOpen,
   staff,
@@ -35,67 +48,20 @@ export default function EmployeeDrawer({
   onSaveMedical,
 }) {
   const [activeTab, setActiveTab] = useState('profile');
-  const [profileData, setProfileData] = useState({
-    name: '',
-    role: '',
-    status: 'ACTIVE',
-    leaveType: '',
-    leaveStartDate: '',
-    leaveEndDate: '',
-    unpaidLeaveDaysThisMonth: 0,
-  });
+  const [profileData, setProfileData] = useState(() => createProfileData(staff));
+  const [profileErrors, setProfileErrors] = useState({});
   const [financialData, setFinancialData] = useState({
-    baseSalary: 0,
-    monthlyDeduction: 0,
+    baseSalary: staff.baseSalary ?? 0,
+    monthlyDeduction: staff.monthlyDeduction ?? 0,
     advanceAmount: 0,
-    loanBalance: 0,
+    loanBalance: staff.loanBalance ?? 0,
   });
   const [medicalData, setMedicalData] = useState({
-    certificationsText: '',
-    notes: '',
+    certificationsText: Array.isArray(staff.medicalCertifications) ? staff.medicalCertifications.join(', ') : '',
+    notes: staff.medicalNotes ?? '',
   });
 
-  useEffect(() => {
-    if (!isOpen || !staff) {
-      return;
-    }
-
-    setActiveTab('profile');
-    setProfileData({
-      name: staff.name ?? '',
-      role: staff.role ?? '',
-      status: staff.status ?? 'ACTIVE',
-      leaveType: staff.leaveType ?? '',
-      leaveStartDate: toDateInput(staff.leaveStartDate),
-      leaveEndDate: toDateInput(staff.leaveEndDate),
-      unpaidLeaveDaysThisMonth: staff.unpaidLeaveDaysThisMonth ?? 0,
-    });
-    setFinancialData({
-      baseSalary: staff.baseSalary ?? 0,
-      monthlyDeduction: staff.monthlyDeduction ?? 0,
-      advanceAmount: 0,
-      loanBalance: staff.loanBalance ?? 0,
-    });
-    setMedicalData({
-      certificationsText: Array.isArray(staff.medicalCertifications) ? staff.medicalCertifications.join(', ') : '',
-      notes: staff.medicalNotes ?? '',
-    });
-  }, [isOpen, staff]);
-
   const isOnLeave = profileData.status === 'ON_LEAVE';
-
-  const statusTone = useMemo(() => {
-    switch (profileData.status) {
-      case 'OVERDUE':
-        return 'bg-rose-50 text-rose-700 ring-1 ring-rose-200';
-      case 'ON_LEAVE':
-        return 'bg-amber-50 text-amber-700 ring-1 ring-amber-200';
-      case 'INACTIVE':
-        return 'bg-gray-100 text-gray-600 ring-1 ring-gray-200';
-      default:
-        return 'bg-green-50 text-green-700 ring-1 ring-green-200';
-    }
-  }, [profileData.status]);
 
   if (!staff) {
     return null;
@@ -104,8 +70,20 @@ export default function EmployeeDrawer({
   const handleProfileSubmit = (event) => {
     event.preventDefault();
 
+    const phoneNumber = normalizeKenyanPhone(profileData.phoneNumber);
+    const errors = {};
+    if (!profileData.name.trim()) errors.name = 'Enter the employee’s full name.';
+    if (!profileData.role) errors.role = 'Select a job role.';
+    if (!phoneNumber) errors.phoneNumber = 'Enter a valid Kenyan mobile number, for example 0712 345 678.';
+    if (Object.keys(errors).length) {
+      setProfileErrors(errors);
+      return;
+    }
+
     onSaveProfile(staff.id, {
       ...profileData,
+      name: profileData.name.trim(),
+      phoneNumber,
       leaveType: isOnLeave ? profileData.leaveType : '',
       leaveStartDate: isOnLeave ? profileData.leaveStartDate || null : null,
       leaveEndDate: isOnLeave ? profileData.leaveEndDate || null : null,
@@ -137,18 +115,10 @@ export default function EmployeeDrawer({
   };
 
   return (
-    <SlidePanel
+    <BaseModal
       isOpen={isOpen}
       onClose={onClose}
       title={staff.name}
-      headerMeta={(
-        <div className="mt-1 flex flex-wrap items-center gap-2">
-          <span className="text-sm font-medium text-gray-500">{staff.role}</span>
-          <span className="inline-flex items-center rounded-md bg-green-50 px-2 py-1 text-xs font-semibold text-green-700 ring-1 ring-inset ring-green-200">
-            {profileData.status}
-          </span>
-        </div>
-      )}
       subtitle="Manage profile, payroll inputs, and credentials without leaving the registry context."
     >
       <div className="space-y-5 text-gray-900">
@@ -177,6 +147,8 @@ export default function EmployeeDrawer({
           <ProfileStatusTab
             profileData={profileData}
             setProfileData={setProfileData}
+            errors={profileErrors}
+            setErrors={setProfileErrors}
             isOnLeave={isOnLeave}
             onSubmit={handleProfileSubmit}
             onClose={onClose}
@@ -201,6 +173,6 @@ export default function EmployeeDrawer({
           />
         )}
       </div>
-    </SlidePanel>
+    </BaseModal>
   );
 }

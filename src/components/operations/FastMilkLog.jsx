@@ -5,8 +5,10 @@ import { useNavigate } from 'react-router-dom';
 import { useTenant } from '../../hooks/useTenant';
 import { QUERY_KEYS } from '../../providers/QueryProvider';
 import { herdApi, productionApi, safetyApi } from '../../lib/backendApi';
+import { createIdempotencyKey } from '../../lib/apiClient';
 import AlertBanner from '../../components/ui/AlertBanner';
 import offlineQueue from '../../lib/offlineQueue';
+import { formatCowIdentity, resolveCowIdentityFromHerd } from '../../lib/cowIdentity';
 import { ArrowLeft, Droplets, CheckCircle2, AlertOctagon, Trash2, X } from 'lucide-react';
 
 const todayIso = () => new Date().toISOString().slice(0, 10);
@@ -48,7 +50,7 @@ const FastMilkUI = ({
 
   if (saveStatus === 'success') {
     return (
-      <div className="w-full max-w-md bg-white rounded-3xl p-12 flex flex-col items-center justify-center text-center space-y-4 animate-reveal min-h-[400px] shadow-[0_20px_60px_rgba(3,105,161,0.12)]">
+      <div className="w-full max-w-md bg-white rounded-3xl p-12 flex flex-col items-center justify-center text-center space-y-4 animate-reveal min-h-[400px] ">
         <CheckCircle2 size={64} className="text-success scale-150 mb-2" />
         <h3 className="font-black text-3xl text-ink">Saved!</h3>
         <p className="text-ink-muted font-bold">Ready for the next cow...</p>
@@ -57,7 +59,7 @@ const FastMilkUI = ({
   }
 
   return (
-    <div className="w-full max-w-md mt-20 bg-white rounded-3xl shadow-2xl border border-ink/10 overflow-hidden relative animate-reveal">
+    <div className="w-full max-w-md mt-20 bg-white rounded-3xl  border border-ink/10 overflow-hidden relative animate-reveal">
       {message && (
         <div className="fixed top-4 right-4 z-[60] w-[min(92vw,430px)]">
           <AlertBanner type={messageType} title="Fast Log" message={message} onDismiss={onDismissMessage} autoDismiss={6000} />
@@ -100,13 +102,13 @@ const FastMilkUI = ({
             <select
               value={formData.cowId}
               onChange={(e) => setFormData({ ...formData, cowId: e.target.value })}
-              className="w-full appearance-none bg-white border-2 border-ink/10 rounded-xl p-4 pr-10 text-lg font-bold text-ink-strong focus:outline-none focus:border-brand focus:ring-4 focus:ring-brand/10 transition-all cursor-pointer shadow-sm"
+              className="w-full appearance-none bg-white border-2 border-ink/10 rounded-xl p-4 pr-10 text-lg font-bold text-ink-strong focus:outline-none focus:border-brand focus:ring-4 focus:ring-brand/10 transition-all cursor-pointer "
               required
             >
               <option value="" disabled>Choose cow...</option>
               {displayHerd.map((cow) => (
                 <option key={cow.id} value={cow.id}>
-                  {cow.name} ({cow.tag_number || cow.tag})
+                  {formatCowIdentity(cow)}
                 </option>
               ))}
             </select>
@@ -126,20 +128,20 @@ const FastMilkUI = ({
               value={formData.date}
               max={todayIso()}
               onChange={(e) => setFormData({ ...formData, date: e.target.value })}
-              className="w-full bg-white border-2 border-ink/10 rounded-xl p-4 text-sm font-bold text-ink-strong focus:outline-none focus:border-brand focus:ring-4 focus:ring-brand/10 transition-all shadow-sm"
+              className="w-full bg-white border-2 border-ink/10 rounded-xl p-4 text-sm font-bold text-ink-strong focus:outline-none focus:border-brand focus:ring-4 focus:ring-brand/10 transition-all "
               required
             />
           </div>
           <div className="space-y-2">
             <label className="text-[11px] font-black text-ink-muted uppercase tracking-widest block">Session</label>
-            <div className="grid grid-cols-3 gap-1 rounded-xl border-2 border-ink/10 bg-white p-1 shadow-sm">
+            <div className="grid grid-cols-3 gap-1 rounded-xl border-2 border-ink/10 bg-white p-1 ">
               {SESSION_OPTIONS.map((s) => (
                 <button
                   key={s}
                   type="button"
                   onClick={() => setFormData({ ...formData, session: s })}
                   className={`rounded-lg px-2 py-2.5 text-[11px] font-bold uppercase tracking-wide transition-colors ${
-                    formData.session === s ? 'bg-brand text-surface shadow-sm' : 'text-ink-muted hover:bg-ink/5 hover:text-ink'
+                    formData.session === s ? 'bg-brand text-surface' : 'text-ink-muted hover:bg-ink/5 hover:text-ink'
                   }`}
                 >
                   {s}
@@ -163,7 +165,7 @@ const FastMilkUI = ({
               inputMode="decimal"
               type="number"
               step="0.1"
-              className="w-full bg-white border-2 border-ink/10 rounded-xl p-6 text-center text-5xl font-black text-brand focus:outline-none focus:border-brand [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+              className="w-full bg-white border-2 border-ink/10 rounded-xl p-6 text-center text-3xl font-black text-brand focus:outline-none focus:border-brand [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
               placeholder="0.0"
               value={formData.volume}
               onChange={(e) => setFormData({ ...formData, volume: e.target.value })}
@@ -187,7 +189,7 @@ const FastMilkUI = ({
               <Trash2 size={16} /> {isDeleting ? 'Deleting...' : 'Delete Record'}
             </button>
           )}
-          <button type="submit" disabled={!formData.cowId || !formData.volume || !formData.date || isLocked || isPending} className="flex-1 bg-brand text-surface font-black text-lg py-4 rounded-xl hover:bg-brand-dark disabled:opacity-70 transition-all active:scale-95 shadow-lg shadow-brand/70">
+          <button type="submit" disabled={!formData.cowId || !formData.volume || !formData.date || isLocked || isPending} className="flex-1 bg-brand text-surface font-black text-lg py-4 rounded-xl hover:bg-brand-dark disabled:opacity-70 transition-all active:scale-95  ">
             {isPending ? 'Saving...' : isEditMode ? 'Update Record' : 'Save Record'}
           </button>
         </div>
@@ -267,9 +269,10 @@ export default function FastMilkLog({ onClose, onSaveSuccess, onDeleteSuccess, m
         milking_date: date,
         milkingDate: date,
       };
-      const idempotencyKey = isEditMode
-        ? `fastlog-edit:${record.id}:${requestPayload.cow_id}:${date}:${requestPayload.session}`
-        : `fastlog:${requestPayload.cow_id}:${date}:${requestPayload.session}`;
+      // Keep the key supplied by handleSubmit for a retry of this submission.
+      // Do not derive it from cow/date/session: those fields can legitimately
+      // be submitted again with a different amount.
+      const idempotencyKey = payload.idempotencyKey ?? createIdempotencyKey();
 
       if (isEditMode) {
         await productionApi.deleteYield(record.id);
@@ -322,8 +325,11 @@ export default function FastMilkLog({ onClose, onSaveSuccess, onDeleteSuccess, m
       const isNetwork = !err?.response && !isEditMode;
       if (isNetwork) {
         try {
+          const cowIdentity = resolveCowIdentityFromHerd({ cowId: variables.cowId }, herd);
           offlineQueue.enqueue({
             cow_id: variables.cowId,
+            cow_name: cowIdentity.name,
+            cow_tag: cowIdentity.earTag,
             amount: Number(variables.volume ?? variables.amount ?? 0),
             session: variables.session || 'morning',
             milking_date: variables.milking_date || variables.milkingDate || todayIso(),
@@ -372,6 +378,7 @@ export default function FastMilkLog({ onClose, onSaveSuccess, onDeleteSuccess, m
       volume: numeric,
       session: formData.session,
       milkingDate: formData.date,
+      idempotencyKey: createIdempotencyKey(),
       id: record?.id,
     });
   };

@@ -1,6 +1,6 @@
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import { createContext, useContext, useEffect, useState } from 'react';
 import { useTenant } from '../hooks/useTenant';
-import { hrApi, normalizeStaffRecord } from '../lib/backendApi';
+import { hrApi, normalizeStaffRecord, staffOnboardingApi } from '../lib/backendApi';
 
 const sortStaff = (records) => [...records].sort((a, b) => a.name.localeCompare(b.name));
 
@@ -70,12 +70,34 @@ export function StaffProvider({ children }) {
       baseSalary: Number(newEmployeeData.baseSalary || 0),
     };
 
-    try {
-      const created = await hrApi.createStaff(payload);
-      return mergeStaffRecord(created);
-    } catch (error) {
-      throw error;
+    const created = await hrApi.createStaff(payload);
+    return mergeStaffRecord(created);
+  };
+
+  const inviteEmployeeAccount = async (staffId, payload) => {
+    const invitation = await staffOnboardingApi.invite({ employee_id: staffId, ...payload });
+    const returnedEmployee = invitation?.employee ?? invitation?.staff;
+    if (returnedEmployee) {
+      mergeStaffRecord(returnedEmployee);
+    } else {
+      const records = await hrApi.listStaff();
+      setStaffData(sortStaff(records.map(normalizeStaffRecord)));
     }
+
+    return invitation;
+  };
+
+  const provisionEmployeeAccount = async (staffId, payload) => {
+    const provisioned = await staffOnboardingApi.provision({ employee_id: staffId, ...payload });
+    const returnedEmployee = provisioned?.employee ?? provisioned?.staff;
+    if (returnedEmployee) {
+      mergeStaffRecord(returnedEmployee);
+    } else {
+      const records = await hrApi.listStaff();
+      setStaffData(sortStaff(records.map(normalizeStaffRecord)));
+    }
+
+    return provisioned;
   };
 
   const issueAdvance = async (staffMember, amount, monthlyDeduction) => {
@@ -88,38 +110,23 @@ export function StaffProvider({ children }) {
         : staffMember?.monthlyDeduction || Math.max(0, Math.round(Number(amount || 0) / 3)),
     };
 
-    try {
-      const saved = await hrApi.updateStaff(staffMember.id, {
-        loanBalance: updatedStaff.loanBalance,
-        monthlyDeduction: updatedStaff.monthlyDeduction,
-      });
-      return mergeStaffRecord(saved);
-    } catch (error) {
-      throw error;
-    }
+    const saved = await hrApi.updateStaff(staffMember.id, {
+      loanBalance: updatedStaff.loanBalance,
+      monthlyDeduction: updatedStaff.monthlyDeduction,
+    });
+    return mergeStaffRecord(saved);
   };
   
   const editEmployee = async (staffId, updatedData) => {
     const payload = { ...updatedData };
 
-    try {
-      const saved = await hrApi.updateStaff(staffId, payload);
-      return mergeStaffRecord(saved);
-    } catch (error) {
-      throw error;
-    }
+    const saved = await hrApi.updateStaff(staffId, payload);
+    return mergeStaffRecord(saved);
   };
 
   const verifyReturn = async (staffId, returned, note = '') => {
-    const timestamp = new Date().toISOString();
-    const actualReturnDate = timestamp.slice(0, 10);
-
-    try {
-      const saved = await hrApi.verifyReturn(staffId, { returned, note });
-      return mergeStaffRecord(saved);
-    } catch (error) {
-      throw error;
-    }
+    const saved = await hrApi.verifyReturn(staffId, { returned, note });
+    return mergeStaffRecord(saved);
   };
 
   const toggleEmployeeStatus = async (staffId) => {
@@ -131,12 +138,8 @@ export function StaffProvider({ children }) {
 
     const nextStatus = currentStaff.status === 'ACTIVE' ? 'INACTIVE' : 'ACTIVE';
 
-    try {
-      const saved = await hrApi.updateStaff(staffId, { status: nextStatus });
-      return mergeStaffRecord(saved);
-    } catch (error) {
-      throw error;
-    }
+    const saved = await hrApi.updateStaff(staffId, { status: nextStatus });
+    return mergeStaffRecord(saved);
   };
 
   const reduceLoanBalance = (staffId, amount) => {
@@ -150,7 +153,7 @@ export function StaffProvider({ children }) {
     );
   };
 
-  const value = { staff: staffData, addEmployee, issueAdvance, editEmployee, verifyReturn, toggleEmployeeStatus, reduceLoanBalance, isHydrating };
+  const value = { staff: staffData, addEmployee, inviteEmployeeAccount, provisionEmployeeAccount, issueAdvance, editEmployee, verifyReturn, toggleEmployeeStatus, reduceLoanBalance, isHydrating };
 
   return (
     <StaffContext.Provider value={value}>
@@ -159,6 +162,7 @@ export function StaffProvider({ children }) {
   );
 }
 
+// eslint-disable-next-line react-refresh/only-export-components
 export function useStaff() {
   const context = useContext(StaffContext);
   if (context === undefined) {

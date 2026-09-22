@@ -177,7 +177,7 @@ export default function AlertBanner({
         aria-hidden="true"
         className={[
           'absolute right-4 top-1/2 -translate-y-1/2',
-          'font-sans font-bold text-[56px] leading-none tracking-tight',
+          'font-sans font-bold text-3xl leading-none tracking-tight',
           'opacity-[0.02] select-none pointer-events-none hidden sm:block',
           v.label,
         ].join(' ')}

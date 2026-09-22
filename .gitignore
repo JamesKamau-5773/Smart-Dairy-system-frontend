@@ -14,11 +14,8 @@ dist-ssr
 
 # Environment variables and secrets
 .env
-.env.local
-.env.*.local
-.env.production.local
-.env.development.local
-.env.test.local
+.env.*
+!.env.example
 
 # Sensitive data and credentials
 .secrets
@@ -35,6 +32,7 @@ apikeys.json
 .vscode/launch.json
 .idea
 .DS_Store
+Thumbs.db
 *.suo
 *.ntvs*
 *.njsproj
@@ -45,4 +43,13 @@ apikeys.json
 .next
 out
 cover
+coverage
 .nyc_output
+
+# Test artifacts and tool caches
+.cache
+.eslintcache
+.vite
+.vitest
+playwright-report
+test-results

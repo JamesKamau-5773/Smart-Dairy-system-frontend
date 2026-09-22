@@ -27,8 +27,8 @@ export default {
       // 1. ENTERPRISE TYPOGRAPHY (Tighter line heights, smaller base sizes for dense data)
       fontSize: {
         'xs': ['0.75rem', { lineHeight: '1rem' }],        // 12px
-        'sm': ['0.8125rem', { lineHeight: '1.125rem' }],  // 13px (New Enterprise Base)
-        'base': ['0.875rem', { lineHeight: '1.25rem' }],  // 14px 
+        'sm': ['0.875rem', { lineHeight: '1.25rem' }],    // 14px enterprise base
+        'base': ['0.875rem', { lineHeight: '1.25rem' }],  // 14px
         'lg': ['1rem', { lineHeight: '1.5rem' }],         // 16px
         'xl': ['1.125rem', { lineHeight: '1.5rem' }],     // 18px (Tighter headers)
         '2xl': ['1.5rem', { lineHeight: '1.75rem' }],     // 24px
@@ -47,15 +47,17 @@ export default {
         sm: "calc(var(--radius) - 4px)",
       },
 
-      // 3. MULTI-LAYERED SHADOWS (Smooth, physical depth)
+      // 3. BORDER-LED DEPTH (shadows intentionally disabled)
       boxShadow: {
-        'sm': '0 1px 2px 0 rgba(0, 0, 0, 0.05)',
-        'DEFAULT': '0 1px 3px 0 rgba(0, 0, 0, 0.08), 0 1px 2px -1px rgba(0, 0, 0, 0.04)',
-        'md': '0 4px 6px -1px rgba(0, 0, 0, 0.06), 0 2px 4px -2px rgba(0, 0, 0, 0.03)',
-        'lg': '0 10px 15px -3px rgba(0, 0, 0, 0.06), 0 4px 6px -4px rgba(0, 0, 0, 0.03)',
-        // Refined Brutalist shadow with layered opacity
-        'brutalist': '0 2px 4px rgba(3, 105, 161, 0.04), 0 8px 16px rgba(3, 105, 161, 0.08)',
-        'brutalist-hover': '0 4px 8px rgba(3, 105, 161, 0.06), 0 12px 24px rgba(3, 105, 161, 0.12)',
+        'sm': 'none',
+        'DEFAULT': 'none',
+        'md': 'none',
+        'lg': 'none',
+        'xl': 'none',
+        '2xl': 'none',
+        'inner': 'none',
+        'brutalist': 'none',
+        'brutalist-hover': 'none',
       },
 
       // 4. FULL SEMANTIC COLOR SCALES
@@ -147,7 +149,7 @@ export default {
           dark: '#D97706',
         },
         surface: {
-          DEFAULT: 'rgba(255, 255, 255, 0.44)',
+          DEFAULT: 'rgba(255, 255, 255, 0.90)',
           warm: 'rgba(234, 245, 255, 0.8)',
           raised: 'rgba(255, 255, 255, 0.85)', // Increased opacity for better card contrast
         },
@@ -177,12 +179,12 @@ export default {
         "accordion-up": "accordion-up 0.2s ease-out",
       },
       fontFamily: {
-        sans: ['Inter', 'system-ui', 'sans-serif'],
-        display: ['Inter', 'system-ui', 'sans-serif'],
+        sans: ['Inter Tight', 'Inter', 'system-ui', 'sans-serif'],
+        display: ['Inter Tight', 'Inter', 'system-ui', 'sans-serif'],
         mono: ['"JetBrains Mono"', 'SFMono-Regular', 'Menlo', 'Monaco', 'Consolas', 'monospace'], // Enterprise standard mono
       },
       borderWidth: {
-        '3': '1px', // (Note: you might want to rename this key to '1' in the future to avoid confusion!)
+        '3': '3px',
       },
       spacing: {
         'sidebar': '15rem',

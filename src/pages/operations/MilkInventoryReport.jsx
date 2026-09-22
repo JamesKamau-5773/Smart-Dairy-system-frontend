@@ -150,7 +150,7 @@ export default function MilkInventoryReport() {
                   }}
                 />
                 <Legend />
-                {visibleLines.produced && <Line type="monotone" dataKey="produced" name="Total Produced" stroke="#3b82f6" strokeWidth={2} />}
+                {visibleLines.produced && <Line type="monotone" dataKey="produced" name="Total Produced" stroke="#38BDF8" strokeWidth={2} />}
                 {visibleLines.sold && <Line type="monotone" dataKey="sold" name="Total Sold" stroke="#16a34a" strokeWidth={2} />}
                 {visibleLines.unsold && <Line type="monotone" dataKey="unsold" name="Total Unsold" stroke="#ef4444" strokeWidth={2} />}
               </LineChart>

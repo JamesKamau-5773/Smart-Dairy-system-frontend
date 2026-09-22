@@ -1,6 +1,6 @@
 export function formatMoney(value) {
   const amount = Number(value || 0);
-  return `KSh ${amount.toLocaleString('en-KE', {
+  return `KES ${amount.toLocaleString('en-KE', {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   })}`;

@@ -62,10 +62,10 @@ export default function StockRegistry() {
           <p className="font-mono text-xs text-ink-muted mt-2">Keep track of your feed, medicines, and daily farm supplies.</p>
         </div>
         <div className="flex gap-3">
-          <button className="btn-command bg-surface border border-ink/20 text-ink flex items-center gap-2 text-sm shadow-sm hover:bg-surface-raised">
+          <button className="btn-command bg-surface border border-ink/20 text-ink flex items-center gap-2 text-sm  hover:bg-surface-raised">
             <ArrowDownRight size={16} className="text-danger" /> Record Usage
           </button>
-          <button className="btn-command flex items-center gap-2 text-sm shadow-sm">
+          <button className="btn-command flex items-center gap-2 text-sm ">
             <PackagePlus size={16} /> Add Stock
           </button>
         </div>
@@ -115,7 +115,7 @@ export default function StockRegistry() {
                 type="button"
                 onClick={() => setControlsOpen((current) => !current)}
                 aria-expanded={controlsOpen}
-                className="inline-flex items-center gap-1.5 rounded-lg border border-ink/10 bg-surface px-3 py-1.5 text-xs font-semibold text-ink shadow-sm transition-all hover:border-brand/20 hover:bg-brand/5 hover:text-brand"
+                className="inline-flex items-center gap-1.5 rounded-lg border border-ink/10 bg-surface px-3 py-1.5 text-xs font-semibold text-ink  transition-all hover:border-brand/20 hover:bg-brand/5 hover:text-brand"
               >
                 {controlsOpen ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
                 {controlsOpen ? 'Hide filters' : 'Show filters'}

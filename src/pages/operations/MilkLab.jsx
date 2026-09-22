@@ -7,6 +7,7 @@ import { Skeleton } from '../../components/ui';
 import LABELS from '../../lib/labels';
 import { useTenant } from '../../hooks/useTenant';
 import { animalYieldTargetService, summarizeTargets, buildSchedulePayload } from '../../services/animalYieldTargetService';
+import { formatCowIdentity } from '../../lib/cowIdentity';
 
 function formatRelativeTime(timestamp) {
   if (!timestamp) {
@@ -63,7 +64,7 @@ function CowTargetRow({ row, tone = 'default', actionLabel = null, actionTo = nu
   return (
     <li className={`rounded-lg border px-3 py-2 text-sm ${toneClass}`}>
       <div className="flex items-center justify-between gap-3">
-        <span className="font-semibold">{row.cowName}</span>
+        <span className="font-semibold">{formatCowIdentity(row)}</span>
         <span className="text-xs uppercase tracking-wide">{row.currentStatus}</span>
       </div>
       {row.targetLiters ? (
@@ -89,7 +90,7 @@ function CowTargetRow({ row, tone = 'default', actionLabel = null, actionTo = nu
  * SRP: Handles ONLY the empty state before a farmer calculates a target.
  */
 const EmptyCalculatorState = () => (
-  <div className="bg-surface rounded-2xl shadow-sm border border-ink/10 p-12 flex flex-col items-center justify-center text-center animate-reveal">
+  <div className="bg-surface rounded-2xl  border border-ink/10 p-12 flex flex-col items-center justify-center text-center animate-reveal">
     <div className="bg-brand/5 p-4 rounded-full mb-4 border border-brand/10">
       <Calculator className="w-8 h-8 text-brand/60" />
     </div>
@@ -114,7 +115,7 @@ const ResultsDashboard = ({ data, targetLiters, targetSource, activeCowCount, ta
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
 
         {/* Target Milk Card */}
-        <div className="bg-surface rounded-2xl shadow-sm border border-brand/20 p-6 relative overflow-hidden">
+        <div className="bg-surface rounded-2xl  border border-brand/20 p-6 relative overflow-hidden">
           <div className="absolute top-0 left-0 w-1 h-full bg-brand rounded-l-2xl"></div>
           <div className="flex items-center gap-2 mb-4 text-brand">
             <Droplets className="w-5 h-5" />
@@ -125,7 +126,7 @@ const ResultsDashboard = ({ data, targetLiters, targetSource, activeCowCount, ta
         </div>
 
         {/* Dairy Meal Protein Card - UPDATED LABEL */}
-        <div className="bg-brand/5 rounded-2xl shadow-sm border border-brand/20 p-6 relative overflow-hidden">
+        <div className="bg-brand/5 rounded-2xl  border border-brand/20 p-6 relative overflow-hidden">
           <div className="absolute top-0 left-0 w-1 h-full bg-brand rounded-l-2xl"></div>
           <div className="flex items-center gap-2 mb-4 text-brand">
             <Beaker className="w-5 h-5" />
@@ -136,7 +137,7 @@ const ResultsDashboard = ({ data, targetLiters, targetSource, activeCowCount, ta
         </div>
 
         {/* Dairy Meal Card */}
-        <div className="bg-surface rounded-2xl shadow-sm border border-emerald-500/20 p-6 relative overflow-hidden">
+        <div className="bg-surface rounded-2xl  border border-emerald-500/20 p-6 relative overflow-hidden">
           <div className="absolute top-0 left-0 w-1 h-full bg-emerald-500 rounded-l-2xl"></div>
           <div className="flex items-center gap-2 mb-4 text-emerald-600">
             <Wheat className="w-5 h-5" />
@@ -149,7 +150,7 @@ const ResultsDashboard = ({ data, targetLiters, targetSource, activeCowCount, ta
         </div>
 
         {/* Boma Feedings Card */}
-        <div className="bg-surface rounded-2xl shadow-sm border border-amber-500/20 p-6 relative overflow-hidden">
+        <div className="bg-surface rounded-2xl  border border-amber-500/20 p-6 relative overflow-hidden">
           <div className="absolute top-0 left-0 w-1 h-full bg-amber-500 rounded-l-2xl"></div>
           <div className="flex items-center gap-2 mb-4 text-amber-600">
             <Clock className="w-5 h-5" />
@@ -162,12 +163,12 @@ const ResultsDashboard = ({ data, targetLiters, targetSource, activeCowCount, ta
         </div>
       </div>
 
-      <div className="bg-brand/5 border border-brand/15 rounded-xl p-5 shadow-sm">
+      <div className="bg-brand/5 border border-brand/15 rounded-xl p-5 ">
         <p className="text-xs font-bold uppercase tracking-wider text-brand mb-2">How To Feed</p>
         <p className="text-sm text-ink-muted font-medium italic">{data.farmer_reasoning}</p>
       </div>
 
-      <div className="bg-surface rounded-xl border border-ink/10 p-5 shadow-sm">
+      <div className="bg-surface rounded-xl border border-ink/10 p-5 ">
         <div className="flex items-center justify-between gap-3">
           <p className="text-xs font-bold uppercase tracking-wider text-ink-muted">Where This Goal Came From</p>
           <span className={`rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider ${targetSource === 'per_cow' ? 'bg-emerald-500/10 text-emerald-700' : 'bg-amber-500/10 text-amber-700'}`}>
@@ -296,7 +297,7 @@ export default function MilkLab() {
           </div>
         </div>
 
-        <div className="bg-surface rounded-2xl border border-ink/10 p-5 shadow-sm">
+        <div className="bg-surface rounded-2xl border border-ink/10 p-5 ">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
               <p className="text-xs font-black uppercase tracking-wider text-ink-muted">Plan Confidence</p>
@@ -309,7 +310,7 @@ export default function MilkLab() {
           </div>
         </div>
 
-        <div className="bg-surface rounded-2xl shadow-sm border border-ink/10 p-6">
+        <div className="bg-surface rounded-2xl  border border-ink/10 p-6">
           <form onSubmit={handleCalculate} className="flex flex-col sm:flex-row items-end gap-4">
             <div className="flex-1 w-full">
               <label htmlFor="targetYield" className="block text-[11px] font-black uppercase tracking-widest text-ink-muted mb-2">
@@ -360,7 +361,7 @@ export default function MilkLab() {
           </div>
         </div>
 
-        <div className="bg-surface rounded-2xl border border-ink/10 p-6 shadow-sm space-y-4">
+        <div className="bg-surface rounded-2xl border border-ink/10 p-6  space-y-4">
           <div>
             <p className="text-xs font-black uppercase tracking-wider text-ink-muted">Saved Cow Goals</p>
             <p className="text-sm text-ink-muted mt-1">

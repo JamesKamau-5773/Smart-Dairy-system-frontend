@@ -1,4 +1,4 @@
-import React, { Suspense, lazy } from 'react';
+import { Suspense, lazy } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { useAuth } from './contexts/AuthContext';
 import { canAccessCommandCenter, getDefaultLandingPath, hasRole, isSingleTenantUser } from './lib/roles';
@@ -13,6 +13,7 @@ import DashboardLayout from './layouts/DashboardLayout';
 const LoginPage = lazy(() => import('./pages/auth/LoginPage.jsx'));
 const RegisterPage = lazy(() => import('./pages/auth/RegisterPage.jsx'));
 const ClaimAccountPage = lazy(() => import('./pages/auth/ClaimAccountPage.jsx'));
+const RequiredPasswordResetPage = lazy(() => import('./pages/auth/RequiredPasswordResetPage.jsx'));
 const SystemAdminDashboardPage = lazy(() => import('./pages/auth/SystemAdminDashboardPage.jsx'));
 const SuperAdminCooperativeSetupPage = lazy(() => import('./pages/auth/SuperAdminCooperativeSetupPage.jsx'));
 const CooperativeAdminOnboardingPage = lazy(() => import('./pages/auth/CooperativeAdminOnboardingPage.jsx'));
@@ -35,6 +36,7 @@ const AnimalPassport = lazy(() => import('./pages/operations/AnimalRecord.jsx'))
 const MilkHistory = lazy(() => import('./pages/operations/MilkHistory.jsx'));
 const FeedFormulation = lazy(() => import('./pages/inventory/FeedFormulation.jsx'));
 const MilkInventoryReport = lazy(() => import('./pages/operations/MilkInventoryReport.jsx'));
+const MilkUsage = lazy(() => import('./pages/operations/MilkUsage.jsx'));
 const DairyUnitEconomicsReport = lazy(() => import('./pages/finance/DairyUnitEconomicsReport.jsx'));
 const AnimalEconomicsReport = lazy(() => import('./pages/finance/AnimalEconomicsReport.jsx'));
 const CustomersPage = lazy(() => import('./pages/operations/Customers.jsx'));
@@ -53,7 +55,7 @@ const Payroll = lazy(() => import('./pages/hr/Payroll.jsx'));
  * PROTECTED ROUTE GATEKEEPER
  * Ensures the 'X-Tenant-ID' context is valid before mounting.
  */
-const ProtectedRoute = ({ children }) => {
+export const ProtectedRoute = ({ children }) => {
   const { currentUser, isLoading } = useAuth();
 
   if (isLoading) {
@@ -67,6 +69,7 @@ const ProtectedRoute = ({ children }) => {
   }
 
   if (!currentUser) return <Navigate to="/login" replace />;
+  if (currentUser.requires_password_reset) return <Navigate to="/reset-required-password" replace />;
 
   return children;
 };
@@ -85,6 +88,16 @@ const renderLazyPage = (Page, label) => (
 
 const getDefaultRoute = (user) => {
   return getDefaultLandingPath(user);
+};
+
+export const RequiredPasswordResetRoute = ({ children }) => {
+  const { currentUser, isLoading } = useAuth();
+
+  if (isLoading) return <RouteLoadingFallback label="Checking password status…" />;
+  if (!currentUser) return <Navigate to="/login" replace />;
+  if (!currentUser.requires_password_reset) return <Navigate to={getDefaultRoute(currentUser)} replace />;
+
+  return children;
 };
 
 const RoleRoute = ({ children, allowedRoles }) => {
@@ -153,6 +166,14 @@ export default function App() {
           <Route path="/register" element={renderLazyPage(RegisterPage, 'Loading registration…')} />
           <Route path="/login" element={renderLazyPage(LoginPage, 'Loading login…')} />
           <Route path="/claim-account" element={renderLazyPage(ClaimAccountPage, 'Loading claim account…')} />
+          <Route
+            path="/reset-required-password"
+            element={(
+              <RequiredPasswordResetRoute>
+                {renderLazyPage(RequiredPasswordResetPage, 'Loading password setup…')}
+              </RequiredPasswordResetRoute>
+            )}
+          />
           <Route path="/shared/statement/:token" element={renderLazyPage(CustomerPortal, 'Loading statement…')} />
           <Route path="/" element={
             <ProtectedRoute>
@@ -182,7 +203,7 @@ export default function App() {
             <Route
               path="cooperative-admin/members"
               element={(
-                <RoleRoute allowedRoles={['ADMIN']}>
+                <RoleRoute allowedRoles={['ADMIN', 'FARM_ADMIN']}>
                   {renderLazyPage(CooperativeAdminOnboardingPage, 'Loading member onboarding…')}
                 </RoleRoute>
               )}
@@ -209,6 +230,7 @@ export default function App() {
 
             {/* Production & Biology */}
             <Route path="operations/yield" element={renderLazyPage(YieldLog, 'Loading yield log…')} />
+            <Route path="operations/milk-usage" element={renderLazyPage(MilkUsage, 'Loading milk usage…')} />
             <Route path="operations/herd" element={renderLazyPage(HerdRegistry, 'Loading herd registry…')} />
             <Route path="operations/breeding" element={renderLazyPage(BreedingHub, 'Loading breeding hub…')} />
             <Route path="operations/clerk" element={renderLazyPage(ClerkEntry, 'Loading clerk entry…')} />
@@ -263,7 +285,7 @@ export default function App() {
             <Route
               path="finance/reports/animal-economics"
               element={
-                <RoleRoute allowedRoles={['SUPER_ADMIN', 'ADMIN', 'FARM_MANAGER']}>{renderLazyPage(AnimalEconomicsReport, 'Loading animal economics report...')}</RoleRoute>
+                <RoleRoute allowedRoles={['SUPER_ADMIN', 'ADMIN', 'FARM_MANAGER']}>{renderLazyPage(AnimalEconomicsReport, 'Loading cow profitability...')}</RoleRoute>
               }
             />
 
@@ -333,7 +355,7 @@ export default function App() {
             <Route
               path="hr/staff"
               element={(
-                <RoleRoute allowedRoles={['SUPER_ADMIN', 'ADMIN']}>
+                <RoleRoute allowedRoles={['SUPER_ADMIN', 'ADMIN', 'FARM_ADMIN', 'FARMER']}>
                   {renderLazyPage(StaffRegistry, 'Loading staff registry…')}
                 </RoleRoute>
               )}

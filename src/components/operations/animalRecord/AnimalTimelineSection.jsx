@@ -69,7 +69,7 @@ export default function AnimalTimelineSection({
               type="button"
               onClick={() => onFilterChange(category)}
               className={`rounded-md px-3 py-1.5 text-xs font-bold transition-all ${
-                activeFilter === category ? 'bg-brand text-surface shadow-sm' : 'text-ink-muted hover:bg-ink/5'
+                activeFilter === category ? 'bg-brand text-surface' : 'text-ink-muted hover:bg-ink/5'
               }`}
             >
               {category}
@@ -80,7 +80,7 @@ export default function AnimalTimelineSection({
         <button
           type="button"
           onClick={onOpenEventModal}
-          className="inline-flex items-center gap-1.5 rounded-md border border-brand/20 bg-white px-3 py-1.5 text-xs font-bold text-brand shadow-sm transition-colors hover:bg-brand/5"
+          className="inline-flex items-center gap-1.5 rounded-md border border-brand/20 bg-white px-3 py-1.5 text-xs font-bold text-brand  transition-colors hover:bg-brand/5"
         >
           <Plus size={14} /> Log Action
         </button>

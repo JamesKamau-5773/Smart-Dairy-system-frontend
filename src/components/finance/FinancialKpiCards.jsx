@@ -2,7 +2,7 @@ import React from 'react';
 import { ShieldCheck } from 'lucide-react';
 
 const KpiCard = ({ title, value, subtext, children, valueClassName = 'text-ink' }) => (
-  <div className="bg-white p-6 rounded-xl border border-slate-100 shadow-sm">
+  <div className="bg-white p-6 rounded-xl border border-slate-100 ">
     <span className="text-[10px] font-black uppercase text-slate-400 tracking-widest">{title}</span>
     {value && <div className={`text-xl font-black mt-2 ${valueClassName}`}>{value}</div>}
     {children}
@@ -15,12 +15,12 @@ const FinancialKpiCards = ({ kpis, totalProfit, isCoopMember }) => {
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
       <KpiCard
         title="Total Profit"
-        value={`KSh ${totalProfit.toLocaleString('en-US', { minimumFractionDigits: 2 })}`}
+        value={`KES ${totalProfit.toLocaleString('en-US', { minimumFractionDigits: 2 })}`}
         subtext="// Profit this season"
       />
       <KpiCard
         title="Total Costs"
-        value={`KSh ${kpis.totalCosts.toLocaleString('en-US', { minimumFractionDigits: 2 })}`}
+        value={`KES ${kpis.totalCosts.toLocaleString('en-US', { minimumFractionDigits: 2 })}`}
         valueClassName="text-danger"
         subtext="// Money spent this season"
       />
@@ -40,7 +40,7 @@ const FinancialKpiCards = ({ kpis, totalProfit, isCoopMember }) => {
       ) : (
         <KpiCard
           title="Total Income"
-          value={`KSh ${kpis.totalIncome.toLocaleString('en-US', { minimumFractionDigits: 2 })}`}
+          value={`KES ${kpis.totalIncome.toLocaleString('en-US', { minimumFractionDigits: 2 })}`}
           valueClassName="text-brand"
           subtext="// Total from all sales"
         />

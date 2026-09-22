@@ -52,6 +52,10 @@ Where implemented, filtering supports `q` and route-specific keys such as `statu
 - `GET /api/hr/employees/<staff_id>`
 - `PATCH /api/hr/staff/<staff_id>`
 - `PATCH /api/hr/employees/<staff_id>`
+- `POST /api/onboarding/invite`
+- `POST /api/onboarding/provision`
+- `POST /api/auth/change-password`
+- `GET /api/hr/staffing-recommendations`
 - `POST /api/hr/staff/<staff_id>/verify-return`
 - `POST /api/hr/employees/<staff_id>/verify-return`
 - `POST /api/hr/payroll`
@@ -76,6 +80,8 @@ Where implemented, filtering supports `q` and route-specific keys such as `statu
 - `POST /api/animals/<cow_id>/events`
 - `GET /api/production/milk-drop-alerts`
 - `POST /api/production/milk-drop-alerts/<alert_id>/investigate`
+
+Milk-drop alert list items include the canonical `cow_id`, `cow_tag`, and `cow_name`. The investigate endpoint owns the alert lifecycle: send `status: "INVESTIGATING"` to save progress or `status: "RESOLVED"` to close the case, together with `selected_reasons` and `notes`.
 
 `POST /api/herd` accepts `tag_number` and `date_of_birth` as the canonical fields. For frontend compatibility, the backend also accepts `id`/`tag`/`tagNumber` for the tag and `dob`/`dateOfBirth` for the birth date.
 
@@ -142,6 +148,8 @@ The browser payload `{ id, name, breed, dob, hasCalved }` is accepted because `i
 - `POST /api/production/yield`
 - `GET /api/production/yield/<log_id>`
 - `DELETE /api/production/yield/<log_id>`
+- `GET /api/production/milk-dispositions`
+- `POST /api/production/milk-dispositions`
 - `GET /api/production/summary`
 - `GET /api/breeding`
 - `POST /api/breeding`

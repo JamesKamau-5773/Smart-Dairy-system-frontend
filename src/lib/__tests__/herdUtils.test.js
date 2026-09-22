@@ -18,4 +18,16 @@ describe('normalizeHerdCow', () => {
     expect(cow.dam_id).toBe('41');
     expect(cow.birth_weight_kg).toBe('32.5');
   });
+
+  it('preserves the canonical photo URL for editing', () => {
+    const cow = normalizeHerdCow({ photoUrl: 'http://localhost:5000/uploads/animal_photos/cow.jpg' });
+
+    expect(cow.photoUrl).toBe('http://localhost:5000/uploads/animal_photos/cow.jpg');
+  });
+
+  it('preserves an explicit photo removal instead of restoring the fallback URL', () => {
+    const cow = normalizeHerdCow({ photoUrl: null }, { photoUrl: 'http://localhost:5000/uploads/old.jpg' });
+
+    expect(cow.photoUrl).toBeNull();
+  });
 });

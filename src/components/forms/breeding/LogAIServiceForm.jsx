@@ -10,6 +10,7 @@ import {
   normalizeBreedingLog,
 } from '../../../lib/breedingUtils';
 import { createAuditEntry, logToAuditTrail } from '../../../lib/audit';
+import { formatCowIdentity } from '../../../lib/cowIdentity';
 import { breedingApi } from '../../../lib/backendApi';
 import { useTenant } from '../../../hooks/useTenant';
 
@@ -41,6 +42,7 @@ export default function LogAIServiceForm({
     aiTime: initialData.aiTime || '',
     sireCode: initialData.sireCode || '',
     semenSource: initialData.semenSource || 'farm_stock',
+    milkVolumePta: initialData.milkVolumePta ?? initialData.sire_pta_scores?.milk_volume ?? '',
     technician: initialData.technician || initialData.technician_name || '',
     ownerName: initialData.ownerName || initialData.owner_name || '',
     farmLocation: initialData.farmLocation || initialData.farm_location || '',
@@ -115,6 +117,9 @@ export default function LogAIServiceForm({
         insemination_time: logForm.aiTime,
         sireCode: logForm.sireCode,
         semenSource: logForm.semenSource,
+        sire_pta_scores: logForm.semenSource === 'vet_provided' && logForm.milkVolumePta !== ''
+          ? { milk_volume: Number(logForm.milkVolumePta) }
+          : null,
         technician_name: logForm.technician,
         owner_name: logForm.ownerName,
         farm_location: logForm.farmLocation,
@@ -182,7 +187,10 @@ export default function LogAIServiceForm({
         ? ` Pregnancy check reminder scheduled for ${savedLog.pregnancyCheckDate}.`
         : '';
       const certificateSuffix = certificateUploaded ? ' Certificate uploaded.' : '';
-      const successMsg = `Logged AI service for ${savedLog.cowId}.${certificateSuffix}${reminderSuffix}`;
+      const successMsg = `Logged AI service for ${formatCowIdentity({
+        cowName: savedLog.cowName || resolvedCow.name,
+        cowTag: resolvedCow.earTag,
+      })}.${certificateSuffix}${reminderSuffix}`;
       onSuccess?.(savedLog, successMsg);
       toast.success(successMsg);
 
@@ -193,6 +201,7 @@ export default function LogAIServiceForm({
         aiTime: '',
         sireCode: '',
         semenSource: 'farm_stock',
+        milkVolumePta: '',
         technician: '',
         ownerName: '',
         farmLocation: '',
@@ -223,7 +232,7 @@ export default function LogAIServiceForm({
 
         {/* Cow Selection */}
         <div>
-          <label className="mb-1 block text-xs font-bold uppercase tracking-wider text-ink-muted">Cow ID or Name *</label>
+          <label className="mb-1 block text-xs font-bold uppercase tracking-wider text-ink-muted">Cow name or ear tag *</label>
           <div className="relative" ref={cowPickerRef}>
             <input
               className={`input-machined w-full pr-10 ${formErrors.cowId ? 'border-rose-300 bg-rose-50' : ''}`}
@@ -234,7 +243,7 @@ export default function LogAIServiceForm({
                 setIsCowPickerOpen(true);
                 if (formErrors.cowId) setFormErrors({ ...formErrors, cowId: null });
               }}
-              placeholder="Type cow ID or name, or pick from herd list"
+              placeholder="Type cow name or ear tag, or pick from herd list"
               aria-invalid={!!formErrors.cowId}
               aria-expanded={isCowPickerOpen}
               aria-autocomplete="list"
@@ -249,7 +258,7 @@ export default function LogAIServiceForm({
             </button>
 
             {isCowPickerOpen && (
-              <div className="absolute z-30 mt-1 max-h-56 w-full overflow-y-auto rounded-lg border border-ink/10 bg-surface shadow-lg">
+              <div className="absolute z-30 mt-1 max-h-56 w-full overflow-y-auto rounded-lg border border-ink/10 bg-surface ">
                 {filteredCowOptions.length === 0 ? (
                   <div className="px-3 py-2 text-xs text-ink-muted">No herd matches found for this tenant.</div>
                 ) : (
@@ -273,7 +282,7 @@ export default function LogAIServiceForm({
             )}
           </div>
           {herdOptions.length > 0 && (
-            <p className="mt-1 text-[11px] text-ink-muted">Suggestions include all herd cows in the active tenant/farm. You can enter either cow ID or cow name.</p>
+            <p className="mt-1 text-[11px] text-ink-muted">Suggestions include all cows in the active herd.</p>
           )}
           {formErrors.cowId && <p className="mt-1 text-xs text-rose-600">{formErrors.cowId}</p>}
         </div>
@@ -439,6 +448,22 @@ export default function LogAIServiceForm({
           </div>
           {formErrors.semenSource && <p className="mt-1 text-xs text-rose-600">{formErrors.semenSource}</p>}
         </div>
+
+        {logForm.semenSource === 'vet_provided' && (
+          <div>
+            <label className="mb-1 block text-xs font-bold uppercase tracking-wider text-ink-muted">
+              Sire PTA Milk Volume (L/day)
+            </label>
+            <input
+              type="number"
+              step="0.01"
+              className="input-machined w-full"
+              value={logForm.milkVolumePta}
+              onChange={(event) => setLogForm((current) => ({ ...current, milkVolumePta: event.target.value }))}
+              placeholder="e.g. 28.5"
+            />
+          </div>
+        )}
       </div>
 
       {/* Action Buttons */}

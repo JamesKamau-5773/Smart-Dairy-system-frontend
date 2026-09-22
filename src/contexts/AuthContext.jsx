@@ -1,5 +1,7 @@
+/* eslint-disable react-refresh/only-export-components */
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { authApi, normalizeSessionUser, normalizeTenantProfile, tenantApi } from '../lib/backendApi';
+import { clearSession, loadSession, saveSession } from '../lib/sessionStore';
 import { tenantRef } from '../lib/tenantRef';
 
 const AuthContext = createContext();
@@ -12,12 +14,13 @@ export function AuthProvider({ children }) {
     let cancelled = false;
 
     const bootstrapSession = async () => {
-      const savedUser = sessionStorage.getItem('jivu_user');
-      let restoredUser = null;
+      const savedUser = await loadSession();
 
       if (savedUser) {
         try {
-          restoredUser = normalizeSessionUser(JSON.parse(savedUser));
+          const restoredUser = normalizeSessionUser(savedUser);
+          tenantRef.tenantId = restoredUser.tenant_id ?? restoredUser.cooperative_id ?? null;
+          tenantRef.farmId = restoredUser.farm_id ?? null;
           setCurrentUser(restoredUser);
           setIsLoading(false);
 
@@ -49,12 +52,12 @@ export function AuthProvider({ children }) {
 
           const normalizedUser = normalizeSessionUser(mergedUser);
           setCurrentUser(normalizedUser);
-          sessionStorage.setItem('jivu_user', JSON.stringify(normalizedUser));
+          await saveSession(normalizedUser);
         }
       } catch (error) {
         if (error?.response?.status === 401) {
           setCurrentUser(null);
-          sessionStorage.removeItem('jivu_user');
+          await clearSession();
           tenantRef.tenantId = null;
           tenantRef.farmId = null;
         }
@@ -77,9 +80,9 @@ export function AuthProvider({ children }) {
       const user = await authApi.login(credentials);
       
       setCurrentUser(user);
-      sessionStorage.setItem('jivu_user', JSON.stringify(user));
+      await saveSession(user);
       
-      return { success: true };
+      return { success: true, user };
     } catch (error) {
       const message = error?.response?.data?.message
         || error?.response?.data?.error
@@ -95,7 +98,7 @@ export function AuthProvider({ children }) {
       const user = await authApi.register(payload);
 
       setCurrentUser(user);
-      sessionStorage.setItem('jivu_user', JSON.stringify(user));
+      await saveSession(user);
 
       return { success: true };
     } catch (error) {
@@ -113,7 +116,7 @@ export function AuthProvider({ children }) {
       const user = await authApi.claimAccount(payload);
 
       setCurrentUser(user);
-      sessionStorage.setItem('jivu_user', JSON.stringify(user));
+      await saveSession(user);
 
       return { success: true };
     } catch (error) {
@@ -126,14 +129,32 @@ export function AuthProvider({ children }) {
     }
   };
 
+  const completeRequiredPasswordReset = async (payload) => {
+    try {
+      const user = await authApi.completeRequiredPasswordReset(payload);
+
+      setCurrentUser(user);
+      await saveSession(user);
+
+      return { success: true, user };
+    } catch (error) {
+      const message = error?.response?.data?.message
+        || error?.response?.data?.error
+        || error?.response?.data?.detail
+        || 'Password update failed. Please try again.';
+
+      return { success: false, error: message };
+    }
+  };
+
   const logout = async () => {
     try {
       await authApi.logout();
-    } catch (e) {
+    } catch {
       console.error('Logout request failed, clearing local state anyway.');
     } finally {
       setCurrentUser(null);
-      sessionStorage.removeItem('jivu_user');
+      await clearSession();
       
       // Wipe the network interceptor variables
       tenantRef.tenantId = null;
@@ -142,16 +163,16 @@ export function AuthProvider({ children }) {
   };
 
   // Exposed for TenantContext to update the active farm seamlessly
-  const updateSession = (updatedUser) => {
+  const updateSession = async (updatedUser) => {
     const normalizedUser = normalizeSessionUser(updatedUser);
     setCurrentUser(normalizedUser);
-    sessionStorage.setItem('jivu_user', JSON.stringify(normalizedUser));
+    await saveSession(normalizedUser);
   };
 
-  return (
-    <AuthContext.Provider value={{ currentUser, login, register, claimAccount, logout, updateSession, isLoading }}>
-      {children}
-    </AuthContext.Provider>
+  return React.createElement(
+    AuthContext.Provider,
+    { value: { currentUser, login, register, claimAccount, completeRequiredPasswordReset, logout, updateSession, isLoading } },
+    children,
   );
 }
 

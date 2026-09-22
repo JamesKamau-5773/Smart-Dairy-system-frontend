@@ -27,7 +27,7 @@ export default function MilkTrendChart({ data }) {
           }}
         />
         <Legend />
-        <Line type="monotone" dataKey="value" name="Daily Production" stroke="#3b82f6" strokeWidth={2} />
+        <Line type="monotone" dataKey="value" name="Daily Production" stroke="#38BDF8" strokeWidth={2} />
       </LineChart>
     </ResponsiveContainer>
   );

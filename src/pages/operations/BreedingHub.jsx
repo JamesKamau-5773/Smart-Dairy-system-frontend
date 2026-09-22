@@ -12,12 +12,14 @@ import {
   RestockSemenInventoryForm,
 } from '../../components/forms/breeding';
 import {
+  enrichBreedingLogCowIdentity,
   normalizeBreedingLog,
   normalizeHerdOption,
   normalizeSemenInventory,
 } from '../../lib/breedingUtils';
 import { createAuditEntry, logToAuditTrail } from '../../lib/audit';
 import { breedingApi, herdApi } from '../../lib/backendApi';
+import { formatCowIdentity, resolveCowIdentityFromHerd } from '../../lib/cowIdentity';
 import { useTenant } from '../../hooks/useTenant';
 import {
   Dna,
@@ -129,11 +131,7 @@ function getSemenSourceTone(source = 'farm_stock') {
 }
 
 function formatCowLabel(log = {}) {
-  if (log.cowId && log.cowName) {
-    return `${log.cowId} (${log.cowName})`;
-  }
-
-  return log.cowId || log.cowName || 'Unknown Cow';
+  return formatCowIdentity({ cowName: log.cowName, cowTag: log.cowTag });
 }
 
 function getMonthLabel(dateValue) {
@@ -150,7 +148,8 @@ function getFilteredHistory(history, filter, searchTerm) {
     .filter((entry) => filter === 'All' || entry.status === filter)
     .filter((entry) => {
       if (!normalizedSearch) return true;
-      return entry.cowId.toLowerCase().includes(normalizedSearch);
+      return [entry.cowName, entry.cowTag, entry.cowId]
+        .some((value) => String(value ?? '').toLowerCase().includes(normalizedSearch));
     })
     .slice()
     .sort((a, b) => new Date(b.updatedAt) - new Date(a.updatedAt));
@@ -212,7 +211,7 @@ function BreedingHeader({ metrics, onLogService, onRecordHeat }) {
         </button>
         <button
           onClick={onLogService}
-          className="btn-command flex items-center gap-2 text-sm bg-brand text-surface shadow-md hover:bg-brand-dark transition-colors"
+          className="btn-command flex items-center gap-2 text-sm bg-brand text-surface  hover:bg-brand-dark transition-colors"
         >
           <Syringe size={16} /> Log AI Service
         </button>
@@ -239,15 +238,15 @@ function HeatAlerts({ alerts, onLogService }) {
   if (alerts.length === 0) return null;
 
   return (
-    <div className="card-machined border-danger/20 bg-danger/5 p-6 shadow-sm">
+    <div className="card-machined border-danger/20 bg-danger/5 p-6 ">
       <h3 className="mb-4 flex items-center gap-2 text-sm font-bold uppercase tracking-wider text-danger">
         <Flame size={18} /> Action Needed: Cows in Heat
       </h3>
       <div className="space-y-3">
         {alerts.map((alert) => (
-          <div key={alert.id} className="flex items-center justify-between rounded-lg bg-surface p-4 shadow-sm border border-danger/10">
+          <div key={alert.id} className="flex items-center justify-between rounded-lg bg-surface p-4  border border-danger/10">
             <div>
-              <h4 className="font-black text-brand text-lg">{alert.cowId}</h4>
+              <h4 className="font-black text-brand text-lg">{formatCowIdentity(alert)}</h4>
               <p className="text-xs font-bold text-danger mt-1">{alert.intensity} heat observed</p>
               <p className="mt-1 text-xs text-ink-muted">Next watch window: {alert.nextWindowStart} to {alert.nextWindowEnd}</p>
             </div>
@@ -271,7 +270,7 @@ function VetQueueItem({ log, onOutcome, isUpdating }) {
 
   return (
     <div className={`flex flex-col gap-4 rounded-lg border p-4 transition-colors md:flex-row md:items-center md:justify-between ${
-      isReady ? 'border-brand/20 bg-surface shadow-sm' : 'border-ink/5 bg-surface/50 opacity-80'
+      isReady ? 'border-brand/20 bg-surface' : 'border-ink/5 bg-surface/50 opacity-80'
     }`}>
       <div>
         <h4 className={`font-bold text-base ${isReady ? 'text-brand' : 'text-ink-strong'}`}>{formatCowLabel(log)}</h4>
@@ -338,7 +337,7 @@ function VetQueueItem({ log, onOutcome, isUpdating }) {
 // ============================================================================
 function SemenInventory({ stock, onAddInventory, onRestockInventory, onDeleteInventory }) {
   return (
-    <div className="card-machined bg-surface p-6 h-full border border-ink/5 shadow-sm">
+    <div className="card-machined bg-surface p-6 h-full border border-ink/5 ">
       <div className="flex items-center justify-between mb-6">
         <h3 className="flex items-center gap-2 text-base font-bold text-brand">
           <Snowflake size={18} className="text-accent" /> Semen Inventory
@@ -507,14 +506,24 @@ export default function BreedingHub() {
 
   const breedingAlerts = useMemo(() => heatObservations
     .filter((observation) => !observation.breeding_log_id)
-    .map((observation) => ({
-      id: observation.id,
-      cowId: String(observation.cow_id),
-      observedAt: observation.observed_at,
-      intensity: observation.intensity,
-      nextWindowStart: observation.next_window_start,
-      nextWindowEnd: observation.next_window_end,
-    })), [heatObservations]);
+        .map((observation) => {
+          const identity = resolveCowIdentityFromHerd({
+            cowId: observation.cow_id,
+            cowTag: observation.cow_tag,
+            cowName: observation.cow_name,
+          }, herdOptions);
+
+          return {
+            id: observation.id,
+            cowId: String(observation.cow_id),
+            cowName: identity.name,
+            cowTag: identity.earTag,
+            observedAt: observation.observed_at,
+            intensity: observation.intensity,
+            nextWindowStart: observation.next_window_start,
+            nextWindowEnd: observation.next_window_end,
+          };
+        }), [heatObservations, herdOptions]);
 
   useEffect(() => {
     if (Array.isArray(semenInventoryData) && inventory.length === 0) {
@@ -526,13 +535,14 @@ export default function BreedingHub() {
     if (Array.isArray(breedingLogsData)) {
       const normalizedServer = breedingLogsData.map(normalizeBreedingLog);
       const normalizedCached = readCachedBreedingLogs(tenantId, farmId).map(normalizeBreedingLog);
-      const normalized = mergeBreedingLogs(normalizedServer, normalizedCached);
+      const normalized = mergeBreedingLogs(normalizedServer, normalizedCached)
+        .map((log) => enrichBreedingLogCowIdentity(log, herdOptions));
 
       writeCachedBreedingLogs(tenantId, farmId, normalized);
       setVetHistory(normalized.map((log) => createHistoryEntry(log, log.status, log.notes)));
       setVetQueue(normalized.filter((log) => log.status === 'Pending'));
     }
-  }, [breedingLogsData, tenantId, farmId]);
+  }, [breedingLogsData, herdOptions, tenantId, farmId]);
 
   // Derived State for KPI Chips
   const metrics = {
@@ -692,7 +702,7 @@ export default function BreedingHub() {
 
           <HeatAlerts alerts={breedingAlerts} onLogService={handleLogService} />
 
-          <div className="card-machined bg-surface p-6 border border-ink/5 shadow-sm">
+          <div className="card-machined bg-surface p-6 border border-ink/5 ">
             <div className="mb-6 flex items-center justify-between border-b border-ink/10 pb-4">
               <h3 className="flex items-center gap-2 text-base font-bold text-brand">
                 <Stethoscope size={18} className="text-brand-dark" /> Pending Vet Checks
@@ -740,7 +750,7 @@ export default function BreedingHub() {
                   />
                   <Legend wrapperStyle={{ fontSize: '12px' }} />
                   <Line type="monotone" dataKey="daughters_yield" name="Daughters' Avg Yield" stroke="#10b981" strokeWidth={2} dot={{ r: 4 }} activeDot={{ r: 6 }} />
-                  <Line type="monotone" dataKey="mothers_yield" name="Mothers' Avg Yield" stroke="#3b82f6" strokeWidth={2} dot={{ r: 4 }} activeDot={{ r: 6 }} />
+                  <Line type="monotone" dataKey="mothers_yield" name="Mothers' Avg Yield" stroke="#38BDF8" strokeWidth={2} dot={{ r: 4 }} activeDot={{ r: 6 }} />
                 </LineChart>
               </ResponsiveContainer>
             ) : (
@@ -806,7 +816,7 @@ export default function BreedingHub() {
                 <div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest text-ink-muted">
                   <Search size={12} /> Search and filters
                 </div>
-                <p className="mt-1 text-sm leading-6 text-ink-muted">Filter breeding history by record status or cow ID.</p>
+                <p className="mt-1 text-sm leading-6 text-ink-muted">Filter breeding history by record status, cow name, or ear tag.</p>
               </div>
 
               <div className="flex items-center gap-2">
@@ -817,7 +827,7 @@ export default function BreedingHub() {
                   type="button"
                   onClick={() => setHistoryControlsOpen((current) => !current)}
                   aria-expanded={historyControlsOpen}
-                  className="inline-flex items-center gap-1.5 rounded-lg border border-ink/10 bg-surface px-3 py-1.5 text-xs font-semibold text-ink shadow-sm transition-all hover:border-brand/20 hover:bg-brand/5 hover:text-brand"
+                  className="inline-flex items-center gap-1.5 rounded-lg border border-ink/10 bg-surface px-3 py-1.5 text-xs font-semibold text-ink  transition-all hover:border-brand/20 hover:bg-brand/5 hover:text-brand"
                 >
                   {historyControlsOpen ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
                   {historyControlsOpen ? 'Hide filters' : 'Show filters'}
@@ -834,7 +844,7 @@ export default function BreedingHub() {
                       type="search"
                       value={historySearch}
                       onChange={(event) => setHistorySearch(event.target.value)}
-                      placeholder="Search cow ID..."
+                      placeholder="Search name or ear tag..."
                       className="w-full bg-transparent text-sm text-ink-strong outline-none placeholder:text-ink-muted"
                     />
                   </div>
@@ -885,7 +895,7 @@ export default function BreedingHub() {
 
               {Array.from(groupedHistory.entries()).map(([monthLabel, entries]) => (
                 <div key={monthLabel} className="mb-4 space-y-2 last:mb-0">
-                  <div className="sticky top-0 z-10 flex items-center justify-between rounded-md border border-ink/10 bg-surface px-3 py-2 text-xs font-black uppercase tracking-widest text-brand shadow-sm">
+                  <div className="sticky top-0 z-10 flex items-center justify-between rounded-md border border-ink/10 bg-surface px-3 py-2 text-xs font-black uppercase tracking-widest text-brand ">
                     <span>{monthLabel}</span>
                     <span className="rounded-full bg-brand/5 px-2 py-0.5 text-[10px] font-black text-brand">
                       {entries.length} {entries.length === 1 ? 'record' : 'records'}

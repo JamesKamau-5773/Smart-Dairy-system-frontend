@@ -161,7 +161,7 @@ export default function MilkHistory() {
 
   return (
     <div className="animate-reveal space-y-6 max-w-6xl mx-auto">
-      <div className="rounded-[28px] border border-ink/10 bg-[linear-gradient(135deg,rgba(223,249,255,0.95),rgba(255,255,255,0.98))] p-5 sm:p-6 shadow-[0_20px_60px_rgba(15,23,42,0.08)]">
+      <div className="rounded-[28px] border border-ink/10 bg-[linear-gradient(135deg,rgba(223,249,255,0.95),rgba(255,255,255,0.98))] p-5 sm:p-6 ">
         <div className="flex items-center justify-between border-b border-ink/10 pb-5 gap-4">
           <div className="flex items-center gap-4 min-w-0">
           <Link to="/operations/yield" className="p-2 hover:bg-surface-raised rounded-lg text-ink-muted transition-colors">
@@ -223,7 +223,7 @@ export default function MilkHistory() {
                   }}
                 />
                 <Legend />
-                <Line type="monotone" dataKey="liters" name="Daily Production" stroke="#3b82f6" strokeWidth={2} />
+                <Line type="monotone" dataKey="liters" name="Daily Production" stroke="#38BDF8" strokeWidth={2} />
               </LineChart>
             </ResponsiveContainer>
           ) : (
@@ -237,7 +237,7 @@ export default function MilkHistory() {
           <button
             type="button"
             onClick={() => setFiltersOpen((prev) => !prev)}
-            className="inline-flex items-center gap-1.5 rounded-lg border border-ink/10 bg-surface px-3 py-1.5 text-xs font-semibold text-ink shadow-sm transition-all hover:border-brand/20 hover:bg-brand/5 hover:text-brand"
+            className="inline-flex items-center gap-1.5 rounded-lg border border-ink/10 bg-surface px-3 py-1.5 text-xs font-semibold text-ink  transition-all hover:border-brand/20 hover:bg-brand/5 hover:text-brand"
             aria-expanded={filtersOpen}
             aria-controls="history-filter-panel"
           >

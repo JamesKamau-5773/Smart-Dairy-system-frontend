@@ -1,8 +1,9 @@
-import React, { useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Users, Search, Building2, Link as LinkIcon, FileText, CheckCircle2, AlertCircle, Plus, Filter, ArrowRight, BadgeDollarSign, CreditCard, X } from 'lucide-react';
+import { Users, Search, Building2, Link as LinkIcon, FileText, CheckCircle2, Plus, Filter, ArrowRight, BadgeDollarSign, CreditCard, X, MoreVertical } from 'lucide-react';
 import AlertBanner from '../../components/ui/AlertBanner';
 import Modal from '../../components/ui/Modal';
+import { Popover, PopoverContent, PopoverTrigger } from '../../components/ui/popover';
 import { financeApi } from '../../lib/backendApi';
 import { useTenant } from '../../hooks/useTenant';
 
@@ -19,7 +20,7 @@ export default function BuyerRegistry() {
     enabled: !!tenantId && !!farmId,
   });
 
-  const buyers = Array.isArray(buyersData)
+  const buyers = useMemo(() => Array.isArray(buyersData)
     ? buyersData.map((buyer) => ({
         id: buyer.id ?? buyer.buyerId ?? buyer.buyer_id ?? '',
         name: buyer.name ?? buyer.businessName ?? buyer.business_name ?? 'Unnamed Buyer',
@@ -30,7 +31,7 @@ export default function BuyerRegistry() {
         status: buyer.status ?? 'Active',
         contract: buyer.contract ?? buyer.paymentPlan ?? buyer.payment_plan ?? 'Not set',
       }))
-    : [];
+    : [], [buyersData]);
 
   const filteredBuyers = useMemo(() => {
     const normalizedSearch = searchTerm.trim().toLowerCase();
@@ -73,7 +74,7 @@ export default function BuyerRegistry() {
         </div>
       )}
 
-      <div className="rounded-[28px] border border-ink/10 bg-[linear-gradient(135deg,rgba(244,249,255,0.95),rgba(255,255,255,0.98))] p-5 sm:p-6 shadow-[0_20px_60px_rgba(15,23,42,0.08)]">
+      <div className="rounded-[28px] border border-ink/10 bg-[linear-gradient(135deg,rgba(244,249,255,0.95),rgba(255,255,255,0.98))] p-5 sm:p-6 ">
         <div className="flex flex-col gap-4 border-b border-ink/10 pb-5 lg:flex-row lg:items-end lg:justify-between">
           <div>
             <div className="inline-flex items-center gap-2 rounded-full bg-brand/10 px-3 py-1 text-[11px] font-bold uppercase tracking-widest text-brand">
@@ -94,9 +95,9 @@ export default function BuyerRegistry() {
             <div className="flex items-start justify-between gap-3">
               <div>
                 <p className="text-[10px] font-bold uppercase tracking-widest text-ink-muted">Total money owed</p>
-                <p className="mt-2 text-3xl font-black text-ink">KSh {stats.totalOutstanding.toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
+                <p className="mt-2 text-3xl font-black text-ink">KES {stats.totalOutstanding.toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
               </div>
-              <div className="rounded-2xl border border-white/60 bg-white/80 p-3 text-brand shadow-sm">
+              <div className="rounded-2xl border border-white/60 bg-white/80 p-3 text-brand ">
                 <BadgeDollarSign size={18} />
               </div>
             </div>
@@ -107,7 +108,7 @@ export default function BuyerRegistry() {
                 <p className="text-[10px] font-bold uppercase tracking-widest text-ink-muted">Active contracts</p>
                 <p className="mt-2 text-3xl font-black text-ink">{stats.activeContracts}</p>
               </div>
-              <div className="rounded-2xl border border-white/60 bg-white/80 p-3 text-brand shadow-sm">
+              <div className="rounded-2xl border border-white/60 bg-white/80 p-3 text-brand ">
                 <CreditCard size={18} />
               </div>
             </div>
@@ -118,7 +119,7 @@ export default function BuyerRegistry() {
                 <p className="text-[10px] font-bold uppercase tracking-widest text-ink-muted">Cash-only accounts</p>
                 <p className="mt-2 text-3xl font-black text-ink">{stats.cashOnly}</p>
               </div>
-              <div className="rounded-2xl border border-white/60 bg-white/80 p-3 text-brand shadow-sm">
+              <div className="rounded-2xl border border-white/60 bg-white/80 p-3 text-brand ">
                 <CheckCircle2 size={18} />
               </div>
             </div>
@@ -162,7 +163,7 @@ export default function BuyerRegistry() {
               <tr>
                 <th className="p-4 font-semibold text-xs uppercase tracking-wider text-ink-muted">Customer Name</th>
                 <th className="p-4 font-semibold text-xs uppercase tracking-wider text-ink-muted">Payment Plan</th>
-                <th className="p-4 font-semibold text-xs uppercase tracking-wider text-right text-ink-muted">Amount Owed (KSh)</th>
+                <th className="p-4 font-semibold text-xs uppercase tracking-wider text-right text-ink-muted">Amount Owed (KES)</th>
                 <th className="p-4 font-semibold text-xs uppercase tracking-wider text-center text-ink-muted">Actions</th>
               </tr>
             </thead>
@@ -210,36 +211,27 @@ export default function BuyerRegistry() {
                   </td>
 
                   {/* Action Column - The "Share Link" Trigger */}
-                  <td className="p-4">
-                    <div className="flex justify-center gap-2 opacity-100 md:opacity-50 md:group-hover:opacity-100 transition-opacity">
-                      <button 
-                        className="btn-ghost h-9 w-9 !min-h-0 !p-0 text-brand"
-                        title="Generate Encrypted Link"
-                        onClick={() => setBanner({ type: 'info', title: 'Link Generated', message: `Generated secure link for ${buyer.name}: https://jivu.farm/shared/statement/tk_8x9a2b` })}
-                      >
-                        <LinkIcon size={16} />
-                      </button>
-                      <button 
-                        className="btn-ghost h-9 w-9 !min-h-0 !p-0 text-ink-muted"
-                        title="View Full Ledger"
-                        onClick={() => openBuyerDetails(buyer)}
-                      >
-                        <FileText size={16} />
-                      </button>
-                    </div>
+                  <td className="p-4 text-right">
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <button type="button" className="btn-ghost h-9 w-9 !min-h-0 !p-0 text-ink-muted" aria-label={`Actions for ${buyer.name}`}>
+                          <MoreVertical size={16} />
+                        </button>
+                      </PopoverTrigger>
+                      <PopoverContent align="end" className="w-52 border-slate-200 bg-white/95 p-1 backdrop-blur">
+                        <button type="button" onClick={() => setBanner({ type: 'info', title: 'Link Generated', message: `Generated secure link for ${buyer.name}: https://jivu.farm/shared/statement/tk_8x9a2b` })} className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm text-ink-900 hover:bg-brand-50">
+                          <LinkIcon size={14} /> Generate secure link
+                        </button>
+                        <button type="button" onClick={() => openBuyerDetails(buyer)} className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm text-ink-900 hover:bg-brand-50">
+                          <FileText size={14} /> View full ledger
+                        </button>
+                      </PopoverContent>
+                    </Popover>
                   </td>
                   
                 </tr>
               ))}
               
-              {filteredBuyers.length === 0 && (
-                <tr>
-                  <td colSpan="4" className="p-8 text-center text-ink-muted flex flex-col items-center">
-                    <AlertCircle size={24} className="mb-2 opacity-50" />
-                    No partners found matching "{searchTerm}"
-                  </td>
-                </tr>
-              )}
             </tbody>
           </table>
         </div>
@@ -276,7 +268,7 @@ export default function BuyerRegistry() {
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div className="rounded-2xl border border-ink/10 bg-surface p-4">
                 <p className="mb-1 text-[10px] font-bold uppercase tracking-wider text-ink-muted">Outstanding balance</p>
-                <p className="text-sm leading-6 text-ink-strong">KSh {selectedBuyer.outstanding.toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
+                <p className="text-sm leading-6 text-ink-strong">KES {selectedBuyer.outstanding.toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
               </div>
               <div className="rounded-2xl border border-ink/10 bg-surface p-4">
                 <p className="mb-1 text-[10px] font-bold uppercase tracking-wider text-ink-muted">Contract</p>

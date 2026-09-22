@@ -2,6 +2,18 @@ import { describe, expect, it } from 'vitest';
 import { canAccessCommandCenter, getDefaultLandingPath, getOrganizationRole, getPermissionSet, getRoleSet } from '../roles';
 
 describe('roles policy helpers', () => {
+  it('expands manager and supervisor access to match backend role inheritance', () => {
+    expect(getRoleSet({ role: 'FARM_MANAGER' })).toEqual([
+      'FARM_MANAGER',
+      'SUPERVISOR',
+      'FARM_HAND',
+    ]);
+    expect(getRoleSet({ role: 'FARM_SUPERVISOR' })).toEqual([
+      'SUPERVISOR',
+      'FARM_HAND',
+    ]);
+  });
+
   it('normalizes layered organizational and operational roles', () => {
     const user = {
       organization_role: 'coop_admin',
@@ -10,7 +22,7 @@ describe('roles policy helpers', () => {
     };
 
     expect(getOrganizationRole(user)).toBe('ADMIN');
-    expect(getRoleSet(user)).toEqual(expect.arrayContaining(['ADMIN', 'HERDSMAN', 'FINANCE']));
+    expect(getRoleSet(user)).toEqual(expect.arrayContaining(['ADMIN', 'FARM_HAND', 'FINANCE']));
   });
 
   it('normalizes permission sets from arrays and objects', () => {

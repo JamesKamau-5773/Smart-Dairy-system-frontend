@@ -1,6 +1,7 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import { Toaster } from 'react-hot-toast';
+import { registerSW } from 'virtual:pwa-register';
 import App from './App.jsx';
 import './index.css';
 
@@ -13,6 +14,8 @@ import { installGlobalErrorCapture } from './lib/telemetry';
 // Capture uncaught errors / unhandled rejections into the telemetry buffer.
 installGlobalErrorCapture();
 
+registerSW({ immediate: true });
+
 // Initialize theme from localStorage before React renders to prevent flash of wrong theme.
 // This logic should match the one in ThemeProvider.
 try {
@@ -22,13 +25,15 @@ try {
   } else {
     document.documentElement.dataset.theme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
   }
-} catch {}
+} catch {
+  // Storage can be unavailable in hardened browser contexts; CSS defaults remain valid.
+}
 
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
-    <QueryProvider>
-      <ThemeProvider>
-        <AuthProvider>
+    <ThemeProvider>
+      <AuthProvider>
+        <QueryProvider>
           <TenantProvider>
             <App />
             {/* Single source of truth for all user-facing notifications.
@@ -44,8 +49,8 @@ ReactDOM.createRoot(document.getElementById('root')).render(
               containerStyle={{ zIndex: 9999 }}
             />
           </TenantProvider>
-        </AuthProvider>
-      </ThemeProvider>
-    </QueryProvider>
+        </QueryProvider>
+      </AuthProvider>
+    </ThemeProvider>
   </React.StrictMode>
 );

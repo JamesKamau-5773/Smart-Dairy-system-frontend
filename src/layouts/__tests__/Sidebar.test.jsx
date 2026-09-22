@@ -21,18 +21,30 @@ function renderWithProviders(ui) {
 describe('Sidebar', () => {
   beforeEach(() => sessionStorage.removeItem('jivu_user'));
 
-  it('shows Customer Management for herdsman', () => {
+  it('does not show Customer Management for farmhands', () => {
     sessionStorage.setItem('jivu_user', JSON.stringify({ name: 'Test', role: 'Herdsman', tenant_id: 't1', farm_id: 'f1', farm_name: 'F1' }));
     renderWithProviders(<Sidebar />);
-    // canViewCustomers = canViewAdminControls || FARMER; a single-tenant herdsman
-    // passes canViewAdminControls (isSingleTenantUser), so the link IS shown.
-    expect(screen.getAllByRole('link', { name: 'Customer Management' }).length).toBeGreaterThan(0);
+    expect(screen.queryByRole('link', { name: 'Customer Management' })).toBeNull();
   });
 
   it('shows Customer Management for farmer', () => {
     sessionStorage.setItem('jivu_user', JSON.stringify({ name: 'Farmer', role: 'FARMER', tenant_id: 't1', farm_id: 'f1', farm_name: 'F1' }));
     renderWithProviders(<Sidebar />);
     expect(screen.getAllByRole('link', { name: 'Customer Management' }).length).toBeGreaterThan(0);
+  });
+
+  it('shows staff onboarding for a cooperative farmer', () => {
+    sessionStorage.setItem('jivu_user', JSON.stringify({
+      name: 'Farm Owner',
+      role: 'FARMER',
+      tenant_type: 'cooperative',
+      tenant_id: 't1',
+      cooperative_id: 't1',
+      farm_id: 'f1',
+    }));
+    renderWithProviders(<Sidebar />);
+
+    expect(screen.getAllByRole('link', { name: 'Staff Registry' }).length).toBeGreaterThan(0);
   });
 
   it('shows Customer Management for primary admin', () => {

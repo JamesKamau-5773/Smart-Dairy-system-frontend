@@ -1,22 +1,23 @@
 /* eslint-disable react-refresh/only-export-components */
-import React from 'react';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { useEffect, useMemo, useRef } from 'react';
+import localforage from 'localforage';
+import { QueryClient } from '@tanstack/react-query';
+import { createAsyncStoragePersister } from '@tanstack/query-async-storage-persister';
+import { PersistQueryClientProvider } from '@tanstack/react-query-persist-client';
+import { useAuth } from '../contexts/AuthContext';
 import offlineQueue from '../lib/offlineQueue';
 
-function getCacheNamespace() {
-  try {
-    const sessionStr = sessionStorage.getItem('jivu_user');
-    if (!sessionStr) {
-      return 'anonymous';
-    }
+const queryStorage = localforage.createInstance({
+  name: 'jivu',
+  storeName: 'query_cache',
+});
 
-    const session = JSON.parse(sessionStr);
-    const tenantId = session?.tenant_id ?? session?.cooperative_id ?? 'unknown-tenant';
-    const farmId = session?.farm_id ?? 'unknown-farm';
-    return `${tenantId}:${farmId}`;
-  } catch {
-    return 'anonymous';
-  }
+function getCacheNamespace(user) {
+  if (!user) return 'anonymous';
+  const actorId = user.id ?? user.user_id ?? user.identifier ?? 'unknown-actor';
+  const tenantId = user.tenant_id ?? user.cooperative_id ?? 'unknown-tenant';
+  const farmId = user.farm_id ?? 'unknown-farm';
+  return `${actorId}:${tenantId}:${farmId}`;
 }
 
 // Centralized Query Keys mapping
@@ -25,6 +26,7 @@ export const QUERY_KEYS = {
   DASHBOARD_SUMMARY: (tenantId, farmId) => [tenantId, farmId, 'dashboard_summary'],
   YIELD_SUMMARY: (tenantId, farmId) => [tenantId, farmId, 'yield_summary'],
   YIELD_TREND: (tenantId, farmId) => [tenantId, farmId, 'yield_trend'],
+  MILK_DISPOSITIONS: (tenantId, farmId) => [tenantId, farmId, 'milk_dispositions'],
   UNIT_COST: (tenantId, farmId) => [tenantId, farmId, 'unit_cost'],
   HARDLOCKS: (tenantId, farmId) => [tenantId, farmId, 'hardlocks'],
 };
@@ -40,7 +42,23 @@ export const queryClient = new QueryClient({
 });
 
 export function QueryProvider({ children }) {
-  React.useEffect(() => {
+  const { currentUser } = useAuth();
+  const namespace = getCacheNamespace(currentUser);
+  const previousNamespace = useRef(namespace);
+  const persister = useMemo(() => createAsyncStoragePersister({
+    storage: queryStorage,
+    key: `rq_cache_v2:${namespace}`,
+    throttleTime: 1000,
+  }), [namespace]);
+
+  useEffect(() => {
+    if (previousNamespace.current !== namespace) {
+      queryClient.clear();
+      previousNamespace.current = namespace;
+    }
+  }, [namespace]);
+
+  useEffect(() => {
     // Flush any queued offline writes when back online
     if (typeof indexedDB === 'undefined') return; // test env or old browser — skip
 
@@ -54,62 +72,17 @@ export function QueryProvider({ children }) {
 
     return () => window.removeEventListener('online', onOnline);
   }, []);
-  
-  React.useEffect(() => {
-    // Basic React Query cache persistence (small & best-effort).
-    const STORAGE_PREFIX = 'rq_cache_v1';
-    const STORAGE = `${STORAGE_PREFIX}:${getCacheNamespace()}`;
 
-    // Restore cached queries on startup
-    try {
-      const raw = localStorage.getItem(STORAGE);
-      if (raw) {
-        const parsed = JSON.parse(raw);
-        Object.keys(parsed).forEach((k) => {
-          try {
-            const key = JSON.parse(k);
-            // Preserve the original fetch timestamp so staleTime is honored and a
-            // background refetch still happens instead of the restored snapshot
-            // being treated as brand-new (and never refreshed) on every reload.
-            queryClient.setQueryData(key, parsed[k].data, { updatedAt: parsed[k].updatedAt });
-          } catch (e) {
-            // ignore invalid entries
-          }
-        });
-      }
-    } catch (e) {
-      console.warn('QueryProvider: failed to restore cache', e);
-    }
-
-    // Subscribe to query cache changes and persist when data changes
-    const save = () => {
-      try {
-        const out = {};
-        const all = queryClient.getQueryCache().getAll();
-        all.forEach((q) => {
-          const k = JSON.stringify(q.queryKey);
-          if (q.state?.data !== undefined) {
-            out[k] = { data: q.state.data, updatedAt: q.state.dataUpdatedAt };
-          }
-        });
-        localStorage.setItem(STORAGE, JSON.stringify(out));
-      } catch (e) {
-        console.warn('QueryProvider: failed to save cache', e);
-      }
-    };
-
-    const unsub = queryClient.getQueryCache().subscribe(save);
-    // also save before unload
-    window.addEventListener('beforeunload', save);
-
-    return () => {
-      unsub();
-      window.removeEventListener('beforeunload', save);
-    };
-  }, []);
   return (
-    <QueryClientProvider client={queryClient}>
+    <PersistQueryClientProvider
+      client={queryClient}
+      persistOptions={{
+        persister,
+        maxAge: 1000 * 60 * 60 * 24 * 7,
+        buster: 'jivu-query-cache-v2',
+      }}
+    >
       {children}
-    </QueryClientProvider>
+    </PersistQueryClientProvider>
   );
 }

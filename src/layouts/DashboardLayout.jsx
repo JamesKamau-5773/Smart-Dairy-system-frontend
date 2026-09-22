@@ -2,6 +2,10 @@ import { Outlet } from 'react-router-dom';
 import Sidebar from './Sidebar';
 import Header from './Header';
 import MobileBottomNav from './MobileBottomNav';
+import DebugBar from './DebugBar';
+
+const isDevelopment = import.meta.env.DEV
+  || globalThis.process?.env?.NODE_ENV === 'development';
 
 export default function DashboardLayout() {
   return (
@@ -11,7 +15,7 @@ export default function DashboardLayout() {
       <Sidebar />
 
       {/* Main Content Area - responsive layout */}
-      <main className="relative z-10 flex h-dvh min-w-0 flex-1 flex-col overflow-y-auto overscroll-contain pb-20 md:pl-60 xl:pl-64 md:pb-0">
+      <main className={`relative z-10 flex h-dvh min-w-0 flex-1 flex-col overflow-y-auto overscroll-contain md:pl-60 xl:pl-64 ${isDevelopment ? 'pb-48 md:pb-16' : 'pb-20 md:pb-0'}`}>
         
         <Header />
         
@@ -22,6 +26,7 @@ export default function DashboardLayout() {
       </main>
 
       <MobileBottomNav />
+      <DebugBar />
 
       </div>
 

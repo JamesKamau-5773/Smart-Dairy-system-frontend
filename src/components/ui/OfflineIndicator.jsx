@@ -1,5 +1,5 @@
-import React, { useEffect, useState } from 'react';
-import { Dot, Database, Loader2 } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { Cloud, CloudOff, Loader2 } from 'lucide-react';
 import offlineQueue from '../../lib/offlineQueue';
 
 export default function OfflineIndicator({ onOpenInspector } = {}) {
@@ -11,13 +11,20 @@ export default function OfflineIndicator({ onOpenInspector } = {}) {
     try {
       const all = await offlineQueue.getAll();
       setPending(all.length);
-    } catch (e) {
+    } catch {
       setPending(0);
     }
   };
 
   useEffect(() => {
-    refresh();
+    let active = true;
+    offlineQueue.getAll()
+      .then((items) => {
+        if (active) setPending(items.length);
+      })
+      .catch(() => {
+        if (active) setPending(0);
+      });
     const onOnline = () => { setOnline(true); refresh(); };
     const onOffline = () => setOnline(false);
     const onUpdated = () => refresh();
@@ -27,6 +34,7 @@ export default function OfflineIndicator({ onOpenInspector } = {}) {
     window.addEventListener('offlineQueue:updated', onUpdated);
     window.addEventListener('offlineQueue:flushing', onFlushing);
     return () => {
+      active = false;
       window.removeEventListener('online', onOnline);
       window.removeEventListener('offline', onOffline);
       window.removeEventListener('offlineQueue:updated', onUpdated);
@@ -36,16 +44,21 @@ export default function OfflineIndicator({ onOpenInspector } = {}) {
 
   return (
     <button
+      type="button"
       onClick={onOpenInspector}
-      className="flex items-center gap-2 px-3 py-1 rounded-md border border-ink/10 bg-surface/80 text-sm font-medium"
-      title={online ? 'Online' : 'Offline'}
+      className="flex h-10 items-center gap-2 rounded-button border border-slate-300 bg-white px-3 text-sm font-semibold text-ink-700 hover:border-brand-400 hover:bg-brand-50"
+      title="Open synchronization status"
+      aria-label={`${online ? 'Online' : 'Offline'}, ${pending} pending changes`}
     >
-      <Dot size={12} className={online ? 'text-success' : 'text-danger'} />
-      <span className="opacity-80">{online ? 'Online' : 'Offline'}</span>
-      <Database size={14} className="ml-2 text-ink-muted" />
-      <span className="text-xs text-ink-muted">{pending}</span>
+      {online ? <Cloud size={17} className="text-success-700" /> : <CloudOff size={17} className="text-warning-700" />}
+      <span className="hidden sm:inline">{online ? 'Online' : 'Offline'}</span>
+      {pending > 0 ? (
+        <span className="min-w-5 rounded-full bg-warning-100 px-1.5 py-0.5 text-center text-xs font-bold text-warning-900">
+          {pending}
+        </span>
+      ) : null}
       {flushing ? (
-        <Loader2 size={14} className="ml-2 text-ink-muted animate-spin" />
+        <Loader2 size={14} className="animate-spin text-ink-500" />
       ) : null}
     </button>
   );

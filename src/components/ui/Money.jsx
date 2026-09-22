@@ -1,8 +1,8 @@
-import React, { useRef, useEffect, useState } from 'react';
+import { useState } from 'react';
 
 /* ─── Currency metadata ─────────────────────────────────────────────────── */
 const CURRENCY_META = {
-  KES: { locale: 'en-KE', symbol: 'KSh', decimals: 2 },
+  KES: { locale: 'en-KE', symbol: 'KES', decimals: 2 },
   USD: { locale: 'en-US', symbol: '$',   decimals: 2 },
   EUR: { locale: 'de-DE', symbol: '€',   decimals: 2 },
   GBP: { locale: 'en-GB', symbol: '£',   decimals: 2 },
@@ -16,13 +16,6 @@ const CURRENCY_META = {
 };
 
 const DEFAULT_META = { locale: 'en-US', symbol: '', decimals: 2 };
-
-/* ─── Helpers ────────────────────────────────────────────────────────────── */
-function usePrevious(value) {
-  const ref = useRef(value);
-  useEffect(() => { ref.current = value; }, [value]);
-  return ref.current;
-}
 
 function splitAmount(formatted) {
   // Split "1,234.56" into integer part "1,234" and decimal part ".56"
@@ -69,17 +62,7 @@ export default function Money({
   size      = 'md',
   className = '',
 }) {
-  const prev           = usePrevious(amount);
-  const [bump, setBump] = useState(false);
   const [hidden, setHidden] = useState(blurred);
-
-  /* Trigger bump animation whenever amount changes */
-  useEffect(() => {
-    if (!animate || prev === amount) return;
-    setBump(true);
-    const id = setTimeout(() => setBump(false), 350);
-    return () => clearTimeout(id);
-  }, [amount, animate, prev]);
 
   /* ── Derived values ─────────────────────────────────────────────────── */
   const isValid   = amount != null && !isNaN(amount);
@@ -106,7 +89,7 @@ export default function Money({
   const sizes = {
     xs: { wrap: 'text-xs',  symbol: 'text-[9px]',  decimal: 'text-[10px]' },
     sm: { wrap: 'text-sm',  symbol: 'text-[10px]', decimal: 'text-xs'     },
-    md: { wrap: 'text-base',symbol: 'text-xs',     decimal: 'text-sm'     },
+    md: { wrap: 'text-sm',  symbol: 'text-xs',     decimal: 'text-sm'     },
     lg: { wrap: 'text-xl',  symbol: 'text-sm',     decimal: 'text-base'   },
     xl: { wrap: 'text-3xl', symbol: 'text-base',   decimal: 'text-xl'     },
   };
@@ -130,12 +113,12 @@ export default function Money({
       title={hidden ? 'Click to reveal' : `${currency} ${amount}`}
       onClick={blurred ? () => setHidden(h => !h) : undefined}
       className={[
-        'inline-flex items-baseline gap-0.5 font-sans tabular-nums tracking-tight',
+        'inline-flex items-baseline gap-0.5 font-mono tabular-nums',
         'transition-all duration-200',
         sz.wrap,
         colorClass,
         blurred ? 'cursor-pointer' : '',
-        bump ? 'scale-105' : 'scale-100',
+        animate ? 'transition-colors' : '',
         className,
       ].filter(Boolean).join(' ')}
     >

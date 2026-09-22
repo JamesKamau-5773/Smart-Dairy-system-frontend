@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import toast from 'react-hot-toast';
-import { 
-  Activity, Syringe, Baby, Calendar, Droplets, 
+import {
+  Activity, Syringe, Baby, Calendar, Droplets,
   HeartPulse, ShieldCheck, FileText, Filter, ArrowLeft, Download, Share2, Calculator, Plus, AlertCircle
 } from 'lucide-react';
 import { Link, useLocation, useParams } from 'react-router-dom';
@@ -28,6 +28,7 @@ import {
 import LABELS from '../../lib/labels';
 import { animalsApi, medicalApi, breedingApi } from '../../lib/backendApi';
 import { useTenant } from '../../hooks/useTenant';
+import { formatCowIdentity } from '../../lib/cowIdentity';
 import cowAvatar from '../../assets/cow-avatar.svg';
 import AnimalSummaryCards from '../../components/operations/animalRecord/AnimalSummaryCards';
 import AnimalTimelineSection from '../../components/operations/animalRecord/AnimalTimelineSection';
@@ -39,6 +40,8 @@ export default function AnimalPassport() {
   const [activeFilter, setActiveFilter] = useState('All');
   const [activeTab, setActiveTab] = useState('timeline');
   const { id } = useParams();
+  const location = useLocation();
+  const openCalvingForm = new URLSearchParams(location.search).get('action') === 'calving';
   const [timelinePage, setTimelinePage] = useState(1);
   const timelinePerPage = 20;
 
@@ -63,7 +66,7 @@ export default function AnimalPassport() {
   // Mirror to the global Toaster so feedback renders above any open modal.
   const notifySuccess = (msg) => { setSuccessMessage(msg); toast.success(msg); };
   const notifyError = (msg) => { setErrorMessage(msg); setShowError(true); toast.error(msg); };
-  const [isEventOpen, setIsEventOpen] = useState(false);
+  const [isEventOpen, setIsEventOpen] = useState(openCalvingForm);
   const EMPTY_ACTION = {
     title: '',
     description: '',
@@ -83,9 +86,14 @@ export default function AnimalPassport() {
     birthWeightKg: '',
     deliveryOutcome: 'live',
   };
-  const [newEvent, setNewEvent] = useState(EMPTY_ACTION);
+  const [newEvent, setNewEvent] = useState(() => ({
+    ...EMPTY_ACTION,
+    type: openCalvingForm ? 'Calving' : EMPTY_ACTION.type,
+  }));
   const [formErrors, setFormErrors] = useState({});
   const [isSaving, setIsSaving] = useState(false);
+  const [isGeneratingCertificate, setIsGeneratingCertificate] = useState(false);
+  const [certificatePreviewUrl, setCertificatePreviewUrl] = useState(null);
   const confirmation = useConfirmation();
 
   const animal = animalData ? normalizeAnimal(animalData, id) : null;
@@ -94,6 +102,7 @@ export default function AnimalPassport() {
     name: 'Loading…',
     breed: 'Unknown',
   };
+  const animalDisplayName = formatCowIdentity(resolvedAnimal, resolvedAnimal.name || 'Unknown cow');
   const timelineEvents = timelineResponse?.items ?? [];
   const timelineMeta = timelineResponse?.meta ?? { page: 1, per_page: timelinePerPage, total: 0, pages: 1 };
 
@@ -119,6 +128,10 @@ export default function AnimalPassport() {
     setTimelinePage(1);
   }, [activeFilter]);
 
+  useEffect(() => () => {
+    if (certificatePreviewUrl) URL.revokeObjectURL(certificatePreviewUrl);
+  }, [certificatePreviewUrl]);
+
   if (!animal && !isLoading) {
     return (
       <div className="animate-reveal max-w-5xl mx-auto rounded-2xl border border-ink/10 bg-surface p-8 text-center text-sm text-ink-muted">
@@ -131,9 +144,33 @@ export default function AnimalPassport() {
     if (!animal) return;
 
     try {
-      setSuccessMessage(`Generating Certified Biological Record for ${resolvedAnimal.id}...`);
+      setIsGeneratingCertificate(true);
+      const pdf = await animalsApi.downloadPassportPdf(resolvedAnimal.id);
+      const url = URL.createObjectURL(pdf);
+      setCertificatePreviewUrl(url);
+      notifySuccess(`Certified Biological Record is ready to preview for ${animalDisplayName}.`);
     } catch (error) {
       console.error('Failed to generate PDF', error);
+      notifyError(error?.response?.data?.error || `Could not generate the Certified Biological Record for ${animalDisplayName}.`);
+    } finally {
+      setIsGeneratingCertificate(false);
+    }
+  };
+
+  const handleDownloadCertificate = () => {
+    if (!certificatePreviewUrl) return;
+
+    try {
+      const anchor = document.createElement('a');
+      anchor.href = certificatePreviewUrl;
+      anchor.download = `Jivu_Passport_${resolvedAnimal.earTag || resolvedAnimal.tag_number || resolvedAnimal.id}.pdf`;
+      document.body.appendChild(anchor);
+      anchor.click();
+      anchor.remove();
+      notifySuccess(`Certified Biological Record downloaded for ${animalDisplayName}.`);
+    } catch (error) {
+      console.error('Failed to download PDF', error);
+      notifyError(`Could not download the Certified Biological Record for ${animalDisplayName}.`);
     }
   };
 
@@ -141,7 +178,7 @@ export default function AnimalPassport() {
     if (!animal) return;
 
     const publicVerifyLink = `https://jivu-dairy.com/verify/${resolvedAnimal.id}-TOKEN123`;
-    const text = `Hello, here is the official Certified Cow Record for ${resolvedAnimal.id} (${resolvedAnimal.name}).\n\nBreed: ${resolvedAnimal.breed}\nView the verified medical passport here: ${publicVerifyLink}`;
+    const text = `Hello, here is the official Certified Cow Record for ${animalDisplayName}.\n\nBreed: ${resolvedAnimal.breed}\nView the verified medical passport here: ${publicVerifyLink}`;
     window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank');
   };
 
@@ -296,24 +333,25 @@ export default function AnimalPassport() {
               <Activity size={12} /> Cow Record
             </div>
             <h2 className="font-sans font-bold text-2xl tracking-tight text-brand m-0">
-              {resolvedAnimal.id} <span className="text-ink-muted">({resolvedAnimal.name})</span>
+              {animalDisplayName}
             </h2>
           </div>
         </div>
 
         <div className="flex items-center gap-2">
-          <button 
+          <button
             onClick={handleWhatsAppShare}
-            className="px-4 py-2 rounded-lg text-sm font-bold border border-[#25D366]/30 bg-white text-[#128C7E] shadow-sm transition-colors hover:border-[#25D366] hover:bg-[#25D366]/5 flex items-center gap-2"
+            className="px-4 py-2 rounded-lg text-sm font-bold border border-[#25D366]/30 bg-white text-[#128C7E]  transition-colors hover:border-[#25D366] hover:bg-[#25D366]/5 flex items-center gap-2"
           >
             <Share2 size={16} /> Send using WhatsApp
           </button>
 
-          <button 
+          <button
             onClick={handleGenerateCertificate}
-            className="btn-command flex items-center gap-2 text-sm shadow-sm"
+            disabled={isGeneratingCertificate}
+            className="btn-command flex items-center gap-2 text-sm "
           >
-            <Download size={16} /> Print PDF
+            <FileText size={16} /> {isGeneratingCertificate ? 'Generating...' : 'Preview PDF'}
           </button>
         </div>
       </div>
@@ -327,7 +365,27 @@ export default function AnimalPassport() {
 
       <AnimalSummaryCards animal={animal} isLoading={isLoading} />
 
-      <div className="mb-8 flex items-center justify-between gap-4 rounded-2xl border border-ink/10 bg-surface p-4 shadow-sm">
+      <Modal
+        isOpen={Boolean(certificatePreviewUrl)}
+        onClose={() => setCertificatePreviewUrl(null)}
+        title={`Certified Biological Record: ${animalDisplayName}`}
+      >
+        <iframe
+          src={certificatePreviewUrl || undefined}
+          title={`PDF preview for ${animalDisplayName}`}
+          className="h-[65vh] w-full rounded-md border border-ink/10 bg-white"
+        />
+        <div className="mt-4 flex justify-end gap-3">
+          <button type="button" onClick={() => setCertificatePreviewUrl(null)} className="btn-secondary px-4 py-2 text-sm">
+            Close
+          </button>
+          <button type="button" onClick={handleDownloadCertificate} className="btn-command flex items-center gap-2 px-4 py-2 text-sm">
+            <Download size={16} /> Download PDF
+          </button>
+        </div>
+      </Modal>
+
+      <div className="mb-8 flex items-center justify-between gap-4 rounded-2xl border border-ink/10 bg-surface p-4 ">
         <div>
           <h3 className="font-bold text-brand">Record Workspace</h3>
           <p className="text-sm text-ink-muted">Switch between the timeline and the nutrition planner. Each section is isolated behind a smaller component boundary.</p>
@@ -336,14 +394,14 @@ export default function AnimalPassport() {
           <button
             type="button"
             onClick={() => setActiveTab('timeline')}
-            className={`px-3 py-1.5 rounded-md text-xs font-bold transition-all ${activeTab === 'timeline' ? 'bg-brand text-surface shadow-sm' : 'text-ink-muted hover:bg-ink/5'}`}
+            className={`px-3 py-1.5 rounded-md text-xs font-bold transition-all ${activeTab === 'timeline' ? 'bg-brand text-surface' : 'text-ink-muted hover:bg-ink/5'}`}
           >
             Timeline
           </button>
           <button
             type="button"
             onClick={() => setActiveTab('nutrition')}
-            className={`px-3 py-1.5 rounded-md text-xs font-bold transition-all ${activeTab === 'nutrition' ? 'bg-brand text-surface shadow-sm' : 'text-ink-muted hover:bg-ink/5'}`}
+            className={`px-3 py-1.5 rounded-md text-xs font-bold transition-all ${activeTab === 'nutrition' ? 'bg-brand text-surface' : 'text-ink-muted hover:bg-ink/5'}`}
           >
             Nutrition Planner
           </button>

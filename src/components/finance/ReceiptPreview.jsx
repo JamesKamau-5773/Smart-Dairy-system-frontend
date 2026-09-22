@@ -6,7 +6,7 @@ export default function ReceiptPreview({ receipt, isOpen, onClose, onDownload, o
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 animate-reveal-fast">
-      <div className="w-full max-w-xl overflow-hidden rounded-lg border border-ink/10 bg-white shadow-2xl">
+      <div className="w-full max-w-xl overflow-hidden rounded-lg border border-ink/10 bg-white ">
         <div className="border-b-4 border-brand px-5 py-5">
           <div className="flex items-start justify-between gap-4">
             <div>

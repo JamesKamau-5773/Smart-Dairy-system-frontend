@@ -1,39 +1,84 @@
-import React, { useState, useEffect } from 'react';
-import { X, UserPlus, Save, BriefcaseBusiness, WalletCards } from 'lucide-react';
+import { useState } from 'react';
+import { createPortal } from 'react-dom';
+import { X, UserPlus, Save, BriefcaseBusiness, WalletCards, Phone, CalendarDays, KeyRound, AlertTriangle } from 'lucide-react';
+import AccessProvisioningFields from './AccessProvisioningFields';
+import {
+  ACCESS_MODES,
+  EMPLOYEE_ROLE_OPTIONS,
+  formatKenyanPhoneInput,
+  formatSalaryInput,
+  normalizeKenyanPhone,
+  parseSalaryInput,
+  validateEmployeeFields,
+  validateProvisioningFields,
+} from '../../lib/staffAccessForm';
 
 const INITIAL_STATE = {
   name: '',
-  role: '',
+  role: 'FARM_HAND',
+  phoneNumber: '',
   baseSalary: '',
   hireDate: new Date().toISOString().slice(0, 10),
 };
 
 export default function AddEmployeeModal({ isOpen, onClose, onSave }) {
   const [formData, setFormData] = useState(INITIAL_STATE);
+  const [accessMode, setAccessMode] = useState(ACCESS_MODES.NONE);
+  const [accessRole, setAccessRole] = useState('FARM_HAND');
+  const [temporaryPassword, setTemporaryPassword] = useState('');
+  const [errors, setErrors] = useState({});
+  const [partialFailureMessage, setPartialFailureMessage] = useState('');
+  const [employeeCreated, setEmployeeCreated] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
-
-  useEffect(() => {
-    if (isOpen) {
-      setFormData(INITIAL_STATE);
-    }
-  }, [isOpen]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
+    const formattedValue = name === 'phoneNumber'
+      ? formatKenyanPhoneInput(value)
+      : name === 'baseSalary'
+        ? formatSalaryInput(value)
+        : value;
+    setFormData(prev => ({ ...prev, [name]: formattedValue }));
+    setErrors((current) => ({ ...current, [name]: undefined }));
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    const employeeErrors = validateEmployeeFields(formData);
+    const provisioningErrors = validateProvisioningFields({
+      mode: accessMode,
+      password: temporaryPassword,
+      requiresPasswordReset: true,
+    });
+    if (accessMode !== ACCESS_MODES.NONE && !normalizeKenyanPhone(formData.phoneNumber)) {
+      employeeErrors.phoneNumber = 'A valid Kenyan mobile number is required for app access.';
+    }
+    const nextErrors = { ...employeeErrors, ...provisioningErrors };
+    if (Object.keys(nextErrors).length) {
+      setErrors(nextErrors);
+      return;
+    }
+
     try {
       setIsSaving(true);
       await onSave({
-          ...formData,
-          baseSalary: parseInt(formData.baseSalary, 10) || 0
+        ...formData,
+        phoneNumber: normalizeKenyanPhone(formData.phoneNumber),
+        baseSalary: parseSalaryInput(formData.baseSalary),
+      }, {
+        mode: accessMode,
+        role: accessRole,
+        password: temporaryPassword,
+        requires_password_reset: true,
       });
+      setTemporaryPassword('');
       onClose();
-    } catch {
-      // The parent displays the request error; keep the form open for correction.
+    } catch (error) {
+      if (error?.employeeCreated) {
+        setEmployeeCreated(true);
+        setTemporaryPassword('');
+        setPartialFailureMessage('The employee profile was saved, but app access could not be created. Close this form and retry from the key action in the employee row.');
+      }
     } finally {
       setIsSaving(false);
     }
@@ -41,53 +86,107 @@ export default function AddEmployeeModal({ isOpen, onClose, onSave }) {
 
   if (!isOpen) return null;
 
-  return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/45 p-4 backdrop-blur-[2px]">
-      <div className="w-full max-w-lg overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-[0_24px_70px_rgba(15,23,42,0.24)]">
-        <div className="flex items-start justify-between border-b border-slate-200 bg-slate-50/80 px-6 py-5">
+  return createPortal(
+    <div
+      className="fixed inset-0 z-[100] bg-slate-950/50 px-4 py-6 backdrop-blur-sm sm:px-6 sm:py-8"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="add-employee-title"
+      onMouseDown={(event) => {
+        if (event.target === event.currentTarget && !isSaving) onClose();
+      }}
+    >
+      <div className="flex h-full items-center justify-center">
+        <div className="flex max-h-full w-full max-w-2xl flex-col overflow-hidden rounded-xl border border-slate-200 bg-white shadow-2xl shadow-slate-950/20">
+        <div className="flex shrink-0 items-start justify-between border-b border-slate-200 bg-slate-50 px-6 py-5 sm:px-7">
           <div className="flex items-start gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-brand text-white shadow-sm"><UserPlus size={18} /></div>
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-brand text-white"><UserPlus size={18} /></div>
             <div>
-              <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-brand">People & payroll</p>
-              <h3 className="mt-1 text-lg font-bold tracking-tight text-slate-900">Add employee</h3>
-              <p className="mt-1 text-xs text-slate-500">Create a staff profile for this farm.</p>
+              <p className="text-[10px] font-black uppercase tracking-widest text-brand">People & payroll</p>
+              <h2 id="add-employee-title" className="mt-1 text-xl font-black tracking-tight text-slate-900">Add employee</h2>
+              <p className="mt-1 text-sm text-slate-500">Create the employee's HR and payroll profile.</p>
             </div>
           </div>
-          <button type="button" onClick={onClose} aria-label="Close add employee dialog" className="rounded-md p-2 text-slate-400 transition-colors hover:bg-slate-200 hover:text-slate-700"><X size={18} /></button>
+          <button type="button" onClick={onClose} disabled={isSaving} aria-label="Close add employee dialog" className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-slate-400 transition-colors hover:bg-slate-200 hover:text-slate-700 disabled:opacity-50"><X size={19} /></button>
         </div>
         
-        <form onSubmit={handleSubmit} className="space-y-5 px-6 py-6">
-          <div className="grid gap-5 sm:grid-cols-2">
-            <label className="space-y-2">
-              <span className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.14em] text-slate-500"><UserPlus size={13} /> Full name</span>
-              <input required name="name" value={formData.name} onChange={handleChange} placeholder="e.g. Mary Wanjiku" className="w-full rounded-lg border border-slate-300 bg-white px-3.5 py-3 text-sm font-medium text-slate-900 outline-none transition focus:border-brand focus:ring-2 focus:ring-brand/15" />
-            </label>
-            <label className="space-y-2">
-              <span className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.14em] text-slate-500"><BriefcaseBusiness size={13} /> Job role</span>
-              <input required name="role" value={formData.role} onChange={handleChange} placeholder="e.g. Milking assistant" className="w-full rounded-lg border border-slate-300 bg-white px-3.5 py-3 text-sm font-medium text-slate-900 outline-none transition focus:border-brand focus:ring-2 focus:ring-brand/15" />
-            </label>
-            <label className="space-y-2">
-              <span className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.14em] text-slate-500"><WalletCards size={13} /> Base salary (KSh)</span>
-              <input required min="0" name="baseSalary" type="number" value={formData.baseSalary} onChange={handleChange} placeholder="e.g. 35,000" className="w-full rounded-lg border border-slate-300 bg-white px-3.5 py-3 text-sm font-medium tabular-nums text-slate-900 outline-none transition focus:border-brand focus:ring-2 focus:ring-brand/15" />
-            </label>
-            <label className="space-y-2">
-              <span className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.14em] text-slate-500">Hire date</span>
-              <input required name="hireDate" type="date" value={formData.hireDate} onChange={handleChange} className="w-full rounded-lg border border-slate-300 bg-white px-3.5 py-3 text-sm font-medium text-slate-900 outline-none transition focus:border-brand focus:ring-2 focus:ring-brand/15" />
-            </label>
+        <form onSubmit={handleSubmit} className="flex min-h-0 flex-col">
+          <div className="space-y-6 overflow-y-auto px-6 py-6 sm:px-7">
+            <section>
+              <div className="mb-4 border-b border-slate-100 pb-3">
+                <h3 className="text-xs font-black uppercase tracking-widest text-slate-700">Employment details</h3>
+                <p className="mt-1 text-xs text-slate-500">Basic information used in the staff register and payroll.</p>
+              </div>
+
+              <div className="grid gap-x-5 gap-y-4 sm:grid-cols-2">
+                <label className="block">
+                  <span className="mb-2 flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-slate-500"><UserPlus size={13} /> Full name <span className="text-danger">*</span></span>
+                  <input required autoFocus autoComplete="name" name="name" value={formData.name} onChange={handleChange} placeholder="e.g. Mary Wanjiku" className="input-machined w-full" aria-invalid={Boolean(errors.name)} />
+                  {errors.name && <span className="mt-1.5 block text-xs text-danger">{errors.name}</span>}
+                </label>
+                <label className="block">
+                  <span className="mb-2 flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-slate-500"><BriefcaseBusiness size={13} /> Job role <span className="text-danger">*</span></span>
+                  <select required name="role" value={formData.role} onChange={handleChange} className="input-machined w-full">
+                    {EMPLOYEE_ROLE_OPTIONS.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
+                  </select>
+                  {errors.role && <span className="mt-1.5 block text-xs text-danger">{errors.role}</span>}
+                </label>
+                <label className="block">
+                  <span className="mb-2 flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-slate-500"><Phone size={13} /> Phone number <span className="text-danger">*</span></span>
+                  <input required name="phoneNumber" type="tel" inputMode="tel" autoComplete="tel" value={formData.phoneNumber} onChange={handleChange} placeholder="e.g. 0712 345 678" className="input-machined w-full tabular-nums" aria-invalid={Boolean(errors.phoneNumber)} />
+                  {errors.phoneNumber && <span className="mt-1.5 block text-xs text-danger">{errors.phoneNumber}</span>}
+                </label>
+                <label className="block">
+                  <span className="mb-2 flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-slate-500"><WalletCards size={13} /> Base salary (KES) <span className="text-danger">*</span></span>
+                  <input required name="baseSalary" type="text" inputMode="numeric" value={formData.baseSalary} onChange={handleChange} placeholder="e.g. 35,000" className="input-machined w-full tabular-nums" aria-invalid={Boolean(errors.baseSalary)} />
+                  {errors.baseSalary && <span className="mt-1.5 block text-xs text-danger">{errors.baseSalary}</span>}
+                </label>
+                <label className="block sm:col-span-2 sm:max-w-[calc(50%-0.625rem)]">
+                  <span className="mb-2 flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-slate-500"><CalendarDays size={13} /> Hire date <span className="text-danger">*</span></span>
+                  <input required name="hireDate" type="date" value={formData.hireDate} onChange={handleChange} className="input-machined w-full" />
+                </label>
+              </div>
+            </section>
+
+            <section>
+              <div className="mb-4 flex items-start gap-3 border-b border-slate-100 pb-3">
+                <KeyRound size={17} className="mt-0.5 shrink-0 text-brand" />
+                <div>
+                  <h3 className="text-xs font-black uppercase tracking-widest text-slate-700">App access</h3>
+                  <p className="mt-1 text-xs text-slate-500">Choose whether this employee needs a linked account now.</p>
+                </div>
+              </div>
+              <AccessProvisioningFields
+                mode={accessMode}
+                onModeChange={(mode) => { setAccessMode(mode); setErrors({}); }}
+                role={accessRole}
+                onRoleChange={setAccessRole}
+                phoneNumber={formData.phoneNumber}
+                password={temporaryPassword}
+                onPasswordChange={setTemporaryPassword}
+                errors={errors}
+                allowNoAccess
+              />
+            </section>
+
+            {partialFailureMessage && (
+              <div className="flex items-start gap-3 rounded-md border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-900" role="alert">
+                <AlertTriangle size={17} className="mt-0.5 shrink-0" />
+                <span>{partialFailureMessage}</span>
+              </div>
+            )}
           </div>
 
-          <div className="rounded-lg border border-slate-200 bg-slate-50 px-3.5 py-3 text-xs leading-5 text-slate-600">
-            Salary and profile details can be updated later from the employee drawer.
-          </div>
-
-          <div className="flex flex-col-reverse gap-3 border-t border-slate-200 pt-5 sm:flex-row sm:justify-end">
-            <button type="button" onClick={onClose} disabled={isSaving} className="rounded-lg border border-slate-300 px-4 py-2.5 text-xs font-bold uppercase tracking-wider text-slate-600 transition-colors hover:bg-slate-50 disabled:opacity-50">Cancel</button>
-            <button type="submit" disabled={isSaving || !formData.name || !formData.role || !formData.baseSalary} className="inline-flex items-center justify-center gap-2 rounded-lg bg-brand px-5 py-2.5 text-xs font-bold uppercase tracking-wider text-white shadow-sm transition-colors hover:bg-brand-dark disabled:cursor-not-allowed disabled:bg-slate-300">
-              <Save size={14} /> {isSaving ? 'Saving employee...' : 'Save employee'}
-            </button>
+          <div className="flex shrink-0 flex-col-reverse gap-3 border-t border-slate-200 bg-slate-50 px-6 py-4 sm:flex-row sm:justify-end sm:px-7">
+            <button type="button" onClick={onClose} disabled={isSaving} className="btn-secondary min-w-28">{employeeCreated ? 'Close' : 'Cancel'}</button>
+            {!employeeCreated && <button type="submit" disabled={isSaving} className="btn-command inline-flex min-w-40 items-center justify-center gap-2 disabled:cursor-not-allowed disabled:opacity-50">
+              <Save size={14} /> {isSaving ? 'Saving employee...' : accessMode === ACCESS_MODES.NONE ? 'Save employee' : 'Save and grant access'}
+            </button>}
           </div>
         </form>
+        </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }

@@ -352,7 +352,7 @@ export default function MixBuilder({ inventoryItems = [], isLoading = false, onS
   };
 
   return (
-    <div className="bg-surface rounded-3xl border border-ink/10 shadow-sm p-6 sm:p-8 space-y-8">
+    <div className="bg-surface rounded-3xl border border-ink/10  p-6 sm:p-8 space-y-8">
       <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
         <div className="max-w-2xl space-y-3">
           <div className="inline-flex items-center gap-2 rounded-full border border-brand/15 bg-brand/5 px-3 py-1 text-[10px] font-bold uppercase tracking-[0.28em] text-brand">
@@ -374,7 +374,7 @@ export default function MixBuilder({ inventoryItems = [], isLoading = false, onS
       </div>
 
       {/* Mix Type Selector */}
-      <div className="rounded-2xl border border-ink/10 bg-surface-warm/70 p-4 shadow-sm">
+      <div className="rounded-2xl border border-ink/10 bg-surface-warm/70 p-4 ">
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-[1fr_auto]">
           <div>
             <label className="mb-2 block text-[11px] font-bold uppercase tracking-wider text-ink-muted">Mix Type</label>
@@ -382,14 +382,14 @@ export default function MixBuilder({ inventoryItems = [], isLoading = false, onS
               <button
                 type="button"
                 onClick={() => handleMixTypeChange('concentrate')}
-                className={`flex-1 flex items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-bold transition-colors ${mixType === 'concentrate' ? 'bg-brand text-white shadow-sm' : 'text-ink-muted hover:bg-ink/5'}`}
+                className={`flex-1 flex items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-bold transition-colors ${mixType === 'concentrate' ? 'bg-brand text-white  : 'text-ink-muted hover:bg-ink/5'}`}
               >
                 <Zap size={16} /> Concentrate
               </button>
               <button
                 type="button"
                 onClick={() => handleMixTypeChange('tmr')}
-                className={`flex-1 flex items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-bold transition-colors ${mixType === 'tmr' ? 'bg-brand text-white shadow-sm' : 'text-ink-muted hover:bg-ink/5'}`}
+                className={`flex-1 flex items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-bold transition-colors ${mixType === 'tmr' ? 'bg-brand text-white  : 'text-ink-muted hover:bg-ink/5'}`}
               >
                 <Wheat size={16} /> Main Meal (TMR)
               </button>
@@ -409,7 +409,7 @@ export default function MixBuilder({ inventoryItems = [], isLoading = false, onS
       </div>
 
       <div className="grid gap-4 xl:grid-cols-[minmax(0,1.2fr)_minmax(280px,0.8fr)]">
-        <div className="rounded-3xl border border-ink/10 bg-surface-warm/70 p-5 sm:p-6 shadow-[0_12px_24px_rgba(38,34,20,0.04)]">
+        <div className="rounded-3xl border border-ink/10 bg-surface-warm/70 p-5 sm:p-6 ">
           <div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.28em] text-brand">
             <Copy size={12} /> Template quick load
           </div>
@@ -468,7 +468,7 @@ export default function MixBuilder({ inventoryItems = [], isLoading = false, onS
           )}
         </div>
 
-        <div className="rounded-3xl border border-brand/15 bg-brand/5 p-5 shadow-sm">
+        <div className="rounded-3xl border border-brand/15 bg-brand/5 p-5 ">
           <div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.28em] text-brand">
             <FolderHeart size={12} /> Template library
           </div>
@@ -502,7 +502,7 @@ export default function MixBuilder({ inventoryItems = [], isLoading = false, onS
 
       <div className="grid gap-8 xl:grid-cols-[minmax(0,1.35fr)_minmax(280px,0.65fr)]">
         <div className="space-y-8">
-          <div className="rounded-3xl border border-ink/10 bg-surface-warm/70 p-5 sm:p-6 shadow-[0_12px_24px_rgba(38,34,20,0.04)]">
+          <div className="rounded-3xl border border-ink/10 bg-surface-warm/70 p-5 sm:p-6 ">
             <div className="flex items-center justify-between gap-3 mb-4">
               <div>
                 <h3 className="text-lg font-bold text-brand">Composition</h3>
@@ -571,7 +571,7 @@ export default function MixBuilder({ inventoryItems = [], isLoading = false, onS
 
             <div className="space-y-4">
               {rows.map((row) => (
-                <div key={row.id} className="rounded-2xl border border-ink/10 bg-surface p-4 shadow-sm">
+                <div key={row.id} className="rounded-2xl border border-ink/10 bg-surface p-4 ">
                   <div className="grid gap-4 md:grid-cols-[minmax(0,1.3fr)_180px_auto] md:items-end">
                     <div>
                       <label className="mb-2 block text-[11px] font-bold uppercase tracking-wider text-ink-muted">Ingredient</label>
@@ -667,7 +667,7 @@ export default function MixBuilder({ inventoryItems = [], isLoading = false, onS
         </div>
 
         <aside className="space-y-6">
-          <div className="rounded-3xl border border-ink/10 bg-surface p-5 shadow-sm">
+          <div className="rounded-3xl border border-ink/10 bg-surface p-5 ">
             <h3 className="text-lg font-bold text-brand">Snapshot summary</h3>
             <p className="mt-2 text-sm text-ink-muted leading-6">
               Saved batches carry a locked price so future ROI calculations stay historically accurate even if ingredient prices change.
@@ -709,7 +709,7 @@ export default function MixBuilder({ inventoryItems = [], isLoading = false, onS
             </div>
           </div>
 
-          <div className="rounded-3xl border border-brand/15 bg-brand/5 p-5 shadow-sm">
+          <div className="rounded-3xl border border-brand/15 bg-brand/5 p-5 ">
             <h3 className="text-lg font-bold text-brand">How it behaves</h3>
             <ul className="mt-3 space-y-3 text-sm text-ink-muted leading-6">
               <li>Raw weights are normalized automatically to 100%.</li>

@@ -45,7 +45,7 @@ export default class ErrorBoundary extends React.Component {
 
       return (
         <div className="flex min-h-screen items-center justify-center bg-surface p-4">
-          <div className="w-full max-w-md rounded-2xl bg-surface-raised p-8 shadow-lg">
+          <div className="w-full max-w-md rounded-2xl bg-surface-raised p-8 ">
             {/* Icon */}
             <div className="mb-4 flex justify-center">
               <div className="rounded-full bg-rose-100 p-4">

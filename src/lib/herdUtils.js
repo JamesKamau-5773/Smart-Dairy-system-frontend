@@ -1,3 +1,5 @@
+import { normalizeCowIdentity } from './cowIdentity';
+
 /**
  * @file Utility functions for processing and normalizing herd registry data.
  */
@@ -79,19 +81,25 @@ function getRelatedRecordName(value) {
 }
 
 export function normalizeHerdCow(cow = {}, fallback = {}) {
+  const identity = normalizeCowIdentity({ ...fallback, ...cow });
   const ageMonths = Number(cow.ageMonths ?? cow.age_months ?? fallback.ageMonths ?? 0);
   const status = cow.current_status ?? cow.currentStatus ?? cow.status ?? cow.lactation_status ?? fallback.status ?? 'Cow';
-  const displayId = cow.tag_number ?? cow.tagNumber ?? cow.tag ?? cow.ear_tag ?? cow.id ?? cow.cow_id ?? fallback.id ?? '';
-  const recordId = cow.id ?? cow.cow_id ?? cow.tag_number ?? cow.tagNumber ?? cow.tag ?? cow.ear_tag ?? fallback.recordId ?? fallback.id ?? '';
+  const displayId = identity.earTag || identity.recordId;
+  const recordId = identity.recordId || identity.earTag;
   const dateOfBirth = cow.dateOfBirth ?? cow.date_of_birth ?? cow.dob ?? fallback.dateOfBirth ?? '';
   const damId = getRelatedRecordId(cow.dam_id ?? cow.damId ?? cow.dam ?? fallback.dam_id ?? fallback.damId ?? fallback.dam);
   const sireName = getRelatedRecordName(cow.sire_name ?? cow.sireName ?? cow.sire ?? fallback.sire_name ?? fallback.sireName ?? fallback.sire);
   const birthWeightKg = cow.birth_weight_kg ?? cow.birthWeightKg ?? cow.birth_weight ?? fallback.birth_weight_kg ?? fallback.birthWeightKg ?? fallback.birth_weight ?? '';
+  const hasPhotoField = Object.prototype.hasOwnProperty.call(cow, 'photoUrl')
+    || Object.prototype.hasOwnProperty.call(cow, 'photo_url');
+  const photoUrl = hasPhotoField
+    ? cow.photoUrl ?? cow.photo_url ?? null
+    : fallback.photoUrl ?? fallback.photo_url ?? null;
 
   return {
     id: String(displayId ?? '').trim(),
     recordId: String(recordId ?? '').trim(),
-    name: cow.name ?? cow.cow_name ?? fallback.name ?? 'Unnamed',
+    name: identity.name || 'Unnamed',
     breed: cow.breed ?? cow.breed_status ?? cow.breed_name ?? fallback.breed ?? 'Foundation',
     ageMonths,
     status,
@@ -104,6 +112,7 @@ export function normalizeHerdCow(cow = {}, fallback = {}) {
     createdAt: cow.createdAt ?? cow.created_at ?? fallback.createdAt ?? new Date().toISOString(),
     updatedAt: cow.updatedAt ?? cow.updated_at ?? fallback.updatedAt ?? null,
     updatedBy: cow.updatedBy ?? cow.updated_by ?? fallback.updatedBy ?? 'You',
+    photoUrl,
   };
 }
 

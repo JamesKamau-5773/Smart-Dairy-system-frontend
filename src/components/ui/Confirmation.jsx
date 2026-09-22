@@ -51,7 +51,7 @@ export default function Confirmation({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
-      <div className="w-full max-w-sm rounded-2xl bg-surface p-6 shadow-2xl">
+      <div className="w-full max-w-sm rounded-2xl bg-surface p-6 ">
         {/* Icon & Title */}
         <div className="mb-4 flex items-start gap-3">
           <div className={`flex-shrink-0 ${config.iconColor}`}>

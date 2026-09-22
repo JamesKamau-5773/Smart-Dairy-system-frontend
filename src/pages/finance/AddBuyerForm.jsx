@@ -131,7 +131,7 @@ export default function AddBuyerForm({ onSuccess, onCancel }) {
 
       <div className="grid grid-cols-2 gap-4">
         <div>
-          <label className="block text-[11px] font-black uppercase tracking-widest text-ink-muted mb-2">Agreed Rate (KSh/L)</label>
+          <label className="block text-[11px] font-black uppercase tracking-widest text-ink-muted mb-2">Agreed Rate (KES/L)</label>
           <input
             type="number"
             name="rate_per_liter"

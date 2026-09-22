@@ -59,7 +59,7 @@ export default function EditResourceModal({ isOpen, onClose, item, onSave }) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-ink-strong/30 backdrop-blur-sm animate-in fade-in duration-200">
-      <div className="bg-white rounded-xl shadow-2xl w-full max-w-lg overflow-hidden flex flex-col">
+      <div className="bg-white rounded-xl  w-full max-w-lg overflow-hidden flex flex-col">
 
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-5 border-b border-slate-100 bg-slate-50">
@@ -218,7 +218,7 @@ export default function EditResourceModal({ isOpen, onClose, item, onSave }) {
             </button>
             <button
               type="submit"
-              className="flex-[2] py-3 px-6 rounded-lg font-black text-xs uppercase tracking-widest bg-ink text-white hover:bg-ink-strong transition-all shadow-sm flex items-center justify-center gap-2"
+              className="flex-[2] py-3 px-6 rounded-lg font-black text-xs uppercase tracking-widest bg-ink text-white hover:bg-ink-strong transition-all  flex items-center justify-center gap-2"
             >
               <Save size={16} strokeWidth={3} /> Save Changes
             </button>

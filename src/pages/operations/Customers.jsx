@@ -2,12 +2,13 @@ import { useState, useMemo, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { financeApi } from '../../lib/backendApi'; 
-import { Plus, Pencil, Trash2, Search, Users } from 'lucide-react';
+import { Plus, Pencil, Trash2, Search, Users, MoreVertical } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 
 import CustomerForm from '../../components/finance/CustomerForm.jsx';
 import Confirmation, { useConfirmation } from '../../components/ui/Confirmation';
 import SlidePanel from '../../components/ui/SlidePanel.jsx';
+import { Popover, PopoverContent, PopoverTrigger } from '../../components/ui/popover';
 
 export default function CustomersPage() {
   const queryClient = useQueryClient();
@@ -112,7 +113,7 @@ export default function CustomersPage() {
             </p>
           </div>
         </div>
-        <button type="button" onClick={handleAdd} className="flex items-center gap-2 rounded-button bg-brand-800 px-4 py-2 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-brand-900 w-full sm:w-auto justify-center">
+        <button type="button" onClick={handleAdd} className="flex items-center gap-2 rounded-button bg-brand-800 px-4 py-2 text-sm font-semibold text-white  transition-colors hover:bg-brand-900 w-full sm:w-auto justify-center">
           <Plus size={16} /> Add New Customer
         </button>
       </div>
@@ -193,14 +194,15 @@ export default function CustomersPage() {
                     )}
                   </td>
                   <td className="p-4 text-right">
-                    <div className="inline-flex items-center gap-1">
-                      <button type="button" onClick={() => handleEdit(customer)} title="Edit" className="p-2 rounded-lg text-slate-400 hover:text-brand-700 hover:bg-brand-50 transition-colors">
-                        <Pencil size={14} />
-                      </button>
-                      <button type="button" onClick={() => handleDelete(customer)} title="Delete" className="p-2 rounded-lg text-slate-400 hover:text-danger hover:bg-danger/10 transition-colors">
-                        <Trash2 size={14} />
-                      </button>
-                    </div>
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <button type="button" className="inline-flex h-8 w-8 items-center justify-center rounded-button border border-slate-300 text-slate-600 hover:border-brand-400 hover:text-brand-700" aria-label={`Actions for ${customer.name}`}><MoreVertical size={16} /></button>
+                      </PopoverTrigger>
+                      <PopoverContent align="end" className="w-40 p-1.5">
+                        <button type="button" onClick={() => handleEdit(customer)} className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm text-ink-900 hover:bg-brand-50"><Pencil size={14} /> Edit</button>
+                        <button type="button" onClick={() => handleDelete(customer)} className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm text-danger hover:bg-danger/10"><Trash2 size={14} /> Delete</button>
+                      </PopoverContent>
+                    </Popover>
                   </td>
                 </tr>
               ))}

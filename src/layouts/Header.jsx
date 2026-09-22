@@ -1,49 +1,79 @@
-import React from 'react';
+import { useEffect, useRef, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useTenant } from '../hooks/useTenant';
 import { useAuth } from '../contexts/AuthContext';
-import { ShieldCheck } from 'lucide-react';
-import ThemeToggle from '../components/ui/ThemeToggle';
-import DevToggle from '../components/ui/DevToggle';
+import { ChevronDown, LogOut, UserCircle } from 'lucide-react';
 import OfflineIndicator from '../components/ui/OfflineIndicator';
 import OfflineQueueInspector from '../components/ui/OfflineQueueInspector';
-import { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
-import { healthApi } from '../lib/backendApi';
+import ThemeToggle from '../components/ui/ThemeToggle';
 
 export default function Header() {
   const { activeFarm } = useTenant();
-  const { currentUser } = useAuth();
-  const [inspectorOpen, setInspectorOpen] = useState(false);
-  const { data: health } = useQuery({
-    queryKey: ['backend-health'],
-    queryFn: () => healthApi.status(),
-    refetchInterval: 30000,
-  });
+  const { currentUser, logout } = useAuth();
+  const navigate = useNavigate();
+  const [profileOpen, setProfileOpen] = useState(false);
+  const [syncOpen, setSyncOpen] = useState(false);
+  const profileRef = useRef(null);
+
+  useEffect(() => {
+    const closeProfile = (event) => {
+      if (!profileRef.current?.contains(event.target)) setProfileOpen(false);
+    };
+    document.addEventListener('pointerdown', closeProfile);
+    return () => document.removeEventListener('pointerdown', closeProfile);
+  }, []);
+
+  const handleLogout = async () => {
+    await logout();
+    navigate('/login');
+  };
 
   return (
-    <header className="sticky top-0 z-20 flex h-16 items-center justify-between border-b border-gray-200 bg-white/95 px-6 backdrop-blur-0">
-      <div className="flex items-center gap-4">
-        <h2 className="font-display m-0 flex items-center font-semibold tracking-normal text-slate-900">
-          Status <ShieldCheck size={18} className="ml-2 mr-1 text-emerald-600" /> <span className="text-emerald-700">Secure</span>
-        </h2>
-        <div className="h-6 w-px bg-gray-200"></div>
-        <span className="font-sans text-sm font-medium text-gray-600">
-          {activeFarm?.name || 'Initializing'}
-        </span>
-      </div>
+    <header className="sticky top-0 z-20 flex h-16 items-center justify-between border-b border-slate-200 bg-white/90 px-6 backdrop-blur">
+      <span className="ml-12 truncate font-display text-sm font-semibold text-ink-900 md:ml-0">
+        {activeFarm?.name || 'Initializing'}
+      </span>
       
       <div className="ml-auto flex items-center gap-3">
-        <ThemeToggle />
-        <DevToggle />
-        <OfflineIndicator onOpenInspector={() => setInspectorOpen(true)} />
-        <OfflineQueueInspector isOpen={inspectorOpen} onClose={() => setInspectorOpen(false)} />
-        <div className="font-sans rounded-md border border-gray-200 bg-gray-50 px-3 py-1 text-sm font-medium text-gray-700 shadow-sm">
-          {health?.status || health?.ok ? 'Backend Healthy' : 'Backend Syncing'}
-        </div>
-        <div className="font-sans rounded-md border border-gray-200 bg-gray-50 px-3 py-1 text-sm font-medium text-gray-700 shadow-sm">
-          Role: {currentUser?.role || 'N/A'}
+        <OfflineIndicator onOpenInspector={() => setSyncOpen(true)} />
+        <div className="relative" ref={profileRef}>
+          <button
+            type="button"
+            onClick={() => setProfileOpen((open) => !open)}
+            className="flex h-10 items-center gap-2 rounded-button border border-slate-300 bg-white px-3 text-left text-ink-900 hover:border-brand-400 hover:bg-brand-50"
+            aria-expanded={profileOpen}
+            aria-haspopup="menu"
+          >
+            <UserCircle size={20} className="text-brand-400" />
+            <span className="hidden min-w-0 sm:block">
+              <span className="block max-w-36 truncate text-xs font-bold">{currentUser?.name || 'User'}</span>
+              <span className="block text-[10px] font-semibold uppercase text-ink-600">{currentUser?.role || 'N/A'}</span>
+            </span>
+            <ChevronDown size={14} className="text-ink-500" />
+          </button>
+          {profileOpen && (
+            <div className="absolute right-0 top-12 w-64 rounded-card border border-slate-200 bg-white/95 p-2 backdrop-blur" role="menu">
+              <div className="border-b border-slate-200 px-3 py-2">
+                <p className="truncate text-sm font-bold text-ink-900">{currentUser?.name || 'User'}</p>
+                <p className="mt-0.5 text-xs text-slate-600">{currentUser?.role || 'No role assigned'}</p>
+              </div>
+              <div className="border-b border-slate-200 px-3 py-3">
+                <p className="mb-2 text-[10px] font-bold uppercase tracking-wider text-slate-600">Interface density</p>
+                <ThemeToggle />
+              </div>
+              <button
+                type="button"
+                onClick={handleLogout}
+                className="mt-1 flex w-full items-center gap-2 rounded-button px-3 py-2 text-sm font-semibold text-danger-900 hover:bg-danger-50"
+                role="menuitem"
+              >
+                <LogOut size={16} /> Sign out
+              </button>
+            </div>
+          )}
         </div>
       </div>
+      <OfflineQueueInspector isOpen={syncOpen} onClose={() => setSyncOpen(false)} />
     </header>
   );
 }

@@ -7,29 +7,45 @@ import toast from 'react-hot-toast';
 
 const formatMoney = (value) => Number(value || 0).toLocaleString();
 
-const PayrollActions = ({ onRunPayroll, nextPayrollPeriod, isRunning }) => (
-  <div className="flex flex-col gap-4 border-b border-gray-200 pb-5 lg:flex-row lg:items-end lg:justify-between">
-    <div>
-      <h2 className="font-display text-3xl font-extrabold tracking-tight text-gray-900 m-0">Payroll</h2>
-      <p className="text-sm font-medium text-gray-600 mt-1">Process and review monthly staff payments, leave adjustments, and advance repayments.</p>
+const PayrollActions = ({ activeRun, nextPayrollDate, onRunPayroll, nextPayrollPeriod, isRunning }) => (
+  <section className="rounded-[28px] border border-ink/10 bg-[linear-gradient(135deg,rgba(223,249,255,0.95),rgba(255,255,255,0.98))] p-5  sm:p-6">
+    <div className="flex flex-col gap-4 border-b border-ink/10 pb-5 lg:flex-row lg:items-end lg:justify-between">
+      <div className="min-w-0">
+        <div className="mb-4 inline-flex items-center gap-2 rounded-md border border-brand/20 bg-brand/10 px-2 py-1 text-[10px] font-semibold text-brand">
+          <Banknote size={12} /> Human Resources
+        </div>
+        <h2 className="m-0 font-display text-4xl font-semibold tracking-tight text-brand">
+          Staff <span className="text-ink/30">Payroll</span>
+        </h2>
+        <p className="mt-2 max-w-2xl text-sm leading-6 text-ink-muted">Process and review monthly staff payments, leave adjustments, and advance repayments.</p>
+      </div>
+      <button
+        type="button"
+        onClick={onRunPayroll}
+        disabled={isRunning}
+        className="btn-command w-full justify-center whitespace-nowrap px-5 py-3 disabled:opacity-60 sm:w-auto"
+      >
+        {isRunning ? 'Running...' : `Run ${nextPayrollPeriod} Payroll`}
+      </button>
     </div>
-    <button 
-      onClick={onRunPayroll}
-      disabled={isRunning}
-      className="flex items-center gap-2 rounded-md bg-slate-900 px-5 py-2.5 text-xs font-semibold uppercase tracking-[0.18em] text-white transition-colors hover:bg-slate-800"
-    >
-      {isRunning ? 'Running...' : `Run ${nextPayrollPeriod} Payroll`}
-    </button>
-  </div>
+
+    {activeRun && (
+      <div className="mt-5 grid gap-4 md:grid-cols-3">
+        <PayrollKPI title={`Total payroll (${activeRun.period.split(' ')[0]})`} value={`KES ${activeRun.totalDisbursed.toLocaleString()}`} icon={Banknote} />
+        <PayrollKPI title="Active staff" value={`${activeRun.employees} Employees`} icon={Users} />
+        <PayrollKPI title="Next payroll date" value={nextPayrollDate} icon={CalendarClock} />
+      </div>
+    )}
+  </section>
 );
 
 const PayrollKPI = ({ title, value, icon: Icon }) => (
-  <div className="flex items-center justify-between gap-4 px-5 py-4">
+  <div className="flex items-start justify-between gap-4 rounded-2xl border border-ink/10 bg-surface p-4 ">
     <div>
-      <span className="text-xs font-semibold uppercase tracking-[0.18em] text-gray-500">{title}</span>
-      <p className="mt-1 text-3xl font-semibold text-gray-900 tabular-nums">{value}</p>
+      <span className="text-[10px] font-bold uppercase tracking-widest text-ink-muted">{title}</span>
+      <p className="mt-2 text-3xl font-black text-brand tabular-nums">{value}</p>
     </div>
-    <div className="rounded-md border border-gray-200 bg-gray-50 p-3 text-slate-700">
+    <div className="mt-1 text-brand">
       <Icon size={18} />
     </div>
   </div>
@@ -66,7 +82,7 @@ const PayrollTable = ({ run }) => {
   }, [run.lineItems, run.details, run.summary]);
 
   return (
-  <div className="overflow-hidden rounded-md border border-gray-200 bg-white shadow-sm">
+  <div className="overflow-hidden rounded-md border border-gray-200 bg-white ">
     <div className="flex flex-col gap-2 border-b border-gray-200 bg-white px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
       <div>
         <h3 className="flex items-center gap-2 font-semibold text-gray-900">
@@ -215,7 +231,7 @@ export default function Payroll() {
         setAllRuns((prevRuns) => [newRun, ...prevRuns.filter((run) => run.id !== newRun.id)]);
         setActiveRunId(newRun.id);
         setLoadError('');
-        toast.success('Payroll run created.');
+        toast.success(newRun.message || 'Payroll run created.');
       } catch (error) {
         setLoadError(getApiErrorMessage(error) || 'Could not run payroll.');
         toast.error(getApiErrorMessage(error) || 'Could not run payroll.');
@@ -251,23 +267,21 @@ export default function Payroll() {
   }, [allRuns]);
 
   return (
-    <div className="animate-reveal min-h-full bg-[#F7F6F3] px-4 py-6 sm:px-6 lg:px-8">
-      <div className="mx-auto max-w-[1600px] space-y-5">
-        <PayrollActions onRunPayroll={handleRunPayroll} nextPayrollPeriod={nextPayrollInfo.period} isRunning={isRunning} />
+    <div className="animate-reveal space-y-6">
+      <div className="space-y-6">
+        <PayrollActions
+          activeRun={activeRun}
+          nextPayrollDate={nextPayrollInfo.displayDate}
+          onRunPayroll={handleRunPayroll}
+          nextPayrollPeriod={nextPayrollInfo.period}
+          isRunning={isRunning}
+        />
 
         {loadError && <div role="alert" className="rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-800">{loadError}</div>}
 
         {activeRun ? (
           <>
-            <section className="overflow-hidden rounded-md border border-gray-200 bg-white shadow-none">
-              <div className="grid divide-y divide-gray-200 md:grid-cols-3 md:divide-x md:divide-y-0">
-                <PayrollKPI title={`Total Payroll (${activeRun.period.split(' ')[0]})`} value={`KSh ${activeRun.totalDisbursed.toLocaleString()}`} icon={Banknote} />
-            <PayrollKPI title="Active Staff" value={`${activeRun.employees} Employees`} icon={Users} />
-            <PayrollKPI title="Next Payroll Date" value={nextPayrollInfo.displayDate} icon={CalendarClock} />
-              </div>
-            </section>
-
-            <section className="space-y-4 rounded-md border border-gray-200 bg-white shadow-none">
+            <section className="space-y-4 rounded-2xl border border-ink/10 bg-surface ">
           <div className="flex flex-col gap-3 border-b border-gray-200 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <h3 className="flex items-center gap-2 font-semibold text-gray-900">
@@ -324,7 +338,7 @@ export default function Payroll() {
                 </div>
                 <div className="text-right">
                   <p className="text-xs font-semibold uppercase tracking-[0.18em] text-gray-500">Net payout</p>
-                  <p className="mt-1 text-sm font-semibold tabular-nums text-gray-900">KSh {run.totalDisbursed.toLocaleString()}</p>
+                  <p className="mt-1 text-sm font-semibold tabular-nums text-gray-900">KES {run.totalDisbursed.toLocaleString()}</p>
                 </div>
               </button>
             ))}

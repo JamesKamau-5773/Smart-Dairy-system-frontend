@@ -22,11 +22,11 @@ describe('buildWhatsAppInvoiceMessage', () => {
 
     expect(message).toContain('Hello Wanjiku\'s Kiosk,');
     expect(message).toContain('Customer: Wanjiku\'s Kiosk');
-    expect(message).toContain('Current balance: KSh 3,700.00');
-    expect(message).toContain('2026-05-28 AM: 3L x 60 = KSh 180.00');
-    expect(message).toContain('2026-05-28 PM: 2L x 60 = KSh 120.00');
-    expect(message).toContain('Invoice total: KSh 12,450.00');
-    expect(message).toContain('Payments received: KSh 8,750.00');
-    expect(message).toContain('Outstanding balance: KSh 3,700.00');
+    expect(message).toContain('Current balance: KES 3,700.00');
+    expect(message).toContain('2026-05-28 AM: 3L x 60 = KES 180.00');
+    expect(message).toContain('2026-05-28 PM: 2L x 60 = KES 120.00');
+    expect(message).toContain('Invoice total: KES 12,450.00');
+    expect(message).toContain('Payments received: KES 8,750.00');
+    expect(message).toContain('Outstanding balance: KES 3,700.00');
   });
 });

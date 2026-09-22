@@ -2,6 +2,7 @@ import { useState } from 'react';
 import toast from 'react-hot-toast';
 import { breedingApi } from '../../../lib/backendApi';
 import { resolveCowIdentity } from '../../../lib/breedingUtils';
+import { formatCowIdentity } from '../../../lib/cowIdentity';
 
 const HEAT_SIGNS = [
   ['standing_heat', 'Standing to be mounted'],
@@ -50,7 +51,7 @@ export default function LogHeatObservationForm({ herdOptions = [], onSuccess, on
         signs,
         notes: notes.trim(),
       });
-      onSuccess?.(observation, `Heat observation recorded for ${resolvedCow.id}.`);
+      onSuccess?.(observation, `Heat observation recorded for ${formatCowIdentity({ name: resolvedCow.name, earTag: resolvedCow.earTag })}.`);
     } catch (error) {
       const message = error?.response?.data?.error || 'Failed to record heat observation.';
       onError?.(message);

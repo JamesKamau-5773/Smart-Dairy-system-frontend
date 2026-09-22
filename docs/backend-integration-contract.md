@@ -40,7 +40,10 @@ Each area should have a predictable resource model, server validation, and stabl
 The backend must own the canonical staff record and return these fields at minimum:
 
 - `id`
+- `userId` / `user_id`, nullable until an account invitation is created
+- `accountStatus` / `account_status` with values `NONE`, `INVITED`, `ACTIVE`
 - `name`
+- `phoneNumber` / `phone_number`
 - `role`
 - `status` with values `ACTIVE`, `ON_LEAVE`, `OVERDUE`, `INACTIVE`
 - `baseSalary`
@@ -56,6 +59,46 @@ The backend must own the canonical staff record and return these fields at minim
 - `returnVerifiedAt`
 - `returnVerificationDecision`
 - `returnVerificationNote`
+
+Employee records and login accounts are linked by the backend through `Employee.user_id`. The frontend submits the employee ID to an onboarding endpoint and must not create or infer a second account locally.
+
+### Staff Account Onboarding
+
+`POST /api/onboarding/invite`
+
+Request:
+
+```json
+{
+  "employee_id": 7,
+  "role": "FARM_HAND"
+}
+```
+
+The response includes the server-issued claim URL. Claim links expire after 48 hours, may be reissued while the account is `INVITE_PENDING`, and cannot be reused after activation.
+
+`POST /api/onboarding/provision`
+
+```json
+{
+  "employee_id": 7,
+  "role": "FARM_HAND",
+  "password": "temporary-password",
+  "requires_password_reset": true
+}
+```
+
+Direct provisioning returns the backend-created linked account with `ACTIVE` status. The frontend never stores the temporary password and blocks all protected routes while the authenticated session has `requires_password_reset: true`. Password completion is submitted to `POST /api/auth/change-password`; only the returned backend session may clear the checkpoint.
+
+`role` must be one of `FARM_ADMIN`, `FARM_MANAGER`, `FARM_SUPERVISOR`, `FARM_HAND`, or `VETERINARY_DOCTOR`.
+
+### Staffing Recommendations
+
+`GET /api/hr/staffing-recommendations`
+
+Returns the tenant's active `employee_count`, `farm_size`, a `recommended_roles` object, `advisory_only: true`, and a policy note. These values are guidance only; account permissions remain explicitly assigned. The frontend must render this response rather than calculate local staffing bands.
+
+Role inheritance is consistent across API authorization and frontend route checks: `FARM_MANAGER` inherits supervisor and farmhand access, while `FARM_SUPERVISOR` inherits farmhand access.
 
 ### 2. Verification Workflow
 
@@ -199,6 +242,24 @@ Response:
 Returns a payroll run with line items for every staff member.
 
 The line items should include the leave split so the frontend can render approved leave versus overdue penalty days without recomputing them locally.
+
+### Calf Milk Feeding
+
+`POST /api/production/milk-dispositions`
+
+```json
+{
+  "type": "CALF_FEED",
+  "calf_id": 12,
+  "liters": 3.5,
+  "date": "2026-09-15",
+  "notes": "Morning feeding"
+}
+```
+
+`GET /api/production/milk-dispositions` returns the active tenant's disposition history and accepts optional `date` and `calf_id` filters.
+
+The backend is authoritative for calf eligibility, available milk, tenant isolation, and remaining-milk calculations. The frontend must refresh disposition and dashboard queries after a successful write rather than adjusting inventory locally.
 
 ### Dashboard and Operations
 
