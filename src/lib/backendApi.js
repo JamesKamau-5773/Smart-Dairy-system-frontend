@@ -334,9 +334,14 @@ export function getApiErrorMessage(error, fallback = 'Request failed. Please try
   const explicitMessage = typeof responseData === 'string'
     ? responseData
     : responseData?.message ?? responseData?.error ?? responseData?.detail ?? responseData?.details ?? null;
+  const displayMessage = typeof explicitMessage === 'string'
+    ? explicitMessage
+    : typeof explicitMessage?.message === 'string'
+      ? explicitMessage.message
+      : null;
 
-  if (explicitMessage) {
-    return explicitMessage;
+  if (displayMessage) {
+    return displayMessage;
   }
 
   if (status === 409) {
