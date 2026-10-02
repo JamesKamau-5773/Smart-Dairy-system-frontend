@@ -9,7 +9,7 @@ vi.mock('../apiClient', () => ({
   resolveBackendAssetUrl: vi.fn(),
 }));
 
-import { financeApi } from '../backendApi';
+import { financeApi, getApiErrorMessage } from '../backendApi';
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -42,5 +42,18 @@ describe('financeApi.listLedgerEntries', () => {
     expect(result.items).toHaveLength(159);
     expect(result.meta).toMatchObject({ page: 1, pages: 1, per_page: 159, total: 159 });
     expect(result.summary).toBe(summary);
+  });
+});
+
+describe('getApiErrorMessage', () => {
+  it('returns the message from an object-shaped validation detail', () => {
+    const error = {
+      response: {
+        status: 422,
+        data: { detail: { field: 'phone_number', message: 'Enter a valid phone number.' } },
+      },
+    };
+
+    expect(getApiErrorMessage(error)).toBe('Enter a valid phone number.');
   });
 });
