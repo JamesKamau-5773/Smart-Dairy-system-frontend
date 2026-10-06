@@ -34,10 +34,12 @@ export default function IssueAdvanceModal({ isOpen, onClose, staff, onConfirm })
           </div>
 
           <div>
-            <label className="block text-[10px] font-black text-ink-muted uppercase mb-1.5">Advance Amount (KES)</label>
+            <label htmlFor="salary-advance-amount" className="block text-[10px] font-black text-ink-muted uppercase mb-1.5">Advance Amount (KES)</label>
             <div className="relative">
               <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
               <input 
+                id="salary-advance-amount"
+                name="amount"
                 required 
                 type="number" 
                 placeholder="0.00" 

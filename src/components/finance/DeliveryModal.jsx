@@ -73,8 +73,9 @@ export default function DeliveryModal({ isOpen, onClose, onSave, delivery, custo
         <form onSubmit={handleSubmit} className="p-6 space-y-5">
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-[10px] font-black text-ink-muted uppercase mb-1.5">Delivery Date</label>
+              <label htmlFor="delivery-date" className="block text-[10px] font-black text-ink-muted uppercase mb-1.5">Delivery Date</label>
               <input
+                id="delivery-date"
                 required
                 name="date"
                 value={formData.date}
@@ -85,8 +86,9 @@ export default function DeliveryModal({ isOpen, onClose, onSave, delivery, custo
               />
             </div>
             <div>
-              <label className="block text-[10px] font-black text-ink-muted uppercase mb-1.5">Liters Delivered</label>
+              <label htmlFor="delivery-liters-delivered" className="block text-[10px] font-black text-ink-muted uppercase mb-1.5">Liters Delivered</label>
               <input
+                id="delivery-liters-delivered"
                 required
                 name="liters_delivered"
                 value={formData.liters_delivered}
@@ -102,10 +104,11 @@ export default function DeliveryModal({ isOpen, onClose, onSave, delivery, custo
           </div>
 
           <div>
-            <label className="block text-[10px] font-black text-ink-muted uppercase mb-1.5">
+            <label htmlFor="delivery-personal-consumption" className="block text-[10px] font-black text-ink-muted uppercase mb-1.5">
               Personal Consumption (Not Billable)
             </label>
             <input
+              id="delivery-personal-consumption"
               name="personal_consumption_liters"
               value={formData.personal_consumption_liters}
               onChange={handleChange}
@@ -139,8 +142,9 @@ export default function DeliveryModal({ isOpen, onClose, onSave, delivery, custo
           </div>
 
           <div>
-            <label className="block text-[10px] font-black text-ink-muted uppercase mb-1.5">Notes (Optional)</label>
+            <label htmlFor="delivery-notes" className="block text-[10px] font-black text-ink-muted uppercase mb-1.5">Notes (Optional)</label>
             <textarea
+              id="delivery-notes"
               name="notes"
               value={formData.notes}
               onChange={handleChange}

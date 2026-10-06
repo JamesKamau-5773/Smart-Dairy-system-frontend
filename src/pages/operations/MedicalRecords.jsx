@@ -23,9 +23,9 @@ import LABELS from '../../lib/labels';
 import AlertBanner from '../../components/ui/AlertBanner';
 import Modal from '../../components/ui/Modal';
 import { createAuditEntry, getRelativeTime, logToAuditTrail } from '../../lib/audit';
-import { formatValidationErrors, getFirstErrorMessage, validateForm } from '../../lib/validation';
+import { getFirstErrorMessage, ValidationRules, validateForm } from '../../lib/validation';
 import { herdApi, medicalApi } from '../../lib/backendApi';
-import { formatCowIdentity, resolveCowIdentityFromHerd } from '../../lib/cowIdentity';
+import { findCowIdentityMatch, formatCowIdentity, resolveCowIdentityFromHerd } from '../../lib/cowIdentity';
 import { normalizeHerdCow } from '../../lib/herdUtils';
 import { useTenant } from '../../hooks/useTenant';
 import GroupedDateRows from '../../components/ui/GroupedDateRows';
@@ -103,8 +103,7 @@ export default function VetRecords() {
   const createRecordMutation = useMutation({
     mutationFn: (payload) => medicalApi.createRecord(payload),
     onSuccess: (record) => {
-      const normalizedRecord = { ...record, cow: resolveCowLabel(record) };
-      setRecords((current) => [normalizedRecord, ...current.filter((entry) => entry.id !== record.id)]);
+      const normalizedRecord = record ? { ...record, cow: resolveCowLabel(record) } : null;
       queryClient.invalidateQueries({ queryKey: ['medical-records', tenantId, farmId] });
       setSelectedRecord(normalizedRecord);
       setShowForm(false);
@@ -112,7 +111,7 @@ export default function VetRecords() {
       setFormErrors({});
       setErrorMessage('');
       setShowError(false);
-      notifySuccess(`Medical record saved for ${normalizedRecord.cow || form.cowTag}.`);
+      notifySuccess(`Medical record saved for ${normalizedRecord?.cow || form.cowTag}.`);
     },
     onError: () => {
       notifyError('Failed to save the medical record. Please try again.');
@@ -125,8 +124,7 @@ export default function VetRecords() {
   const updateRecordMutation = useMutation({
     mutationFn: ({ id, payload }) => medicalApi.updateRecord(id, payload),
     onSuccess: (record) => {
-      const normalizedRecord = { ...record, cow: resolveCowLabel(record) };
-      setRecords((current) => current.map((entry) => (entry.id === record.id ? normalizedRecord : entry)));
+      const normalizedRecord = record ? { ...record, cow: resolveCowLabel(record) } : null;
       queryClient.invalidateQueries({ queryKey: ['medical-records', tenantId, farmId] });
       setSelectedRecord(normalizedRecord);
       setShowForm(false);
@@ -135,7 +133,7 @@ export default function VetRecords() {
       setFormErrors({});
       setErrorMessage('');
       setShowError(false);
-      notifySuccess(`Medical record updated for ${normalizedRecord.cow || form.cowTag}.`);
+      notifySuccess(`Medical record updated for ${normalizedRecord?.cow || form.cowTag}.`);
     },
     onError: () => {
       notifyError('Failed to update the medical record. Please try again.');
@@ -184,15 +182,6 @@ export default function VetRecords() {
       .sort((a, b) => `${a.tag} ${a.name}`.localeCompare(`${b.tag} ${b.name}`));
   }, [herdData]);
 
-  const tenantCowLookup = useMemo(() => {
-    return new Set(
-      tenantCows
-        .flatMap((cow) => [cow.tag, cow.name])
-        .filter(Boolean)
-        .map((value) => String(value).trim().toLowerCase())
-    );
-  }, [tenantCows]);
-
   const filteredRecords = useMemo(() => {
     const normalizedQuery = query.trim().toLowerCase();
 
@@ -215,30 +204,33 @@ export default function VetRecords() {
     if (formErrors[field]) {
       setFormErrors((current) => ({ ...current, [field]: null }));
     }
+    if (field === 'status' && value !== 'Follow-up Due' && formErrors.followUp) {
+      setFormErrors((current) => ({ ...current, followUp: null }));
+    }
   };
 
   const handleSaveRecord = (event) => {
     event.preventDefault();
 
     const errors = validateForm(form, {
-      cowTag: ['required', { minLength: 3 }],
-      symptoms: ['required', { minLength: 8 }],
-      diagnosis: ['required', { minLength: 3 }],
-      medications: ['required', { minLength: 3 }],
-      recommendations: ['required', { minLength: 8 }],
-      vet: ['required', { minLength: 3 }],
-      followUp: ['required'],
+      cowTag: [ValidationRules.required, ValidationRules.minLength(3)],
+      symptoms: [ValidationRules.required, ValidationRules.minLength(8)],
+      diagnosis: [ValidationRules.required, ValidationRules.minLength(3)],
+      medications: [ValidationRules.required, ValidationRules.minLength(3)],
+      recommendations: [ValidationRules.required, ValidationRules.minLength(8)],
+      vet: [ValidationRules.required, ValidationRules.minLength(3)],
+      ...(form.status === 'Follow-up Due' ? { followUp: [ValidationRules.required] } : {}),
     });
 
     const normalizedCowInput = String(form.cowTag ?? '').trim().toLowerCase();
-    if (tenantCows.length > 0 && normalizedCowInput && !tenantCowLookup.has(normalizedCowInput)) {
+  const matchedCow = findCowIdentityMatch(normalizedCowInput, tenantCows);
+    if (tenantCows.length > 0 && normalizedCowInput && !matchedCow) {
       errors.cowTag = 'Select a registered tenant cow by tag or name from the dropdown.';
     }
 
     if (Object.keys(errors).length > 0) {
-      const formattedErrors = formatValidationErrors(errors);
-      setFormErrors(formattedErrors);
-      setErrorMessage(getFirstErrorMessage(formattedErrors) || 'Please correct the highlighted fields.');
+      setFormErrors(errors);
+      setErrorMessage(getFirstErrorMessage(errors) || 'Please correct the highlighted fields.');
       setShowError(true);
       return;
     }
@@ -249,9 +241,6 @@ export default function VetRecords() {
     // backend record ID, so this links to the same animal the Cow Register /
     // Animal Passport pages use — sending the raw name would leave the record
     // orphaned from that animal's timeline.
-    const matchedCow = tenantCows.find(
-      (cow) => cow.tag.toLowerCase() === normalizedCowInput || cow.name.toLowerCase() === normalizedCowInput
-    );
     const resolvedCowId = matchedCow?.recordId || matchedCow?.tag || form.cowTag;
 
     const nextRecord = {
@@ -610,12 +599,13 @@ export default function VetRecords() {
             </div>
 
             <div className="space-y-2">
-              <label className="text-[10px] font-bold uppercase tracking-wider text-ink-strong">Follow-up date *</label>
+              <label className="text-[10px] font-bold uppercase tracking-wider text-ink-strong">Follow-up date{form.status === 'Follow-up Due' ? ' *' : ' (optional)'}</label>
               <input
                 type="date"
                 className={`input-machined w-full ${formErrors.followUp ? 'border-rose-300 bg-rose-50' : ''}`}
                 value={form.followUp}
                 onChange={(event) => handleFieldChange('followUp', event.target.value)}
+                aria-required={form.status === 'Follow-up Due'}
                 aria-invalid={!!formErrors.followUp}
                 aria-describedby={formErrors.followUp ? 'followUp-error' : undefined}
               />

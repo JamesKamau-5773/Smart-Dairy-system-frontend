@@ -417,6 +417,23 @@ export function normalizeMedicalRecord(record = {}) {
   };
 }
 
+const normalizeMedicalMutationResponse = (response) => {
+  const record = toObject(response?.data);
+  if (!record || typeof record !== 'object' || Array.isArray(record)) return null;
+
+  const source = record.visit ?? record.record ?? record.data ?? record.result ?? record;
+  const recordFields = [
+    'id', 'record_id', 'visit_id', 'cow', 'cow_id', 'cowId', 'cow_name', 'cowName',
+    'cow_tag', 'cowTag', 'animal_id', 'animalId', 'animal_name', 'animalName',
+    'visit_date', 'date', 'reason', 'reason_for_visit', 'diagnosis', 'diagnosis_text',
+    'meds', 'medications', 'treatment', 'recommendations', 'follow_up_date',
+    'follow_up_status', 'severity', 'vet', 'vet_name',
+  ];
+  if (!recordFields.some((field) => Object.prototype.hasOwnProperty.call(source ?? {}, field))) return null;
+
+  return normalizeMedicalRecord(record);
+};
+
 const mapUiMedicalStatusToBackend = (status) => {
   const normalizedStatus = String(status ?? '').trim().toLowerCase();
 
@@ -426,6 +443,10 @@ const mapUiMedicalStatusToBackend = (status) => {
 
   if (normalizedStatus === 'follow-up due') {
     return 'Scheduled';
+  }
+
+  if (normalizedStatus === 'under treatment') {
+    return 'Not Required';
   }
 
   return null;
@@ -464,6 +485,8 @@ const buildMedicalRecordPayload = (payload = {}) => {
     request.follow_up_completed_at = payload.follow_up_completed_at ?? payload.followUpCompletedAt ?? new Date().toISOString();
   } else if (backendFollowUpStatus === 'Scheduled') {
     request.follow_up_required = true;
+  } else if (backendFollowUpStatus === 'Not Required') {
+    request.follow_up_required = false;
   }
 
   if (!request.remarks && payload.updatedBy) {
@@ -1133,6 +1156,9 @@ export const breedingApi = {
   createLog(payload) {
     return apiClient.post('/operations/breeding-logs', payload).then((response) => toObject(response.data));
   },
+  updateLog(logId, payload) {
+    return apiClient.put(`/operations/breeding-logs/${logId}`, payload).then((response) => toObject(response.data));
+  },
   uploadCertificate(logId, certificateFile) {
     const formData = new FormData();
     formData.append('certificate', certificateFile);
@@ -1327,7 +1353,7 @@ export const medicalApi = {
         url: '/medical/records',
         data: requestPayload,
       },
-    ]).then((response) => normalizeMedicalRecord(toObject(response.data) ?? requestPayload));
+    ]).then(normalizeMedicalMutationResponse);
   },
   async updateRecord(recordId, payload) {
     const requestPayload = buildMedicalRecordPayload(payload);
@@ -1360,7 +1386,7 @@ export const medicalApi = {
         },
       ]);
 
-      return normalizeMedicalRecord(toObject(completionResponse.data) ?? { ...requestPayload, id: recordId, follow_up_status: 'Completed' });
+      return normalizeMedicalMutationResponse(completionResponse);
     }
 
     if (normalizedPayloadStatus === 'follow-up due') {
@@ -1381,10 +1407,10 @@ export const medicalApi = {
         },
       ]);
 
-      return normalizeMedicalRecord(toObject(scheduleResponse.data) ?? { ...requestPayload, id: recordId, follow_up_status: 'Scheduled' });
+      return normalizeMedicalMutationResponse(scheduleResponse);
     }
 
-    return normalizeMedicalRecord(toObject(response.data) ?? { ...requestPayload, id: recordId });
+    return normalizeMedicalMutationResponse(response);
   },
   listPendingFollowUps() {
     return requestWithFallback(apiClient, [
@@ -1410,7 +1436,7 @@ export const medicalApi = {
         url: `/medical/records/${visitId}/follow-up/schedule`,
         data: payload,
       },
-    ]).then((response) => normalizeMedicalRecord(toObject(response.data) ?? payload));
+    ]).then(normalizeMedicalMutationResponse);
   },
   completeFollowUp(visitId, payload = {}) {
     return requestWithFallback(apiClient, [
@@ -1424,7 +1450,7 @@ export const medicalApi = {
         url: `/medical/records/${visitId}/follow-up/complete`,
         data: payload,
       },
-    ]).then((response) => normalizeMedicalRecord(toObject(response.data) ?? payload));
+    ]).then(normalizeMedicalMutationResponse);
   },
 };
 

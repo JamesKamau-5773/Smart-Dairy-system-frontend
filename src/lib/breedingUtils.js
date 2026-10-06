@@ -102,17 +102,22 @@ export function normalizeBreedingLog(log = {}) {
 
   if (['pregnant', 'in-calf', 'incalf', 'confirmed_pregnant'].includes(rawStatus)) {
     status = 'Pregnant';
-  } else if (['open', 'not pregnant', 'not_pregnant', 'negative', 'failed', 'failure'].includes(rawStatus)) {
+  } else if (['failed', 'failure'].includes(rawStatus)) {
+    status = 'Failed';
+  } else if (['open', 'not pregnant', 'not_pregnant', 'negative'].includes(rawStatus)) {
     status = 'Open';
   } else if (['pending', 'pending check', 'pending_check', 'awaiting_check', 'awaiting'].includes(rawStatus)) {
     status = 'Pending';
   }
+
+  const ptaScores = log.sire_pta_scores ?? log.sirePTAScores ?? {};
 
   return {
     id: log.id ?? log.log_id ?? log.breeding_log_id ?? `log-${Date.now()}`,
     cowId,
     cowName,
     aiDate,
+    aiTime: log.aiTime ?? log.ai_time ?? log.insemination_time ?? '',
     sireCode: log.sireCode
       ?? log.sire_code
       ?? log.semen_id
@@ -123,6 +128,7 @@ export function normalizeBreedingLog(log = {}) {
       ?? '',
     semenSource: rawSource
       || (rawProvidedBy === 'vet' ? 'vet_provided' : '')
+      || (rawProvidedBy === 'farm' ? 'farm_stock' : '')
       || (rawProvidedBy === 'inventory' ? 'farm_stock' : '')
       || (rawSourceLabel.includes('vet') ? 'vet_provided' : '')
       || (rawSourceLabel.includes('farm') || rawSourceLabel.includes('stock') ? 'farm_stock' : 'unknown'),
@@ -130,10 +136,28 @@ export function normalizeBreedingLog(log = {}) {
     pregnancyCheckDate,
     certificateImageUrl: log.certificateImageUrl ?? log.certificate_image_url ?? log.certificate_url ?? null,
     certificateNumber: log.certificateNumber ?? log.certificate_number ?? null,
+    technician: log.technician ?? log.technician_name ?? '',
+    ownerName: log.ownerName ?? log.owner_name ?? '',
+    farmLocation: log.farmLocation ?? log.farm_location ?? '',
+    serviceFee: log.serviceFee ?? log.service_fee ?? '',
+    isRepeatService: Boolean(log.isRepeatService ?? log.is_repeat_service ?? false),
+    milkVolumePta: ptaScores.milk_volume ?? '',
+    heatObservationId: log.heatObservationId ?? log.heat_observation_id ?? null,
     daysPostAI,
     status,
     notes: log.note ?? log.notes ?? '',
   };
+}
+
+export function filterBreedingHistory(history, filter = 'All', searchTerm = '') {
+  const normalizedSearch = searchTerm.trim().toLowerCase();
+
+  return history
+    .filter((entry) => filter === 'All' || entry.status === filter)
+    .filter((entry) => !normalizedSearch || [entry.cowName, entry.cowTag, entry.cowId]
+      .some((value) => String(value ?? '').toLowerCase().includes(normalizedSearch)))
+    .slice()
+    .sort((left, right) => new Date(right.updatedAt) - new Date(left.updatedAt));
 }
 
 export function normalizeHerdOption(cow = {}) {

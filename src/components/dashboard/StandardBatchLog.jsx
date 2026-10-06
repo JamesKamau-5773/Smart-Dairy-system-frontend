@@ -71,9 +71,9 @@ export default function StandardBatchLog({ onCancel, onSaveComplete }) {
         
         {/* STEP 1: Quick-Select Grid */}
         <div className="mb-8">
-          <label className="block text-[10px] font-black uppercase tracking-normal text-ink-muted mb-3 ">
+          <p className="block text-[10px] font-black uppercase tracking-normal text-ink-muted mb-3 ">
             1. What arrived?
-          </label>
+          </p>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             {commonItems.map(item => (
               <button
@@ -100,9 +100,9 @@ export default function StandardBatchLog({ onCancel, onSaveComplete }) {
 
         {/* STEP 2: The "Tap" Entry System */}
         <div className="mb-8 bg-surface-raised p-6 rounded-card border border-ink/5">
-          <label className="block text-[10px] font-black uppercase tracking-normal text-ink-muted mb-4 text-center ">
+          <p className="block text-[10px] font-black uppercase tracking-normal text-ink-muted mb-4 text-center ">
             2. How much was delivered?
-          </label>
+          </p>
           <div className="flex flex-col items-center">
             
             {/* Core Increment/Decrement UI */}

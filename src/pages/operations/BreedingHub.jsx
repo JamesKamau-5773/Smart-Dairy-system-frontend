@@ -13,6 +13,7 @@ import {
 } from '../../components/forms/breeding';
 import {
   enrichBreedingLogCowIdentity,
+  filterBreedingHistory,
   normalizeBreedingLog,
   normalizeHerdOption,
   normalizeSemenInventory,
@@ -35,12 +36,11 @@ import {
   ChevronRight,
   ChevronDown,
   ChevronUp,
-  Search
+  Search,
+  Pencil,
 } from 'lucide-react';
 
 const bullStock = [];
-const initialVetQueue = [];
-const INITIAL_HISTORY = [];
 
 function getBreedingCacheKey(tenantId, farmId) {
   return `breeding_logs_cache:${tenantId || 'tenant'}:${farmId || 'farm'}`;
@@ -68,27 +68,6 @@ function writeCachedBreedingLogs(tenantId, farmId, logs) {
   }
 }
 
-function removeBreedingCacheLog(tenantId, farmId, logId) {
-  const current = readCachedBreedingLogs(tenantId, farmId);
-  const next = current.filter((item) => item.id !== logId);
-  writeCachedBreedingLogs(tenantId, farmId, next);
-}
-
-function mergeBreedingLogs(serverLogs = [], cachedLogs = []) {
-  const merged = new Map();
-
-  [...cachedLogs, ...serverLogs].forEach((entry) => {
-    const key = `${entry.id ?? ''}|${entry.cowId ?? ''}|${entry.aiDate ?? ''}|${entry.sireCode ?? ''}`;
-    if (!merged.has(key)) {
-      merged.set(key, entry);
-    } else {
-      merged.set(key, { ...merged.get(key), ...entry });
-    }
-  });
-
-  return Array.from(merged.values());
-}
-
 /**
  * NOTE: The following components should be extracted into their own files
  * under `src/components/breeding/` to improve code organization and reusability.
@@ -97,6 +76,7 @@ function createHistoryEntry(log, status = 'Pending', notes = '') {
   const labelByStatus = {
     Pregnant: 'Pregnant (In-Calf)',
     Open: 'Open (Not Pregnant)',
+    Failed: 'Unsuccessful',
     Pending: 'Pending Check',
   };
 
@@ -113,6 +93,7 @@ function createHistoryEntry(log, status = 'Pending', notes = '') {
 function getStatusTone(status) {
   if (status === 'Pregnant') return 'border-emerald-500/30 bg-emerald-500/10 text-emerald-700';
   if (status === 'Open') return 'border-rose-500/30 bg-rose-500/10 text-rose-600';
+  if (status === 'Failed') return 'border-red-700/25 bg-red-600/10 text-red-800';
   return 'border-brand/20 bg-brand/10 text-brand';
 }
 
@@ -139,20 +120,6 @@ function getMonthLabel(dateValue) {
   if (Number.isNaN(parsedDate.getTime())) return 'Unknown Month';
 
   return parsedDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
-}
-
-function getFilteredHistory(history, filter, searchTerm) {
-  const normalizedSearch = searchTerm.trim().toLowerCase();
-
-  return history
-    .filter((entry) => filter === 'All' || entry.status === filter)
-    .filter((entry) => {
-      if (!normalizedSearch) return true;
-      return [entry.cowName, entry.cowTag, entry.cowId]
-        .some((value) => String(value ?? '').toLowerCase().includes(normalizedSearch));
-    })
-    .slice()
-    .sort((a, b) => new Date(b.updatedAt) - new Date(a.updatedAt));
 }
 
 function groupHistoryByMonth(history) {
@@ -265,7 +232,7 @@ function HeatAlerts({ alerts, onLogService }) {
 // ============================================================================
 // COMPONENT 3: Vet Queue Item (Responsibility: Individual pregnancy check logic)
 // ============================================================================
-function VetQueueItem({ log, onOutcome, isUpdating }) {
+function VetQueueItem({ log, onOutcome, onEdit, isUpdating }) {
   const isReady = log.daysPostAI >= 45;
 
   return (
@@ -327,6 +294,14 @@ function VetQueueItem({ log, onOutcome, isUpdating }) {
             Wait {45 - log.daysPostAI} Days
           </div>
         )}
+        <button
+          type="button"
+          onClick={() => onEdit(log)}
+          className="btn-secondary inline-flex items-center gap-1 px-3 py-2 text-xs"
+          aria-label={`Edit AI service for ${formatCowLabel(log)}`}
+        >
+          <Pencil size={14} /> Edit
+        </button>
       </div>
     </div>
   );
@@ -401,8 +376,6 @@ function SemenInventory({ stock, onAddInventory, onRestockInventory, onDeleteInv
 export default function BreedingHub() {
   const { tenantId, farmId } = useTenant();
   const queryClient = useQueryClient();
-  const [vetQueue, setVetQueue] = useState(initialVetQueue);
-  const [vetHistory, setVetHistory] = useState(INITIAL_HISTORY);
   const [inventory, setInventory] = useState(bullStock);
   const [infoMessage, setInfoMessage] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
@@ -414,6 +387,7 @@ export default function BreedingHub() {
 
   // Modal visibility states
   const [isLogServiceOpen, setIsLogServiceOpen] = useState(false);
+  const [selectedBreedingLog, setSelectedBreedingLog] = useState(null);
   const [isHeatObservationOpen, setIsHeatObservationOpen] = useState(false);
   const [selectedHeatObservation, setSelectedHeatObservation] = useState(null);
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
@@ -492,7 +466,7 @@ export default function BreedingHub() {
         return await breedingApi.listLogs();
       } catch (error) {
         console.error('Failed to load breeding logs:', error);
-        return [];
+        return readCachedBreedingLogs(tenantId, farmId);
       }
     },
     enabled: !!tenantId && !!farmId,
@@ -503,6 +477,23 @@ export default function BreedingHub() {
     queryFn: () => breedingApi.listHeatObservations(),
     enabled: !!tenantId && !!farmId,
   });
+
+  const normalizedBreedingLogs = useMemo(() => {
+    if (!Array.isArray(breedingLogsData)) return null;
+
+    return breedingLogsData
+      .map(normalizeBreedingLog)
+      .map((log) => enrichBreedingLogCowIdentity(log, herdOptions));
+  }, [breedingLogsData, herdOptions]);
+
+  const vetHistory = useMemo(
+    () => (normalizedBreedingLogs ?? []).map((log) => createHistoryEntry(log, log.status, log.notes)),
+    [normalizedBreedingLogs],
+  );
+  const vetQueue = useMemo(
+    () => (normalizedBreedingLogs ?? []).filter((log) => log.status === 'Pending'),
+    [normalizedBreedingLogs],
+  );
 
   const breedingAlerts = useMemo(() => heatObservations
     .filter((observation) => !observation.breeding_log_id)
@@ -532,17 +523,8 @@ export default function BreedingHub() {
   }, [inventory.length, semenInventoryData]);
 
   useEffect(() => {
-    if (Array.isArray(breedingLogsData)) {
-      const normalizedServer = breedingLogsData.map(normalizeBreedingLog);
-      const normalizedCached = readCachedBreedingLogs(tenantId, farmId).map(normalizeBreedingLog);
-      const normalized = mergeBreedingLogs(normalizedServer, normalizedCached)
-        .map((log) => enrichBreedingLogCowIdentity(log, herdOptions));
-
-      writeCachedBreedingLogs(tenantId, farmId, normalized);
-      setVetHistory(normalized.map((log) => createHistoryEntry(log, log.status, log.notes)));
-      setVetQueue(normalized.filter((log) => log.status === 'Pending'));
-    }
-  }, [breedingLogsData, herdOptions, tenantId, farmId]);
+    if (normalizedBreedingLogs) writeCachedBreedingLogs(tenantId, farmId, normalizedBreedingLogs);
+  }, [normalizedBreedingLogs, tenantId, farmId]);
 
   // Derived State for KPI Chips
   const metrics = {
@@ -556,28 +538,11 @@ export default function BreedingHub() {
     if (statusUpdatingById[logId]) return;
 
     const backendStatus = outcome === 'Pregnant' ? 'Pregnant' : 'Failed';
-    const displayStatus = outcome === 'Pregnant' ? 'Pregnant' : 'Open';
     setStatusUpdatingById((current) => ({ ...current, [logId]: true }));
 
     try {
       await breedingApi.updateLogStatus(logId, backendStatus);
       notifyInfo(`Cow marked as ${outcome}. Records updated.`);
-      removeBreedingCacheLog(tenantId, farmId, logId);
-      setVetQueue((current) => current.filter((log) => log.id !== logId));
-      setVetHistory((current) =>
-        current.map((entry) => {
-          if (entry.id !== logId) return entry;
-
-          return {
-            ...entry,
-            status: displayStatus,
-            outcome: displayStatus === 'Pregnant' ? 'Pregnant (In-Calf)' : 'Open (Not Pregnant)',
-            updatedAt: new Date().toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' }),
-          };
-        })
-      );
-
-      // Same reasoning as handleAddHistoryEntry: keep other consumers of this key in sync.
       await queryClient.invalidateQueries({ queryKey: ['breeding', 'logs', tenantId, farmId] });
     } catch (error) {
       console.error('Failed to update breeding log status:', error);
@@ -593,16 +558,21 @@ export default function BreedingHub() {
   };
 
   const handleLogService = (heatObservation = null) => {
+    setSelectedBreedingLog(null);
     setSelectedHeatObservation(heatObservation);
     setIsLogServiceOpen(true);
   };
 
-  const handleLogServiceSuccess = (savedLog, message) => {
-    setVetQueue((current) => [...current, savedLog]);
-    const entry = createHistoryEntry(savedLog, 'Pending', '');
-    setVetHistory((current) => [entry, ...current]);
+  const handleEditPendingLog = (log) => {
+    setSelectedHeatObservation(null);
+    setSelectedBreedingLog(log);
+    setIsLogServiceOpen(true);
+  };
+
+  const handleLogServiceSuccess = async (_savedLog, message) => {
     setIsLogServiceOpen(false);
     setSelectedHeatObservation(null);
+    setSelectedBreedingLog(null);
     queryClient.invalidateQueries({ queryKey: ['breeding', 'heat-observations', tenantId, farmId] });
     notifyInfo(message);
   };
@@ -631,7 +601,7 @@ export default function BreedingHub() {
     notifyInfo(message);
   };
 
-  const filteredHistory = getFilteredHistory(vetHistory, historyFilter, historySearch);
+  const filteredHistory = filterBreedingHistory(vetHistory, historyFilter, historySearch);
   const groupedHistory = groupHistoryByMonth(filteredHistory);
   const hasActiveHistoryFilters = historyFilter !== 'All' || historySearch.trim() !== '';
   const activeHistoryControlCount = [historySearch.trim(), historyFilter !== 'All'].filter(Boolean).length;
@@ -711,7 +681,13 @@ export default function BreedingHub() {
 
             <div className="space-y-3">
               {vetQueue.map((log) => (
-                <VetQueueItem key={log.id} log={log} onOutcome={handleOutcome} isUpdating={!!statusUpdatingById[log.id]} />
+                <VetQueueItem
+                  key={log.id}
+                  log={log}
+                  onOutcome={handleOutcome}
+                  onEdit={handleEditPendingLog}
+                  isUpdating={!!statusUpdatingById[log.id]}
+                />
               ))}
               {vetQueue.length === 0 && (
                 <div className="py-8 text-center text-sm font-medium text-ink-muted">
@@ -774,15 +750,26 @@ export default function BreedingHub() {
 
       </div>
 
-      <Modal isOpen={isLogServiceOpen} onClose={() => { setIsLogServiceOpen(false); setSelectedHeatObservation(null); }} title="Log AI Service">
+      <Modal
+        isOpen={isLogServiceOpen}
+        onClose={() => {
+          setIsLogServiceOpen(false);
+          setSelectedHeatObservation(null);
+          setSelectedBreedingLog(null);
+        }}
+        title={selectedBreedingLog ? 'Edit AI Service' : 'Log AI Service'}
+      >
         <LogAIServiceForm
-          key={selectedHeatObservation?.id || 'unlinked-ai'}
+          key={selectedBreedingLog?.id || selectedHeatObservation?.id || 'new-ai-service'}
           herdOptions={herdOptions}
           onSuccess={handleLogServiceSuccess}
           onError={(msg) => { setErrorMessage(msg); setShowError(true); }}
           isSaving={isSaving}
           onSavingChange={setIsSaving}
-          initialData={selectedHeatObservation ? {
+          initialData={selectedBreedingLog ? {
+            ...selectedBreedingLog,
+            cowId: formatCowIdentity(selectedBreedingLog, selectedBreedingLog.cowId),
+          } : selectedHeatObservation ? {
             cowId: selectedHeatObservation.cowId,
             aiDate: new Date(selectedHeatObservation.observedAt).toISOString().slice(0, 10),
             heatObservationId: selectedHeatObservation.id,
@@ -792,7 +779,11 @@ export default function BreedingHub() {
           <button
             type="button"
             disabled={isSaving}
-            onClick={() => setIsLogServiceOpen(false)}
+            onClick={() => {
+              setIsLogServiceOpen(false);
+              setSelectedHeatObservation(null);
+              setSelectedBreedingLog(null);
+            }}
             className="btn-secondary px-4 py-2 text-sm"
           >
             Cancel
@@ -868,18 +859,24 @@ export default function BreedingHub() {
                 </div>
 
                 <div className="flex flex-wrap gap-2">
-                  {['All', 'Pregnant', 'Open', 'Pending'].map((filter) => (
+                  {[
+                    { value: 'All', label: 'All' },
+                    { value: 'Pregnant', label: 'Pregnant' },
+                    { value: 'Open', label: 'Open' },
+                    { value: 'Pending', label: 'Pending' },
+                    { value: 'Failed', label: 'Unsuccessful' },
+                  ].map(({ value, label }) => (
                     <button
-                      key={filter}
+                      key={value}
                       type="button"
-                      onClick={() => setHistoryFilter(filter)}
+                      onClick={() => setHistoryFilter(value)}
                       className={`rounded-full border px-3 py-1.5 text-xs font-bold transition-colors ${
-                        historyFilter === filter
+                        historyFilter === value
                           ? 'border-brand bg-brand text-surface'
                           : 'border-ink/10 bg-surface-raised text-ink-muted hover:border-brand/20 hover:text-brand'
                       }`}
                     >
-                      {filter}
+                      {label}
                     </button>
                   ))}
                 </div>
