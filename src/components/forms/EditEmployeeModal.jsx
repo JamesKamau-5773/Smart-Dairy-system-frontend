@@ -44,18 +44,18 @@ export default function EditEmployeeModal({ isOpen, onClose, onSave, staff }) {
         
         <form onSubmit={handleSubmit} className="p-6 space-y-5">
           <div>
-            <label className="block text-[10px] font-black text-ink-muted uppercase mb-1.5">Full Name</label>
-            <input required name="name" value={formData.name} onChange={handleChange} placeholder="e.g. Mary Wanjiku" className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm font-bold" />
+            <label htmlFor="employee-edit-name" className="block text-[10px] font-black text-ink-muted uppercase mb-1.5">Full Name</label>
+            <input id="employee-edit-name" required name="name" value={formData.name} onChange={handleChange} placeholder="e.g. Mary Wanjiku" className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm font-bold" />
           </div>
           
           <div>
-            <label className="block text-[10px] font-black text-ink-muted uppercase mb-1.5">Job Role</label>
-            <input required name="role" value={formData.role} onChange={handleChange} placeholder="e.g. Milking Assistant" className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm font-bold" />
+            <label htmlFor="employee-edit-role" className="block text-[10px] font-black text-ink-muted uppercase mb-1.5">Job Role</label>
+            <input id="employee-edit-role" required name="role" value={formData.role} onChange={handleChange} placeholder="e.g. Milking Assistant" className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm font-bold" />
           </div>
 
           <div>
-            <label className="block text-[10px] font-black text-ink-muted uppercase mb-1.5">Base Salary (KES)</label>
-            <input required name="baseSalary" type="number" value={formData.baseSalary} onChange={handleChange} placeholder="e.g. 35000" className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm font-bold" />
+            <label htmlFor="employee-edit-base-salary" className="block text-[10px] font-black text-ink-muted uppercase mb-1.5">Base Salary (KES)</label>
+            <input id="employee-edit-base-salary" required name="baseSalary" type="number" value={formData.baseSalary} onChange={handleChange} placeholder="e.g. 35000" className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm font-bold" />
           </div>
 
           <div className="flex justify-end gap-3 pt-2">

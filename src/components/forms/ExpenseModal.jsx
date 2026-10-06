@@ -51,18 +51,19 @@ export default function ExpenseModal({ isOpen, onClose, onSave }) {
         <form onSubmit={handleSubmit} className="p-6 space-y-5">
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-[10px] font-black text-ink-muted uppercase mb-1.5">Date of Expense</label>
-              <input required name="date" value={formData.date} onChange={handleChange} type="date" className="w-full px-3 py-2 border border-slate-300 rounded-lg text-xs font-bold" />
+              <label htmlFor="expense-date" className="block text-[10px] font-black text-ink-muted uppercase mb-1.5">Date of Expense</label>
+              <input id="expense-date" required name="date" value={formData.date} onChange={handleChange} type="date" className="w-full px-3 py-2 border border-slate-300 rounded-lg text-xs font-bold" />
             </div>
             <div>
-              <label className="block text-[10px] font-black text-ink-muted uppercase mb-1.5">Amount Spent (KES)</label>
-              <input required name="amount" value={formData.amount} onChange={handleChange} type="number" placeholder="0.00" className="w-full px-3 py-2 border border-slate-300 rounded-lg text-xs font-bold" />
+              <label htmlFor="expense-amount" className="block text-[10px] font-black text-ink-muted uppercase mb-1.5">Amount Spent (KES)</label>
+              <input id="expense-amount" required name="amount" value={formData.amount} onChange={handleChange} type="number" placeholder="0.00" className="w-full px-3 py-2 border border-slate-300 rounded-lg text-xs font-bold" />
             </div>
           </div>
 
           <div>
-            <label className="block text-[10px] font-black text-ink-muted uppercase mb-1.5">Cost Classification</label>
+            <label htmlFor="expense-cost-class" className="block text-[10px] font-black text-ink-muted uppercase mb-1.5">Cost Classification</label>
             <select
+              id="expense-cost-class"
               required
               name="costClass"
               value={formData.costClass}
@@ -76,16 +77,17 @@ export default function ExpenseModal({ isOpen, onClose, onSave }) {
           </div>
 
           <div>
-            <label className="block text-[10px] font-black text-ink-muted uppercase mb-1.5">Who did you pay?</label>
+            <label htmlFor="expense-paid-to" className="block text-[10px] font-black text-ink-muted uppercase mb-1.5">Who did you pay?</label>
             <div className="relative">
               <Building className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={14} />
-              <input required name="paidTo" value={formData.paidTo} onChange={handleChange} placeholder="e.g. AgroVet Supply" className="w-full pl-9 pr-3 py-2 border border-slate-300 rounded-lg text-xs font-bold" />
+              <input id="expense-paid-to" required name="paidTo" value={formData.paidTo} onChange={handleChange} placeholder="e.g. AgroVet Supply" className="w-full pl-9 pr-3 py-2 border border-slate-300 rounded-lg text-xs font-bold" />
             </div>
           </div>
 
           <div>
-            <label className="block text-[10px] font-black text-ink-muted uppercase mb-1.5">Item / commodity name</label>
+            <label htmlFor="expense-item-name" className="block text-[10px] font-black text-ink-muted uppercase mb-1.5">Item / commodity name</label>
             <input
+              id="expense-item-name"
               required
               name="itemName"
               value={formData.itemName}
@@ -96,8 +98,9 @@ export default function ExpenseModal({ isOpen, onClose, onSave }) {
           </div>
 
           <div>
-            <label className="block text-[10px] font-black text-ink-muted uppercase mb-1.5">Quantity</label>
+            <label htmlFor="expense-quantity" className="block text-[10px] font-black text-ink-muted uppercase mb-1.5">Quantity</label>
             <input
+              id="expense-quantity"
               required
               name="quantity"
               value={formData.quantity}
@@ -112,8 +115,9 @@ export default function ExpenseModal({ isOpen, onClose, onSave }) {
 
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-[10px] font-black text-ink-muted uppercase mb-1.5">What was this for?</label>
+              <label htmlFor="expense-category" className="block text-[10px] font-black text-ink-muted uppercase mb-1.5">What was this for?</label>
               <select
+                id="expense-category"
                 name="category"
                 value={formData.category}
                 onChange={handleChange}
@@ -128,8 +132,9 @@ export default function ExpenseModal({ isOpen, onClose, onSave }) {
               </select>
             </div>
             <div>
-              <label className="block text-[10px] font-black text-ink-muted uppercase mb-1.5">Payment Method</label>
+              <label htmlFor="expense-payment-method" className="block text-[10px] font-black text-ink-muted uppercase mb-1.5">Payment Method</label>
               <select
+                id="expense-payment-method"
                 name="paymentMethod"
                 value={formData.paymentMethod}
                 onChange={handleChange}
@@ -142,16 +147,16 @@ export default function ExpenseModal({ isOpen, onClose, onSave }) {
           </div>
 
           <div>
-            <label className="block text-[10px] font-black text-ink-muted uppercase mb-1.5">Transaction Reference (Code)</label>
+            <label htmlFor="expense-reference" className="block text-[10px] font-black text-ink-muted uppercase mb-1.5">Transaction Reference (Code)</label>
             <div className="relative">
               <CreditCard className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={14} />
-              <input name="reference" value={formData.reference} onChange={handleChange} placeholder="e.g. QJ12ABC345" className="w-full pl-9 pr-3 py-2 border border-slate-300 rounded-lg text-xs font-bold" />
+              <input id="expense-reference" name="reference" value={formData.reference} onChange={handleChange} placeholder="e.g. QJ12ABC345" className="w-full pl-9 pr-3 py-2 border border-slate-300 rounded-lg text-xs font-bold" />
             </div>
           </div>
 
           <div>
-            <label className="block text-[10px] font-black text-ink-muted uppercase mb-1.5">Additional Details</label>
-            <textarea name="notes" value={formData.notes} onChange={handleChange} className="w-full px-3 py-2 border border-slate-300 rounded-lg text-xs font-bold h-20" />
+            <label htmlFor="expense-notes" className="block text-[10px] font-black text-ink-muted uppercase mb-1.5">Additional Details</label>
+            <textarea id="expense-notes" name="notes" value={formData.notes} onChange={handleChange} className="w-full px-3 py-2 border border-slate-300 rounded-lg text-xs font-bold h-20" />
           </div>
 
           {/* Footer Actions */}

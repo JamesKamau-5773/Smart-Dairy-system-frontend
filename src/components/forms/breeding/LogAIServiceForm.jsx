@@ -34,6 +34,7 @@ export default function LogAIServiceForm({
 }) {
   const { tenantId, farmId } = useTenant();
   const queryClient = useQueryClient();
+  const editingLogId = initialData.id ?? initialData.log_id ?? null;
 
   // Form state
   const [logForm, setLogForm] = useState({
@@ -132,26 +133,28 @@ export default function LogAIServiceForm({
       });
 
       if (!payload) {
-        const errorMsg = 'Failed to create a valid breeding log. Please check the required fields.';
+        const errorMsg = 'Failed to prepare the AI service. Please check the required fields.';
         onError?.(errorMsg);
         toast.error(errorMsg);
         onSavingChange?.(false);
         return;
       }
 
-      const createResponse = await breedingApi.createLog(payload);
+      const saveResponse = editingLogId
+        ? await breedingApi.updateLog(editingLogId, payload)
+        : await breedingApi.createLog(payload);
 
       let savedLog = normalizeBreedingLog({
-        ...createResponse,
-        cowId: createResponse?.cow_id ?? createResponse?.cowId ?? payload.animal_id,
-        cowName: createResponse?.cow_name ?? createResponse?.cowName ?? resolvedCow.name,
-        aiDate: createResponse?.insemination_date ?? createResponse?.aiDate ?? payload.event_date,
-        sireCode: createResponse?.external_sire_code ?? createResponse?.semen_id ?? createResponse?.sireCode ?? payload.sire_id,
-        semenSource: createResponse?.semen_source
-          ?? (String(createResponse?.provided_by ?? '').toUpperCase() === 'VET' ? 'vet_provided' : null)
+        ...saveResponse,
+        cowId: saveResponse?.cow_id ?? saveResponse?.cowId ?? payload.cow_id,
+        cowName: saveResponse?.cow_name ?? saveResponse?.cowName ?? resolvedCow.name,
+        aiDate: saveResponse?.insemination_date ?? saveResponse?.aiDate ?? payload.insemination_date,
+        sireCode: saveResponse?.external_sire_code ?? saveResponse?.semen_id ?? saveResponse?.sireCode ?? payload.semen_id,
+        semenSource: saveResponse?.semen_source
+          ?? (String(saveResponse?.provided_by ?? '').toUpperCase() === 'VET' ? 'vet_provided' : null)
           ?? logForm.semenSource,
-        expectedCalvingDate: createResponse?.expected_calving_date ?? createResponse?.expectedCalvingDate ?? null,
-        status: createResponse?.status ?? 'Pending',
+        expectedCalvingDate: saveResponse?.expected_calving_date ?? saveResponse?.expectedCalvingDate ?? null,
+        status: saveResponse?.status ?? initialData.status ?? 'Pending',
       });
 
       let certificateUploaded = false;
@@ -172,11 +175,11 @@ export default function LogAIServiceForm({
 
       logToAuditTrail(
         createAuditEntry({
-          action: 'create',
+          action: editingLogId ? 'update' : 'create',
           recordType: 'ai_service',
           recordId: savedLog.id,
           userName: 'You',
-          notes: `Logged AI service for ${savedLog.cowId} with sire ${savedLog.sireCode}`,
+          notes: `${editingLogId ? 'Updated' : 'Logged'} AI service for ${savedLog.cowId} with sire ${savedLog.sireCode}`,
         })
       );
 
@@ -187,12 +190,12 @@ export default function LogAIServiceForm({
         ? ` Pregnancy check reminder scheduled for ${savedLog.pregnancyCheckDate}.`
         : '';
       const certificateSuffix = certificateUploaded ? ' Certificate uploaded.' : '';
-      const successMsg = `Logged AI service for ${formatCowIdentity({
+      const successMsg = `${editingLogId ? 'Updated' : 'Logged'} AI service for ${formatCowIdentity({
         cowName: savedLog.cowName || resolvedCow.name,
         cowTag: resolvedCow.earTag,
       })}.${certificateSuffix}${reminderSuffix}`;
       onSuccess?.(savedLog, successMsg);
-      toast.success(successMsg);
+      if (!onSuccess) toast.success(successMsg);
 
       // Reset form
       setLogForm({
@@ -473,7 +476,7 @@ export default function LogAIServiceForm({
           disabled={isSaving}
           className="btn-command px-4 py-2 text-sm"
         >
-          {isSaving ? 'Saving...' : 'Save Service'}
+          {isSaving ? 'Saving...' : editingLogId ? 'Update Service' : 'Save Service'}
         </button>
       </div>
     </form>

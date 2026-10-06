@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   enrichBreedingLogCowIdentity,
+  filterBreedingHistory,
   normalizeBreedingLogPayload,
   normalizeBreedingLog,
   normalizeHerdOption,
@@ -55,13 +56,53 @@ describe('breedingUtils', () => {
     expect(normalized.pregnancyCheckDate).toBe('2026-09-01');
   });
 
-  it('maps a failed backend outcome to Open so completed checks leave the vet queue', () => {
+  it('normalizes backend fields needed to edit a pending service', () => {
+    expect(normalizeBreedingLog({
+      id: 9,
+      cow_id: 46,
+      provided_by: 'FARM',
+      semen_id: 12,
+      insemination_date: '2026-09-15',
+      insemination_time: '08:30:00',
+      technician_name: 'Dr. Njeri',
+      owner_name: 'Owner',
+      farm_location: 'Bahati',
+      certificate_number: 'AI-9',
+      service_fee: 1500,
+      is_repeat_service: true,
+      heat_observation_id: 7,
+      sire_pta_scores: { milk_volume: 28.5 },
+    })).toMatchObject({
+      aiTime: '08:30:00',
+      semenSource: 'farm_stock',
+      technician: 'Dr. Njeri',
+      ownerName: 'Owner',
+      farmLocation: 'Bahati',
+      certificateNumber: 'AI-9',
+      serviceFee: 1500,
+      isRepeatService: true,
+      heatObservationId: 7,
+      milkVolumePta: 28.5,
+    });
+  });
+
+  it('preserves a failed insemination outcome separately from the cow being Open', () => {
     const normalized = normalizeBreedingLog({
       id: 41,
       status: 'Failed',
     });
 
-    expect(normalized.status).toBe('Open');
+    expect(normalized.status).toBe('Failed');
+    expect(normalizeBreedingLog({ status: 'Open' }).status).toBe('Open');
+  });
+
+  it('filters unsuccessful records by their Failed backend status', () => {
+    const records = [
+      { id: 1, status: 'Failed', cowName: 'Malaika', updatedAt: '2026-09-15' },
+      { id: 2, status: 'Open', cowName: 'Ruby', updatedAt: '2026-09-14' },
+    ];
+
+    expect(filterBreedingHistory(records, 'Failed').map((record) => record.id)).toEqual([1]);
   });
 
   it('enriches a system cow ID with the farmer-facing name and ear tag', () => {

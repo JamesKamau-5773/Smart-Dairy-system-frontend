@@ -1,5 +1,15 @@
 import { describe, expect, it } from 'vitest';
-import { normalizeAnimal } from '../animalUtils';
+import { normalizeAnimal, normalizeTimelineEvent } from '../animalUtils';
+
+describe('normalizeTimelineEvent', () => {
+  it.each(['medical', 'medical_visit', 'vet-visit', 'clinical_visit'])('maps %s event types to Health', (eventType) => {
+    expect(normalizeTimelineEvent({ event_type: eventType, title: 'Routine check' }).type).toBe('Health');
+  });
+
+  it('does not infer Health from a general event title', () => {
+    expect(normalizeTimelineEvent({ event_type: 'general', title: 'Deworming treatment' }).type).toBe('General');
+  });
+});
 
 describe('normalizeAnimal', () => {
   it('uses backend-owned status and recent yield metrics', () => {

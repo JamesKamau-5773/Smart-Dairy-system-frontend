@@ -31,6 +31,20 @@ export function resolveCowIdentityFromHerd(cow = {}, herd = []) {
   };
 }
 
+export function findCowIdentityMatch(value, cows = []) {
+  const normalizedValue = clean(value).toLowerCase();
+
+  return cows.find((cow) => {
+    const identity = normalizeCowIdentity(cow);
+    return [
+      identity.recordId,
+      identity.earTag,
+      identity.name,
+      formatCowIdentity(identity),
+    ].some((alias) => clean(alias).toLowerCase() === normalizedValue);
+  });
+}
+
 export function formatCowIdentity(cow = {}, fallback = 'Unknown cow') {
   const { name, earTag } = normalizeCowIdentity(cow);
 

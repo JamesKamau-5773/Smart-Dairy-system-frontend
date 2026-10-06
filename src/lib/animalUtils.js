@@ -33,10 +33,22 @@ export function getTimelineTheme(type) {
   };
 }
 
+const HEALTH_EVENT_TYPES = new Set([
+  'health',
+  'medical',
+  'medical_record',
+  'medical_visit',
+  'vet_visit',
+  'veterinary_visit',
+  'clinical_visit',
+]);
+
 export function normalizeTimelineEvent(entry = {}, animalId = '') {
   const eventType = entry.event_type ?? entry.type ?? 'general';
-  const normalizedType = `${eventType}`.trim().toLowerCase();
-  const displayType = normalizedType === 'health' ? 'Health' : normalizedType === 'breeding' ? 'Breeding' : 'General';
+  const normalizedType = `${eventType}`.trim().toLowerCase().replace(/[\s-]+/g, '_');
+  const displayType = HEALTH_EVENT_TYPES.has(normalizedType)
+    ? 'Health'
+    : normalizedType === 'breeding' ? 'Breeding' : 'General';
 
   return {
     id: entry.id ?? `${animalId}-${entry.created_at ?? entry.event_date ?? Date.now()}`,

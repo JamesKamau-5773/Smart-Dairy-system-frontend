@@ -48,21 +48,22 @@ export default function IncomeModal({ isOpen, onClose, onSave, customers = [] })
           {/* Date and Amount */}
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-[10px] font-black text-ink-muted uppercase mb-1.5">Date Received</label>
-              <input required name="date" value={formData.date} onChange={handleChange} type="date" className="w-full px-3 py-2 border border-slate-300 rounded-lg text-xs font-bold" />
+              <label htmlFor="income-date" className="block text-[10px] font-black text-ink-muted uppercase mb-1.5">Date Received</label>
+              <input id="income-date" required name="date" value={formData.date} onChange={handleChange} type="date" className="w-full px-3 py-2 border border-slate-300 rounded-lg text-xs font-bold" />
             </div>
             <div>
-              <label className="block text-[10px] font-black text-ink-muted uppercase mb-1.5">Amount Received (KES)</label>
-              <input required name="amount" value={formData.amount} onChange={handleChange} type="number" placeholder="0.00" className="w-full px-3 py-2 border border-slate-300 rounded-lg text-xs font-bold" />
+              <label htmlFor="income-amount" className="block text-[10px] font-black text-ink-muted uppercase mb-1.5">Amount Received (KES)</label>
+              <input id="income-amount" required name="amount" value={formData.amount} onChange={handleChange} type="number" placeholder="0.00" className="w-full px-3 py-2 border border-slate-300 rounded-lg text-xs font-bold" />
             </div>
           </div>
 
           {/* Customer Dropdown */}
           <div>
-            <label className="block text-[10px] font-black text-ink-muted uppercase mb-1.5">Who paid you? (Customer/Co-op)</label>
+            <label htmlFor="income-source" className="block text-[10px] font-black text-ink-muted uppercase mb-1.5">Who paid you? (Customer/Co-op)</label>
             <div className="relative">
               <User className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={14} />
               <select 
+                id="income-source"
                 required
                 name="source"
                 value={formData.source}
@@ -82,8 +83,9 @@ export default function IncomeModal({ isOpen, onClose, onSave, customers = [] })
           {/* Income Type and Method */}
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-[10px] font-black text-ink-muted uppercase mb-1.5">What is this for?</label>
+              <label htmlFor="income-stream" className="block text-[10px] font-black text-ink-muted uppercase mb-1.5">What is this for?</label>
               <select name="stream"
+                id="income-stream"
                 value={formData.stream}
                 onChange={handleChange}
                 className="w-full px-3 py-2 border border-slate-300 rounded-lg text-xs font-bold outline-none bg-white"
@@ -94,8 +96,9 @@ export default function IncomeModal({ isOpen, onClose, onSave, customers = [] })
               </select>
             </div>
             <div>
-              <label className="block text-[10px] font-black text-ink-muted uppercase mb-1.5">Payment Method</label>
+              <label htmlFor="income-payment-method" className="block text-[10px] font-black text-ink-muted uppercase mb-1.5">Payment Method</label>
               <select name="paymentMethod"
+                id="income-payment-method"
                 value={formData.paymentMethod}
                 onChange={handleChange}
                 className="w-full px-3 py-2 border border-slate-300 rounded-lg text-xs font-bold outline-none bg-white"
@@ -109,17 +112,17 @@ export default function IncomeModal({ isOpen, onClose, onSave, customers = [] })
 
           {/* Transaction Reference */}
           <div>
-            <label className="block text-[10px] font-black text-ink-muted uppercase mb-1.5">Transaction Reference (Code)</label>
+            <label htmlFor="income-reference" className="block text-[10px] font-black text-ink-muted uppercase mb-1.5">Transaction Reference (Code)</label>
             <div className="relative">
               <CreditCard className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={14} />
-              <input name="reference" value={formData.reference} onChange={handleChange} placeholder="e.g. QJ12ABC345" className="w-full pl-9 pr-3 py-2 border border-slate-300 rounded-lg text-xs font-bold" />
+              <input id="income-reference" name="reference" value={formData.reference} onChange={handleChange} placeholder="e.g. QJ12ABC345" className="w-full pl-9 pr-3 py-2 border border-slate-300 rounded-lg text-xs font-bold" />
             </div>
           </div>
 
           {/* Additional Details */}
           <div>
-            <label className="block text-[10px] font-black text-ink-muted uppercase mb-1.5">Additional Details</label>
-            <textarea name="notes" value={formData.notes} onChange={handleChange} className="w-full px-3 py-2 border border-slate-300 rounded-lg text-xs font-bold h-20" />
+            <label htmlFor="income-notes" className="block text-[10px] font-black text-ink-muted uppercase mb-1.5">Additional Details</label>
+            <textarea id="income-notes" name="notes" value={formData.notes} onChange={handleChange} className="w-full px-3 py-2 border border-slate-300 rounded-lg text-xs font-bold h-20" />
           </div>
 
           {/* Footer Actions */}

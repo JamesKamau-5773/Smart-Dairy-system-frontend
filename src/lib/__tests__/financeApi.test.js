@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const apiClientMock = vi.hoisted(() => ({
   get: vi.fn(),
+  request: vi.fn(),
 }));
 
 vi.mock('../apiClient', () => ({
@@ -9,7 +10,7 @@ vi.mock('../apiClient', () => ({
   resolveBackendAssetUrl: vi.fn(),
 }));
 
-import { financeApi, getApiErrorMessage } from '../backendApi';
+import { financeApi, getApiErrorMessage, medicalApi } from '../backendApi';
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -55,5 +56,34 @@ describe('getApiErrorMessage', () => {
     };
 
     expect(getApiErrorMessage(error)).toBe('Enter a valid phone number.');
+  });
+});
+
+describe('medicalApi mutation responses', () => {
+  it('does not fabricate a created record when the backend returns no record body', async () => {
+    apiClientMock.request.mockResolvedValue({ data: null });
+
+    await expect(medicalApi.createRecord({ cow: 5, diagnosis: 'Mastitis' })).resolves.toBeNull();
+  });
+
+  it('does not fabricate an updated record when the backend returns no record body', async () => {
+    apiClientMock.request.mockResolvedValue({ data: null });
+
+    await expect(medicalApi.updateRecord(12, { cow: 5, diagnosis: 'Mastitis' })).resolves.toBeNull();
+  });
+
+  it('does not fabricate a completed record when the follow-up endpoint returns no record body', async () => {
+    apiClientMock.request
+      .mockResolvedValueOnce({ data: null })
+      .mockResolvedValueOnce({ data: null });
+
+    await expect(medicalApi.updateRecord(12, { status: 'Closed' })).resolves.toBeNull();
+  });
+
+  it('does not fabricate follow-up records when schedule or complete returns no body', async () => {
+    apiClientMock.request.mockResolvedValue({ data: null });
+
+    await expect(medicalApi.scheduleFollowUp(12, { follow_up_date: '2026-10-10' })).resolves.toBeNull();
+    await expect(medicalApi.completeFollowUp(12)).resolves.toBeNull();
   });
 });
