@@ -36,6 +36,7 @@ const AnimalPassport = lazy(() => import('./pages/operations/AnimalRecord.jsx'))
 const MilkHistory = lazy(() => import('./pages/operations/MilkHistory.jsx'));
 const FeedFormulation = lazy(() => import('./pages/inventory/FeedFormulation.jsx'));
 const MilkInventoryReport = lazy(() => import('./pages/operations/MilkInventoryReport.jsx'));
+const OperationsReportsPage = lazy(() => import('./pages/operations/OperationsReportsPage.jsx'));
 const MilkUsage = lazy(() => import('./pages/operations/MilkUsage.jsx'));
 const DairyUnitEconomicsReport = lazy(() => import('./pages/finance/DairyUnitEconomicsReport.jsx'));
 const AnimalEconomicsReport = lazy(() => import('./pages/finance/AnimalEconomicsReport.jsx'));
@@ -270,6 +271,12 @@ export default function App() {
             <Route path="operations/animal/:id" element={renderLazyPage(AnimalPassport, 'Loading animal record…')} />
 
             {/* Reports */}
+            <Route
+              path="operations/reports"
+              element={
+                <RoleRoute allowedRoles={['ADMIN', 'FARM_MANAGER', 'FARMER']}>{renderLazyPage(OperationsReportsPage, 'Loading reporting dashboard…')}</RoleRoute>
+              }
+            />
             <Route
               path="operations/reports/milk-inventory"
               element={

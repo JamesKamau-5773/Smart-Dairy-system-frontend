@@ -1,7 +1,7 @@
-import { useMemo, useState } from 'react';
+import { useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { FileWarning, Filter, Search, Stethoscope, Wheat, ThermometerSun, Settings, X, CheckCircle2 } from 'lucide-react';
+import { FileWarning, Filter, Stethoscope, Wheat, ThermometerSun, Settings, X, CheckCircle2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { productionApi } from '../../lib/backendApi';
 import { formatCowIdentity } from '../../lib/cowIdentity';
@@ -24,26 +24,15 @@ export default function MilkDropReports() {
   const [selectedReasons, setSelectedReasons] = useState([]);
   const [managerNotes, setManagerNotes] = useState('');
   const [formError, setFormError] = useState('');
-  const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState('ALL');
   const { data: reportsData } = useQuery({
     queryKey: ['milk-drop-reports', tenantId, farmId],
     queryFn: () => productionApi.listMilkDropAlerts(),
     enabled: !!tenantId && !!farmId,
   });
 
-  const reports = useMemo(() => Array.isArray(reportsData)
+  const reports = Array.isArray(reportsData)
     ? reportsData.map(normalizeMilkDropReport)
-    : [], [reportsData]);
-
-  const filteredReports = useMemo(() => {
-    const query = searchTerm.trim().toLowerCase();
-    return reports.filter((report) => {
-      const matchesSearch = !query || formatCowIdentity(report).toLowerCase().includes(query);
-      const matchesStatus = statusFilter === 'ALL' || report.status === statusFilter;
-      return matchesSearch && matchesStatus;
-    });
-  }, [reports, searchTerm, statusFilter]);
+    : [];
 
   const saveInvestigation = useMutation({
     mutationFn: ({ alertId, ...payload }) => productionApi.investigateMilkDropAlert(alertId, payload),
@@ -97,27 +86,14 @@ export default function MilkDropReports() {
           </div>
           <p className="text-xs sm:text-sm text-ink/50 font-medium">Investigate yield drops per cow.</p>
         </div>
+        <div className="flex gap-2">
+          <button className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 py-2 bg-surface text-ink border border-ink/20 rounded-md text-sm font-semibold hover:bg-surface-raised">
+            <Filter size={16} /> Filter
+          </button>
+        </div>
       </div>
 
-      <div className="mb-3 grid gap-3 rounded-lg border border-slate-200 bg-white/90 p-3 backdrop-blur sm:grid-cols-[1fr_200px]">
-        <label className="relative">
-          <span className="sr-only">Search low milk alerts</span>
-          <Search size={15} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
-          <input value={searchTerm} onChange={(event) => setSearchTerm(event.target.value)} placeholder="Search by cow name or tag" className="w-full border-slate-300 pl-9" />
-        </label>
-        <label className="relative">
-          <span className="sr-only">Filter alerts by status</span>
-          <Filter size={15} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
-          <select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)} className="w-full border-slate-300 pl-9">
-            <option value="ALL">All statuses</option>
-            <option value="OPEN">Open</option>
-            <option value="INVESTIGATING">Investigating</option>
-            <option value="RESOLVED">Resolved</option>
-          </select>
-        </label>
-      </div>
-
-      <div className="overflow-x-auto rounded-lg border border-slate-200 bg-white/90 backdrop-blur">
+      <div className="bg-surface border border-ink/10 rounded-lg overflow-x-auto shadow-sm">
         <table className="w-full text-left text-sm whitespace-nowrap">
           <thead>
             <tr className="border-b border-ink/10 text-xs font-semibold uppercase tracking-wide text-ink/50">
@@ -129,7 +105,7 @@ export default function MilkDropReports() {
           </thead>
           <tbody className="divide-y divide-ink/5">
             <GroupedDateRows
-              items={filteredReports}
+              items={reports}
               getDate={(report) => report.date_time}
               colSpan={4}
               renderGroupMeta={(items) => `${items.length} ${items.length === 1 ? 'alert' : 'alerts'}`}
@@ -149,10 +125,10 @@ export default function MilkDropReports() {
                 </td>
               </tr>
               )}
-              empty={filteredReports.length === 0 && (
+              empty={reports.length === 0 && (
               <tr>
                 <td className="px-6 py-6 text-center text-ink/50" colSpan={4}>
-                  No milk drop alerts match the current filters.
+                  No milk drop alerts recorded yet.
                 </td>
               </tr>
               )}
@@ -163,7 +139,7 @@ export default function MilkDropReports() {
 
       {investigateModal.isOpen && createPortal((
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-ink/40 backdrop-blur-sm">
-          <div className="bg-surface rounded-2xl  w-full max-w-3xl max-h-[90vh] flex flex-col overflow-hidden">
+          <div className="bg-surface rounded-2xl shadow-2xl w-full max-w-3xl max-h-[90vh] flex flex-col overflow-hidden">
             <div className="p-4 sm:p-6 border-b border-ink/10 flex justify-between items-start">
               <div>
                 <h3 className="text-lg font-bold">Investigate {formatCowIdentity(investigateModal.log)}</h3>
@@ -199,7 +175,7 @@ export default function MilkDropReports() {
                 {saveInvestigation.isPending ? 'Saving...' : investigateModal.log.status === 'OPEN' ? 'Start Investigation' : 'Save Progress'}
               </button>
               {investigateModal.log.status === 'INVESTIGATING' && (
-                <button type="button" onClick={() => handleSubmit('RESOLVED')} disabled={saveInvestigation.isPending} className="inline-flex min-h-10 items-center gap-2 rounded-md bg-emerald-700 px-6 py-2 text-sm font-bold text-white  transition-colors hover:bg-emerald-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-700 disabled:cursor-not-allowed disabled:opacity-60">
+                <button type="button" onClick={() => handleSubmit('RESOLVED')} disabled={saveInvestigation.isPending} className="inline-flex min-h-10 items-center gap-2 rounded-md bg-emerald-700 px-6 py-2 text-sm font-bold text-white shadow-md transition-colors hover:bg-emerald-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-700 disabled:cursor-not-allowed disabled:opacity-60">
                   <CheckCircle2 size={16} /> Close Case
                 </button>
               )}

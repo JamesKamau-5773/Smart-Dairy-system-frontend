@@ -99,6 +99,7 @@ export default function Sidebar() {
     {
       title: 'Reports',
       items: [
+        { label: 'Farm Reporting Dashboard', to: '/operations/reports', icon: TrendingUp, visible: canViewMilkReport },
         { label: 'Customer Value & Profit', to: '/finance/reports/dairy-unit-economics', icon: TrendingUp, visible: showAdminControls },
         { label: 'Cow Profitability', to: '/finance/reports/animal-economics', icon: TrendingUp, visible: showAdminControls },
         { label: 'Milk Inventory Report', to: '/operations/reports/milk-inventory', icon: ClipboardList, visible: canViewMilkReport },

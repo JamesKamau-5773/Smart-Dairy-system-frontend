@@ -55,16 +55,35 @@ describe('buildLedgerEntryPayload', () => {
       party: '  Feed Supplier  ',
       item_name: '  Maize Meal  ',
       quantity: '50',
-      cost_class: 'COGS',
+      cost_class: 'production_cost',
       description: 'Bulk purchase for cows',
     }, 'expense');
 
     expect(payload.paid_to).toBe('Feed Supplier');
     expect(payload.item_name).toBe('Maize Meal');
     expect(payload.quantity).toBe(50);
-    expect(payload.cost_class).toBe('COGS');
+    expect(payload.cost_class).toBe('production_cost');
     expect(payload.description).toBe('Bulk purchase for cows');
     expect(payload).not.toHaveProperty('customer_id');
     expect(payload).not.toHaveProperty('income_source');
+  });
+
+  it('builds a multi-cow animal expense with animal_ids and the selected cost type', () => {
+    const payload = buildLedgerEntryPayload({
+      ...commonForm,
+      category: 'Vet Fees',
+      incomePayerType: 'other',
+      income_source: '',
+      party: '  Farm Vet  ',
+      item_name: 'Vaccination',
+      quantity: '2',
+      cost_class: 'production_cost',
+      animal_ids: ['12', '27'],
+      animal_cost_type: 'VETERINARY',
+    }, 'expense');
+
+    expect(payload.animal_ids).toEqual([12, 27]);
+    expect(payload.animal_cost_type).toBe('VETERINARY');
+    expect(payload).not.toHaveProperty('animal_id');
   });
 });
