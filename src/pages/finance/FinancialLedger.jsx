@@ -13,6 +13,7 @@ import { buildLedgerEntryPayload } from '../../lib/ledgerEntryPayload';
 import { downloadReceiptPdf, shareReceiptText } from '../../lib/receipt';
 import toast from 'react-hot-toast';
 import GroupedDateRows from '../../components/ui/GroupedDateRows';
+import { Popover, PopoverContent, PopoverTrigger } from '../../components/ui/popover';
 import { formatCowIdentity } from '../../lib/cowIdentity';
 
 const SummaryTooltip = ({ text, label }) => (
@@ -101,10 +102,17 @@ const EXPENSE_CATEGORIES = [
 ];
 
 const COST_CLASSES = [
-  ['COGS', 'Production cost'],
-  ['CUSTOMER_ACQUISITION', 'Customer acquisition'],
-  ['OPERATING', 'Operating cost'],
-  ['CAPITAL', 'Capital expenditure'],
+  ['production_cost', 'Direct Farm Costs'],
+  ['operating_cost', 'General Running Costs'],
+  ['customer_acquisition', 'Selling & Delivery'],
+  ['capital_expenditure', 'Major Purchases (Assets)'],
+];
+
+const COST_CLASS_DEFINITIONS = [
+  ['production_cost', 'Money spent directly on the cows and milk production, such as feeds, supplements, AI services, and veterinary bills.'],
+  ['operating_cost', 'Day-to-day farm overhead not directly tied to a specific cow, like electricity, water, fuel, and permanent staff wages.'],
+  ['customer_acquisition', 'Costs related to getting your milk to the buyer, including transport, packaging, marketing, and vendor fees.'],
+  ['capital_expenditure', 'Big, long-term investments for the farm, such as buying new machinery, building sheds, or purchasing new livestock.'],
 ];
 
 const isCorrectableExpense = (transaction) => (
@@ -114,7 +122,7 @@ const isCorrectableExpense = (transaction) => (
 
 const LedgerCorrectionModal = ({ transaction, onClose, onSubmit, isPending }) => {
   const [category, setCategory] = useState(transaction.category || 'Other');
-  const [costClass, setCostClass] = useState(transaction.cost_class || 'OPERATING');
+  const [costClass, setCostClass] = useState(transaction.cost_class || 'operating_cost');
   const [reason, setReason] = useState('');
   const isValid = category && costClass && reason.trim();
 
@@ -159,6 +167,7 @@ const LedgerCorrectionModal = ({ transaction, onClose, onSubmit, isPending }) =>
 
 const LedgerEntryFormModal = ({ onClose, transactionType, farmId, tenantId }) => {
   const queryClient = useQueryClient();
+  const [isAnimalListOpen, setIsAnimalListOpen] = useState(false);
   const [formData, setFormData] = useState(() => ({
     date: format(new Date(), 'yyyy-MM-dd'),
     amount: '',
@@ -169,9 +178,9 @@ const LedgerEntryFormModal = ({ onClose, transactionType, farmId, tenantId }) =>
     party: '',
     item_name: '',
     quantity: '',
-    cost_class: 'COGS',
+    cost_class: 'production_cost',
     paymentMethod: 'M-Pesa',
-    animal_id: '',
+    animal_ids: [],
     animal_cost_type: '',
     reference_code: '',
     description: '',
@@ -218,6 +227,20 @@ const LedgerEntryFormModal = ({ onClose, transactionType, farmId, tenantId }) =>
     setFormData(prev => ({ ...prev, [name]: value }));
   };
 
+  const handleAnimalToggle = (animalId) => {
+    setFormData((prev) => {
+      const selectedAnimals = prev.animal_ids.includes(animalId)
+        ? prev.animal_ids.filter((id) => id !== animalId)
+        : [...prev.animal_ids, animalId];
+
+      return {
+        ...prev,
+        animal_ids: selectedAnimals,
+        animal_cost_type: selectedAnimals.length === 0 ? '' : prev.animal_cost_type,
+      };
+    });
+  };
+
   const handleSubmit = (e) => {
     e.preventDefault();
     mutation.mutate(buildLedgerEntryPayload(formData, transactionType));
@@ -228,8 +251,9 @@ const LedgerEntryFormModal = ({ onClose, transactionType, farmId, tenantId }) =>
     : !formData.income_source.trim();
   const isCustomerPayment = transactionType === 'income' && formData.incomePayerType === 'customer';
   const isIncomeFormInvalid = !formData.date || !formData.amount || !formData.category || isIncomeCounterpartyMissing || (isCustomerPayment && !formData.reference_code.trim());
-  const isAnimalAllocationIncomplete = Boolean(formData.animal_id) !== Boolean(formData.animal_cost_type);
-  const isExpenseFormInvalid = !formData.date || !formData.amount || !formData.category || !formData.party.trim() || !formData.item_name.trim() || !formData.quantity || isAnimalAllocationIncomplete;
+  const hasSelectedAnimals = formData.animal_ids.length > 0;
+  const isAnimalAllocationIncomplete = hasSelectedAnimals !== Boolean(formData.animal_cost_type);
+  const isExpenseFormInvalid = !formData.date || !formData.amount || !formData.category || !formData.party.trim() || !formData.item_name.trim() || !formData.quantity || !hasSelectedAnimals || isAnimalAllocationIncomplete;
   const isFormInvalid = transactionType === 'income' ? isIncomeFormInvalid : isExpenseFormInvalid;
 
   return (
@@ -314,15 +338,31 @@ const LedgerEntryFormModal = ({ onClose, transactionType, farmId, tenantId }) =>
                       <option value="Other">Other expense</option>
                     </select>
                   </label>
-                  <label className="form-control">
-                    <span className="label-text">Cost classification</span>
+                  <div className="form-control">
+                    <div className="mb-1.5 flex items-center gap-1.5">
+                      <span className="label-text">Cost classification</span>
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <button type="button" className="inline-flex text-ink-muted transition-colors hover:text-brand" aria-label="Explain cost classifications">
+                            <Info size={14} aria-hidden="true" />
+                          </button>
+                        </PopoverTrigger>
+                        <PopoverContent align="start" sideOffset={6} className="w-80 space-y-3">
+                          <div className="space-y-2 text-xs leading-relaxed text-slate-600">
+                            {COST_CLASS_DEFINITIONS.map(([value, definition]) => (
+                              <div key={value}>
+                                <p className="font-bold text-slate-900">{COST_CLASSES.find(([classValue]) => classValue === value)?.[1]}</p>
+                                <p>{definition}</p>
+                              </div>
+                            ))}
+                          </div>
+                        </PopoverContent>
+                      </Popover>
+                    </div>
                     <select name="cost_class" value={formData.cost_class} onChange={handleChange} className="input-machined" required>
-                      <option value="COGS">Production cost</option>
-                      <option value="CUSTOMER_ACQUISITION">Customer acquisition</option>
-                      <option value="OPERATING">Operating cost</option>
-                      <option value="CAPITAL">Capital expenditure</option>
+                      {COST_CLASSES.map(([value, label]) => <option key={value} value={value}>{label}</option>)}
                     </select>
-                  </label>
+                  </div>
                 </div>
                 <label className="form-control">
                   <span className="label-text">Payment method used</span>
@@ -332,23 +372,95 @@ const LedgerEntryFormModal = ({ onClose, transactionType, farmId, tenantId }) =>
                 </label>
                 <label className="form-control"><span className="label-text">Receipt or invoice number</span><input type="text" name="reference_code" value={formData.reference_code} onChange={handleChange} className="input-machined" placeholder="Supplier receipt, invoice, or transaction code" /></label>
                 <label className="form-control"><span className="label-text">Purchase or expense details</span><textarea name="description" value={formData.description} onChange={handleChange} className="input-machined" rows="2" placeholder="Describe the goods or services purchased" /></label>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 border-t border-ink/10 pt-4">
-                  <label className="form-control">
-                    <span className="label-text">Animal (optional direct cost)</span>
-                    <select name="animal_id" value={formData.animal_id} onChange={handleChange} className="input-machined">
-                      <option value="">Farm-wide expense</option>
-                      {animals.map((animal) => <option key={animal.id} value={animal.id}>{formatCowIdentity(animal)}</option>)}
+                <div className="grid grid-cols-1 gap-4 border-t border-ink/10 pt-4">
+                  <div className="form-control">
+                    <div className="mb-1.5 flex items-center gap-1.5">
+                      <span className="label-text">Cost classification</span>
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <button type="button" className="inline-flex text-ink-muted transition-colors hover:text-brand" aria-label="Explain cost classifications">
+                            <Info size={14} aria-hidden="true" />
+                          </button>
+                        </PopoverTrigger>
+                        <PopoverContent align="start" sideOffset={6} className="w-80 space-y-3">
+                          <div className="space-y-2 text-xs leading-relaxed text-slate-600">
+                            {COST_CLASS_DEFINITIONS.map(([value, definition]) => (
+                              <div key={value}>
+                                <p className="font-bold text-slate-900">{COST_CLASSES.find(([classValue]) => classValue === value)?.[1]}</p>
+                                <p>{definition}</p>
+                              </div>
+                            ))}
+                          </div>
+                        </PopoverContent>
+                      </Popover>
+                    </div>
+                    <select name="cost_class" value={formData.cost_class} onChange={handleChange} className="input-machined" required>
+                      {COST_CLASSES.map(([value, label]) => <option key={value} value={value}>{label}</option>)}
                     </select>
-                  </label>
-                  <label className="form-control">
-                    <span className="label-text">Animal cost type</span>
-                    <select name="animal_cost_type" value={formData.animal_cost_type} onChange={handleChange} className="input-machined" disabled={!formData.animal_id}>
+                  </div>
+                </div>
+                <div className="grid grid-cols-1 gap-4 border-t border-ink/10 pt-4">
+                  <div className="form-control">
+                    <span className="label-text">Animals for this expense <span className="text-danger">*</span></span>
+                    <button
+                      type="button"
+                      onClick={() => setIsAnimalListOpen((current) => !current)}
+                      aria-expanded={isAnimalListOpen}
+                      aria-controls="animals-for-expense-list"
+                      className="mt-1 flex w-full items-center justify-between rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-left text-sm font-medium text-gray-900 shadow-sm transition-colors hover:border-gray-400 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:ring-offset-2"
+                    >
+                      <span>Select Animals ({formData.animal_ids.length} selected)</span>
+                      {isAnimalListOpen ? <ChevronUp size={18} aria-hidden="true" /> : <ChevronDown size={18} aria-hidden="true" />}
+                    </button>
+                    {isAnimalListOpen && (
+                      <div id="animals-for-expense-list" className="mt-2 max-h-48 overflow-y-auto rounded-lg border border-gray-300 bg-white">
+                        {animals.length === 0 ? (
+                          <p className="px-3 py-3 text-sm text-gray-500">No animals available</p>
+                        ) : (
+                          animals.map((animal) => (
+                            <label key={animal.id} className="flex cursor-pointer items-center gap-3 py-2 px-3 transition-colors hover:bg-gray-50 focus-within:bg-gray-50">
+                              <input
+                                type="checkbox"
+                                checked={formData.animal_ids.includes(animal.id)}
+                                onChange={() => handleAnimalToggle(animal.id)}
+                                className="h-4 w-4 rounded border-gray-300 text-brand-700 focus:ring-brand-500"
+                              />
+                              <span className="text-sm text-gray-900">{formatCowIdentity(animal)}</span>
+                            </label>
+                          ))
+                        )}
+                      </div>
+                    )}
+                  </div>
+                  <div className="form-control">
+                    <div className="mb-1.5 flex items-center gap-1.5">
+                      <span className="label-text">Animal cost type</span>
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <button type="button" className="inline-flex text-ink-muted transition-colors hover:text-brand" aria-label="Explain cost classifications">
+                            <Info size={14} aria-hidden="true" />
+                          </button>
+                        </PopoverTrigger>
+                        <PopoverContent align="start" sideOffset={6} className="w-80 space-y-3">
+                          <div className="space-y-2 text-xs leading-relaxed text-slate-600">
+                            {COST_CLASS_DEFINITIONS.map(([value, definition]) => (
+                              <div key={value}>
+                                <p className="font-bold text-slate-900">{COST_CLASSES.find(([classValue]) => classValue === value)?.[1]}</p>
+                                <p>{definition}</p>
+                              </div>
+                            ))}
+                          </div>
+                        </PopoverContent>
+                      </Popover>
+                    </div>
+                    <select name="animal_cost_type" value={formData.animal_cost_type} onChange={handleChange} className="input-machined" disabled={!hasSelectedAnimals}>
                       <option value="">Select cost type</option>
                       <option value="PURCHASE">Purchase</option><option value="CALF_FEED">Calf feed</option><option value="HEIFER_FEED">Heifer feed</option><option value="BREEDING">Breeding</option><option value="VETERINARY">Veterinary</option><option value="LABOR">Labor</option><option value="HOUSING">Housing</option><option value="OVERHEAD">Overhead</option><option value="OTHER">Other</option>
                     </select>
-                  </label>
+                  </div>
                 </div>
-                {isAnimalAllocationIncomplete && <p className="text-xs text-danger">Select a cost type to assign this expense to the animal.</p>}
+                {!hasSelectedAnimals && <p className="text-xs text-danger">Select at least one cow for this animal cost.</p>}
+                {hasSelectedAnimals && isAnimalAllocationIncomplete && <p className="text-xs text-danger">Select a cost type to assign this expense to the selected cows.</p>}
               </>
             )}
           </div>

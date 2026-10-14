@@ -7,6 +7,7 @@ globalThis.React = React;
 
 const backendMocks = vi.hoisted(() => ({
   listLedgerEntries: vi.fn(),
+  listAnimals: vi.fn(),
 }));
 
 vi.mock('../../../hooks/useTenant', () => ({
@@ -19,7 +20,7 @@ vi.mock('../../../contexts/AuthContext', () => ({
 
 vi.mock('../../../lib/backendApi', () => ({
   financeApi: { listLedgerEntries: backendMocks.listLedgerEntries },
-  herdApi: { list: vi.fn() },
+  herdApi: { list: backendMocks.listAnimals },
   getApiErrorMessage: (error) => error?.message || 'Request failed',
 }));
 
@@ -67,6 +68,10 @@ beforeEach(() => {
   backendMocks.listLedgerEntries.mockImplementation((params) => (
     Promise.resolve(params.search_query ? auntieResponse : allAccountsResponse)
   ));
+  backendMocks.listAnimals.mockResolvedValue([
+    { id: 'C-007', name: 'C-007' },
+    { id: '006', name: '006' },
+  ]);
 });
 
 describe('FinancialLedger summaries', () => {
@@ -94,5 +99,23 @@ describe('FinancialLedger summaries', () => {
         search_query: 'Auntie',
       }));
     });
+  });
+
+  it('toggles selected animals through a collapsible checkbox list', async () => {
+    renderLedger();
+
+    const expenseButtons = screen.getAllByRole('button', { name: 'Log Expense' });
+    fireEvent.click(screen.getAllByRole('button', { name: 'Log Expense' })[0]);
+    fireEvent.click(screen.getByRole('button', { name: 'Select Animals (0 selected)' }));
+
+    const cowOne = await screen.findByLabelText('C-007');
+    const cowTwo = await screen.findByLabelText('006');
+
+    fireEvent.click(cowOne);
+    fireEvent.click(cowTwo);
+
+    expect(screen.getByRole('button', { name: 'Select Animals (2 selected)' })).toBeTruthy();
+    expect(cowOne.checked).toBe(true);
+    expect(cowTwo.checked).toBe(true);
   });
 });

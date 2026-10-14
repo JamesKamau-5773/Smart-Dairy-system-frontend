@@ -6,20 +6,46 @@ const durableSessionStore = localforage.createInstance({
   storeName: 'authenticated_session',
 });
 
+function isValidSession(session) {
+  return session
+    && typeof session === 'object'
+    && typeof session.token === 'string'
+    && session.token.trim().length > 0;
+}
+
 export async function loadSession() {
   const activeSession = sessionStorage.getItem(SESSION_KEY);
-  if (activeSession) return JSON.parse(activeSession);
+  if (activeSession) {
+    try {
+      const parsed = JSON.parse(activeSession);
+      return isValidSession(parsed) ? parsed : null;
+    } catch {
+      sessionStorage.removeItem(SESSION_KEY);
+      return null;
+    }
+  }
 
   const durableSession = await durableSessionStore.getItem(SESSION_KEY);
-  if (durableSession) {
+  if (isValidSession(durableSession)) {
     sessionStorage.setItem(SESSION_KEY, JSON.stringify(durableSession));
+    return durableSession;
   }
-  return durableSession;
+
+  if (durableSession) {
+    await durableSessionStore.removeItem(SESSION_KEY);
+  }
+  return null;
 }
 
 export async function saveSession(session) {
-  sessionStorage.setItem(SESSION_KEY, JSON.stringify(session));
-  await durableSessionStore.setItem(SESSION_KEY, session);
+  const normalizedSession = isValidSession(session) ? session : null;
+  if (!normalizedSession) {
+    throw new Error('Authentication response is missing an access token.');
+  }
+
+  sessionStorage.setItem(SESSION_KEY, JSON.stringify(normalizedSession));
+  await durableSessionStore.setItem(SESSION_KEY, normalizedSession);
+  return normalizedSession;
 }
 
 export async function clearSession() {

@@ -26,8 +26,14 @@ export const buildLedgerEntryPayload = (formData, transactionType) => {
     if (formData.cost_class) {
       payload.cost_class = formData.cost_class;
     }
-    if (formData.animal_id && formData.animal_cost_type) {
-      payload.animal_id = Number(formData.animal_id);
+    const animalIds = Array.isArray(formData.animal_ids)
+      ? formData.animal_ids
+      : formData.animal_id
+        ? [formData.animal_id]
+        : [];
+
+    if (animalIds.length > 0 && formData.animal_cost_type) {
+      payload.animal_ids = animalIds.map((animalId) => Number(animalId)).filter((animalId) => Number.isFinite(animalId));
       payload.animal_cost_type = formData.animal_cost_type;
     }
   }

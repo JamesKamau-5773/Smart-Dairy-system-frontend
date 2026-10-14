@@ -1,5 +1,20 @@
 import React from 'react';
-import { X, Save, Building, CreditCard } from 'lucide-react';
+import { X, Save, Building, CreditCard, Info } from 'lucide-react';
+import { Popover, PopoverContent, PopoverTrigger } from '../ui/popover';
+
+const COST_CLASSES = [
+  ['production_cost', 'Direct Farm Costs'],
+  ['operating_cost', 'General Running Costs'],
+  ['customer_acquisition', 'Selling & Delivery'],
+  ['capital_expenditure', 'Major Purchases (Assets)'],
+];
+
+const COST_CLASS_DEFINITIONS = [
+  ['production_cost', 'Money spent directly on the cows and milk production, such as feeds, supplements, AI services, and veterinary bills.'],
+  ['operating_cost', 'Day-to-day farm overhead not directly tied to a specific cow, like electricity, water, fuel, and permanent staff wages.'],
+  ['customer_acquisition', 'Costs related to getting your milk to the buyer, including transport, packaging, marketing, and vendor fees.'],
+  ['capital_expenditure', 'Big, long-term investments for the farm, such as buying new machinery, building sheds, or purchasing new livestock.'],
+];
 
 const INITIAL_STATE = {
   date: '',
@@ -8,7 +23,7 @@ const INITIAL_STATE = {
   itemName: '',
   quantity: '',
   category: 'Feed Purchase',
-  costClass: 'COGS',
+  costClass: 'production_cost',
   paymentMethod: 'M-Pesa',
   reference: '',
   notes: ''
@@ -61,7 +76,26 @@ export default function ExpenseModal({ isOpen, onClose, onSave }) {
           </div>
 
           <div>
-            <label htmlFor="expense-cost-class" className="block text-[10px] font-black text-ink-muted uppercase mb-1.5">Cost Classification</label>
+            <div className="mb-1.5 flex items-center gap-1.5">
+              <label htmlFor="expense-cost-class" className="block text-[10px] font-black text-ink-muted uppercase">Cost Classification</label>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <button type="button" className="inline-flex text-slate-500 transition-colors hover:text-brand" aria-label="Explain cost classifications">
+                    <Info size={14} aria-hidden="true" />
+                  </button>
+                </PopoverTrigger>
+                <PopoverContent align="start" sideOffset={6} className="w-80 space-y-3">
+                  <div className="space-y-2 text-xs leading-relaxed text-slate-600">
+                    {COST_CLASS_DEFINITIONS.map(([value, definition]) => (
+                      <div key={value}>
+                        <p className="font-bold text-slate-900">{COST_CLASSES.find(([classValue]) => classValue === value)?.[1]}</p>
+                        <p>{definition}</p>
+                      </div>
+                    ))}
+                  </div>
+                </PopoverContent>
+              </Popover>
+            </div>
             <select
               id="expense-cost-class"
               required
@@ -69,10 +103,7 @@ export default function ExpenseModal({ isOpen, onClose, onSave }) {
               value={formData.costClass}
               onChange={handleChange}
               className="w-full px-3 py-2 border border-slate-300 rounded-lg text-xs font-bold bg-white">
-              <option value="COGS">Production cost</option>
-              <option value="CUSTOMER_ACQUISITION">Customer acquisition</option>
-              <option value="OPERATING">Operating cost</option>
-              <option value="CAPITAL">Capital expenditure</option>
+              {COST_CLASSES.map(([value, label]) => <option key={value} value={value}>{label}</option>)}
             </select>
           </div>
 

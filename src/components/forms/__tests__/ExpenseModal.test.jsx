@@ -21,7 +21,7 @@ describe('ExpenseModal', () => {
       itemName: '  Maize Meal  ',
       item_name: 'Maize Meal',
       quantity: 50,
-      cost_class: 'COGS',
+      cost_class: 'production_cost',
       paidTo: 'Kamau Feeds',
     }));
     expect(onClose).toHaveBeenCalledOnce();

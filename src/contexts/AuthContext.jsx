@@ -22,14 +22,24 @@ export function AuthProvider({ children }) {
           tenantRef.tenantId = restoredUser.tenant_id ?? restoredUser.cooperative_id ?? null;
           tenantRef.farmId = restoredUser.farm_id ?? null;
           setCurrentUser(restoredUser);
-          setIsLoading(false);
 
-          // If we already have a restored session, keep it authoritative for this reload.
-          // The backend cookie can belong to a different browser session, which would
-          // otherwise overwrite the user's active farm and role after refresh.
+          // Validate the saved token with the backend before continuing.
+          // A stale, revoked, or incomplete session must not remain authenticated.
+          const verifiedUser = await authApi.me();
+          if (cancelled) return;
+
+          const normalizedUser = normalizeSessionUser(verifiedUser);
+          tenantRef.tenantId = normalizedUser.tenant_id ?? normalizedUser.cooperative_id ?? null;
+          tenantRef.farmId = normalizedUser.farm_id ?? null;
+          setCurrentUser(normalizedUser);
+          await saveSession(normalizedUser);
+          setIsLoading(false);
           return;
         } catch (error) {
-          console.warn('Failed to restore saved session.', error);
+          console.warn('Failed to validate saved session.', error);
+          await clearSession();
+          tenantRef.tenantId = null;
+          tenantRef.farmId = null;
         }
       }
 

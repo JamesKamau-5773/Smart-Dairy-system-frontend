@@ -129,9 +129,15 @@ export function normalizeSessionUser(payload) {
     return null;
   }
 
+  const token = session.token ?? session.access_token ?? session.accessToken ?? payload?.token ?? payload?.access_token ?? payload?.accessToken ?? null;
+
+  if (typeof session !== 'object' || !token || !String(token).trim()) {
+    throw new Error('Authentication response is missing an access token.');
+  }
+
   if (typeof session !== 'object') {
     return {
-      token: payload?.access_token ?? payload?.accessToken ?? payload?.token ?? null,
+      token: token,
       raw: payload,
     };
   }
