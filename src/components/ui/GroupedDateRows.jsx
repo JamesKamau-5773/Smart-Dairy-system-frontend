@@ -43,37 +43,51 @@ function buildGroups(items, getDate) {
     }));
 }
 
-function GroupHeader({ level, label, items, isOpen, onToggle, renderGroupMeta, colSpan, dateRowClassName }) {
+function GroupHeader({ level, label, items, isOpen, onToggle, renderGroupMeta, renderGroupCount, renderGroupTotal, labelColSpan, colSpan, dateRowClassName, yearRowClassName, monthRowClassName }) {
   const padding = level === 'year' ? 'px-5 py-3' : level === 'month' ? 'px-7 py-2.5' : 'px-9 py-2';
   const styles = level === 'year'
-    ? 'bg-brand/10 text-brand text-sm font-bold'
+    ? yearRowClassName || 'bg-brand/10 text-brand text-sm font-bold'
     : level === 'month'
-      ? 'bg-brand/5 text-brand text-xs font-bold'
+      ? monthRowClassName || 'bg-brand/5 text-brand text-xs font-bold'
       : dateRowClassName || 'bg-surface-raised text-ink text-xs font-semibold';
+
+  const groupCount = renderGroupCount ? renderGroupCount(items, level) : null;
+  const content = (
+    <button
+      type="button"
+      onClick={onToggle}
+      className="flex w-full items-center gap-2 text-left"
+      aria-expanded={isOpen}
+    >
+      {isOpen ? <ChevronDown size={level === 'year' ? 16 : 14} /> : <ChevronRight size={level === 'year' ? 16 : 14} />}
+      <span>{label}</span>
+      {renderGroupCount && (
+        <span className="rounded-full bg-black/5 px-1.5 py-0.5 text-[10px] font-medium text-ink-muted">
+          ({groupCount})
+        </span>
+      )}
+      {!renderGroupTotal && !renderGroupCount && (
+        <span className="ml-auto text-[11px] font-medium text-ink-muted">
+          {renderGroupMeta ? renderGroupMeta(items, level) : `${items.length} ${items.length === 1 ? 'entry' : 'entries'}`}
+        </span>
+      )}
+    </button>
+  );
 
   return (
     <tr className={styles}>
-      <td colSpan={colSpan} className={padding}>
-        <button
-          type="button"
-          onClick={onToggle}
-          className="flex w-full items-center justify-between gap-3 text-left"
-          aria-expanded={isOpen}
-        >
-          <span className="flex items-center gap-2">
-            {isOpen ? <ChevronDown size={level === 'year' ? 16 : 14} /> : <ChevronRight size={level === 'year' ? 16 : 14} />}
-            {label}
-          </span>
-          <span className="text-[11px] font-medium text-ink-muted">
-            {renderGroupMeta ? renderGroupMeta(items, level) : `${items.length} ${items.length === 1 ? 'entry' : 'entries'}`}
-          </span>
-        </button>
-      </td>
+      {renderGroupTotal ? (
+        <>
+          <td colSpan={labelColSpan} className={padding}>{content}</td>
+          <td className="p-4 text-right text-[11px] font-semibold tabular-nums">{renderGroupTotal(items, level)}</td>
+          {colSpan - labelColSpan - 1 > 0 && <td colSpan={colSpan - labelColSpan - 1} />}
+        </>
+      ) : <td colSpan={colSpan} className={padding}>{content}</td>}
     </tr>
   );
 }
 
-export default function GroupedDateRows({ items, getDate, renderItem, renderGroupMeta, colSpan = 1, empty, dateRowClassName }) {
+export default function GroupedDateRows({ items, getDate, renderItem, renderGroupMeta, renderGroupCount, renderGroupTotal, colSpan = 1, labelColSpan = colSpan - 1, empty, dateRowClassName, yearRowClassName, monthRowClassName }) {
   const groups = useMemo(() => buildGroups(items, getDate), [items, getDate]);
   const latestKeys = groups[0] && groups[0].months[0]?.dates[0]
     ? [
@@ -105,7 +119,7 @@ export default function GroupedDateRows({ items, getDate, renderItem, renderGrou
 
     return (
       <Fragment key={yearKey}>
-        <GroupHeader level="year" label={yearGroup.year} items={yearItems} isOpen={yearOpen} onToggle={() => toggle(yearKey)} renderGroupMeta={renderGroupMeta} colSpan={colSpan} />
+        <GroupHeader level="year" label={yearGroup.year} items={yearItems} isOpen={yearOpen} onToggle={() => toggle(yearKey)} renderGroupMeta={renderGroupMeta} renderGroupCount={renderGroupCount} renderGroupTotal={renderGroupTotal} labelColSpan={labelColSpan} colSpan={colSpan} dateRowClassName={dateRowClassName} yearRowClassName={yearRowClassName} monthRowClassName={monthRowClassName} />
         {yearOpen && yearGroup.months.map((monthGroup) => {
           const monthKey = `${yearKey}/${monthGroup.month}`;
           const monthItems = monthGroup.dates.flatMap((date) => date.items);
@@ -113,7 +127,7 @@ export default function GroupedDateRows({ items, getDate, renderItem, renderGrou
 
           return (
             <Fragment key={monthKey}>
-              <GroupHeader level="month" label={monthGroup.month} items={monthItems} isOpen={monthOpen} onToggle={() => toggle(monthKey)} renderGroupMeta={renderGroupMeta} colSpan={colSpan} />
+              <GroupHeader level="month" label={monthGroup.month} items={monthItems} isOpen={monthOpen} onToggle={() => toggle(monthKey)} renderGroupMeta={renderGroupMeta} renderGroupCount={renderGroupCount} renderGroupTotal={renderGroupTotal} labelColSpan={labelColSpan} colSpan={colSpan} dateRowClassName={dateRowClassName} yearRowClassName={yearRowClassName} monthRowClassName={monthRowClassName} />
               {monthOpen && monthGroup.dates.map((dateGroup) => {
                 const dateKey = `${monthKey}/${dateGroup.date}`;
                 const dateOpen = expanded.has(dateKey);
@@ -123,7 +137,7 @@ export default function GroupedDateRows({ items, getDate, renderItem, renderGrou
 
                 return (
                   <Fragment key={dateKey}>
-                    <GroupHeader level="date" label={dateLabel} items={dateGroup.items} isOpen={dateOpen} onToggle={() => toggle(dateKey)} renderGroupMeta={renderGroupMeta} colSpan={colSpan} dateRowClassName={dateRowClassName} />
+                    <GroupHeader level="date" label={dateLabel} items={dateGroup.items} isOpen={dateOpen} onToggle={() => toggle(dateKey)} renderGroupMeta={renderGroupMeta} renderGroupCount={renderGroupCount} renderGroupTotal={renderGroupTotal} labelColSpan={labelColSpan} colSpan={colSpan} dateRowClassName={dateRowClassName} yearRowClassName={yearRowClassName} monthRowClassName={monthRowClassName} />
                     {dateOpen && dateGroup.items.map((item, index) => renderItem(item, index))}
                   </Fragment>
                 );
