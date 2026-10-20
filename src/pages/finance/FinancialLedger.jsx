@@ -202,7 +202,7 @@ const LedgerEntryFormModal = ({ onClose, transactionType, farmId, tenantId }) =>
       if (transactionType === 'income' && formData.incomePayerType === 'customer') {
         return financeApi.recordCustomerPayment(newEntry.customer_id, {
           amount: newEntry.amount,
-          reference_code: newEntry.reference_code,
+          ...(newEntry.reference_code?.trim() ? { reference_code: newEntry.reference_code.trim() } : {}),
           note: newEntry.description,
           date: newEntry.date,
           payment_method: newEntry.payment_method,
@@ -250,7 +250,8 @@ const LedgerEntryFormModal = ({ onClose, transactionType, farmId, tenantId }) =>
     ? !formData.customer_id
     : !formData.income_source.trim();
   const isCustomerPayment = transactionType === 'income' && formData.incomePayerType === 'customer';
-  const isIncomeFormInvalid = !formData.date || !formData.amount || !formData.category || isIncomeCounterpartyMissing || (isCustomerPayment && !formData.reference_code.trim());
+  const isPaymentReferenceRequired = isCustomerPayment && formData.paymentMethod !== 'Cash';
+  const isIncomeFormInvalid = !formData.date || !formData.amount || !formData.category || isIncomeCounterpartyMissing || (isPaymentReferenceRequired && !formData.reference_code.trim());
   const hasSelectedAnimals = formData.animal_ids.length > 0;
   const isAnimalAllocationIncomplete = hasSelectedAnimals !== Boolean(formData.animal_cost_type);
   const isExpenseFormInvalid = !formData.date || !formData.amount || !formData.category || !formData.party.trim() || !formData.item_name.trim() || !formData.quantity || !hasSelectedAnimals || isAnimalAllocationIncomplete;
@@ -311,7 +312,7 @@ const LedgerEntryFormModal = ({ onClose, transactionType, farmId, tenantId }) =>
                     </select>
                   </label>
                 </div>
-                <label className="form-control"><span className="label-text">Payment reference{isCustomerPayment ? ' (required)' : ''}</span><input type="text" name="reference_code" value={formData.reference_code} onChange={handleChange} className="input-machined" placeholder="M-Pesa, cash receipt, or bank transaction code" required={isCustomerPayment} /></label>
+                <label className="form-control"><span className="label-text">Payment reference{isPaymentReferenceRequired ? ' (required)' : ' (optional)'}</span><input type="text" name="reference_code" value={formData.reference_code} onChange={handleChange} className="input-machined" placeholder={formData.paymentMethod === 'Cash' ? 'Optional for cash payments' : 'M-Pesa or bank transaction code'} required={isPaymentReferenceRequired} /></label>
                 <label className="form-control"><span className="label-text">Income notes</span><textarea name="description" value={formData.description} onChange={handleChange} className="input-machined" rows="2" placeholder="What was this payment for?" /></label>
               </>
             ) : (
@@ -707,8 +708,18 @@ const FinancialLedger = () => {
                   items={filteredTransactions}
                   getDate={(tx) => tx.date}
                   colSpan={9}
-                  dateRowClassName="bg-brand-50 text-brand-900 text-xs font-bold"
-                  renderGroupMeta={(items) => `${items.length} ${items.length === 1 ? 'transaction' : 'transactions'}`}
+                  labelColSpan={5}
+                  yearRowClassName="bg-gray-100 text-gray-900 text-sm font-bold"
+                  monthRowClassName="bg-gray-50 text-gray-800 text-xs font-bold"
+                  dateRowClassName="bg-white text-gray-700 text-xs font-semibold"
+                  renderGroupCount={(items) => items.length}
+                  renderGroupTotal={(items) => {
+                    const total = items.reduce((sum, tx) => {
+                      const amount = Number(tx.amount);
+                      return sum + (Number.isFinite(amount) ? amount : 0);
+                    }, 0);
+                    return <Money amount={total} size="xs" showSign={total < 0} />;
+                  }}
                   renderItem={(tx) => (
                 <tr key={tx.id} className="hover:bg-surface-raised transition-colors">
                   <td className="p-4 text-sm text-ink-muted font-medium font-mono">{format(parseISO(tx.date), 'PPP')}</td>

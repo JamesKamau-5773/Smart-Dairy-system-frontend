@@ -61,10 +61,20 @@ export function buildBreedingLogPayload(fields, cowId, cowName) {
     cowId,
     cow_name: cowName,
     event_date: fields.date,
+    insemination_time: fields.aiTime,
     sire_id: fields.sireCode.trim(),
     notes: fields.description.trim(),
     eventType: 'INSEMINATION',
     semenSource: fields.semenSource,
+    technician_name: fields.technician,
+    owner_name: fields.ownerName,
+    farm_location: fields.farmLocation,
+    certificate_number: fields.certificateNumber,
+    service_fee: fields.serviceFee,
+    is_repeat_service: fields.isRepeatService,
+    sire_pta_scores: fields.semenSource === 'vet_provided' && fields.milkVolumePta !== ''
+      ? { milk_volume: Number(fields.milkVolumePta) }
+      : null,
   });
 }
 
