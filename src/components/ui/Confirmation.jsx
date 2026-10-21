@@ -1,4 +1,5 @@
 import React from 'react';
+import { createPortal } from 'react-dom';
 import { AlertTriangle, CheckCircle2, Info, XCircle } from 'lucide-react';
 
 /**
@@ -49,9 +50,9 @@ export default function Confirmation({
   const config = typeStyles[type] || typeStyles.warning;
   const Icon = config.icon;
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-ink/50 backdrop-blur-sm">
-      <div className="w-full max-w-sm rounded-2xl bg-surface p-6 ">
+  return createPortal(
+    <div className="fixed inset-0 z-[100] flex items-start justify-center overflow-y-auto overscroll-contain bg-ink/50 p-3 backdrop-blur-sm touch-pan-y sm:items-center sm:p-6">
+      <div role="dialog" aria-modal="true" aria-label={title} className="my-auto max-h-[calc(100dvh-1.5rem)] w-full max-w-sm overflow-y-auto overscroll-contain rounded-2xl bg-surface p-5 touch-pan-y sm:p-6">
         {/* Icon & Title */}
         <div className="mb-4 flex items-start gap-3">
           <div className={`flex-shrink-0 ${config.iconColor}`}>
@@ -90,7 +91,8 @@ export default function Confirmation({
           {title}: {message}
         </div>
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }
 

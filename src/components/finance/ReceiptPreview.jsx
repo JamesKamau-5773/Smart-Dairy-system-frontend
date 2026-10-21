@@ -1,12 +1,13 @@
 import { BadgeCheck, CalendarDays, CreditCard, Download, Hash, ReceiptText, Share2, UserRound, X } from 'lucide-react';
+import { createPortal } from 'react-dom';
 import { formatMoney, formatReceiptDate } from '../../lib/receipt';
 
 export default function ReceiptPreview({ receipt, isOpen, onClose, onDownload, onShare, isDownloading }) {
   if (!isOpen || !receipt) return null;
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 animate-reveal-fast">
-      <div className="w-full max-w-xl overflow-hidden rounded-lg border border-ink/10 bg-white ">
+  return createPortal(
+    <div className="fixed inset-0 z-[100] flex items-start justify-center overflow-y-auto overscroll-contain bg-black/50 p-3 animate-reveal-fast touch-pan-y sm:items-center sm:p-4">
+      <div role="dialog" aria-modal="true" aria-label="Payment receipt" className="my-auto max-h-[calc(100dvh-1.5rem)] w-full max-w-xl overflow-y-auto overscroll-contain rounded-lg border border-ink/10 bg-white touch-pan-y">
         <div className="border-b-4 border-brand px-5 py-5">
           <div className="flex items-start justify-between gap-4">
             <div>
@@ -50,6 +51,7 @@ export default function ReceiptPreview({ receipt, isOpen, onClose, onDownload, o
           </div>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }

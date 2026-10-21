@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { createPortal } from 'react-dom';
 import { X, Save, Edit2 } from 'lucide-react';
 import { resolveIngredientStandards } from '../../lib/feedNutritionStandards';
 import { proteinGramsPerKgToInput, proteinInputToGramsPerKg } from '../../lib/feedNutritionUnits';
@@ -57,12 +58,12 @@ export default function EditResourceModal({ isOpen, onClose, item, onSave }) {
 
   if (!isOpen) return null;
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-ink-strong/30 backdrop-blur-sm animate-in fade-in duration-200">
-      <div className="bg-white rounded-xl  w-full max-w-lg overflow-hidden flex flex-col">
+  return createPortal(
+    <div className="fixed inset-0 z-[100] flex items-start justify-center overflow-y-auto overscroll-contain bg-ink-strong/30 p-3 backdrop-blur-sm animate-in fade-in duration-200 touch-pan-y sm:items-center sm:p-4">
+      <section role="dialog" aria-modal="true" aria-label="Edit resource" className="my-auto flex max-h-[calc(100dvh-1.5rem)] min-h-0 w-full max-w-lg flex-col overflow-hidden rounded-xl bg-white shadow-2xl">
 
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-5 border-b border-slate-100 bg-slate-50">
+        <div className="flex shrink-0 items-center justify-between px-4 py-4 border-b border-slate-100 bg-slate-50 sm:px-6 sm:py-5">
           <div className="flex items-center gap-3">
             <div className="bg-slate-200 p-2 rounded-lg text-slate-600">
               <Edit2 size={18} strokeWidth={2.5} />
@@ -73,6 +74,7 @@ export default function EditResourceModal({ isOpen, onClose, item, onSave }) {
             </div>
           </div>
           <button
+            type="button"
             onClick={onClose}
             className="text-ink-muted hover:text-danger p-1.5 rounded-md hover:bg-danger/10 transition-colors"
           >
@@ -81,8 +83,8 @@ export default function EditResourceModal({ isOpen, onClose, item, onSave }) {
         </div>
 
         {/* Body */}
-        <form onSubmit={handleSubmit}>
-          <div className="p-6 space-y-5">
+        <form onSubmit={handleSubmit} className="flex min-h-0 flex-1 flex-col overflow-hidden">
+          <div className="min-h-0 flex-1 space-y-5 overflow-y-auto overscroll-contain p-4 touch-pan-y sm:p-6">
 
             <div className="grid grid-cols-2 gap-5">
               <div>
@@ -208,7 +210,7 @@ export default function EditResourceModal({ isOpen, onClose, item, onSave }) {
           </div>
 
           {/* Footer Actions */}
-          <div className="p-6 bg-slate-50 border-t border-slate-100 flex gap-4">
+          <div className="flex shrink-0 gap-3 border-t border-slate-100 bg-slate-50 p-4 sm:gap-4 sm:p-6">
             <button
               type="button"
               onClick={onClose}
@@ -224,7 +226,8 @@ export default function EditResourceModal({ isOpen, onClose, item, onSave }) {
             </button>
           </div>
         </form>
-      </div>
-    </div>
+      </section>
+    </div>,
+    document.body,
   );
 }

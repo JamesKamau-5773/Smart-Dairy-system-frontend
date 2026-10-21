@@ -159,8 +159,8 @@ export default function MilkDropReports() {
       </div>
 
       {investigateModal.isOpen && createPortal((
-        <div className="fixed inset-0 z-[100] flex items-start justify-center overflow-y-auto p-3 backdrop-blur-sm sm:items-center sm:p-4">
-          <div className="my-auto flex max-h-[calc(100dvh-1.5rem)] w-full max-w-3xl flex-col overflow-hidden rounded-2xl bg-surface shadow-2xl sm:max-h-[90vh]">
+        <div className="fixed inset-0 z-[100] flex items-start justify-center overflow-y-auto overscroll-contain p-3 backdrop-blur-sm touch-pan-y sm:items-center sm:p-4">
+          <div role="dialog" aria-modal="true" aria-label="Investigate milk drop" className="my-auto flex max-h-[calc(100dvh-1.5rem)] w-full max-w-3xl flex-col overflow-hidden rounded-2xl bg-surface shadow-2xl sm:max-h-[90dvh]">
             <div className="flex shrink-0 items-start justify-between border-b border-ink/10 p-4 sm:p-6">
               <div>
                 <h3 className="text-lg font-bold">Investigate {formatCowIdentity(investigateModal.log)}</h3>
