@@ -1,3 +1,4 @@
+import { format, isValid, parseISO } from 'date-fns';
 import { Skeleton } from '../../ui';
 import { getAvatarLabel } from './animalRecordUtils';
 
@@ -7,6 +8,11 @@ export default function AnimalSummaryCards({ animal, isLoading }) {
   const ageLabel = displayAnimal.age ?? (displayAnimal.ageMonths !== undefined && displayAnimal.ageMonths !== null
     ? `${Math.floor(Number(displayAnimal.ageMonths) / 12)}y ${Number(displayAnimal.ageMonths) % 12}m`
     : 'N/A');
+  const birthDate = displayAnimal.dateOfBirth ?? displayAnimal.date_of_birth ?? displayAnimal.dob;
+  const parsedBirthDate = birthDate ? parseISO(String(birthDate)) : null;
+  const birthDateLabel = parsedBirthDate && isValid(parsedBirthDate)
+    ? format(parsedBirthDate, 'MMM d, yyyy')
+    : 'Not recorded';
 
   return (
     <div className="grid grid-cols-1 gap-6 mb-8 md:grid-cols-2 lg:grid-cols-4">
@@ -35,6 +41,10 @@ export default function AnimalSummaryCards({ animal, isLoading }) {
           <div className="mb-4">
             <div className="mb-1 text-[10px] font-bold uppercase tracking-wider text-ink-muted">Current Age</div>
             <div className="text-xl font-black text-ink-strong">{isLoading ? <Skeleton className="h-6 w-24" /> : ageLabel}</div>
+          </div>
+          <div className="mb-4">
+            <div className="mb-1 text-[10px] font-bold uppercase tracking-wider text-ink-muted">Date of Birth</div>
+            <div className="text-sm font-semibold text-ink-strong">{isLoading ? <Skeleton className="h-4 w-28" /> : birthDateLabel}</div>
           </div>
         </div>
         <div className="border-t border-ink/10 pt-4">
