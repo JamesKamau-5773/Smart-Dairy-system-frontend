@@ -1,10 +1,11 @@
 export const buildLedgerEntryPayload = (formData, transactionType) => {
+  const notes = String(formData.description || '').trim();
   const payload = {
     date: formData.date,
     amount: parseFloat(formData.amount),
     payment_method: formData.paymentMethod,
     reference_code: formData.reference_code,
-    description: formData.description,
+    description: notes,
     type: transactionType,
     category: formData.category,
   };
@@ -16,11 +17,16 @@ export const buildLedgerEntryPayload = (formData, transactionType) => {
       payload.income_source = formData.income_source.trim();
     }
   } else {
+    if (formData.category === 'Feed Purchase' && formData.quantity) {
+      const quantityUnit = String(formData.quantity_unit || 'kg').trim();
+      const quantityNote = `Purchased quantity: ${formData.quantity} ${quantityUnit}`;
+      payload.description = [quantityNote, notes].filter(Boolean).join(' · ');
+    }
     payload.paid_to = formData.party.trim();
     if (formData.item_name && String(formData.item_name).trim()) {
       payload.item_name = String(formData.item_name).trim();
     }
-    if (formData.quantity) {
+    if (formData.category === 'Feed Purchase' && formData.quantity) {
       payload.quantity = parseFloat(formData.quantity);
     }
     if (formData.cost_class) {

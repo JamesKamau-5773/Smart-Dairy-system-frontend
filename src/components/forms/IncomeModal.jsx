@@ -1,5 +1,6 @@
 // src/components/forms/IncomeModal.jsx
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { X, Save, Calendar, User, Briefcase, CreditCard } from 'lucide-react';
 
 const INITIAL_STATE = { 
@@ -35,9 +36,9 @@ export default function IncomeModal({ isOpen, onClose, onSave, customers = [] })
 
   if (!isOpen) return null;
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-ink-strong/30 backdrop-blur-sm">
-      <div className="bg-white rounded-xl  w-full max-w-xl border border-slate-200 overflow-hidden">
+  return createPortal(
+    <div className="fixed inset-0 z-[100] flex items-start justify-center overflow-y-auto overscroll-contain bg-ink-strong/30 p-3 backdrop-blur-sm touch-pan-y sm:items-center sm:p-4">
+      <div role="dialog" aria-modal="true" aria-label="Log new income" className="my-auto max-h-[calc(100dvh-1.5rem)] w-full max-w-xl overflow-y-auto overscroll-contain rounded-xl border border-slate-200 bg-white touch-pan-y">
         {/* Header */}
         <div className="flex justify-between items-center px-6 py-4 border-b border-slate-100 bg-slate-50">
           <h3 className="font-black text-ink text-sm uppercase tracking-widest">Log New Income</h3>
@@ -136,6 +137,7 @@ export default function IncomeModal({ isOpen, onClose, onSave, customers = [] })
           </div>
         </form>
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }

@@ -50,7 +50,7 @@ const FastMilkUI = ({
 
   if (saveStatus === 'success') {
     return (
-      <div className="w-full max-w-md bg-white rounded-3xl p-12 flex flex-col items-center justify-center text-center space-y-4 animate-reveal min-h-[400px] ">
+      <div className="my-auto max-h-[calc(100dvh-2rem)] w-full max-w-md overflow-y-auto overscroll-contain bg-white rounded-3xl p-6 flex flex-col items-center justify-center text-center space-y-4 animate-reveal touch-pan-y sm:p-12 sm:max-h-[90dvh]">
         <CheckCircle2 size={64} className="text-success scale-150 mb-2" />
         <h3 className="font-black text-3xl text-ink">Saved!</h3>
         <p className="text-ink-muted font-bold">Ready for the next cow...</p>
@@ -59,7 +59,7 @@ const FastMilkUI = ({
   }
 
   return (
-    <div className="w-full max-w-md mt-20 bg-white rounded-3xl  border border-ink/10 overflow-hidden relative animate-reveal">
+    <div className="my-auto max-h-[calc(100dvh-2rem)] w-full max-w-md overflow-y-auto overscroll-contain bg-white rounded-3xl border border-ink/10 relative animate-reveal touch-pan-y sm:max-h-[90dvh]">
       {message && (
         <div className="fixed top-4 right-4 z-[60] w-[min(92vw,430px)]">
           <AlertBanner type={messageType} title="Fast Log" message={message} onDismiss={onDismissMessage} autoDismiss={6000} />
@@ -412,7 +412,7 @@ export default function FastMilkLog({ onClose, onSaveSuccess, onDeleteSuccess, m
   }, []);
 
   return createPortal(
-    <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-slate-900/50 p-4">
+    <div className="fixed inset-0 z-[9999] flex items-start justify-center overflow-y-auto overscroll-contain bg-slate-900/50 p-3 touch-pan-y sm:items-center sm:p-4">
       <FastMilkUI
         herd={herd}
         displayHerd={displayHerd}

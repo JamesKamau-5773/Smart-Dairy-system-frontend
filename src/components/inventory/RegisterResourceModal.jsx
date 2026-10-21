@@ -39,14 +39,14 @@ export default function RegisterResourceModal({ isOpen, onClose, onRegister }) {
 
   const modalContent = (
     <div
-      className="fixed inset-0 z-50 overflow-y-auto bg-ink-strong/20 backdrop-blur-sm animate-in fade-in duration-200"
+      className="fixed inset-0 z-[100] overflow-y-auto overscroll-contain bg-ink-strong/20 backdrop-blur-sm animate-in fade-in duration-200 touch-pan-y"
       role="dialog"
       aria-modal="true"
       onClick={onClose}
     >
-      <div className="min-h-full flex items-start sm:items-center justify-center p-4">
+      <div className="flex min-h-full items-start justify-center p-3 sm:items-center sm:p-4">
         <div
-          className="bg-white rounded-[24px] w-full max-w-sm  max-h-[calc(100vh-2rem)] overflow-y-auto animate-in zoom-in-95 duration-200"
+          className="max-h-[calc(100dvh-1.5rem)] w-full max-w-sm overflow-y-auto overscroll-contain rounded-[24px] bg-white touch-pan-y animate-in zoom-in-95 duration-200"
           onClick={(e) => e.stopPropagation()}
         >
           <div className="p-8">

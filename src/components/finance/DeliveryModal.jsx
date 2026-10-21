@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
+import { createPortal } from 'react-dom';
 import { X, Save, Droplets } from 'lucide-react';
 
 const INITIAL_STATE = {
@@ -57,20 +58,20 @@ export default function DeliveryModal({ isOpen, onClose, onSave, delivery, custo
 
   if (!isOpen) return null;
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-ink-strong/30 backdrop-blur-sm">
-      <div className="bg-white rounded-xl  w-full max-w-xl border border-slate-200 overflow-hidden">
-        <div className="flex justify-between items-center px-6 py-4 border-b border-slate-100 bg-slate-50">
+  return createPortal(
+    <div className="fixed inset-0 z-[100] flex items-start justify-center overflow-y-auto overscroll-contain bg-ink-strong/30 p-3 backdrop-blur-sm touch-pan-y sm:items-center sm:p-4">
+      <section role="dialog" aria-modal="true" aria-label={isEditMode ? 'Edit milk delivery' : 'Log milk delivery'} className="my-auto flex max-h-[calc(100dvh-1.5rem)] min-h-0 w-full max-w-xl flex-col overflow-hidden rounded-xl border border-slate-200 bg-white shadow-2xl">
+        <div className="flex shrink-0 justify-between items-center px-6 py-4 border-b border-slate-100 bg-slate-50">
           <h3 className="font-black text-ink text-sm uppercase tracking-widest flex items-center gap-2">
             <Droplets size={16} className="text-brand" />
             {isEditMode ? 'Edit Milk Delivery' : 'Log Milk Delivery'}
           </h3>
-          <button type="button" onClick={onClose} className="p-1 hover:bg-slate-200 rounded transition-colors">
+          <button type="button" onClick={onClose} aria-label="Close milk delivery form" className="p-1 hover:bg-slate-200 rounded transition-colors">
             <X size={16} />
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="p-6 space-y-5">
+        <form onSubmit={handleSubmit} className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-4 space-y-5 touch-pan-y sm:p-6">
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label htmlFor="delivery-date" className="block text-[10px] font-black text-ink-muted uppercase mb-1.5">Delivery Date</label>
@@ -166,7 +167,8 @@ export default function DeliveryModal({ isOpen, onClose, onSave, delivery, custo
             </button>
           </div>
         </form>
-      </div>
-    </div>
+      </section>
+    </div>,
+    document.body,
   );
 }

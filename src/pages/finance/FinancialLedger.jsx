@@ -1,6 +1,7 @@
 import { useEffect, useState, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { format, parseISO } from 'date-fns';
+import { createPortal } from 'react-dom';
 import { Wallet, TrendingUp, TrendingDown, ChevronsRight, ListChecks, BadgeDollarSign, Info, Plus, X, Search, Filter, RotateCcw, ChevronDown, ChevronUp, PencilLine } from 'lucide-react';
 import { useTenant } from '../../hooks/useTenant';
 import { useAuth } from '../../contexts/AuthContext';
@@ -138,17 +139,17 @@ const LedgerCorrectionModal = ({ transaction, onClose, onSubmit, isPending }) =>
     });
   };
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
-      <form onSubmit={handleSubmit} className="w-full max-w-md rounded-lg bg-white ">
-        <div className="flex items-center justify-between border-b p-5">
+  return createPortal(
+    <div className="fixed inset-0 z-[100] flex items-start justify-center overflow-y-auto overscroll-contain bg-black/50 p-3 backdrop-blur-sm touch-pan-y sm:items-center sm:p-4">
+      <form role="dialog" aria-modal="true" aria-label="Correct expense classification" onSubmit={handleSubmit} className="my-auto flex max-h-[calc(100dvh-1.5rem)] w-full max-w-md flex-col overflow-y-auto overscroll-contain rounded-lg bg-white touch-pan-y">
+        <div className="flex shrink-0 items-center justify-between border-b p-5">
           <div>
             <h3 className="text-lg font-bold text-ink">Correct expense classification</h3>
             <p className="mt-1 text-sm text-ink-muted">The original entry will be voided and replaced with a linked corrected entry.</p>
           </div>
           <button type="button" onClick={onClose} disabled={isPending} className="rounded-full p-1 text-ink-muted hover:bg-gray-100" aria-label="Close correction form"><X size={20} /></button>
         </div>
-        <div className="space-y-4 p-5">
+        <div className="min-h-0 flex-1 space-y-4 overflow-y-auto p-4 touch-pan-y sm:p-5">
           <dl className="grid grid-cols-2 gap-x-4 gap-y-2 rounded-lg bg-surface-raised p-3 text-sm">
             <dt className="text-ink-muted">Expense</dt><dd className="text-right font-semibold text-ink">{transaction.item_name || transaction.description || transaction.category}</dd>
             <dt className="text-ink-muted">Amount</dt><dd className="text-right font-semibold text-ink"><Money amount={transaction.amount} /></dd>
@@ -159,12 +160,13 @@ const LedgerCorrectionModal = ({ transaction, onClose, onSubmit, isPending }) =>
           </div>
           <label className="form-control"><span className="label-text">Reason for correction</span><textarea value={reason} onChange={(event) => setReason(event.target.value)} className="input-machined" rows="3" placeholder="Explain why this classification is being corrected" required /></label>
         </div>
-        <div className="flex justify-end gap-3 border-t bg-gray-50 p-4">
+        <div className="flex shrink-0 justify-end gap-3 border-t bg-gray-50 p-4">
           <button type="button" onClick={onClose} disabled={isPending} className="btn-secondary">Cancel</button>
           <button type="submit" disabled={isPending || !isValid} className="btn-primary">{isPending ? 'Correcting...' : 'Void and replace'}</button>
         </div>
       </form>
-    </div>
+    </div>,
+    document.body,
   );
 };
 
@@ -181,6 +183,7 @@ const LedgerEntryFormModal = ({ onClose, transactionType, farmId, tenantId }) =>
     party: '',
     item_name: '',
     quantity: '',
+    quantity_unit: 'kg',
     cost_class: 'production_cost',
     paymentMethod: 'M-Pesa',
     animal_ids: [],
@@ -227,7 +230,11 @@ const LedgerEntryFormModal = ({ onClose, transactionType, farmId, tenantId }) =>
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
+    setFormData((prev) => ({
+      ...prev,
+      [name]: value,
+      ...(name === 'category' && value !== 'Feed Purchase' ? { quantity: '' } : {}),
+    }));
   };
 
   const handleAnimalToggle = (animalId) => {
@@ -255,19 +262,20 @@ const LedgerEntryFormModal = ({ onClose, transactionType, farmId, tenantId }) =>
   const isCustomerPayment = transactionType === 'income' && formData.incomePayerType === 'customer';
   const isPaymentReferenceRequired = isCustomerPayment && formData.paymentMethod !== 'Cash';
   const isIncomeFormInvalid = !formData.date || !formData.amount || !formData.category || isIncomeCounterpartyMissing || (isPaymentReferenceRequired && !formData.reference_code.trim());
+  const requiresCommodityQuantity = transactionType === 'expense' && formData.category === 'Feed Purchase';
   const hasSelectedAnimals = formData.animal_ids.length > 0;
   const isAnimalAllocationIncomplete = hasSelectedAnimals !== Boolean(formData.animal_cost_type);
-  const isExpenseFormInvalid = !formData.date || !formData.amount || !formData.category || !formData.party.trim() || !formData.item_name.trim() || !formData.quantity || !hasSelectedAnimals || isAnimalAllocationIncomplete;
+  const isExpenseFormInvalid = !formData.date || !formData.amount || !formData.category || !formData.party.trim() || !formData.item_name.trim() || (requiresCommodityQuantity && (!formData.quantity || Number(formData.quantity) <= 0 || !formData.quantity_unit)) || !hasSelectedAnimals || isAnimalAllocationIncomplete;
   const isFormInvalid = transactionType === 'income' ? isIncomeFormInvalid : isExpenseFormInvalid;
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-brand-dark/50 p-3 animate-reveal-fast sm:items-center sm:p-4">
-      <div className="my-auto flex max-h-[calc(100dvh-1.5rem)] w-full max-w-lg flex-col overflow-hidden rounded-lg bg-white sm:max-h-[90vh]">
+  return createPortal(
+    <div className="fixed inset-0 z-[100] flex items-start justify-center overflow-y-auto overscroll-contain bg-brand-dark/50 p-3 animate-reveal-fast touch-pan-y sm:items-center sm:p-4">
+      <section role="dialog" aria-modal="true" aria-label={transactionType === 'income' ? 'Record income or customer payment' : 'Log new expense'} className="my-auto flex max-h-[calc(100dvh-1.5rem)] min-h-0 w-full max-w-lg flex-col overflow-hidden rounded-lg bg-white shadow-2xl sm:max-h-[90dvh]">
         <div className="flex shrink-0 items-center justify-between border-b p-4 sm:p-5">
           <h3 className="text-lg font-bold text-ink">
             {transactionType === 'income' ? 'Record Income or Customer Payment' : 'Log New Expense'}
           </h3>
-          <button onClick={onClose} className="p-1 rounded-full hover:bg-gray-100 text-ink-muted">
+          <button type="button" onClick={onClose} className="p-1 rounded-full hover:bg-gray-100 text-ink-muted" aria-label="Close transaction form">
             <X size={20} />
           </button>
         </div>
@@ -325,23 +333,15 @@ const LedgerEntryFormModal = ({ onClose, transactionType, farmId, tenantId }) =>
                   <label className="form-control"><span className="label-text">Amount paid (KES)</span><input type="number" min="0.01" step="0.01" name="amount" value={formData.amount} onChange={handleChange} className="input-machined" placeholder="e.g., 2500" required /></label>
                 </div>
                 <label className="form-control"><span className="label-text">Supplier or payee</span><input type="text" name="party" value={formData.party} onChange={handleChange} className="input-machined" placeholder="e.g., Agrovet Store or employee name" required /></label>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <label className="form-control"><span className="label-text">Item / commodity name</span><input type="text" name="item_name" value={formData.item_name} onChange={handleChange} className="input-machined" placeholder="e.g., Maize Meal, Dairy Meal, Vet Drugs" required /></label>
-                  <label className="form-control"><span className="label-text">Quantity</span><input type="number" min="0.001" step="0.001" name="quantity" value={formData.quantity} onChange={handleChange} className="input-machined" placeholder="e.g., 50" required /></label>
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <label className="form-control">
-                    <span className="label-text">Expense category</span>
-                    <select name="category" value={formData.category} onChange={handleChange} className="input-machined" required>
-                      <option value="Feed Purchase">Feed and supplies</option>
-                      <option value="Labor / Wages">Labor and wages</option>
-                      <option value="Utilities">Utilities</option>
-                      <option value="Vet Fees">Veterinary services</option>
-                      <option value="Equipment Maintenance">Equipment maintenance</option>
-                      <option value="Transport">Transport</option>
-                      <option value="Other">Other expense</option>
-                    </select>
-                  </label>
+                <label className="form-control"><span className="label-text">Expense category</span><select name="category" value={formData.category} onChange={handleChange} className="input-machined" required><option value="Feed Purchase">Feed and supplies</option><option value="Labor / Wages">Labor and wages</option><option value="Utilities">Utilities</option><option value="Vet Fees">Veterinary services</option><option value="Equipment Maintenance">Equipment maintenance</option><option value="Transport">Transport</option><option value="Other">Other expense</option></select></label>
+                <label className="form-control"><span className="label-text">{requiresCommodityQuantity ? 'Item / commodity name' : 'Expense or service description'}</span><input type="text" name="item_name" value={formData.item_name} onChange={handleChange} className="input-machined" placeholder={requiresCommodityQuantity ? 'e.g., Dairy Meal' : 'e.g., Veterinary visit or vaccination'} required /></label>
+                {requiresCommodityQuantity && (
+                  <div className="grid grid-cols-2 gap-3">
+                    <label className="form-control"><span className="label-text">Quantity</span><input type="number" min="0.001" step="0.001" name="quantity" value={formData.quantity} onChange={handleChange} className="input-machined" placeholder="e.g., 50" required /></label>
+                    <label className="form-control"><span className="label-text">Unit</span><select name="quantity_unit" value={formData.quantity_unit} onChange={handleChange} className="input-machined" required><option value="kg">Kilograms (kg)</option><option value="g">Grams (g)</option><option value="L">Litres (L)</option><option value="mL">Millilitres (mL)</option><option value="bags">Bags</option><option value="pieces">Pieces</option><option value="packs">Packs</option><option value="units">Units</option></select></label>
+                  </div>
+                )}
+                <div className="grid grid-cols-1 gap-4">
                   <div className="form-control">
                     <div className="mb-1.5 flex items-center gap-1.5">
                       <span className="label-text">Cost classification</span>
@@ -477,8 +477,9 @@ const LedgerEntryFormModal = ({ onClose, transactionType, farmId, tenantId }) =>
             </button>
           </div>
         </form>
-      </div>
-    </div>
+      </section>
+    </div>,
+    document.body,
   );
 };
 

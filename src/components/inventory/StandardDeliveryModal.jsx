@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { X, ClipboardList, Search, Minus, Plus, CheckCircle2, PackageCheck } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { inventoryApi } from '../../lib/backendApi';
@@ -55,22 +56,22 @@ export default function StandardDeliveryModal({ isOpen, onClose, item, onRestock
   const increaseAmount = (val) => setAmount((prev) => prev + val);
   const decreaseAmount = () => setAmount((prev) => Math.max(0, prev - 1));
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-sm p-4">
-      <div className="bg-white rounded-2xl  w-full max-w-2xl overflow-hidden animate-reveal">
+  return createPortal(
+    <div className="fixed inset-0 z-[100] flex items-start justify-center overflow-y-auto overscroll-contain bg-slate-900/50 p-3 backdrop-blur-sm touch-pan-y sm:items-center sm:p-4">
+      <section role="dialog" aria-modal="true" aria-label={item ? 'Restock resource' : 'Log standard batch'} className="my-auto flex max-h-[calc(100dvh-1.5rem)] min-h-0 w-full max-w-2xl flex-col overflow-hidden rounded-2xl bg-white shadow-2xl animate-reveal">
         
         {/* HEADER */}
-        <div className="flex justify-between items-center p-6 border-b border-slate-100">
+        <div className="flex shrink-0 justify-between items-center p-4 border-b border-slate-100 sm:p-6">
           <h3 className="font-black text-lg text-slate-800 flex items-center gap-2">
             <ClipboardList size={20} className="text-brand" /> 
             {item ? 'Restock Resource' : 'Log Standard Batch'}
           </h3>
-          <button onClick={onClose} className="text-slate-400 hover:text-slate-600 transition-colors">
+          <button type="button" onClick={onClose} aria-label="Close restock form" className="text-slate-400 hover:text-slate-600 transition-colors">
             <X size={20} />
           </button>
         </div>
         
-        <div className="p-8">
+        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-4 touch-pan-y sm:p-8">
           {/* SECTION 1: WHAT ARRIVED */}
           <div className="mb-8">
             <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-4">
@@ -186,7 +187,7 @@ export default function StandardDeliveryModal({ isOpen, onClose, item, onRestock
         </div>
 
         {/* FOOTER ACTIONS */}
-        <div className="flex items-center justify-between p-6 bg-white border-t border-slate-100">
+        <div className="flex shrink-0 items-center justify-between p-4 bg-white border-t border-slate-100 sm:p-6">
           <button 
             type="button" 
             onClick={onClose}
@@ -205,7 +206,8 @@ export default function StandardDeliveryModal({ isOpen, onClose, item, onRestock
           </button>
         </div>
 
-      </div>
-    </div>
+      </section>
+    </div>,
+    document.body,
   );
 }
