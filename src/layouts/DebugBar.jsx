@@ -24,7 +24,7 @@ export default function DebugBar() {
 
   return (
     <>
-      <aside className="fixed inset-x-0 bottom-20 z-[70] border-t border-brand-400 bg-ink-950 px-3 py-2 text-white md:bottom-0 md:left-60 xl:left-64" aria-label="Development diagnostics">
+      <aside className="fixed inset-x-0 bottom-20 z-[70] hidden border-t border-brand-400 bg-ink-950 px-3 py-2 text-white md:bottom-0 md:left-60 md:block xl:left-64" aria-label="Development diagnostics">
         <div className="flex items-center gap-2 overflow-x-auto">
           <div className="flex shrink-0 items-center gap-2 border-r border-white/20 pr-3 text-xs font-bold uppercase">
             <Activity size={15} className="text-brand-400" /> Debug Bar

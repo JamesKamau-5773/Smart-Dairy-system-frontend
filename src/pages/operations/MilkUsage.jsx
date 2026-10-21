@@ -57,13 +57,13 @@ export default function MilkUsage() {
 
   return (
     <div className="animate-reveal space-y-6">
-      <section className="rounded-[28px] border border-ink/10 bg-[linear-gradient(135deg,rgba(223,249,255,0.95),rgba(255,255,255,0.98))] p-5  sm:p-6">
-        <header className="flex flex-col gap-4 border-b border-ink/10 pb-5 sm:flex-row sm:items-end sm:justify-between">
+      <section className="rounded-[28px] border border-brand/15 bg-brand-50 p-5 sm:p-6">
+        <header className="flex min-w-0 flex-col gap-4 border-b border-ink/10 pb-5 sm:flex-row sm:items-end sm:justify-between">
           <div className="min-w-0">
             <div className="mb-4 inline-flex items-center gap-2 rounded-md border border-brand/20 bg-brand/10 px-2 py-1 text-[10px] font-semibold text-brand">
               <Droplets size={12} /> Milk Operations
             </div>
-            <h1 className="m-0 font-display text-4xl font-semibold tracking-tight text-brand">
+            <h1 className="m-0 break-words font-display text-3xl font-semibold tracking-tight text-brand sm:text-4xl">
               Milk <span className="text-ink/30">Usage</span>
             </h1>
             <p className="mt-2 max-w-2xl text-sm leading-6 text-ink-muted">Review milk allocated to calves without mixing usage records into production entries.</p>
@@ -73,17 +73,17 @@ export default function MilkUsage() {
           </button>
         </header>
 
-        <div className="mt-5 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <div className="mt-5 grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4">
           {[
             { label: 'Fed today', value: `${summary.todayLiters.toFixed(2)} L`, icon: Droplets },
             { label: 'Fed this month', value: `${summary.monthLiters.toFixed(2)} L`, icon: CalendarDays },
             { label: 'Calves served', value: summary.calfCount, icon: Users },
             { label: 'Feeding records', value: summary.recordCount, icon: Baby },
           ].map(({ label, value, icon: Icon }) => (
-            <div key={label} className="flex items-start justify-between rounded-2xl border border-ink/10 bg-surface p-4 ">
+            <div key={label} className="flex min-w-0 items-start justify-between gap-2 rounded-2xl border border-ink/10 bg-surface p-3 sm:p-4">
               <div>
                 <p className="text-[10px] font-bold uppercase tracking-widest text-ink-muted">{label}</p>
-                <p className="mt-2 text-3xl font-black tabular-nums text-brand">{value}</p>
+                <p className="mt-2 break-words text-2xl font-black tabular-nums text-brand sm:text-3xl">{value}</p>
               </div>
               <Icon size={18} className="mt-1 text-brand" />
             </div>
@@ -124,7 +124,7 @@ export default function MilkUsage() {
             <h2 id="calf-summary-heading" className="font-semibold text-ink">Consumption by calf</h2>
           </div>
           <div className="max-h-64 overflow-auto">
-            <table className="w-full min-w-[520px] text-left">
+            <table className="hidden w-full min-w-[520px] text-left md:table">
               <thead className="sticky top-0 bg-surface-raised text-[10px] font-bold uppercase tracking-widest text-ink-muted">
                 <tr><th className="px-5 py-3">Calf</th><th className="px-5 py-3 text-right">Feedings</th><th className="px-5 py-3 text-right">Total milk</th></tr>
               </thead>
@@ -139,6 +139,17 @@ export default function MilkUsage() {
               </tbody>
             </table>
           </div>
+          <div className="divide-y divide-ink/10 md:hidden">
+            {calfTotals.map((calf) => (
+              <article key={calf.calfId} className="min-w-0 p-4">
+                <p className="break-words font-semibold text-brand">{formatCowIdentity({ cowName: calf.calfName, cowTag: calf.calfTag })}</p>
+                <dl className="mt-3 grid grid-cols-2 gap-3 text-xs">
+                  <div><dt className="text-ink-muted">Feedings</dt><dd className="mt-1 font-semibold tabular-nums text-ink">{calf.feedings}</dd></div>
+                  <div><dt className="text-ink-muted">Total milk</dt><dd className="mt-1 font-semibold tabular-nums text-ink">{calf.liters.toFixed(2)} L</dd></div>
+                </dl>
+              </article>
+            ))}
+          </div>
         </section>
       )}
 
@@ -146,7 +157,6 @@ export default function MilkUsage() {
         records={pageRecords}
         isLoading={dispositionsQuery.isLoading}
         error={dispositionsQuery.error}
-        onRecord={() => setShowFeedModal(true)}
         title="Feeding history"
         totalCount={filteredRecords.length}
         totalLiters={filteredLiters}

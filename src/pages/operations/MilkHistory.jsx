@@ -262,13 +262,13 @@ export default function MilkHistory() {
               <label className="space-y-1 text-xs font-semibold text-ink-muted xl:col-span-2">
                 Search
                 <div className="relative">
-                  <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-ink-muted" />
+                  <Search size={14} className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-brand" />
                   <input
                     type="text"
                     value={filters.search}
                     onChange={(e) => setFilters((prev) => ({ ...prev, search: e.target.value }))}
                     placeholder="Search date, session, milker, status..."
-                    className="input-machined pl-9"
+                    className="input-machined pl-10"
                   />
                 </div>
               </label>
@@ -318,7 +318,7 @@ export default function MilkHistory() {
       </div>
 
       <div className="card-machined overflow-hidden !p-0">
-        <div className="p-5 border-b border-ink/10 bg-surface-raised flex items-center justify-between gap-4">
+        <div className="flex flex-col items-start justify-between gap-2 border-b border-ink/10 bg-surface-raised p-5 sm:flex-row sm:items-center sm:gap-4">
           <div>
             <h3 className="font-bold text-brand text-lg m-0">Milk Session Records</h3>
             <p className="text-sm text-ink-muted">Most recent milking sessions first.</p>
@@ -329,39 +329,60 @@ export default function MilkHistory() {
         {isLoading ? (
           <div className="p-8 text-center text-ink-muted">Loading milk history…</div>
         ) : filteredSessions.length > 0 ? (
-          <table className="w-full text-left border-collapse">
-            <thead>
-              <tr className="bg-brand text-surface">
-                <th className="p-4 text-xs uppercase tracking-[0.12em]">Date</th>
-                <th className="p-4 text-xs uppercase tracking-[0.12em]">Session</th>
-                <th className="p-4 text-xs uppercase tracking-[0.12em]">Milker</th>
-                <th className="p-4 text-xs uppercase tracking-[0.12em] text-right">Liters</th>
-                <th className="p-4 text-xs uppercase tracking-[0.12em] text-center">Status</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-ink/5 bg-white">
-              <GroupedDateRows
-                items={filteredSessions}
-                getDate={(entry) => entry.date}
-                colSpan={5}
-                renderGroupMeta={(items) => `${items.length} ${items.length === 1 ? 'session' : 'sessions'} / ${items.reduce((sum, item) => sum + Number(item.liters || 0), 0).toFixed(1)} L`}
-                renderItem={(entry, index) => (
-                <tr key={`${entry.date}-${entry.session}-${index}`} className="hover:bg-surface-raised transition-colors">
-                  <td className="p-4 text-sm text-ink-muted font-medium">{entry.date}</td>
-                  <td className="p-4 text-sm font-semibold text-ink">{entry.session}</td>
-                  <td className="p-4 text-sm font-medium text-ink">{entry.milker}</td>
-                  <td className="p-4 text-sm font-black text-brand text-right tabular-nums">{entry.liters} L</td>
-                  <td className="p-4 text-center">
-                    <span className="inline-flex items-center gap-1 px-2 py-1 rounded border border-brand/20 bg-brand/5 text-brand text-[11px] font-medium">
-                      {entry.status}
-                    </span>
-                  </td>
-                </tr>
-                )}
-                empty={null}
-              />
-            </tbody>
-          </table>
+          <>
+            <div className="hidden overflow-x-auto md:block">
+              <table className="w-full min-w-[680px] border-collapse text-left">
+                <thead>
+                  <tr className="bg-brand text-white">
+                    <th className="p-4 text-xs uppercase tracking-[0.12em]">Date</th>
+                    <th className="p-4 text-xs uppercase tracking-[0.12em]">Session</th>
+                    <th className="p-4 text-xs uppercase tracking-[0.12em]">Milker</th>
+                    <th className="p-4 text-right text-xs uppercase tracking-[0.12em]">Liters</th>
+                    <th className="p-4 text-center text-xs uppercase tracking-[0.12em]">Status</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-ink/5 bg-surface">
+                  <GroupedDateRows
+                    items={filteredSessions}
+                    getDate={(entry) => entry.date}
+                    colSpan={5}
+                    renderGroupMeta={(items) => `${items.length} ${items.length === 1 ? 'session' : 'sessions'} / ${items.reduce((sum, item) => sum + Number(item.liters || 0), 0).toFixed(1)} L`}
+                    renderItem={(entry, index) => (
+                      <tr key={`${entry.date}-${entry.session}-${index}`} className="transition-colors hover:bg-surface-raised">
+                        <td className="p-4 text-sm font-medium text-ink-muted">{entry.date}</td>
+                        <td className="p-4 text-sm font-semibold text-ink">{entry.session}</td>
+                        <td className="p-4 text-sm font-medium text-ink">{entry.milker}</td>
+                        <td className="p-4 text-right text-sm font-black tabular-nums text-brand">{entry.liters} L</td>
+                        <td className="p-4 text-center">
+                          <span className="inline-flex items-center gap-1 rounded border border-brand/20 bg-brand-50 px-2 py-1 text-[11px] font-medium text-brand-dark">
+                            {entry.status}
+                          </span>
+                        </td>
+                      </tr>
+                    )}
+                    empty={null}
+                  />
+                </tbody>
+              </table>
+            </div>
+            <div className="divide-y divide-ink/10 bg-surface md:hidden">
+              {filteredSessions.map((entry, index) => (
+                <article key={`${entry.date}-${entry.session}-${index}`} className="min-w-0 space-y-3 p-4">
+                  <div className="flex min-w-0 items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <time className="text-xs text-ink-muted">{entry.date}</time>
+                      <h4 className="mt-1 break-words font-semibold text-ink">{entry.session} session</h4>
+                    </div>
+                    <span className="shrink-0 rounded border border-brand/20 bg-brand-50 px-2 py-1 text-[10px] font-semibold text-brand-dark">{entry.status}</span>
+                  </div>
+                  <dl className="grid grid-cols-2 gap-3 border-t border-ink/10 pt-3 text-xs">
+                    <div className="min-w-0"><dt className="text-ink-muted">Milker</dt><dd className="mt-1 break-words font-medium text-ink">{entry.milker || '—'}</dd></div>
+                    <div className="min-w-0"><dt className="text-ink-muted">Liters</dt><dd className="mt-1 break-words font-mono font-bold tabular-nums text-brand">{entry.liters} L</dd></div>
+                  </dl>
+                </article>
+              ))}
+            </div>
+          </>
         ) : (
           <div className="p-10 text-center text-ink-muted bg-surface-warm/30">
             <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-brand/10 text-brand mb-3">

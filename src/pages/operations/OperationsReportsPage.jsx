@@ -344,11 +344,11 @@ export default function OperationsReportsPage() {
         <div className="flex flex-col gap-4 p-4 lg:flex-row lg:items-center">
           
           <div className="relative w-full lg:max-w-md">
-            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+            <Search className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-brand" />
             <input
               type="text"
               placeholder="Search customer, reference..."
-              className="h-10 w-full rounded-lg border border-slate-200 bg-white pl-9 pr-4 text-sm text-slate-900 placeholder:text-slate-400 transition-colors focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand"
+              className="h-10 w-full rounded-lg border border-ink/20 bg-surface pl-10 pr-4 text-sm text-ink placeholder:text-ink-muted transition-colors focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand"
               value={searchValue}
               onChange={(e) => setSearchValue(e.target.value)}
             />
@@ -512,7 +512,7 @@ export default function OperationsReportsPage() {
                 <h3 className="font-sans text-lg font-bold text-slate-900">Delivery history</h3>
                 <p className="mt-1 text-sm text-slate-500">Daily milk delivered to {selectedCustomer.name}.</p>
               </div>
-              <div className="overflow-x-auto">
+              <div className="hidden overflow-x-auto md:block">
                 <table className="min-w-full text-left">
                   <thead className="bg-slate-50 text-xs font-bold uppercase tracking-wider text-slate-500">
                     <tr>
@@ -533,6 +533,16 @@ export default function OperationsReportsPage() {
                     ))}
                   </tbody>
                 </table>
+              </div>
+              <div className="divide-y divide-slate-100 md:hidden">
+                {dashboardData.buyerPerformance.daily_records.map((record) => (
+                  <article key={record.date} className="grid grid-cols-2 gap-3 p-4 text-sm">
+                    <div className="col-span-2 font-semibold text-slate-900">{format(new Date(`${record.date}T00:00:00`), 'MMM d, yyyy')}</div>
+                    <div><p className="text-xs text-slate-500">Delivered</p><p className="mt-1 font-semibold tabular-nums text-brand">{formatNumber(record.milk_delivered_liters)} L</p></div>
+                    <div><p className="text-xs text-slate-500">Revenue</p><p className="mt-1 font-semibold tabular-nums text-slate-900">{formatCurrency(record.revenue_kes)}</p></div>
+                    <div className="col-span-2"><p className="text-xs text-slate-500">Amount paid</p><p className="mt-1 font-semibold tabular-nums text-slate-900">{formatCurrency(record.amount_paid_kes)}</p></div>
+                  </article>
+                ))}
               </div>
             </div>
           )}

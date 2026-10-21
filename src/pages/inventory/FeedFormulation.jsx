@@ -542,6 +542,7 @@ export default function FeedFormulation() {
         recipe_name: routerState?.draftName ?? defaultRecipeName,
         name: routerState?.draftName ?? defaultRecipeName,
         source: routerState?.fromMilkLab ? 'milk_lab_export' : 'manual',
+        feeding_group: routerState?.feedingGroup,
       });
 
       // --- START: In-component Normalization for Robustness ---
@@ -578,7 +579,7 @@ export default function FeedFormulation() {
     },
     onSuccess: () => {
       // Clear the draft state from the URL so a refresh doesn't reload it
-      if (importedDraft) {
+      if (importedDraft || routerState?.feedingGroup) {
         navigate(location.pathname, { replace: true, state: {} });
       }
       // Safe object syntax for React Query v4/v5 compatibility
@@ -609,16 +610,17 @@ export default function FeedFormulation() {
         <p className="mt-2 text-sm text-ink-muted max-w-2xl">
           Plan the right feed mix for your cows. Save your mix so the farm team can use it quickly during daily feeding.
         </p>
+        {routerState?.feedingGroup && <p className="mt-3 inline-flex rounded-full border border-brand/20 bg-brand-50 px-3 py-1 text-xs font-semibold capitalize text-brand-dark">Saving this mix for {String(routerState.feedingGroup).replaceAll('_', ' ')}</p>}
       </div>
 
       <FeedingGroupPlanner />
 
       {/* Draft warning banner */}
       {importedDraft && (
-        <div className="bg-warning/10 border border-warning/20 p-4 rounded-xl flex items-start gap-3 animate-fade-in">
-          <AlertCircle className="text-warning-dark shrink-0 mt-0.5" size={20} />
+        <div className="flex animate-fade-in items-start gap-3 rounded-xl border border-brand/20 bg-brand-50 p-4">
+          <AlertCircle className="mt-0.5 shrink-0 text-brand-dark" size={20} />
           <div>
-            <h4 className="font-bold text-warning-dark text-sm">Draft Mode Active</h4>
+            <h4 className="text-sm font-bold text-brand-dark">Draft Mode Active</h4>
             <p className="text-sm font-medium text-ink/70 mt-1">
               You are editing an imported feed mix. These changes are in draft mode and will not affect feeding until you save this mix.
             </p>
@@ -739,7 +741,7 @@ export default function FeedFormulation() {
             </div>
 
             {!hasEligibleIngredients && ingredientEligibilityDiagnostics.total > 0 && (
-              <div className="mb-4 rounded-md border border-warning/20 bg-warning/10 p-3 text-xs text-warning-dark">
+              <div className="mb-4 rounded-md border border-brand/20 bg-brand-50 p-3 text-xs text-brand-dark">
                 Auto-adjust is disabled because one or more feed items are missing backend identifiers.
                 {ingredientEligibilityDiagnostics.missingIds.length > 0 && (
                   <span className="ml-1">
@@ -766,7 +768,7 @@ export default function FeedFormulation() {
             )}
 
             {formulationError && (
-              <div className="mb-4 rounded-md border border-danger/20 bg-danger/10 p-3 text-xs text-danger">
+              <div className="mb-4 rounded-md border border-brand/30 bg-brand-50 p-3 text-xs text-brand-dark">
                 {formulationError}
               </div>
             )}
@@ -786,14 +788,14 @@ export default function FeedFormulation() {
                   onClick={handleDiscardDraft}
                   className="w-full bg-surface-raised hover:bg-ink/5 text-ink-strong px-4 py-3 rounded-button font-bold text-sm transition-colors flex items-center justify-center gap-2"
                 >
-                  <XCircle size={18} className="text-danger" /> Cancel Draft
+                  <XCircle size={18} className="text-brand-dark" /> Cancel Draft
                 </button>
               )}
 
               <button
                 onClick={() => setIsBatchModalOpen(true)}
                 disabled={saveRecipe.isPending}
-                className="w-full mt-3 bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-3 rounded-button font-bold text-sm transition-colors  flex items-center justify-center gap-2 disabled:opacity-70"
+                className="mt-3 flex w-full items-center justify-center gap-2 rounded-button bg-brand px-4 py-3 text-sm font-bold text-white transition-colors hover:bg-brand-dark disabled:opacity-70"
               >
                 Create Batch From This Mix
               </button>

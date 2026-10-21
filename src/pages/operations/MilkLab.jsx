@@ -38,12 +38,12 @@ function formatRelativeTime(timestamp) {
 
 function CoverageTone({ coveragePercent }) {
   if (coveragePercent >= 95) {
-    return <span className="rounded-full bg-emerald-500/10 text-emerald-700 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider">High Confidence</span>;
+    return <span className="rounded-full bg-brand/10 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-brand">High Confidence</span>;
   }
   if (coveragePercent >= 60) {
-    return <span className="rounded-full bg-amber-500/10 text-amber-700 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider">Medium Confidence</span>;
+    return <span className="rounded-full bg-brand-100 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-brand-800">Medium Confidence</span>;
   }
-  return <span className="rounded-full bg-danger/10 text-danger px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider">Low Confidence</span>;
+  return <span className="rounded-full bg-brand-50 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-brand-dark">Low Confidence</span>;
 }
 
 function EmptyTargetList({ text }) {
@@ -56,7 +56,7 @@ function EmptyTargetList({ text }) {
 
 function CowTargetRow({ row, tone = 'default', actionLabel = null, actionTo = null }) {
   const toneClass = tone === 'warning'
-    ? 'border-amber-500/20 bg-amber-500/5 text-amber-800'
+    ? 'border-brand/20 bg-brand-50 text-brand-dark'
     : tone === 'muted'
       ? 'border-ink/10 bg-surface-raised text-ink-muted'
       : 'border-brand/20 bg-brand/5 text-ink';
@@ -112,47 +112,47 @@ const ResultsDashboard = ({ data, targetLiters, targetSource, activeCowCount, ta
 
   return (
     <div className="space-y-6 animate-reveal">
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
+      <div className="grid grid-cols-2 gap-3 md:gap-6 lg:grid-cols-4">
 
         {/* Target Milk Card */}
-        <div className="bg-surface rounded-2xl  border border-brand/20 p-6 relative overflow-hidden">
+        <div className="relative overflow-hidden rounded-2xl border border-brand/20 bg-surface p-4 sm:p-6">
           <div className="absolute top-0 left-0 w-1 h-full bg-brand rounded-l-2xl"></div>
           <div className="flex items-center gap-2 mb-4 text-brand">
             <Droplets className="w-5 h-5" />
             <h4 className="text-[10px] font-black uppercase tracking-widest">{LABELS.TARGET_MILK}</h4>
           </div>
-          <p className="text-3xl font-black text-ink mb-2">{Number(targetLiters).toFixed(1)} L</p>
+          <p className="mb-2 break-words text-2xl font-black text-ink sm:text-3xl">{Number(targetLiters).toFixed(1)} L</p>
           <p className="text-sm text-ink-muted font-medium">Milk you want to hit today.</p>
         </div>
 
         {/* Dairy Meal Protein Card - UPDATED LABEL */}
-        <div className="bg-brand/5 rounded-2xl  border border-brand/20 p-6 relative overflow-hidden">
+        <div className="relative overflow-hidden rounded-2xl border border-brand/20 bg-brand/5 p-4 sm:p-6">
           <div className="absolute top-0 left-0 w-1 h-full bg-brand rounded-l-2xl"></div>
           <div className="flex items-center gap-2 mb-4 text-brand">
             <Beaker className="w-5 h-5" />
             <h4 className="text-[10px] font-black uppercase tracking-widest">Protein Strength</h4>
           </div>
-          <p className="text-3xl font-black text-brand mb-2">{proteinTarget}</p>
+          <p className="mb-2 break-words text-2xl font-black text-brand sm:text-3xl">{proteinTarget}</p>
           <p className="text-sm text-brand/70 font-medium">Best protein level for this milk goal.</p>
         </div>
 
         {/* Dairy Meal Card */}
-        <div className="bg-surface rounded-2xl  border border-emerald-500/20 p-6 relative overflow-hidden">
-          <div className="absolute top-0 left-0 w-1 h-full bg-emerald-500 rounded-l-2xl"></div>
-          <div className="flex items-center gap-2 mb-4 text-emerald-600">
+        <div className="relative overflow-hidden rounded-2xl border border-brand/20 bg-surface p-4 sm:p-6">
+          <div className="absolute left-0 top-0 h-full w-1 rounded-l-2xl bg-brand-400"></div>
+          <div className="mb-4 flex items-center gap-2 text-brand">
             <Wheat className="w-5 h-5" />
             <h4 className="text-[10px] font-black uppercase tracking-widest">{LABELS.MILKING_TIME_DAIRY_MEAL}</h4>
           </div>
-          <p className="text-3xl font-black text-ink mb-2">
+          <p className="mb-2 break-words text-2xl font-black text-ink sm:text-3xl">
             {data.extra_milking_topup_total_kg} <span className="text-lg font-bold text-ink-muted">kg</span>
           </p>
           <p className="text-sm text-ink-muted font-medium">Extra feed at milking time.</p>
         </div>
 
         {/* Boma Feedings Card */}
-        <div className="bg-surface rounded-2xl  border border-amber-500/20 p-6 relative overflow-hidden">
-          <div className="absolute top-0 left-0 w-1 h-full bg-amber-500 rounded-l-2xl"></div>
-          <div className="flex items-center gap-2 mb-4 text-amber-600">
+        <div className="relative overflow-hidden rounded-2xl border border-brand/20 bg-surface p-4 sm:p-6">
+          <div className="absolute left-0 top-0 h-full w-1 rounded-l-2xl bg-brand-400"></div>
+          <div className="mb-4 flex items-center gap-2 text-brand-800">
             <Clock className="w-5 h-5" />
             <h4 className="text-[10px] font-black uppercase tracking-widest">{LABELS.BOMA_FEEDINGS}</h4>
           </div>
@@ -171,7 +171,7 @@ const ResultsDashboard = ({ data, targetLiters, targetSource, activeCowCount, ta
       <div className="bg-surface rounded-xl border border-ink/10 p-5 ">
         <div className="flex items-center justify-between gap-3">
           <p className="text-xs font-bold uppercase tracking-wider text-ink-muted">Where This Goal Came From</p>
-          <span className={`rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider ${targetSource === 'per_cow' ? 'bg-emerald-500/10 text-emerald-700' : 'bg-amber-500/10 text-amber-700'}`}>
+          <span className={`rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider ${targetSource === 'per_cow' ? 'bg-brand/10 text-brand' : 'bg-brand-100 text-brand-800'}`}>
             {targetSource === 'per_cow' ? 'Cow-By-Cow' : 'Whole Herd'}
           </span>
         </div>
@@ -278,7 +278,7 @@ export default function MilkLab() {
           </p>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+        <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
           <div className="rounded-xl border border-ink/10 bg-surface p-4">
             <p className="text-[10px] font-bold uppercase tracking-wider text-ink-muted">Lactating Cows</p>
             <p className="mt-1 text-2xl font-black text-ink">{targetOverview?.lactatingCount ?? 0}</p>
@@ -391,7 +391,7 @@ export default function MilkLab() {
               </div>
 
               <div className="space-y-2">
-                <p className="text-xs font-bold uppercase tracking-wider text-amber-700">Milking Cows Missing Goal ({targetOverview?.lactatingMissingTarget?.length ?? 0})</p>
+                <p className="text-xs font-bold uppercase tracking-wider text-brand-800">Milking Cows Missing Goal ({targetOverview?.lactatingMissingTarget?.length ?? 0})</p>
                 <ul className="space-y-2 max-h-60 overflow-auto pr-1">
                   {(targetOverview?.lactatingMissingTarget ?? []).map((row) => (
                     <CowTargetRow
@@ -435,7 +435,7 @@ export default function MilkLab() {
 
         <div className="pt-2">
           {calcMutation.isError && (
-            <div className="mb-6 bg-danger/10 text-danger text-sm p-4 rounded-xl flex items-start gap-2 animate-reveal">
+            <div className="mb-6 flex items-start gap-2 rounded-xl border border-brand/20 bg-brand-50 p-4 text-sm text-brand-dark animate-reveal">
               <AlertCircle size={18} />
               <div>
                 <p className="font-bold">Could not prepare feeding plan.</p>

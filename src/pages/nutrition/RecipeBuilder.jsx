@@ -46,7 +46,7 @@ function RecipeAlerts({ alerts }) {
   return (
     <div className="mb-6 space-y-2 animate-in fade-in slide-in-from-top-2">
       {alerts.map((alert, idx) => (
-        <div key={idx} className={`flex items-start gap-2 p-3 rounded-md text-xs font-bold border ${alert.type === 'danger' ? 'bg-danger/10 border-danger/20 text-danger' : 'bg-warning/10 border-warning/20 text-warning-dark'}`}>
+        <div key={idx} className="flex items-start gap-2 rounded-md border border-brand/20 bg-brand-50 p-3 text-xs font-bold text-brand-dark">
           <AlertTriangle size={16} className="shrink-0 mt-0.5" />
           <p>{alert.message}</p>
         </div>
@@ -55,18 +55,18 @@ function RecipeAlerts({ alerts }) {
   );
 }
 
-function ProteinMeter({ averageProtein, targetProtein, hasWarning }) {
+function ProteinMeter({ averageProtein, targetProtein }) {
   return (
     <div className="space-y-1.5 mb-8 bg-surface-raised p-4 rounded-lg border border-ink/5">
       <div className="flex justify-between text-xs font-black uppercase text-ink-muted">
         <span>Protein Goal ({targetProtein}%)</span>
-        <span className={averageProtein >= targetProtein ? 'text-brand' : 'text-warning-dark'}>
+        <span className="text-brand-dark">
           Current Mix: {averageProtein.toFixed(1)}%
         </span>
       </div>
       <div className="h-2.5 w-full bg-white rounded-full overflow-hidden ">
         <div
-          className={`h-full transition-all duration-500 ease-out ${hasWarning ? 'bg-warning' : 'bg-brand'}`}
+          className="h-full bg-brand transition-all duration-500 ease-out"
           style={{ width: `${Math.min((averageProtein / targetProtein) * 100, 100)}%` }}
         />
       </div>
@@ -217,7 +217,6 @@ export default function RecipeBuilder({
       <ProteinMeter
         averageProtein={metrics.averageProtein}
         targetProtein={resolvedTargetProtein}
-        hasWarning={alerts.some((alert) => alert.type === 'warning')}
       />
 
       {/* Ingredient Inputs */}

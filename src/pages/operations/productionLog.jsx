@@ -260,9 +260,9 @@ export default function YieldLog() {
 
   const summaryTone = {
     brand: 'text-brand',
-    success: 'text-success',
-    warning: 'text-warning-dark',
-    danger: 'text-danger',
+    success: 'text-brand-800',
+    warning: 'text-brand-700',
+    danger: 'text-brand-dark',
   };
 
   const updateFilter = (name, value) => {
@@ -397,13 +397,13 @@ export default function YieldLog() {
   return (
     <div className="animate-reveal space-y-6">
       <Confirmation {...confirmation} />
-      <div className="rounded-[28px] border border-ink/10 bg-[linear-gradient(135deg,rgba(223,249,255,0.95),rgba(255,255,255,0.98))] p-5 sm:p-6 ">
+      <div className="rounded-[28px] border border-brand/15 bg-brand-50 p-5 sm:p-6">
         <div className="flex flex-col gap-4 border-b border-ink/10 pb-5 lg:flex-row lg:items-end lg:justify-between">
           <div className="min-w-0">
             <div className="inline-flex items-center gap-2 px-2 py-1 bg-brand/10 text-brand text-[10px] font-semibold tracking-normal mb-4 rounded-md border border-brand/20">
               <Beaker size={12} /> Production Interface
             </div>
-            <h2 className="font-display font-semibold text-4xl tracking-tight text-brand m-0">
+            <h2 className="m-0 break-words font-display text-3xl font-semibold tracking-tight text-brand sm:text-4xl">
               Daily <span className="text-ink/30">Milk Log</span>
             </h2>
             <p className="mt-2 max-w-2xl text-sm leading-6 text-ink-muted">
@@ -430,7 +430,7 @@ export default function YieldLog() {
           </div>
         </div>
 
-        <div className="mt-5 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <div className="mt-5 grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4">
           {[
             { label: 'Total volume', value: `${summary.totalVolume} L`, tone: 'brand' },
             { label: 'Verified entries', value: summary.verified, tone: 'success' },
@@ -439,7 +439,7 @@ export default function YieldLog() {
           ].map((item) => (
             <div key={item.label} className="rounded-2xl border border-ink/10 bg-surface p-4 ">
               <p className="text-[10px] font-bold uppercase tracking-widest text-ink-muted">{item.label}</p>
-              <p className={`mt-2 text-3xl font-black ${summaryTone[item.tone]}`}>{item.value}</p>
+              <p className={`mt-2 break-words text-2xl font-black tabular-nums ${summaryTone[item.tone]} sm:text-3xl`}>{item.value}</p>
             </div>
           ))}
         </div>
@@ -463,12 +463,12 @@ export default function YieldLog() {
       />
 
       {hardlocks?.length > 0 && (
-        <div className="card-machined bg-danger/5 border-danger  p-6 flex gap-6 items-start">
-          <div className="p-3 bg-danger text-surface">
+        <div className="card-machined flex items-start gap-6 border border-brand/20 bg-brand-50 p-6">
+          <div className="bg-brand p-3 text-surface">
             <AlertTriangle size={24} />
           </div>
           <div>
-            <h4 className="font-display font-semibold text-danger tracking-tight text-lg">
+            <h4 className="font-display text-lg font-semibold tracking-tight text-brand-dark">
               Cows on Medicine (Do Not Mix!)
             </h4>
             <p className="font-sans text-sm text-ink-normal mt-1 max-w-2xl">
@@ -483,7 +483,6 @@ export default function YieldLog() {
         records={milkDispositions.slice(0, 5)}
         isLoading={isLoadingMilkDispositions}
         error={milkDispositionsError}
-        onRecord={() => setShowCalfMilkFeed(true)}
         title="Recent calf milk allocations"
         totalCount={milkDispositions.length}
         totalLiters={milkDispositions.reduce((total, record) => total + record.liters, 0)}
@@ -594,8 +593,8 @@ export default function YieldLog() {
         )}
       </div>
 
-      <div className="card-machined overflow-x-auto !p-0">
-        <table className="w-full min-w-[720px] text-left border-collapse">
+      <div className="card-machined !p-0">
+        <table className="hidden w-full min-w-[720px] border-collapse text-left md:table">
           <thead>
             <tr className="bg-brand text-surface">
               <th className="p-5 font-sans text-xs font-semibold uppercase tracking-[0.12em] text-surface/95">Date</th>
@@ -639,8 +638,8 @@ export default function YieldLog() {
                         row.status === 'Verified'
                           ? 'border-brand/20 bg-brand/5 text-brand'
                           : row.status === 'Pending'
-                            ? 'border-amber-200 bg-amber-50 text-amber-700'
-                            : 'border-danger/20 bg-danger/5 text-danger'
+                            ? 'border-brand-200 bg-brand-50 text-brand-800'
+                            : 'border-brand/20 bg-brand/10 text-brand-dark'
                       }`}
                     >
                       <ShieldCheck size={10} /> {row.status}
@@ -653,18 +652,18 @@ export default function YieldLog() {
                       <button
                         type="button"
                         onClick={() => handleVerifyEntry(row)}
-                        className="btn-ghost gap-1 px-3 py-2 text-xs text-success border border-success/30 hover:bg-success/10"
+                        className="btn-ghost gap-1 border border-brand/30 px-3 py-2 text-xs text-brand hover:bg-brand/10"
                       >
                         <ShieldCheck size={12} /> Verify
                       </button>
                     )}
                     <Popover>
                       <PopoverTrigger asChild>
-                        <button type="button" className="inline-flex h-8 w-8 items-center justify-center rounded-button border border-slate-300 text-slate-600 hover:border-brand-400 hover:text-brand-700" aria-label={`Actions for milk record ${row.id}`}><MoreVertical size={16} /></button>
+                        <button type="button" className="inline-flex h-8 w-8 items-center justify-center rounded-button border border-brand/20 text-brand hover:border-brand-400 hover:bg-brand-50" aria-label={`Actions for milk record ${row.id}`}><MoreVertical size={16} /></button>
                       </PopoverTrigger>
                       <PopoverContent align="end" className="w-40 p-1.5">
                         <button type="button" onClick={() => openEditLog(row)} className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm text-ink-900 hover:bg-brand-50"><Pencil size={14} /> Edit</button>
-                        <button type="button" onClick={() => handleDeleteFromTable(row)} className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm text-danger hover:bg-danger/10"><Trash2 size={14} /> Delete</button>
+                        <button type="button" onClick={() => handleDeleteFromTable(row)} className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm text-brand-dark hover:bg-brand-50"><Trash2 size={14} /> Delete</button>
                       </PopoverContent>
                     </Popover>
                   </div>
@@ -681,6 +680,41 @@ export default function YieldLog() {
             />
           </tbody>
         </table>
+        <div className="divide-y divide-ink/10 md:hidden">
+          {filteredMilkRows.map((row) => {
+            const milker = String(row.milker || 'SYSTEM');
+            const digits = milker.replace(/\D/g, '');
+            const displayMilker = digits.length === 12 && digits.startsWith('254') ? `+254 ${digits.slice(3, 6)} ${digits.slice(6, 9)} ${digits.slice(9)}` : milker;
+            return (
+              <article key={row.id} className="min-w-0 space-y-3 p-4">
+                <div className="flex min-w-0 items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <Link to={`/operations/animal/${row.animalRefId ?? row.cowId}/milk-history`} className="break-words font-semibold text-brand">{formatCowIdentity({ cowName: row.cowName, cowTag: row.cowId })}</Link>
+                    <p className="mt-1 break-words text-xs text-ink-muted">{formatDate(row.date)} · {toNormalizedSessionLabel(row.session)}</p>
+                  </div>
+                  <div className="shrink-0 text-right">
+                    <p className="font-mono text-lg font-bold tabular-nums text-brand">{row.amount} {row.amount === '--' ? '' : 'L'}</p>
+                    <span className="inline-flex items-center gap-1 rounded border border-brand/20 bg-brand-50 px-2 py-1 text-[10px] font-semibold text-brand-dark"><ShieldCheck size={11} /> {row.status}</span>
+                  </div>
+                </div>
+                <div className="flex min-w-0 flex-wrap items-baseline justify-between gap-x-3 gap-y-1 border-t border-ink/10 pt-2 text-xs">
+                  <span className="text-ink-muted">Milker</span><span className="break-all text-right font-medium text-ink">{displayMilker}</span>
+                </div>
+                <div className="flex flex-wrap items-center justify-end gap-2">
+                  {canVerify && row.status !== 'Verified' && <button type="button" onClick={() => handleVerifyEntry(row)} className="rounded-lg border border-brand/20 px-3 py-2 text-xs font-semibold text-brand">Verify</button>}
+                  <Popover>
+                    <PopoverTrigger asChild><button type="button" className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-brand/20 text-brand" aria-label={`Actions for milk record ${row.id}`}><MoreVertical size={16} /></button></PopoverTrigger>
+                    <PopoverContent align="end" className="w-40 p-1.5">
+                      <button type="button" onClick={() => openEditLog(row)} className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm text-ink hover:bg-brand-50"><Pencil size={14} /> Edit</button>
+                      <button type="button" onClick={() => handleDeleteFromTable(row)} className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm text-brand-dark hover:bg-brand-50"><Trash2 size={14} /> Delete</button>
+                    </PopoverContent>
+                  </Popover>
+                </div>
+              </article>
+            );
+          })}
+          {filteredMilkRows.length === 0 && <p className="p-6 text-center text-sm text-ink-muted">No milk log entries match the selected filters.</p>}
+        </div>
       </div>
     </div>
   );

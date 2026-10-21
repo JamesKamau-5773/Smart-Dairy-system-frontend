@@ -22,15 +22,15 @@ export default function Confirmation({
   const typeStyles = {
     warning: {
       icon: AlertTriangle,
-      iconColor: 'text-amber-500',
-      buttonColor: 'bg-amber-500 hover:bg-amber-600',
-      bgColor: 'bg-amber-50',
+      iconColor: 'text-brand-800',
+      buttonColor: 'bg-brand-700 hover:bg-brand-800',
+      bgColor: 'bg-brand-50',
     },
     danger: {
       icon: XCircle,
-      iconColor: 'text-rose-500',
-      buttonColor: 'bg-rose-500 hover:bg-rose-600',
-      bgColor: 'bg-rose-50',
+      iconColor: 'text-brand-dark',
+      buttonColor: 'bg-brand-dark hover:bg-brand-950',
+      bgColor: 'bg-brand-50',
     },
     info: {
       icon: Info,
@@ -40,9 +40,9 @@ export default function Confirmation({
     },
     success: {
       icon: CheckCircle2,
-      iconColor: 'text-emerald-500',
-      buttonColor: 'bg-emerald-500 hover:bg-emerald-600',
-      bgColor: 'bg-emerald-50',
+      iconColor: 'text-brand',
+      buttonColor: 'bg-brand hover:bg-brand-dark',
+      bgColor: 'bg-brand/5',
     },
   };
 
@@ -50,7 +50,7 @@ export default function Confirmation({
   const Icon = config.icon;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-ink/50 backdrop-blur-sm">
       <div className="w-full max-w-sm rounded-2xl bg-surface p-6 ">
         {/* Icon & Title */}
         <div className="mb-4 flex items-start gap-3">

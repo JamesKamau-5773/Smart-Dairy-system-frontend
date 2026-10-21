@@ -1,6 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { ChevronDown, ChevronUp, Ruler, Save, Users } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { ChevronDown, ChevronUp, Plus, Ruler, Save, Users } from 'lucide-react';
 import { nutritionApi } from '../../lib/backendApi';
 import { useTenant } from '../../hooks/useTenant';
 
@@ -105,17 +106,17 @@ function GroupDetails({ group, profile, onSaveProfile, onSaveRecipe, isSavingPro
   const measures = group.physical_measures;
   return (
     <div className="py-4">
-      {group.requires_concentrate_rate && <p className="mb-3 border-l-2 border-warning bg-warning/10 px-3 py-2 text-xs font-semibold text-ink">Set concentrate kg/head/day before using this feeding instruction.</p>}
+      {group.requires_concentrate_rate && <p className="mb-3 border-l-2 border-brand bg-brand-50 px-3 py-2 text-xs font-semibold text-ink">Set concentrate kg/head/day before using this feeding instruction.</p>}
       {recipe ? (
         <div className="grid gap-4 lg:grid-cols-2">
           <div>
             <h4 className="text-xs font-bold uppercase text-ink">{recipe.name} ingredients</h4>
-            <div className="mt-2 divide-y divide-ink/5 border-y border-ink/10">
+      <div className="mt-2 divide-y divide-ink/5 border-y border-ink/10">
               {recipe.ingredients.map((ingredient) => (
-                <div key={ingredient.inventory_item_id} className="grid grid-cols-[1fr_auto_auto] gap-4 py-2 text-xs">
-                  <span className="font-semibold text-ink">{ingredient.name} ({Number(ingredient.percentage).toFixed(1)}%)</span>
-                  <span>{Number(ingredient.group_kg_per_feeding).toFixed(2)} kg/feed</span>
-                  <span>{Number(ingredient.daily_group_kg).toFixed(2)} kg/day</span>
+                <div key={ingredient.inventory_item_id} className="grid min-w-0 grid-cols-2 gap-x-2 gap-y-2 py-2 text-xs sm:grid-cols-[minmax(0,1fr)_auto_auto] sm:gap-4">
+                  <span className="col-span-2 break-words font-semibold text-ink sm:col-span-1">{ingredient.name} ({Number(ingredient.percentage).toFixed(1)}%)</span>
+                  <span className="text-right sm:text-left">{Number(ingredient.group_kg_per_feeding).toFixed(2)} kg/feed</span>
+                  <span className="text-right sm:text-left">{Number(ingredient.daily_group_kg).toFixed(2)} kg/day</span>
                 </div>
               ))}
             </div>
@@ -136,6 +137,7 @@ function GroupDetails({ group, profile, onSaveProfile, onSaveRecipe, isSavingPro
 }
 
 export default function FeedingGroupPlanner() {
+  const navigate = useNavigate();
   const { tenantId, farmId } = useTenant();
   const queryClient = useQueryClient();
   const [expandedGroup, setExpandedGroup] = useState(null);
@@ -200,7 +202,8 @@ export default function FeedingGroupPlanner() {
       </div>
 
       {planQuery.isLoading ? <div className="p-5 text-sm text-ink-muted">Loading group plan...</div> : groups.length === 0 ? <div className="p-5 text-sm text-ink-muted">No feeding groups are available yet.</div> : (
-        <div className="overflow-x-auto">
+        <>
+        <div className="hidden overflow-x-auto md:block">
           <table className="w-full min-w-[980px] text-left">
             <thead className="bg-surface-raised text-[10px] font-bold uppercase tracking-wider text-ink-muted">
               <tr><th className="px-5 py-3">Group / quantity basis</th><th className="px-5 py-3 text-right">Headcount</th><th className="px-5 py-3 text-right">kg/head/day</th><th className="px-5 py-3 text-right">kg/head/feeding</th><th className="px-5 py-3 text-right">Daily group batch</th><th className="px-5 py-3 text-right">Batch/feeding</th><th className="px-5 py-3">Recipe</th><th /></tr>
@@ -231,6 +234,43 @@ export default function FeedingGroupPlanner() {
             </tfoot>
           </table>
         </div>
+        <div className="divide-y divide-ink/10 md:hidden">
+          {groups.map((group) => {
+            const isExpanded = expandedGroup === group.feeding_group;
+            const profile = profiles.find((item) => item.feeding_group === group.feeding_group) ?? { ...EMPTY_PROFILE, feeding_group: group.feeding_group };
+            return (
+              <article key={group.feeding_group} className="min-w-0 p-4">
+                <div className="flex min-w-0 items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <h3 className="break-words font-semibold text-ink">{GROUP_LABELS[group.feeding_group] ?? group.feeding_group}</h3>
+                  </div>
+                  <span className="shrink-0 rounded-badge border border-brand/20 bg-brand-50 px-2 py-1 text-[10px] font-bold text-brand-dark">{group.assigned_recipe ? 'Assigned' : 'Not assigned'}</span>
+                </div>
+                <dl className="mt-3 grid min-w-0 grid-cols-2 gap-x-3 gap-y-3 rounded-lg bg-brand-50 p-3 text-xs">
+                  <div className="min-w-0"><dt className="text-ink-muted">Headcount</dt><dd className="mt-0.5 font-semibold tabular-nums text-ink">{group.headcount}</dd></div>
+                  <div className="min-w-0"><dt className="text-ink-muted">Daily per head</dt><dd className="mt-0.5 break-words font-semibold tabular-nums text-ink">{Number(group.daily_kg_per_head || 0).toFixed(2)} kg</dd></div>
+                  <div className="min-w-0"><dt className="text-ink-muted">Per head / feeding</dt><dd className="mt-0.5 break-words font-semibold tabular-nums text-ink">{Number(group.kg_per_head_per_feeding || 0).toFixed(2)} kg</dd></div>
+                  <div className="min-w-0"><dt className="text-ink-muted">Daily group batch</dt><dd className="mt-0.5 break-words font-bold tabular-nums text-brand">{Number(group.daily_group_batch_kg || 0).toFixed(2)} kg</dd></div>
+                  <div className="min-w-0"><dt className="text-ink-muted">Batch / feeding</dt><dd className="mt-0.5 break-words font-semibold tabular-nums text-ink">{Number(group.group_batch_per_feeding_kg || 0).toFixed(2)} kg</dd></div>
+                </dl>
+                <div className="mt-3 flex min-w-0 items-center justify-between gap-3 border-t border-ink/10 pt-3">
+                  <p className="min-w-0 break-words text-xs text-ink-muted">{group.quantity_label}{group.assigned_recipe?.name ? ` · ${group.assigned_recipe.name}` : ''}</p>
+                  {group.assigned_recipe ? (
+                    <button type="button" onClick={() => setExpandedGroup(isExpanded ? null : group.feeding_group)} className="inline-flex min-h-10 shrink-0 items-center justify-center gap-1.5 rounded-button border border-brand/20 px-2.5 text-xs font-semibold text-brand-dark" aria-label={`${isExpanded ? 'Close' : 'Edit'} ${GROUP_LABELS[group.feeding_group] ?? group.feeding_group} recipe details`} aria-expanded={isExpanded}>{isExpanded ? <><ChevronUp size={15} /> Close</> : <><ChevronDown size={15} /> Recipe details</>}</button>
+                  ) : (
+                    <button type="button" onClick={() => navigate('/feed-nutrition/mix', { state: { feedingGroup: group.feeding_group, draftName: `${GROUP_LABELS[group.feeding_group] ?? group.feeding_group} Feed Mix` } })} className="inline-flex min-h-10 shrink-0 items-center justify-center gap-1.5 rounded-button bg-brand px-2.5 text-xs font-semibold text-white hover:bg-brand-dark" aria-label={`Assign a recipe to ${GROUP_LABELS[group.feeding_group] ?? group.feeding_group}`}><Plus size={15} /> Assign recipe</button>
+                  )}
+                </div>
+                {isExpanded && <GroupDetails group={group} profile={profile} onSaveProfile={(feedingGroup, payload) => saveProfile.mutate({ group: feedingGroup, payload })} onSaveRecipe={(recipeId, payload) => saveRecipe.mutate({ recipeId, payload })} isSavingProfile={saveProfile.isPending} isSavingRecipe={saveRecipe.isPending} />}
+              </article>
+            );
+          })}
+          <div className="bg-brand-50 px-4 py-3 text-xs font-bold text-ink">
+            <div>Total ({totals.total_active_animals ?? 0} active animals)</div>
+            <div className="mt-1 text-brand">Planned mix: {Number(totals.total_planned_mix_kg || 0).toFixed(2)} kg</div>
+          </div>
+        </div>
+        </>
       )}
     </section>
   );

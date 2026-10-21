@@ -92,7 +92,7 @@ export default function CustomerPortal() {
             <span className="text-sm text-ink-muted">Sorted by Newest First</span>
           </div>
 
-          <div className="overflow-x-auto">
+          <div className="hidden overflow-x-auto md:block">
             <table className="w-full text-left border-collapse">
               <thead className="bg-brand/10 text-ink-muted">
                 <tr>
@@ -119,6 +119,21 @@ export default function CustomerPortal() {
                 ))}
               </tbody>
             </table>
+          </div>
+          <div className="divide-y divide-ink/10 md:hidden">
+            {portalData.history.map((row, index) => (
+              <article key={index} className="space-y-3 p-4">
+                <div className="flex items-start justify-between gap-3">
+                  <p className="min-w-0 text-sm font-semibold text-ink">{row.date}</p>
+                  <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-brand/10 px-2 py-1 text-[11px] font-semibold text-brand"><CheckCircle2 size={12} />{row.status}</span>
+                </div>
+                <div className="grid grid-cols-2 gap-3 text-xs">
+                  <div><p className="text-ink-muted">Volume</p><p className="mt-1 font-semibold tabular-nums text-ink">{Number(row.volume || 0).toFixed(1)} L</p></div>
+                  <div><p className="text-ink-muted">Rate</p><p className="mt-1 font-semibold tabular-nums text-ink">KES {Number(row.rate || 0).toFixed(2)}</p></div>
+                  <div className="col-span-2"><p className="text-ink-muted">Daily total</p><p className="mt-1 font-bold tabular-nums text-brand">KES {Number(row.dailyTotal || row.amount || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</p></div>
+                </div>
+              </article>
+            ))}
           </div>
         </div>
       </div>

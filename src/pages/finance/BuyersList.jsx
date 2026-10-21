@@ -21,7 +21,7 @@ const formatKes = (value) => `KES ${Number(value || 0).toLocaleString(undefined,
 /**
  * SRP: Renders a single Financial KPI Widget.
  */
-const KPIWidget = ({ title, value, subtitle, icon: Icon, valueColor = "text-brand-700" }) => (
+const KPIWidget = ({ title, value, subtitle, icon: Icon, valueColor = "text-brand" }) => (
   <div className="group relative overflow-hidden rounded-card border border-slate-200 border-t-[4px] border-t-brand-400 bg-white/90 p-6 backdrop-blur">
     <div className="flex justify-between items-start mb-4">
       <h3 className="text-[11px] font-black uppercase tracking-widest text-slate-600">
@@ -31,7 +31,7 @@ const KPIWidget = ({ title, value, subtitle, icon: Icon, valueColor = "text-bran
         <Icon size={18} strokeWidth={2.5} />
       </div>
     </div>
-    <div className={`text-3xl font-bold tabular-nums mb-1 font-mono ${valueColor}`}>
+    <div className={`mb-1 break-words font-mono text-2xl font-bold tabular-nums sm:text-3xl ${valueColor}`}>
       {value}
     </div>
     <p className="text-xs font-medium text-slate-600">{subtitle}</p>
@@ -181,7 +181,7 @@ export default function BuyersList() {
 
       {/* IMPROVEMENT: Wrap KPIs in a conditional check */}
       {safeCustomers.length > 0 && (
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6 mb-8 animate-in slide-in-from-bottom-4">
+        <div className="mb-8 grid grid-cols-2 gap-3 animate-in slide-in-from-bottom-4 md:grid-cols-3 md:gap-6">
           <KPIWidget 
             title="Total Buyers" 
             value={safeCustomers.length} 
@@ -193,7 +193,7 @@ export default function BuyersList() {
             value={formatKes(totalOutstanding)}
             subtitle="Unpaid balances across all buyers."
             icon={TrendingDown}
-            valueColor="text-danger" 
+            valueColor="text-brand-dark"
           />
           <KPIWidget 
             title="Settled Accounts" 
@@ -211,22 +211,22 @@ export default function BuyersList() {
             <section className="rounded-card border border-slate-200 bg-white/90 p-5 backdrop-blur md:p-6" aria-label="Buyer filters and bulk actions">
               <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
                 <div className="relative min-w-0 flex-1 lg:max-w-lg">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" size={17} />
+                  <Search className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-brand" size={17} />
                   <input
                     type="search"
                     placeholder="Search name, ID, or phone number"
-                    className="h-10 w-full rounded-input border border-slate-300 bg-white pl-10 pr-3 text-sm font-medium text-ink-900 placeholder:text-slate-500 focus:border-brand-700 focus:outline-none focus:ring-2 focus:ring-brand-400/30"
+                    className="h-10 w-full rounded-input border border-ink/20 bg-surface pl-10 pr-3 text-sm font-medium text-ink placeholder:text-ink-muted focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/30"
                     value={searchTerm}
                     onChange={(event) => setSearchTerm(event.target.value)}
                   />
                 </div>
                 <label className="relative flex min-w-[190px] items-center">
-                  <SlidersHorizontal className="pointer-events-none absolute left-3 text-slate-500" size={16} />
+                  <SlidersHorizontal className="pointer-events-none absolute left-3.5 text-brand" size={16} />
                   <span className="sr-only">Status</span>
                   <select
                     value={statusFilter}
                     onChange={(event) => setStatusFilter(event.target.value)}
-                    className="h-10 w-full appearance-none rounded-input border border-slate-300 bg-white pl-10 pr-9 text-sm font-semibold text-ink-900 focus:border-brand-700 focus:outline-none focus:ring-2 focus:ring-brand-400/30"
+                    className="h-10 w-full appearance-none rounded-input border border-ink/20 bg-surface pl-10 pr-9 text-sm font-semibold text-ink focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/30"
                     aria-label="Status"
                   >
                     <option value="all">All statuses</option>
@@ -251,7 +251,7 @@ export default function BuyersList() {
             </section>
 
             <section className="overflow-hidden rounded-card border border-slate-200 bg-white/90 backdrop-blur" aria-label="Buyers data table">
-              <div className="overflow-x-auto">
+              <div className="hidden overflow-x-auto md:block">
                 <table className="w-full min-w-[1040px] border-collapse text-left">
                   <thead className="border-b border-slate-300">
                     <tr className="text-xs font-bold uppercase tracking-wider text-slate-600">
@@ -301,11 +301,11 @@ export default function BuyersList() {
                           <td className="px-3 py-2.5 text-right font-mono text-xs font-semibold tabular-nums text-ink-900">
                             {formatKes(rate)}/L
                           </td>
-                          <td className={`px-3 py-2.5 text-right font-mono text-xs font-bold tabular-nums ${balance > 0 ? 'text-danger-500' : 'text-brand-700'}`}>
+                          <td className="px-3 py-2.5 text-right font-mono text-xs font-bold tabular-nums text-brand">
                             {formatKes(balance)}
                           </td>
                           <td className="px-3 py-2.5">
-                            <span className={`inline-flex items-center rounded-badge border px-2 py-1 text-[11px] font-bold ${balance > 0 ? 'border-danger-100 bg-danger-50 text-danger-900' : 'border-brand-200 bg-brand-50 text-brand-900'}`}>
+                            <span className="inline-flex items-center rounded-badge border border-brand/20 bg-brand-50 px-2 py-1 text-[11px] font-bold text-brand-dark">
                               {balance > 0 ? 'Outstanding' : 'Settled'}
                             </span>
                           </td>
@@ -352,6 +352,41 @@ export default function BuyersList() {
                   </tbody>
                 </table>
               </div>
+              <div className="divide-y divide-ink/10 md:hidden">
+                {filteredCustomers.map((buyer) => {
+                  const id = buyer?.id || 'Unknown ID';
+                  const contact = buyer?.phone_number || buyer?.contact || 'No contact';
+                  const balance = Number(buyer?.account_balance || buyer?.balance || 0);
+                  const rate = Number(buyer?.agreed_rate_per_liter || buyer?.rate_per_liter || 0);
+                  const isSelected = selectedCustomerIds.includes(String(id));
+                  return (
+                    <article key={id} className={`min-w-0 space-y-3 p-4 ${isSelected ? 'bg-brand-50' : ''}`}>
+                      <div className="flex min-w-0 items-start justify-between gap-3">
+                        <div className="flex min-w-0 items-start gap-2">
+                          <input type="checkbox" checked={isSelected} onChange={() => toggleCustomer(id)} className="mt-1 h-4 w-4 shrink-0 accent-brand" aria-label={`Select ${buyer?.name || 'buyer'}`} />
+                          <div className="min-w-0">
+                            <p className="break-words font-semibold text-ink">{buyer?.name || 'Unnamed Buyer'}</p>
+                            <p className="mt-0.5 text-xs text-ink-muted">{buyer?.type || 'Standard'} · ID {id}</p>
+                          </div>
+                        </div>
+                        <span className="shrink-0 rounded-badge border border-brand/20 bg-brand-50 px-2 py-1 text-[10px] font-bold text-brand-dark">{balance > 0 ? 'Outstanding' : 'Settled'}</span>
+                      </div>
+                      <dl className="grid grid-cols-2 gap-x-3 gap-y-2 border-t border-ink/10 pt-3 text-xs">
+                        <div className="min-w-0"><dt className="text-ink-muted">Agreed rate</dt><dd className="mt-1 break-words font-mono font-semibold text-ink">{formatKes(rate)}/L</dd></div>
+                        <div className="min-w-0"><dt className="text-ink-muted">Current balance</dt><dd className="mt-1 break-words font-mono font-bold text-brand">{formatKes(balance)}</dd></div>
+                      </dl>
+                      <div className="flex min-w-0 flex-wrap items-center justify-between gap-2 border-t border-ink/10 pt-3">
+                        <p className="min-w-0 flex-1 break-all text-xs text-ink-muted">{contact}</p>
+                        <div className="flex shrink-0 gap-2">
+                          <Link to={`/finance/customers/${id}`} className="inline-flex min-h-10 items-center gap-1.5 rounded-button border border-brand/20 px-2.5 text-xs font-semibold text-brand-dark hover:bg-brand-50"><FileText size={14} /> Statement</Link>
+                          <button type="button" onClick={() => shareCustomerStatement(buyer)} className="inline-flex min-h-10 items-center gap-1.5 rounded-button bg-brand px-2.5 text-xs font-semibold text-white hover:bg-brand-dark"><MessageCircle size={14} /> WhatsApp</button>
+                        </div>
+                      </div>
+                    </article>
+                  );
+                })}
+                {filteredCustomers.length === 0 && <p className="p-6 text-center text-sm text-ink-muted">No buyers match these filters.</p>}
+              </div>
             </section>
           </div>
         )}
@@ -389,7 +424,7 @@ export default function BuyersList() {
               </button>
               
               <button onClick={handleImport} className="w-full sm:w-auto flex items-center justify-center gap-2 bg-surface border border-ink/20 text-ink-strong px-6 py-3 rounded-button font-bold text-sm hover:bg-ink/5 transition-colors">
-                <FileSpreadsheet size={18} className="text-success" /> Import from Excel
+                <FileSpreadsheet size={18} className="text-brand" /> Import from Excel
               </button>
             </div>
 

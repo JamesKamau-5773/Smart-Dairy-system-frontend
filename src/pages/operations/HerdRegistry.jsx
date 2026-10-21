@@ -700,7 +700,7 @@ export default function HerdRegistry() {
         </div>
 
         {/* Table */}
-        <div className="overflow-x-auto">
+        <div className="hidden overflow-x-auto md:block">
           <table className="w-full border-collapse text-left">
             <thead>
               <tr className="bg-surface-raised border-b border-ink/10">
@@ -852,6 +852,31 @@ export default function HerdRegistry() {
                   })}
             </tbody>
           </table>
+        </div>
+        <div className="space-y-3 p-3 md:hidden">
+          {isLoading ? Array.from({ length: 4 }, (_, index) => <Skeleton key={index} className="h-36 w-full" />)
+            : visibleHerd.length === 0 ? <p className="p-5 text-center text-sm text-ink-muted">{herdSearch || statusFilter !== 'All' ? 'No animals match your filters.' : 'Your herd is empty.'}</p>
+              : visibleHerd.map((cow) => {
+                const routeId = getCowRouteId(cow);
+                return (
+                  <article key={`${cow.id}-${routeId || 'card'}`} className="min-w-0 rounded-xl border border-ink/10 bg-surface p-4">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0"><Link to={`/operations/animal/${routeId}`} className="text-sm font-bold text-brand">{cow.name || cow.id}</Link><p className="mt-1 text-xs text-ink-muted">Tag {cow.id} · {cow.breed}</p></div>
+                      <span className={`shrink-0 rounded-full border px-2 py-1 text-[10px] font-bold ${statusTone(cow.status)}`}>{cow.status}</span>
+                    </div>
+                    <div className="mt-3 grid grid-cols-2 gap-3 rounded-lg bg-surface-raised p-3 text-xs">
+                      <div><p className="text-ink-muted">Last calved</p><p className="mt-1 font-semibold text-ink">{formatDate(cow.lastCalved)}</p></div>
+                      <div><p className="text-ink-muted">Age</p><p className="mt-1 font-semibold text-ink">{formatAge(cow.ageMonths)}</p></div>
+                      <div className="col-span-2"><p className="text-ink-muted">Updated</p><p className="mt-1 font-semibold text-ink">{hasValidTimestamp(cow.updatedAt) ? `${getRelativeTime(cow.updatedAt)}${cow.updatedBy ? ` · ${cow.updatedBy}` : ''}` : '—'}</p></div>
+                    </div>
+                    <div className="mt-3 flex gap-2">
+                      <Link to={`/operations/animal/${routeId}`} className="flex-1 rounded-lg bg-brand px-3 py-2 text-center text-xs font-semibold text-white">View record</Link>
+                      <button type="button" onClick={() => handleOpenEdit(cow)} className="rounded-lg border border-brand/20 px-3 py-2 text-xs font-semibold text-brand">Edit</button>
+                      <button type="button" onClick={() => handleDeleteCow(routeId, cow.name, cow.id)} className="rounded-lg border border-brand/20 px-3 py-2 text-xs font-semibold text-brand">Delete</button>
+                    </div>
+                  </article>
+                );
+              })}
         </div>
 
         <div className="mt-4 text-xs text-ink-muted">

@@ -132,7 +132,7 @@ export default function MilkInventoryReport() {
           {isLoading ? (
             <Skeleton className="h-full w-full" />
           ) : isError ? (
-            <div className="flex items-center justify-center h-full text-danger">
+            <div className="flex items-center justify-center h-full text-brand">
               Error loading report data.
             </div>
           ) : chartData.length > 0 ? (
@@ -168,7 +168,7 @@ export default function MilkInventoryReport() {
           <Table size={18} className="text-brand" />
           <h3 className="font-bold text-lg text-ink">Daily Records</h3>
         </div>
-        <div className="overflow-x-auto">
+        <div className="hidden overflow-x-auto md:block">
           <table className="w-full text-left">
             <thead className="bg-surface-raised">
               <tr>
@@ -184,7 +184,7 @@ export default function MilkInventoryReport() {
                   <tr key={i}><td colSpan="4" className="p-4"><Skeleton className="h-6 w-full" /></td></tr>
                 ))
               ) : isError ? (
-                <tr><td colSpan="4" className="p-6 text-center text-danger">Error loading report data.</td></tr>
+                <tr><td colSpan="4" className="p-6 text-center text-brand">Error loading report data.</td></tr>
               ) : chartData.length > 0 ? (
                 <GroupedDateRows
                   items={dailyRecords}
@@ -202,8 +202,8 @@ export default function MilkInventoryReport() {
                   <tr key={record.date} className="hover:bg-surface-raised transition-colors">
                     <td className="p-4 text-sm font-medium text-ink">{format(new Date(`${record.date}T00:00:00`), 'MMM d, yyyy')}</td>
                     <td className="p-4 text-sm font-semibold text-ink text-right tabular-nums">{record.produced.toFixed(1)}</td>
-                    <td className="p-4 text-sm font-semibold text-success text-right tabular-nums">{record.sold.toFixed(1)}</td>
-                    <td className="p-4 text-sm font-semibold text-danger text-right tabular-nums">{record.unsold.toFixed(1)}</td>
+                    <td className="p-4 text-sm font-semibold text-brand text-right tabular-nums">{record.sold.toFixed(1)}</td>
+                    <td className="p-4 text-sm font-semibold text-brand-dark text-right tabular-nums">{record.unsold.toFixed(1)}</td>
                   </tr>
                   )}
                 />
@@ -212,6 +212,19 @@ export default function MilkInventoryReport() {
               )}
             </tbody>
           </table>
+        </div>
+        <div className="divide-y divide-ink/10 md:hidden">
+          {isLoading ? Array.from({ length: 5 }).map((_, i) => <div key={i} className="p-4"><Skeleton className="h-20 w-full" /></div>)
+            : isError ? <p className="p-5 text-center text-sm text-brand">Error loading report data.</p>
+              : dailyRecords.map((record) => (
+                <article key={record.date} className="grid grid-cols-2 gap-3 p-4 text-sm">
+                  <div className="col-span-2 font-semibold text-ink">{format(new Date(`${record.date}T00:00:00`), 'MMM d, yyyy')}</div>
+                  <div><p className="text-xs text-ink-muted">Produced</p><p className="mt-1 font-semibold tabular-nums text-ink">{Number(record.produced || 0).toFixed(1)} L</p></div>
+                  <div><p className="text-xs text-ink-muted">Sold</p><p className="mt-1 font-semibold tabular-nums text-brand">{Number(record.sold || 0).toFixed(1)} L</p></div>
+                  <div className="col-span-2"><p className="text-xs text-ink-muted">Unsold</p><p className="mt-1 font-semibold tabular-nums text-ink">{Number(record.unsold || 0).toFixed(1)} L</p></div>
+                </article>
+              ))}
+          {!isLoading && !isError && dailyRecords.length === 0 && <p className="p-5 text-center text-sm text-ink-muted">No data available for the selected date range.</p>}
         </div>
       </div>
     </div>

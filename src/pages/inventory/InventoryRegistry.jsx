@@ -247,20 +247,20 @@ export default function InventoryRegistry() {
       </div>
 
       {/* SEARCH AND FILTER */}
-      <div className="flex gap-4 mb-6">
-        <div className="flex-1 relative">
-            <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
+      <div className="mb-6 flex min-w-0 flex-col gap-3 sm:flex-row sm:gap-4">
+        <div className="relative min-w-0 flex-1">
+            <Search size={16} className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-brand" />
             <input
                 placeholder="Search items by name or SKU..."
-                className="w-full pl-12 pr-4 py-3 border border-slate-200 rounded-lg text-xs font-bold outline-none focus:border-brand/50"
+                className="w-full rounded-lg border border-ink/20 py-3 pl-10 pr-4 text-xs font-bold outline-none focus:border-brand/50"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
             />
         </div>
-        <div className="relative">
-            <Filter size={14} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+        <div className="relative w-full sm:w-auto sm:min-w-48">
+            <Filter size={14} className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-brand" />
             <select
-                className="w-full pl-10 pr-10 py-3 bg-white border border-slate-200 rounded-lg font-black text-xs uppercase text-slate-600 hover:bg-slate-50 appearance-none focus:outline-none focus:border-brand/50 cursor-pointer"
+                className="w-full appearance-none rounded-lg border border-ink/20 bg-surface py-3 pl-10 pr-10 text-xs font-black uppercase text-ink hover:bg-brand-50 focus:border-brand/50 focus:outline-none cursor-pointer"
                 value={categoryFilter}
                 onChange={(e) => setCategoryFilter(e.target.value)}
             >
@@ -273,13 +273,13 @@ export default function InventoryRegistry() {
       </div>
 
       {/* STOCK TABLE */}
-      <div className="bg-white border border-slate-100 rounded-xl  overflow-x-auto">
+      <div className="min-w-0 overflow-hidden rounded-xl border border-slate-100 bg-white">
         {filteredInventoryData.length === 0 ? (
           <div className="p-8 text-center text-sm text-slate-500">
             No inventory items are available yet.
           </div>
         ) : (
-        <table className="w-full min-w-[680px] text-left border-collapse">
+        <table className="hidden w-full min-w-[680px] border-collapse text-left md:table">
           <thead className="bg-brand-800 text-[10px] uppercase font-bold text-white">
             <tr>
               <th className="px-6 py-4">Item Details</th>
@@ -303,9 +303,7 @@ export default function InventoryRegistry() {
                 <td className="px-6 py-4">
                   {(() => {
                     const status = getItemStatus(item);
-                    const statusClass = status === 'HEALTHY'
-                      ? 'bg-emerald-50 text-emerald-600 border-emerald-100'
-                      : 'bg-red-50 text-red-600 border-red-100';
+                    const statusClass = 'border-brand/20 bg-brand-50 text-brand-dark';
                     return (
                       <span className={`text-[9px] font-black px-2 py-1 rounded border ${statusClass}`}>
                         {status}
@@ -331,6 +329,28 @@ export default function InventoryRegistry() {
             ))}
           </tbody>
         </table>
+        <div className="divide-y divide-ink/10 md:hidden">
+          {filteredInventoryData.map((item) => {
+            const status = getItemStatus(item);
+            return (
+              <article key={item.sku} className="min-w-0 space-y-3 p-4">
+                <div className="flex min-w-0 items-start justify-between gap-3">
+                  <div className="min-w-0"><h3 className="break-words font-bold text-ink">{item.name}</h3><p className="mt-1 break-all font-mono text-xs text-ink-muted">{item.sku}</p></div>
+                  <span className="shrink-0 rounded border border-brand/20 bg-brand-50 px-2 py-1 text-[10px] font-bold text-brand-dark">{status}</span>
+                </div>
+                <dl className="grid grid-cols-2 gap-3 border-t border-ink/10 pt-3 text-xs">
+                  <div className="min-w-0"><dt className="text-ink-muted">Category</dt><dd className="mt-1 break-words font-semibold text-ink">{item.category}</dd></div>
+                  <div className="min-w-0"><dt className="text-ink-muted">Current stock</dt><dd className="mt-1 break-words font-mono font-bold tabular-nums text-brand">{item.stock?.value ?? 0} {item.stock?.unit || 'units'}</dd></div>
+                </dl>
+                <div className="flex flex-wrap justify-end gap-2 border-t border-ink/10 pt-3">
+                  <button type="button" onClick={() => handleRestock(item)} className="rounded-button border border-brand/20 px-3 py-2 text-xs font-semibold text-brand">Restock</button>
+                  <button type="button" onClick={() => handleEdit(item)} className="rounded-button border border-brand/20 px-3 py-2 text-xs font-semibold text-brand">Edit</button>
+                  <button type="button" onClick={() => handleDelete(item)} className="rounded-button border border-brand/20 px-3 py-2 text-xs font-semibold text-brand-dark">Delete</button>
+                </div>
+              </article>
+            );
+          })}
+        </div>
         )}
       </div>
 

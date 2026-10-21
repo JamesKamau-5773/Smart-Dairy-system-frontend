@@ -36,7 +36,7 @@ const SummaryCard = ({ title, value, unit, icon: Icon, trend, loading = false })
         <Skeleton className="h-12 w-3/5" />
       ) : (
         <>
-          <div className="font-sans text-3xl font-black text-brand tracking-tight flex items-baseline">
+          <div className="flex min-w-0 items-baseline break-words font-sans text-2xl font-black tracking-tight text-brand sm:text-3xl">
             {value}
             <span className="text-sm ml-2 font-bold text-ink-muted">{unit}</span>
           </div>
@@ -155,7 +155,7 @@ export default function CommandCenter() {
       </section>
 
       {hasSummaryError && (
-        <section className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+        <section className="rounded-xl border border-brand/20 bg-brand-50 px-4 py-3 text-sm text-brand-dark">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <p>
               Some dashboard totals are unavailable right now. Check the backend responses for
@@ -166,7 +166,7 @@ export default function CommandCenter() {
               type="button"
               onClick={handleRetrySummary}
               disabled={isRetryingSummary}
-              className="inline-flex items-center justify-center rounded-lg border border-amber-300 bg-white px-3 py-1.5 text-xs font-bold uppercase tracking-wider text-amber-900 transition hover:bg-amber-100 disabled:cursor-not-allowed disabled:opacity-60"
+              className="inline-flex items-center justify-center rounded-lg border border-brand/30 bg-surface px-3 py-1.5 text-xs font-bold uppercase tracking-wider text-brand-dark transition hover:bg-brand-50 disabled:cursor-not-allowed disabled:opacity-60"
             >
               {isRetryingSummary ? 'Retrying...' : 'Retry'}
             </button>
@@ -174,10 +174,10 @@ export default function CommandCenter() {
         </section>
       )}
 
-      <section className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <section className="grid grid-cols-2 gap-3 md:grid-cols-3 md:gap-4">
         <div className="card-machined bg-surface p-5 border border-ink/5">
           <p className="text-xs font-bold text-ink-muted uppercase tracking-wider">Transaction Revenue</p>
-          <h3 className="text-2xl font-black text-brand mt-2">
+          <h3 className="mt-2 break-words text-xl font-black text-brand sm:text-2xl">
             {summaryQuery.isLoading ? 'Loading...' : hasSummaryError ? 'Unavailable' : `KES ${(summary?.revenue_total_kes ?? 0).toLocaleString()}`}
           </h3>
           {summary?.revenue_breakdown?.report_sales_revenue_kes != null && (
@@ -188,19 +188,19 @@ export default function CommandCenter() {
         </div>
         <div className="card-machined bg-surface p-5 border border-ink/5">
           <p className="text-xs font-bold text-ink-muted uppercase tracking-wider">Today's Feed Cost</p>
-          <h3 className="text-2xl font-black text-ink mt-2">
+          <h3 className="mt-2 break-words text-xl font-black text-ink sm:text-2xl">
             {summaryQuery.isLoading ? 'Loading...' : hasSummaryError ? 'Unavailable' : `KES ${(summary?.feed_cost_total_kes ?? 0).toLocaleString()}`}
           </h3>
         </div>
         <div className="card-machined bg-brand/5 p-5 border-2 border-brand/20 ">
           <p className="text-xs font-bold text-brand uppercase tracking-wider">Daily Profit</p>
-          <h3 className="text-2xl font-black text-brand mt-2">
+          <h3 className="mt-2 break-words text-xl font-black text-brand sm:text-2xl">
             {summaryQuery.isLoading ? 'Loading...' : hasSummaryError ? 'Unavailable' : `KES ${(summary?.net_margin_kes ?? 0).toLocaleString()}`}
           </h3>
         </div>
       </section>
 
-      <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <section className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
         <SummaryCard title="Total Milk (Today)" value={summaryQuery.isLoading ? '—' : totalLitersToday.toFixed(1)} unit="Liters" icon={Droplets} loading={summaryQuery.isLoading} />
         <SummaryCard title="Saleable Milk (Today)" value={summaryQuery.isLoading ? '—' : (summary?.saleable_liters ?? 0).toFixed(1)} unit="Liters" icon={Droplets} loading={summaryQuery.isLoading} />
         <SummaryCard title="Milk Sold (Today)" value={summaryQuery.isLoading ? '—' : (summary?.total_sold_liters ?? 0).toFixed(1)} unit="Liters" icon={ShoppingCart} loading={summaryQuery.isLoading} />

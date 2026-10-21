@@ -205,11 +205,11 @@ export default function TopRecipesList({ recipes }) {
         The feed mixes giving you the most milk for the least amount of money.
       </p>
 
-      <div className="overflow-x-auto border border-slate-300">
+      <div className="border border-slate-300">
         {safeRecipes.length === 0 ? (
           <EmptyMixState />
         ) : (
-          <table className="min-w-[760px] w-full border-collapse text-left">
+          <table className="hidden min-w-[760px] w-full border-collapse text-left md:table">
             <thead className="bg-slate-100">
               <tr className="border-b border-slate-300">
                 <th scope="col" className="w-20 px-4 py-3 text-xs font-bold uppercase tracking-wider text-slate-500">Rank</th>
@@ -233,6 +233,32 @@ export default function TopRecipesList({ recipes }) {
           </table>
         )}
       </div>
+      {safeRecipes.length > 0 && <div className="space-y-3 md:hidden">
+        {safeRecipes.map((recipe, index) => {
+          const recipeId = recipe?.id;
+          const perf = recipe?.performance ?? {};
+          const yieldAvg = Number(perf.avgDailyYieldLiters ?? perf.avg_daily_yield_liters ?? recipe?.yieldAvg ?? 0);
+          const costPerLiter = Number(perf.costPerLiter ?? perf.cost_per_liter ?? recipe?.costPerLiter ?? 0);
+          const ingredients = Array.isArray(recipe?.ingredients) ? recipe.ingredients : Array.isArray(recipe?.formula) ? recipe.formula : [];
+          const expanded = expandedId === recipeId;
+          return <article key={recipeId || `mobile-${index}`} className="min-w-0 rounded-xl border border-ink/10 bg-surface p-4">
+            <button type="button" onClick={() => handleToggle(recipeId)} aria-expanded={expanded} className="flex w-full min-w-0 items-center justify-between gap-3 text-left">
+              <span className="min-w-0"><span className="block text-[10px] font-semibold uppercase tracking-wider text-ink-muted">Rank {index + 1}</span><span className="mt-1 block break-words text-sm font-bold text-brand">{recipe?.name || 'Unnamed Mix'}</span></span>
+              {expanded ? <ChevronUp className="shrink-0 text-brand" size={18} /> : <ChevronDown className="shrink-0 text-brand" size={18} />}
+            </button>
+            <div className="mt-3 grid grid-cols-2 gap-3 rounded-lg bg-surface-raised p-3 text-xs">
+              <div><p className="text-ink-muted">Daily milk average</p><p className="mt-1 font-mono font-bold tabular-nums text-ink">{yieldAvg.toFixed(1)} L</p></div>
+              <div><p className="text-ink-muted">Cost per liter</p><p className="mt-1 font-mono font-bold tabular-nums text-ink">KES {costPerLiter.toFixed(2)}</p></div>
+            </div>
+            {expanded && <div className="mt-3 space-y-3 border-t border-ink/10 pt-3">
+              <p className="text-[10px] font-bold uppercase tracking-wider text-ink-muted">Formula breakdown</p>
+              {ingredients.length ? ingredients.map((ingredient, ingredientIndex) => <div key={ingredientIndex} className="flex justify-between gap-3 text-xs"><span className="min-w-0 break-words text-ink">{ingredient?.name ?? ingredient?.ingredient_name ?? ingredient?.ingredientName ?? 'Unknown ingredient'}</span><span className="shrink-0 font-mono font-semibold text-ink">{Number(ingredient?.percentage ?? ingredient?.inclusion_percentage ?? ingredient?.inclusionPercentage ?? 0)}%</span></div>) : <p className="text-xs text-ink-muted">No formula data available.</p>}
+              <p className="text-xs text-ink-muted">Protein: {recipe?.target_protein_percentage ?? recipe?.protein ?? '--'}% · Last fed: {perf.lastFedOn ?? perf.last_fed_on ?? recipe?.lastUsed ?? 'Not recorded'}</p>
+              <button type="button" onClick={(event) => handleLoadRecipe(event, recipe)} className="w-full rounded-lg bg-brand px-3 py-2 text-xs font-semibold text-white">Load into Lab</button>
+            </div>}
+          </article>;
+        })}
+      </div>}
     </div>
   );
 }
