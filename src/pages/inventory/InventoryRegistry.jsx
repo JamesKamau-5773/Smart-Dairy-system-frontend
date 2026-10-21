@@ -279,6 +279,7 @@ export default function InventoryRegistry() {
             No inventory items are available yet.
           </div>
         ) : (
+        <>
         <table className="hidden w-full min-w-[680px] border-collapse text-left md:table">
           <thead className="bg-brand-800 text-[10px] uppercase font-bold text-white">
             <tr>
@@ -351,6 +352,7 @@ export default function InventoryRegistry() {
             );
           })}
         </div>
+        </>
         )}
       </div>
 
