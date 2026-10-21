@@ -105,6 +105,7 @@ export function normalizeAnimal(animal = {}, id = '') {
     sire: formatParentReference(animal.sire, animal.sire_name, animal.sire_id),
     dam: formatParentReference(animal.dam, animal.dam_name, animal.dam_id),
     birthWeightKg: animal.birth_weight_kg ?? animal.birthWeightKg ?? animal.birth_weight ?? null,
+    dateOfBirth: animal.dateOfBirth ?? animal.date_of_birth ?? animal.dob ?? null,
     ageMonths,
     status: animal.status ?? animal.current_status ?? animal.currentStatus ?? animal.lactation_status ?? 'Cow',
     current_status: animal.current_status ?? animal.currentStatus ?? animal.status ?? animal.lactation_status ?? 'Cow',

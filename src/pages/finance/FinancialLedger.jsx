@@ -95,6 +95,35 @@ const StatusBadge = ({ status }) => {
   );
 };
 
+const TransactionDescription = ({ transaction }) => {
+  const [isExpanded, setIsExpanded] = useState(false);
+  const description = transaction.description || (transaction.item_name ? 'No additional details' : 'N/A');
+  const firstSentence = description.match(/^(.+?[.!?])(?:\s|$)/)?.[1];
+  const summary = firstSentence && firstSentence.length <= 140
+    ? firstSentence
+    : `${description.slice(0, 137).replace(/\s+\S*$/, '')}…`;
+  const canExpand = description.length > summary.length;
+
+  return (
+    <div className="min-w-0">
+      {transaction.item_name && <div className="break-words font-semibold text-ink">{transaction.item_name}</div>}
+      <p className={`break-words text-ink-muted ${isExpanded ? 'whitespace-pre-wrap' : 'line-clamp-2'}`}>
+        {isExpanded ? description : summary}
+      </p>
+      {canExpand && (
+        <button
+          type="button"
+          onClick={() => setIsExpanded((expanded) => !expanded)}
+          aria-expanded={isExpanded}
+          className="mt-1 text-xs font-semibold text-brand hover:text-brand-dark"
+        >
+          {isExpanded ? 'See less' : 'See more'}
+        </button>
+      )}
+    </div>
+  );
+};
+
 const EXPENSE_CATEGORIES = [
   ['Feed Purchase', 'Feed and supplies'],
   ['Labor / Wages', 'Labor and wages'],
@@ -694,7 +723,7 @@ const FinancialLedger = () => {
                 <th className="p-4 text-xs font-bold uppercase tracking-wider text-white">Date</th>
                 <th className="p-4 text-xs font-bold uppercase tracking-wider text-white">Customer/Supplier</th>
                 <th className="p-4 text-xs font-bold uppercase tracking-wider text-white">Category</th>
-                <th className="p-4 text-xs font-bold uppercase tracking-wider text-white">Description</th>
+                <th className="min-w-56 p-4 text-xs font-bold uppercase tracking-wider text-white">Description</th>
                 <th className="p-4 text-xs font-bold uppercase tracking-wider text-white">Ref Code</th>
                 <th className="p-4 text-xs font-bold uppercase tracking-wider text-white text-right">Amount</th>
                 <th className="p-4 text-xs font-bold uppercase tracking-wider text-white">Status</th>
@@ -729,9 +758,8 @@ const FinancialLedger = () => {
                   <td className="p-4 text-sm text-ink-muted font-medium font-mono">{format(parseISO(tx.date), 'PPP')}</td>
                   <td className="p-4 text-sm text-ink font-semibold">{tx.counterparty_name || tx.customer_name || tx.buyer_name || 'N/A'}</td>
                   <td className="p-4 text-sm text-ink-muted">{tx.category}</td>
-                  <td className="p-4 text-sm text-ink-muted">
-                    {tx.item_name && <div className="font-semibold text-ink">{tx.item_name}</div>}
-                    <div>{tx.description || (tx.item_name ? 'No additional details' : 'N/A')}</div>
+                  <td className="min-w-56 p-4 text-sm text-ink-muted">
+                    <TransactionDescription transaction={tx} />
                   </td>
                   <td className="p-4 text-sm text-ink-muted font-mono">{tx.reference_code || 'N/A'}</td>
                   <td className="p-4 text-right font-mono text-sm font-semibold tabular-nums text-brand"><Money amount={tx.amount} /></td>
@@ -772,7 +800,7 @@ const FinancialLedger = () => {
               <dl className="grid min-w-0 grid-cols-2 gap-x-3 gap-y-2 border-t border-ink/10 pt-3 text-xs">
                 <div className="min-w-0"><dt className="text-ink-muted">Category</dt><dd className="mt-1 break-words font-medium text-ink">{tx.category || '—'}</dd></div>
                 <div className="min-w-0"><dt className="text-ink-muted">Status</dt><dd className="mt-1"><StatusBadge status={tx.status || tx.transaction_type} /></dd></div>
-                <div className="col-span-2 min-w-0"><dt className="text-ink-muted">Description</dt><dd className="mt-1 break-words text-ink">{tx.item_name && <strong className="block">{tx.item_name}</strong>}{tx.description || (tx.item_name ? 'No additional details' : 'N/A')}</dd></div>
+                <div className="col-span-2 min-w-0"><dt className="text-ink-muted">Description</dt><dd className="mt-1 text-sm"><TransactionDescription transaction={tx} /></dd></div>
                 <div className="col-span-2 min-w-0"><dt className="text-ink-muted">Reference</dt><dd className="mt-1 break-all font-mono text-ink">{tx.reference_code || 'N/A'}</dd></div>
               </dl>
               <div className="flex flex-wrap justify-end gap-2 border-t border-ink/10 pt-3">
