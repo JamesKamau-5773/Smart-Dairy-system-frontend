@@ -46,19 +46,19 @@ export default function OfflineIndicator({ onOpenInspector } = {}) {
     <button
       type="button"
       onClick={onOpenInspector}
-      className="flex h-10 items-center gap-2 rounded-button border border-slate-300 bg-white px-3 text-sm font-semibold text-ink-700 hover:border-brand-400 hover:bg-brand-50"
+      className="flex h-10 items-center gap-2 rounded-button border border-brand/20 bg-surface px-3 text-sm font-semibold text-ink hover:border-brand hover:bg-brand-50"
       title="Open synchronization status"
       aria-label={`${online ? 'Online' : 'Offline'}, ${pending} pending changes`}
     >
-      {online ? <Cloud size={17} className="text-success-700" /> : <CloudOff size={17} className="text-warning-700" />}
+      {online ? <Cloud size={17} className="text-brand" /> : <CloudOff size={17} className="text-brand-dark" />}
       <span className="hidden sm:inline">{online ? 'Online' : 'Offline'}</span>
       {pending > 0 ? (
-        <span className="min-w-5 rounded-full bg-warning-100 px-1.5 py-0.5 text-center text-xs font-bold text-warning-900">
+        <span className="min-w-5 rounded-full bg-brand-50 px-1.5 py-0.5 text-center text-xs font-bold text-brand-dark">
           {pending}
         </span>
       ) : null}
       {flushing ? (
-        <Loader2 size={14} className="animate-spin text-ink-500" />
+        <Loader2 size={14} className="animate-spin text-brand" />
       ) : null}
     </button>
   );

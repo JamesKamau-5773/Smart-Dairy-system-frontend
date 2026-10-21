@@ -88,7 +88,7 @@ export default function AddEmployeeModal({ isOpen, onClose, onSave }) {
 
   return createPortal(
     <div
-      className="fixed inset-0 z-[100] bg-slate-950/50 px-4 py-6 backdrop-blur-sm sm:px-6 sm:py-8"
+      className="fixed inset-0 z-[100] flex items-start justify-center overflow-y-auto bg-slate-950/50 px-3 py-4 backdrop-blur-sm sm:items-center sm:px-6 sm:py-8"
       role="dialog"
       aria-modal="true"
       aria-labelledby="add-employee-title"
@@ -96,8 +96,7 @@ export default function AddEmployeeModal({ isOpen, onClose, onSave }) {
         if (event.target === event.currentTarget && !isSaving) onClose();
       }}
     >
-      <div className="flex h-full items-center justify-center">
-        <div className="flex max-h-full w-full max-w-2xl flex-col overflow-hidden rounded-xl border border-slate-200 bg-white shadow-2xl shadow-slate-950/20">
+        <div className="my-auto flex max-h-[calc(100dvh-2rem)] w-full max-w-2xl flex-col overflow-hidden rounded-xl border border-slate-200 bg-white shadow-2xl shadow-slate-950/20 sm:max-h-[calc(100dvh-4rem)]">
         <div className="flex shrink-0 items-start justify-between border-b border-slate-200 bg-slate-50 px-6 py-5 sm:px-7">
           <div className="flex items-start gap-3">
             <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-brand text-white"><UserPlus size={18} /></div>
@@ -110,8 +109,8 @@ export default function AddEmployeeModal({ isOpen, onClose, onSave }) {
           <button type="button" onClick={onClose} disabled={isSaving} aria-label="Close add employee dialog" className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-slate-400 transition-colors hover:bg-slate-200 hover:text-slate-700 disabled:opacity-50"><X size={19} /></button>
         </div>
         
-        <form onSubmit={handleSubmit} className="flex min-h-0 flex-col">
-          <div className="space-y-6 overflow-y-auto px-6 py-6 sm:px-7">
+        <form onSubmit={handleSubmit} className="flex min-h-0 flex-1 flex-col overflow-hidden">
+          <div className="min-h-0 max-h-[calc(100dvh-16rem)] flex-1 space-y-6 overflow-y-auto overscroll-contain px-4 py-5 touch-pan-y sm:max-h-none sm:px-7 sm:py-6">
             <section>
               <div className="mb-4 border-b border-slate-100 pb-3">
                 <h3 className="text-xs font-black uppercase tracking-widest text-slate-700">Employment details</h3>
@@ -185,7 +184,6 @@ export default function AddEmployeeModal({ isOpen, onClose, onSave }) {
           </div>
         </form>
         </div>
-      </div>
     </div>,
     document.body
   );

@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import {
-  LayoutDashboard, Beaker, Pill, Package, Wallet, Menu, X,
+  LayoutDashboard, Beaker, Pill, Package, Wallet, X,
   Users, Dna, Landmark, ShieldCheck, BookHeart, BookOpen, Activity,
   Wheat, ChevronRight, ChevronDown, FileWarning, ClipboardList, TrendingUp, Droplets
 } from 'lucide-react';
@@ -10,10 +10,9 @@ import { useAuth } from '../contexts/AuthContext';
 import FarmSwitcher from './FarmSwitcher';
 import { canAccessCommandCenter, canViewAdminControls, isCooperativeAdmin, isSuperAdmin, hasRole } from '../lib/roles';
 
-export default function Sidebar() {
+export default function Sidebar({ mobileOpen = false, setMobileOpen = () => {} }) {
   const { currentUser } = useAuth();
   const location = useLocation();
-  const [mobileOpen, setMobileOpen] = useState(false);
   const [collapsedGroups, setCollapsedGroups] = useState({});
 
   const mobileDefaultCollapsedGroups = () => ({
@@ -24,6 +23,12 @@ export default function Sidebar() {
     Compliance: true,
     'Human Resources': true,
   });
+
+  useEffect(() => {
+    if (mobileOpen && Object.keys(collapsedGroups).length === 0) {
+      setCollapsedGroups(mobileDefaultCollapsedGroups());
+    }
+  }, [mobileOpen]);
 
   const showAdminControls = canViewAdminControls(currentUser);
   const canViewBreeding = true;
@@ -138,16 +143,6 @@ export default function Sidebar() {
   const isGroupCollapsed = (groupTitle) =>
     mobileOpen && Boolean(groupTitle) && Boolean(collapsedGroups[groupTitle]);
 
-  const handleMobileToggle = () => {
-    setMobileOpen((prev) => {
-      const next = !prev;
-      if (next) {
-        setCollapsedGroups((current) => Object.keys(current).length > 0 ? current : mobileDefaultCollapsedGroups());
-      }
-      return next;
-    });
-  };
-
   const toggleGroup = (groupKey) => {
     setCollapsedGroups((prev) => ({
       ...prev,
@@ -157,19 +152,10 @@ export default function Sidebar() {
 
   return (
     <React.Fragment>
-      {/* Mobile Hamburger Button */}
-      <button
-        onClick={handleMobileToggle}
-        className="md:hidden fixed top-4 left-4 z-30 p-2 min-h-[44px] min-w-[44px] bg-brand text-surface rounded-lg "
-        aria-label="Toggle navigation menu"
-      >
-        {mobileOpen ? <X size={20} /> : <Menu size={20} />}
-      </button>
-
       {/* Mobile Overlay */}
       {mobileOpen && (
         <div
-          className="md:hidden fixed inset-0 z-[19] bg-black/40 animate-reveal"
+          className="fixed inset-0 z-[19] animate-reveal bg-ink/50 md:hidden"
           onClick={() => setMobileOpen(false)}
         />
       )}
@@ -178,24 +164,25 @@ export default function Sidebar() {
       <aside className={`
         ${mobileOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}
         transition-transform duration-300
-        fixed md:fixed md:inset-y-0 md:left-0
-        w-64 md:w-60 xl:w-64 h-screen md:h-screen
-        bg-white border-r border-gray-200
+        fixed inset-y-0 bottom-16 md:inset-y-0 md:left-0 md:bottom-0
+        w-72 max-w-[85vw] md:w-60 md:max-w-none xl:w-64 h-auto md:h-screen
+        border-r border-ink/10 bg-white
         flex flex-col overflow-hidden
         z-[25] md:z-20
       `}>
 
       {/* Logo Block */}
-      <div className="h-16 flex items-center px-6 border-b border-gray-200 bg-slate-900">
-        <h1 className="text-white font-display font-semibold text-lg m-0 leading-tight">
-          Jivu Smart Dairy
+      <div className="flex h-16 shrink-0 items-center justify-between border-b border-ink/10 bg-ink-900 px-4 md:px-6">
+        <h1 className="m-0 font-display text-lg font-semibold leading-tight text-white">
+          Smart Dairy
         </h1>
+        <button type="button" onClick={() => setMobileOpen(false)} className="inline-flex h-10 w-10 items-center justify-center rounded-lg text-white hover:bg-white/10 md:hidden" aria-label="Close navigation menu"><X size={20} /></button>
       </div>
 
       <FarmSwitcher />
 
       {/* Navigation */}
-      <nav className="flex-1 overflow-y-auto sidebar-scrollbar overscroll-contain p-4 flex flex-col gap-4" aria-label="Main navigation">
+      <nav className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-4 pb-24 sidebar-scrollbar flex flex-col gap-4 md:pb-4" aria-label="Main navigation">
         {visibleGroups.map((group) => (
           <div key={group.title || 'core'} className="flex flex-col gap-2">
             {group.title && (
@@ -203,7 +190,7 @@ export default function Sidebar() {
                 <button
                   type="button"
                   onClick={() => mobileOpen && toggleGroup(group.title)}
-                  className={`w-full px-2 py-1.5 flex items-center justify-between text-xs font-bold tracking-wider uppercase rounded-md md:px-4 md:py-0 md:cursor-default transition-colors ${activeGroupTitle === group.title ? 'text-slate-700' : 'text-gray-400'}`}
+                  className={`w-full px-2 py-1.5 flex items-center justify-between text-xs font-bold tracking-wider uppercase rounded-md md:px-4 md:py-0 md:cursor-default transition-colors ${activeGroupTitle === group.title ? 'text-ink-700' : 'text-ink-400'}`}
                   aria-expanded={mobileOpen ? !isGroupCollapsed(group.title) : true}
                   aria-label={`Toggle ${group.title} section`}
                 >
@@ -231,10 +218,10 @@ export default function Sidebar() {
                     className={({ isActive }) => `flex items-center px-4 py-3 min-h-[44px] font-sans font-semibold text-sm transition-colors duration-100 border-l-2 rounded-md relative ${
                       isActive
                         ? 'border-brand-400 bg-ink-900 pl-4 text-white'
-                        : `border-transparent text-slate-600 hover:border-brand-400/50 hover:bg-brand-50 hover:text-ink-900 ${itemIsActive ? 'border-brand-400 bg-ink-900 text-white' : ''}`
+                        : `border-transparent text-ink-600 hover:border-brand-400/50 hover:bg-brand-50 hover:text-ink-900 ${itemIsActive ? 'border-brand-400 bg-ink-900 text-white' : ''}`
                     }`}
                   >
-                    <Icon size={18} className={`mr-3 shrink-0 ${itemIsActive ? 'text-brand-400' : 'text-slate-600'}`} /> {item.label}
+                    <Icon size={18} className={`mr-3 shrink-0 ${itemIsActive ? 'text-brand-400' : 'text-ink-600'}`} /> {item.label}
                   </NavLink>
                 );
               })}

@@ -112,9 +112,9 @@ export default function MilkSafetyBoard() {
   const hasCritical = stats.critical > 0;
 
   const severityTone = {
-    CRITICAL: 'bg-red-100 text-red-800 ring-1 ring-red-200',
-    WARNING: 'bg-amber-100 text-amber-800 ring-1 ring-amber-200',
-    CLEARED: 'bg-emerald-100 text-emerald-800 ring-1 ring-emerald-200',
+    CRITICAL: 'bg-brand/15 text-brand-dark ring-1 ring-brand/20',
+    WARNING: 'bg-brand/10 text-brand ring-1 ring-brand/15',
+    CLEARED: 'bg-surface-raised text-ink-muted ring-1 ring-ink/10',
   };
 
   const severityLabel = {
@@ -142,10 +142,10 @@ export default function MilkSafetyBoard() {
             </p>
           </div>
 
-          <div className={`flex items-center gap-3 rounded-md border px-4 py-3 ${hasCritical ? 'border-red-200 bg-red-50' : 'border-emerald-200 bg-emerald-50'}`}>
-            {hasCritical ? <ShieldAlert className="text-red-600" size={28} /> : <ShieldCheck className="text-emerald-600" size={28} />}
+          <div className={`flex items-center gap-3 rounded-md border px-4 py-3 ${hasCritical ? 'border-brand/25 bg-brand/10' : 'border-brand/15 bg-brand/5'}`}>
+            {hasCritical ? <ShieldAlert className="text-brand-dark" size={28} /> : <ShieldCheck className="text-brand" size={28} />}
             <div>
-              <p className={`text-sm font-semibold ${hasCritical ? 'text-red-800' : 'text-emerald-800'}`}>
+              <p className={`text-sm font-semibold ${hasCritical ? 'text-brand-dark' : 'text-brand'}`}>
                 {hasCritical ? 'Do not mix flagged milk' : 'All active milk is clear'}
               </p>
               <p className="text-xs text-gray-500">
@@ -225,7 +225,7 @@ export default function MilkSafetyBoard() {
                   className="input-machined w-full pl-10"
                   placeholder="Cow name, tag, reason, or notes"
                 />
-                <Search size={14} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                <Search size={14} className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-brand" />
               </div>
             </label>
 
@@ -247,7 +247,7 @@ export default function MilkSafetyBoard() {
           </div>
         )}
 
-        <div className="overflow-x-auto">
+        <div className="hidden overflow-x-auto md:block">
           <table className="min-w-full border-separate border-spacing-0">
             <thead className="bg-gray-50">
               <tr className="text-left text-[10px] font-semibold uppercase tracking-[0.22em] text-gray-500">
@@ -271,7 +271,7 @@ export default function MilkSafetyBoard() {
 
               {error && !isLoading && (
                 <tr>
-                  <td colSpan={5} className="px-5 py-10 text-center text-sm text-red-700">
+                  <td colSpan={5} className="px-5 py-10 text-center text-sm text-brand">
                     Could not load the safety list. Please check your connection and retry.
                   </td>
                 </tr>
@@ -322,7 +322,7 @@ export default function MilkSafetyBoard() {
               {!isLoading && !error && safetyRows.length === 0 && (
                 <tr>
                   <td colSpan={5} className="px-5 py-12 text-center">
-                    <ShieldCheck className="mx-auto mb-3 text-emerald-500" size={44} />
+                    <ShieldCheck className="mx-auto mb-3 text-brand" size={44} />
                     <p className="text-base font-semibold text-gray-900">No records match the current filters</p>
                     <p className="mt-1 text-sm text-gray-600">Try clearing the filters to see all milk safety alerts.</p>
                   </td>
@@ -330,6 +330,25 @@ export default function MilkSafetyBoard() {
               )}
             </tbody>
           </table>
+        </div>
+        <div className="space-y-3 p-3 md:hidden">
+          {isLoading ? Array.from({ length: 3 }).map((_, index) => <Skeleton key={index} className="h-32 w-full" />)
+            : error ? <p className="p-5 text-center text-sm text-brand">Could not load the safety list. Check your connection and retry.</p>
+              : safetyRows.length === 0 ? <p className="p-6 text-center text-sm text-ink-muted">No records match the current filters.</p>
+                : safetyRows.map((lock) => (
+                  <article key={lock.id} onClick={() => setSelectedLock(lock)} className="min-w-0 rounded-xl border border-ink/10 bg-surface p-4">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0"><h3 className="truncate text-sm font-bold text-ink">{formatCowIdentity(lock)}</h3><p className="mt-1 text-xs text-ink-muted">Section: {lock.section}</p></div>
+                      <span className={`shrink-0 rounded-full px-2 py-1 text-[10px] font-semibold ${severityTone[lock.severity] || severityTone.WARNING}`}>{severityLabel[lock.severity] || lock.severity}</span>
+                    </div>
+                    <div className="mt-3 grid grid-cols-2 gap-3 rounded-lg bg-surface-raised p-3 text-xs">
+                      <div><p className="text-ink-muted">Tag</p><Link to={`/operations/animal/${lock.cowRecordId}`} onClick={(event) => event.stopPropagation()} className="mt-1 block font-semibold text-brand">{lock.cowTag || 'Unavailable'}</Link></div>
+                      <div><p className="text-ink-muted">Clearance date</p><p className="mt-1 font-semibold text-ink">{lock.clearanceDate}</p></div>
+                      <div className="col-span-2"><p className="text-ink-muted">Treatment</p><p className="mt-1 font-semibold text-ink">{lock.reason} · {lock.medication}</p></div>
+                    </div>
+                    <button type="button" onClick={() => setSelectedLock(lock)} className="mt-3 w-full rounded-lg border border-brand/20 py-2 text-xs font-semibold text-brand">Open safety record</button>
+                  </article>
+                ))}
         </div>
       </section>
 

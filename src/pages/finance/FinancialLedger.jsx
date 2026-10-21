@@ -27,24 +27,27 @@ const SummaryTooltip = ({ text, label }) => (
 
 const CurrencyValue = ({ amount, inverse = false }) => (
   amount == null
-    ? <span className={`text-base font-semibold ${inverse ? 'text-white/70' : 'text-gray-500'}`}>Not available</span>
-    : <Money amount={amount} size="lg" className={`!font-mono text-2xl font-bold tracking-tight ${inverse ? 'text-white' : 'text-gray-950'}`} />
+    ? <span className={`break-words text-sm font-semibold ${inverse ? 'text-white/70' : 'text-ink-muted'}`}>Not available</span>
+    : <>
+        <Money amount={amount} size="xs" className={`max-w-full !font-mono !text-xs font-bold tracking-tight sm:hidden ${inverse ? 'text-white' : 'text-ink'}`} />
+        <Money amount={amount} size="md" className={`hidden max-w-full !font-mono text-base font-bold tracking-tight sm:inline-flex sm:text-lg ${inverse ? 'text-white' : 'text-ink'}`} />
+      </>
 );
 
 const SummaryCard = ({ title, value, icon: Icon, tone = 'default', tooltip }) => {
   const tones = {
-    default: 'text-gray-700',
-    success: 'text-emerald-700',
-    danger: 'text-rose-700',
+    default: 'text-brand-800',
+    success: 'text-brand-700',
+    danger: 'text-brand-dark',
   };
   return (
-    <div className="rounded-xl border border-gray-200 bg-white p-5">
-      <div className="flex items-start gap-4">
-        <div className={`rounded-lg border border-gray-200 bg-gray-50 p-3 ${tones[tone]}`}>
+    <div className="min-w-0 rounded-xl border border-ink/10 bg-surface p-3 sm:p-5">
+      <div className="flex min-w-0 flex-col gap-2 sm:flex-row sm:items-start sm:gap-4">
+        <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-ink/10 bg-brand-50 sm:h-11 sm:w-11 ${tones[tone]}`}>
           <Icon size={20} />
         </div>
         <div className="min-w-0">
-          <div className="mb-2 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-gray-500">
+          <div className="mb-1 flex min-w-0 items-start gap-1.5 text-[10px] font-semibold uppercase leading-tight tracking-wide text-ink-muted sm:mb-2 sm:text-xs sm:tracking-wider">
             <span>{title}</span>
             {tooltip && <SummaryTooltip text={tooltip} label={`About ${title}`} />}
           </div>
@@ -74,15 +77,15 @@ const LiquidityCard = ({ title, value, icon: Icon, tooltip }) => (
 
 const StatusBadge = ({ status }) => {
   const normalizedStatus = String(status || '').toLowerCase();
-  let styles = 'bg-amber-50 text-amber-700'; // Default to Pending
+  let styles = 'bg-brand-50 text-brand-800';
   if (normalizedStatus === 'posted' || normalizedStatus === 'cleared' || normalizedStatus === 'paid' || normalizedStatus === 'revenue') {
-    styles = 'bg-emerald-50 text-emerald-800';
+    styles = 'bg-brand-100 text-brand-dark';
   } else if (normalizedStatus === 'pending') {
-    styles = 'bg-amber-50 text-amber-700';
+    styles = 'bg-brand-50 text-brand-800';
   } else if (normalizedStatus === 'voided' || normalizedStatus === 'void' || normalizedStatus === 'cancelled') {
-    styles = 'bg-slate-100 text-slate-600';
+    styles = 'bg-brand/5 text-brand-800';
   } else if (normalizedStatus === 'expense') {
-    styles = 'bg-rose-50 text-rose-700';
+    styles = 'bg-brand/10 text-brand-dark';
   }
   return (
     <span className={`inline-flex items-center px-2.5 py-0.5 rounded-badge text-xs font-medium ${styles}`}>
@@ -258,9 +261,9 @@ const LedgerEntryFormModal = ({ onClose, transactionType, farmId, tenantId }) =>
   const isFormInvalid = transactionType === 'income' ? isIncomeFormInvalid : isExpenseFormInvalid;
 
   return (
-    <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 animate-reveal-fast">
-      <div className="bg-white rounded-lg  w-full max-w-lg">
-        <div className="p-5 border-b flex justify-between items-center">
+    <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-brand-dark/50 p-3 animate-reveal-fast sm:items-center sm:p-4">
+      <div className="my-auto flex max-h-[calc(100dvh-1.5rem)] w-full max-w-lg flex-col overflow-hidden rounded-lg bg-white sm:max-h-[90vh]">
+        <div className="flex shrink-0 items-center justify-between border-b p-4 sm:p-5">
           <h3 className="text-lg font-bold text-ink">
             {transactionType === 'income' ? 'Record Income or Customer Payment' : 'Log New Expense'}
           </h3>
@@ -268,8 +271,8 @@ const LedgerEntryFormModal = ({ onClose, transactionType, farmId, tenantId }) =>
             <X size={20} />
           </button>
         </div>
-        <form onSubmit={handleSubmit}>
-          <div className="p-6 space-y-4 max-h-[70vh] overflow-y-auto">
+        <form onSubmit={handleSubmit} className="flex min-h-0 flex-1 flex-col overflow-hidden">
+          <div className="min-h-0 flex-1 space-y-4 overflow-y-auto overscroll-contain p-4 touch-pan-y sm:p-6">
             {transactionType === 'income' ? (
               <>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -402,7 +405,7 @@ const LedgerEntryFormModal = ({ onClose, transactionType, farmId, tenantId }) =>
                 </div>
                 <div className="grid grid-cols-1 gap-4 border-t border-ink/10 pt-4">
                   <div className="form-control">
-                    <span className="label-text">Animals for this expense <span className="text-danger">*</span></span>
+                    <span className="label-text">Animals for this expense <span className="text-brand-dark">*</span></span>
                     <button
                       type="button"
                       onClick={() => setIsAnimalListOpen((current) => !current)}
@@ -460,12 +463,12 @@ const LedgerEntryFormModal = ({ onClose, transactionType, farmId, tenantId }) =>
                     </select>
                   </div>
                 </div>
-                {!hasSelectedAnimals && <p className="text-xs text-danger">Select at least one cow for this animal cost.</p>}
-                {hasSelectedAnimals && isAnimalAllocationIncomplete && <p className="text-xs text-danger">Select a cost type to assign this expense to the selected cows.</p>}
+                {!hasSelectedAnimals && <p className="text-xs text-brand-dark">Select at least one cow for this animal cost.</p>}
+                {hasSelectedAnimals && isAnimalAllocationIncomplete && <p className="text-xs text-brand-dark">Select a cost type to assign this expense to the selected cows.</p>}
               </>
             )}
           </div>
-          <div className="p-4 bg-gray-50 rounded-b-lg flex justify-end gap-3">
+          <div className="flex shrink-0 justify-end gap-3 rounded-b-lg bg-gray-50 p-4">
             <button type="button" onClick={onClose} className="btn-secondary">
               Cancel
             </button>
@@ -586,21 +589,21 @@ const FinancialLedger = () => {
 
   return (
     <div className="animate-reveal space-y-6 max-w-7xl mx-auto">
-      <div className="flex items-center justify-between gap-4 rounded-card border border-brand-100 bg-brand-50 p-5">
-        <div className="flex items-center gap-4">
-          <div className="p-3 bg-white text-brand-700 rounded-lg border border-brand-100"><Wallet size={20} /></div>
-          <div>
-            <h2 className="font-sans font-bold text-2xl tracking-tight text-brand-900 m-0">Financial Ledger</h2>
+      <div className="flex min-w-0 flex-col gap-4 rounded-card border border-brand/20 bg-brand-50 p-4 sm:flex-row sm:items-center sm:justify-between sm:p-5">
+        <div className="flex min-w-0 items-center gap-3">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-brand/20 bg-surface text-brand"><Wallet size={20} /></div>
+          <div className="min-w-0">
+            <h2 className="m-0 break-words font-sans text-xl font-bold tracking-tight text-brand-dark sm:text-2xl">Financial Ledger</h2>
             <p className="text-sm text-brand-700/80 mt-1">All income and expense transactions.</p>
           </div>
         </div>
-        <div className="flex items-center gap-2">
-          <button onClick={() => handleOpenModal('income')} className="flex items-center gap-2 rounded-button bg-brand-800 px-4 py-2 text-sm font-semibold text-white  transition-colors hover:bg-brand-900"><Plus size={16} /><span>Log Income</span></button>
-          <button onClick={() => handleOpenModal('expense')} className="flex items-center gap-2 rounded-button bg-brand-800 px-4 py-2 text-sm font-semibold text-white  transition-colors hover:bg-brand-900"><Plus size={16} /><span>Log Expense</span></button>
+        <div className="grid w-full grid-cols-2 gap-2 sm:w-auto sm:gap-2">
+          <button onClick={() => handleOpenModal('income')} className="flex min-w-0 items-center justify-center gap-1.5 rounded-button bg-brand px-2 py-2 text-xs font-semibold text-white transition-colors hover:bg-brand-dark sm:gap-2 sm:px-4 sm:text-sm"><Plus size={16} /><span>Log Income</span></button>
+          <button onClick={() => handleOpenModal('expense')} className="flex min-w-0 items-center justify-center gap-1.5 rounded-button bg-brand px-2 py-2 text-xs font-semibold text-white transition-colors hover:bg-brand-dark sm:gap-2 sm:px-4 sm:text-sm"><Plus size={16} /><span>Log Expense</span></button>
         </div>
       </div>
 
-      <div className={`grid grid-cols-1 gap-4 sm:grid-cols-2 ${searchQuery ? '' : 'lg:grid-cols-3'}`}>
+      <div className={`grid min-w-0 grid-cols-2 gap-3 sm:gap-4 ${searchQuery ? '' : 'lg:grid-cols-3'}`}>
         <SummaryCard
           title="Total Sales"
           value={<CurrencyValue amount={summary.recognized_sales} />}
@@ -655,8 +658,8 @@ const FinancialLedger = () => {
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-5">
           <label className="relative sm:col-span-2 xl:col-span-2">
             <span className="sr-only">Search transactions</span>
-            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-ink-muted" />
-            <input type="search" value={ledgerFilters.search} onChange={(event) => setLedgerFilters((current) => ({ ...current, search: event.target.value }))} placeholder="Search customer, item, category, description, reference..." className="input-machined pl-9" />
+            <Search size={14} className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-brand" />
+            <input type="search" value={ledgerFilters.search} onChange={(event) => setLedgerFilters((current) => ({ ...current, search: event.target.value }))} placeholder="Search customer, item, category, description, reference..." className="input-machined pl-10" />
           </label>
           <label>
             <span className="sr-only">Transaction type</span>
@@ -683,7 +686,7 @@ const FinancialLedger = () => {
       </div>
 
       <div className="card-machined overflow-hidden !p-0">
-        <div className="overflow-x-auto">
+        <div className="hidden overflow-x-auto md:block">
           <table className="w-full text-left border-collapse">
             <thead className="bg-brand-800">
               <tr>
@@ -702,16 +705,16 @@ const FinancialLedger = () => {
               {isLoading ? (
                 <tr><td colSpan="9" className="p-10 text-center text-ink-muted">Loading transactions...</td></tr>
               ) : isError ? (
-                <tr><td colSpan="9" className="p-10 text-center text-danger">Error: {getApiErrorMessage(error)}</td></tr>
+                <tr><td colSpan="9" className="p-10 text-center text-brand-dark">Error: {getApiErrorMessage(error)}</td></tr>
               ) : filteredTransactions.length > 0 ? (
                 <GroupedDateRows
                   items={filteredTransactions}
                   getDate={(tx) => tx.date}
                   colSpan={9}
                   labelColSpan={5}
-                  yearRowClassName="bg-gray-100 text-gray-900 text-sm font-bold"
-                  monthRowClassName="bg-gray-50 text-gray-800 text-xs font-bold"
-                  dateRowClassName="bg-white text-gray-700 text-xs font-semibold"
+                  yearRowClassName="bg-brand-100 text-brand-dark text-sm font-bold"
+                  monthRowClassName="bg-brand-50 text-brand-800 text-xs font-bold"
+                  dateRowClassName="bg-surface text-ink text-xs font-semibold"
                   renderGroupCount={(items) => items.length}
                   renderGroupTotal={(items) => {
                     const total = items.reduce((sum, tx) => {
@@ -730,7 +733,7 @@ const FinancialLedger = () => {
                     <div>{tx.description || (tx.item_name ? 'No additional details' : 'N/A')}</div>
                   </td>
                   <td className="p-4 text-sm text-ink-muted font-mono">{tx.reference_code || 'N/A'}</td>
-                  <td className={`p-4 text-sm font-semibold text-right tabular-nums font-mono ${tx.amount < 0 ? 'text-danger' : 'text-slate-800'}`}><Money amount={tx.amount} /></td>
+                  <td className="p-4 text-right font-mono text-sm font-semibold tabular-nums text-brand"><Money amount={tx.amount} /></td>
                   <td className="p-4 text-sm"><StatusBadge status={tx.status || tx.transaction_type} /></td>
                   <td className="p-4 text-right">
                     {tx.receipt_available && tx.receipt?.id ? (
@@ -757,6 +760,27 @@ const FinancialLedger = () => {
               )}
             </tbody>
           </table>
+        </div>
+        <div className="divide-y divide-ink/10 md:hidden">
+          {isLoading ? <p className="p-5 text-center text-sm text-ink-muted">Loading transactions...</p> : isError ? <p className="p-5 text-center text-sm text-brand-dark">Error: {getApiErrorMessage(error)}</p> : filteredTransactions.map((tx) => (
+            <article key={tx.id} className="min-w-0 space-y-3 p-4">
+              <div className="flex min-w-0 items-start justify-between gap-3">
+                <div className="min-w-0"><time className="text-xs text-ink-muted">{format(parseISO(tx.date), 'PPP')}</time><p className="mt-1 break-words font-semibold text-ink">{tx.counterparty_name || tx.customer_name || tx.buyer_name || 'N/A'}</p></div>
+                <span className="shrink-0 text-right font-mono text-sm font-bold tabular-nums text-brand"><Money amount={tx.amount} /></span>
+              </div>
+              <dl className="grid min-w-0 grid-cols-2 gap-x-3 gap-y-2 border-t border-ink/10 pt-3 text-xs">
+                <div className="min-w-0"><dt className="text-ink-muted">Category</dt><dd className="mt-1 break-words font-medium text-ink">{tx.category || '—'}</dd></div>
+                <div className="min-w-0"><dt className="text-ink-muted">Status</dt><dd className="mt-1"><StatusBadge status={tx.status || tx.transaction_type} /></dd></div>
+                <div className="col-span-2 min-w-0"><dt className="text-ink-muted">Description</dt><dd className="mt-1 break-words text-ink">{tx.item_name && <strong className="block">{tx.item_name}</strong>}{tx.description || (tx.item_name ? 'No additional details' : 'N/A')}</dd></div>
+                <div className="col-span-2 min-w-0"><dt className="text-ink-muted">Reference</dt><dd className="mt-1 break-all font-mono text-ink">{tx.reference_code || 'N/A'}</dd></div>
+              </dl>
+              <div className="flex flex-wrap justify-end gap-2 border-t border-ink/10 pt-3">
+                {tx.receipt_available && tx.receipt?.id ? <button type="button" disabled={isReceiptLoading} onClick={() => openReceipt(tx)} className="rounded-lg border border-brand/20 px-3 py-2 text-xs font-semibold text-brand">View receipt</button> : <span className="self-center text-xs text-ink-muted">No receipt</span>}
+                {canCorrectExpenses && isCorrectableExpense(tx) && <button type="button" onClick={() => setTransactionToCorrect(tx)} className="inline-flex items-center gap-1 rounded-lg border border-brand/20 px-3 py-2 text-xs font-semibold text-brand"><PencilLine size={13} /> Correct cost</button>}
+              </div>
+            </article>
+          ))}
+          {!isLoading && !isError && filteredTransactions.length === 0 && <p className="p-6 text-center text-sm text-ink-muted">{transactions.length === 0 ? 'No transactions recorded yet.' : 'No transactions match the selected filters.'}</p>}
         </div>
       </div>
 

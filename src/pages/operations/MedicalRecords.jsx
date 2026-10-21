@@ -44,16 +44,18 @@ const EMPTY_FORM = {
 };
 
 const SEVERITY_STYLES = {
-  High: 'bg-[#fff1f2] text-[#b91c1c] border-[#fecdd3]',
-  Medium: 'bg-[#fffbeb] text-[#b45309] border-[#fde68a]',
-  Low: 'bg-[#f0fdf4] text-[#166534] border-[#bbf7d0]',
+  High: 'bg-brand-100 text-brand-dark border-brand-200',
+  Medium: 'bg-brand-50 text-brand-800 border-brand-200',
+  Low: 'bg-brand/5 text-brand border-brand/20',
 };
 
 const STATUS_STYLES = {
-  'Under Treatment': 'bg-[#eff6ff] text-[#1d4ed8] border-[#bfdbfe]',
-  'Follow-up Due': 'bg-[#fff7ed] text-[#c2410c] border-[#fed7aa]',
-  Closed: 'bg-[#f0fdf4] text-[#166534] border-[#bbf7d0]',
+  'Under Treatment': 'bg-brand-50 text-brand-dark border-brand-200',
+  'Follow-up Due': 'bg-brand/10 text-brand-800 border-brand/20',
+  Closed: 'bg-brand/5 text-brand border-brand/20',
 };
+
+const cleanUpdatedBy = (value) => String(value ?? '').replace(/^updated by\s+/i, '');
 
 export default function VetRecords() {
   const queryClient = useQueryClient();
@@ -103,7 +105,7 @@ export default function VetRecords() {
   const createRecordMutation = useMutation({
     mutationFn: (payload) => medicalApi.createRecord(payload),
     onSuccess: (record) => {
-      const normalizedRecord = record ? { ...record, cow: resolveCowLabel(record) } : null;
+      const normalizedRecord = record ? { ...record, cow: resolveCowLabel(record), updatedBy: cleanUpdatedBy(record.updatedBy ?? record.updated_by) } : null;
       queryClient.invalidateQueries({ queryKey: ['medical-records', tenantId, farmId] });
       setSelectedRecord(normalizedRecord);
       setShowForm(false);
@@ -124,7 +126,7 @@ export default function VetRecords() {
   const updateRecordMutation = useMutation({
     mutationFn: ({ id, payload }) => medicalApi.updateRecord(id, payload),
     onSuccess: (record) => {
-      const normalizedRecord = record ? { ...record, cow: resolveCowLabel(record) } : null;
+      const normalizedRecord = record ? { ...record, cow: resolveCowLabel(record), updatedBy: cleanUpdatedBy(record.updatedBy ?? record.updated_by) } : null;
       queryClient.invalidateQueries({ queryKey: ['medical-records', tenantId, farmId] });
       setSelectedRecord(normalizedRecord);
       setShowForm(false);
@@ -145,7 +147,11 @@ export default function VetRecords() {
 
   useEffect(() => {
     if (Array.isArray(backendRecords)) {
-      setRecords(backendRecords.map((record) => ({ ...record, cow: resolveCowLabel(record) })));
+      setRecords(backendRecords.map((record) => ({
+        ...record,
+        cow: resolveCowLabel(record),
+        updatedBy: cleanUpdatedBy(record.updatedBy ?? record.updated_by),
+      })));
     }
   }, [backendRecords, herdData]);
 
@@ -386,7 +392,7 @@ export default function VetRecords() {
                 <p className="text-[10px] font-bold uppercase tracking-widest text-ink-muted">Critical cases</p>
                 <p className="mt-2 text-3xl font-black text-ink">{stats.critical}</p>
               </div>
-              <div className="rounded-2xl border border-slate-200 bg-white/90 p-3 text-danger"><ShieldAlert size={18} /></div>
+              <div className="rounded-2xl border border-brand/20 bg-brand-50 p-3 text-brand-dark"><ShieldAlert size={18} /></div>
             </div>
           </div>
           <div className="rounded-2xl border border-ink/10 bg-surface/90 p-4 ">
@@ -448,7 +454,7 @@ export default function VetRecords() {
                   className="input-machined w-full pl-10"
                   placeholder="Cow, diagnosis, vet, status"
                 />
-                <Search size={14} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-ink-muted" />
+                <Search size={14} className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-brand" />
               </div>
             </label>
 
@@ -504,7 +510,7 @@ export default function VetRecords() {
             <div className="space-y-2">
               <label className="text-[10px] font-bold uppercase tracking-wider text-ink-strong">Cow name or ear tag *</label>
               <input
-                className={`input-machined w-full ${formErrors.cowTag ? 'border-rose-300 bg-rose-50' : ''}`}
+                className={`input-machined w-full ${formErrors.cowTag ? 'border-brand bg-brand-50' : ''}`}
                 placeholder="e.g. Malaika or KE-0046"
                 value={form.cowTag}
                 onChange={(event) => handleFieldChange('cowTag', event.target.value)}
@@ -520,7 +526,7 @@ export default function VetRecords() {
                 ))}
               </datalist>
               <p className="text-[11px] text-ink-muted">Start typing and select a registered tenant cow from the dropdown.</p>
-              {formErrors.cowTag && <p id="cowTag-error" className="mt-1 flex items-center gap-1 text-xs text-rose-600"><AlertCircle size={12} /> {formErrors.cowTag}</p>}
+              {formErrors.cowTag && <p id="cowTag-error" className="mt-1 flex items-center gap-1 text-xs text-brand-dark"><AlertCircle size={12} /> {formErrors.cowTag}</p>}
             </div>
 
             <div className="space-y-2">
@@ -536,80 +542,80 @@ export default function VetRecords() {
             <div className="md:col-span-2 space-y-2">
               <label className="text-[10px] font-bold uppercase tracking-wider text-ink-strong">Signs of sickness *</label>
               <textarea
-                className={`input-machined min-h-[110px] w-full ${formErrors.symptoms ? 'border-rose-300 bg-rose-50' : ''}`}
+                className={`input-machined min-h-[110px] w-full ${formErrors.symptoms ? 'border-brand bg-brand-50' : ''}`}
                 placeholder="Detailed description of symptoms..."
                 value={form.symptoms}
                 onChange={(event) => handleFieldChange('symptoms', event.target.value)}
                 aria-invalid={!!formErrors.symptoms}
                 aria-describedby={formErrors.symptoms ? 'symptoms-error' : undefined}
               />
-              {formErrors.symptoms && <p id="symptoms-error" className="mt-1 flex items-center gap-1 text-xs text-rose-600"><AlertCircle size={12} /> {formErrors.symptoms}</p>}
+              {formErrors.symptoms && <p id="symptoms-error" className="mt-1 flex items-center gap-1 text-xs text-brand-dark"><AlertCircle size={12} /> {formErrors.symptoms}</p>}
             </div>
 
             <div className="space-y-2">
               <label className="text-[10px] font-bold uppercase tracking-wider text-ink-strong">{LABELS.DIAGNOSIS} *</label>
               <input
-                className={`input-machined w-full ${formErrors.diagnosis ? 'border-rose-300 bg-rose-50' : ''}`}
+                className={`input-machined w-full ${formErrors.diagnosis ? 'border-brand bg-brand-50' : ''}`}
                 placeholder="e.g. Mastitis, Milk Fever"
                 value={form.diagnosis}
                 onChange={(event) => handleFieldChange('diagnosis', event.target.value)}
                 aria-invalid={!!formErrors.diagnosis}
                 aria-describedby={formErrors.diagnosis ? 'diagnosis-error' : undefined}
               />
-              {formErrors.diagnosis && <p id="diagnosis-error" className="mt-1 flex items-center gap-1 text-xs text-rose-600"><AlertCircle size={12} /> {formErrors.diagnosis}</p>}
+              {formErrors.diagnosis && <p id="diagnosis-error" className="mt-1 flex items-center gap-1 text-xs text-brand-dark"><AlertCircle size={12} /> {formErrors.diagnosis}</p>}
             </div>
 
             <div className="space-y-2">
               <label className="text-[10px] font-bold uppercase tracking-wider text-ink-strong">{LABELS.MEDICATIONS_PRESCRIBED} *</label>
               <input
-                className={`input-machined w-full ${formErrors.medications ? 'border-rose-300 bg-rose-50' : ''}`}
+                className={`input-machined w-full ${formErrors.medications ? 'border-brand bg-brand-50' : ''}`}
                 placeholder="Name and dosage"
                 value={form.medications}
                 onChange={(event) => handleFieldChange('medications', event.target.value)}
                 aria-invalid={!!formErrors.medications}
                 aria-describedby={formErrors.medications ? 'medications-error' : undefined}
               />
-              {formErrors.medications && <p id="medications-error" className="mt-1 flex items-center gap-1 text-xs text-rose-600"><AlertCircle size={12} /> {formErrors.medications}</p>}
+              {formErrors.medications && <p id="medications-error" className="mt-1 flex items-center gap-1 text-xs text-brand-dark"><AlertCircle size={12} /> {formErrors.medications}</p>}
             </div>
 
             <div className="md:col-span-2 space-y-2">
               <label className="text-[10px] font-bold uppercase tracking-wider text-ink-strong">{LABELS.RECOMMENDATIONS_REMARKS} *</label>
               <textarea
-                className={`input-machined min-h-[100px] w-full ${formErrors.recommendations ? 'border-rose-300 bg-rose-50' : ''}`}
+                className={`input-machined min-h-[100px] w-full ${formErrors.recommendations ? 'border-brand bg-brand-50' : ''}`}
                 placeholder="Follow-up instructions..."
                 value={form.recommendations}
                 onChange={(event) => handleFieldChange('recommendations', event.target.value)}
                 aria-invalid={!!formErrors.recommendations}
                 aria-describedby={formErrors.recommendations ? 'recommendations-error' : undefined}
               />
-              {formErrors.recommendations && <p id="recommendations-error" className="mt-1 flex items-center gap-1 text-xs text-rose-600"><AlertCircle size={12} /> {formErrors.recommendations}</p>}
+              {formErrors.recommendations && <p id="recommendations-error" className="mt-1 flex items-center gap-1 text-xs text-brand-dark"><AlertCircle size={12} /> {formErrors.recommendations}</p>}
             </div>
 
             <div className="space-y-2">
               <label className="text-[10px] font-bold uppercase tracking-wider text-ink-strong">Vet *</label>
               <input
-                className={`input-machined w-full ${formErrors.vet ? 'border-rose-300 bg-rose-50' : ''}`}
+                className={`input-machined w-full ${formErrors.vet ? 'border-brand bg-brand-50' : ''}`}
                 placeholder="Vet name"
                 value={form.vet}
                 onChange={(event) => handleFieldChange('vet', event.target.value)}
                 aria-invalid={!!formErrors.vet}
                 aria-describedby={formErrors.vet ? 'vet-error' : undefined}
               />
-              {formErrors.vet && <p id="vet-error" className="mt-1 flex items-center gap-1 text-xs text-rose-600"><AlertCircle size={12} /> {formErrors.vet}</p>}
+              {formErrors.vet && <p id="vet-error" className="mt-1 flex items-center gap-1 text-xs text-brand-dark"><AlertCircle size={12} /> {formErrors.vet}</p>}
             </div>
 
             <div className="space-y-2">
               <label className="text-[10px] font-bold uppercase tracking-wider text-ink-strong">Follow-up date{form.status === 'Follow-up Due' ? ' *' : ' (optional)'}</label>
               <input
                 type="date"
-                className={`input-machined w-full ${formErrors.followUp ? 'border-rose-300 bg-rose-50' : ''}`}
+                className={`input-machined w-full ${formErrors.followUp ? 'border-brand bg-brand-50' : ''}`}
                 value={form.followUp}
                 onChange={(event) => handleFieldChange('followUp', event.target.value)}
                 aria-required={form.status === 'Follow-up Due'}
                 aria-invalid={!!formErrors.followUp}
                 aria-describedby={formErrors.followUp ? 'followUp-error' : undefined}
               />
-              {formErrors.followUp && <p id="followUp-error" className="mt-1 flex items-center gap-1 text-xs text-rose-600"><AlertCircle size={12} /> {formErrors.followUp}</p>}
+              {formErrors.followUp && <p id="followUp-error" className="mt-1 flex items-center gap-1 text-xs text-brand-dark"><AlertCircle size={12} /> {formErrors.followUp}</p>}
             </div>
 
             <div className="space-y-2">
@@ -659,7 +665,7 @@ export default function VetRecords() {
           </div>
         </div>
 
-        <table className="w-full text-left">
+        <table className="hidden w-full text-left md:table">
           <thead className="bg-brand/10 text-ink-muted">
             <tr>
               <th className="p-4 text-[10px] font-bold uppercase text-ink-muted">Date</th>
@@ -729,6 +735,30 @@ export default function VetRecords() {
             />
           </tbody>
         </table>
+        <div className="divide-y divide-ink/10 md:hidden">
+          {filteredRecords.map((visit) => (
+            <article key={visit.id} className="min-w-0 space-y-3 p-4">
+              <div className="flex min-w-0 items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <p className="font-mono text-xs text-ink-muted">{visit.date}</p>
+                  <p className="mt-1 break-words font-bold text-brand">{visit.cow}</p>
+                  <p className="mt-1 break-words text-xs text-ink-muted">Updated {getRelativeTime(visit.updatedAt)}{visit.updatedBy ? ` · ${visit.updatedBy}` : ''}</p>
+                </div>
+                <button type="button" onClick={() => setSelectedRecord(visit)} className="inline-flex h-9 shrink-0 items-center gap-1.5 rounded-lg border border-brand/20 px-2 text-xs font-semibold text-brand" aria-label={`Open medical record for ${visit.cow}`}><Eye size={14} /> Open</button>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <span className={`rounded-full border px-2.5 py-1 text-[10px] font-bold uppercase ${SEVERITY_STYLES[visit.severity]}`}>{visit.severity}</span>
+                <span className={`rounded-full border px-2.5 py-1 text-[10px] font-bold uppercase ${STATUS_STYLES[visit.status]}`}>{visit.status}</span>
+              </div>
+              <div className="min-w-0 border-t border-ink/10 pt-3 text-sm">
+                <p className="break-words font-medium text-ink">{visit.diagnosis}</p>
+                <p className="mt-1 break-words text-xs text-ink-muted">Veterinarian: {visit.vet}</p>
+                <p className="mt-2 break-words text-xs text-ink-muted">Medication: {visit.meds || 'None recorded'}</p>
+              </div>
+            </article>
+          ))}
+          {filteredRecords.length === 0 && <p className="p-6 text-center text-sm text-ink-muted">No medical records match the current filters.</p>}
+        </div>
       </div>
 
       <Modal isOpen={!!selectedRecord} onClose={() => setSelectedRecord(null)} title="Medical Record Details">

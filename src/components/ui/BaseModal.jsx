@@ -16,8 +16,8 @@ export default function BaseModal({
   if (!isOpen) return null;
 
   return createPortal(
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-[#0F172A]/50 backdrop-blur-sm" role="dialog" aria-modal="true" aria-label={title}>
-      <div className="bg-white rounded-xl shadow-2xl w-full max-w-2xl overflow-hidden flex flex-col max-h-[90vh]">
+    <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-brand-dark/50 p-3 backdrop-blur-sm sm:items-center sm:p-6" role="dialog" aria-modal="true" aria-label={title}>
+      <div className="my-auto flex max-h-[calc(100dvh-1.5rem)] w-full max-w-2xl flex-col overflow-hidden rounded-xl bg-white shadow-2xl sm:max-h-[90vh]">
         <header className="flex items-start justify-between p-6 border-b border-slate-200">
           <div>
             <h2 className="text-xl font-bold text-[#0F172A]">{title}</h2>
@@ -28,7 +28,7 @@ export default function BaseModal({
           </button>
         </header>
 
-        <div className="p-6 overflow-y-auto">{children}</div>
+        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-4 touch-pan-y sm:p-6">{children}</div>
 
         {footerActions && (
           <footer className="flex items-center justify-end gap-3 px-6 py-4 bg-slate-50 border-t border-slate-200">

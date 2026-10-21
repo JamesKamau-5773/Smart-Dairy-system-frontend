@@ -95,7 +95,7 @@ const PayrollTable = ({ run }) => {
       </span>
     </div>
 
-    <div className="overflow-x-auto">
+    <div className="hidden overflow-x-auto md:block">
       <table className="min-w-full table-fixed text-left">
         <thead className="bg-gray-50 text-xs font-semibold uppercase tracking-[0.18em] text-gray-500">
           <tr>
@@ -117,7 +117,7 @@ const PayrollTable = ({ run }) => {
                 <div className="text-xs text-gray-500">{item.role}</div>
               </td>
               <td className="px-5 py-4 text-right font-medium tabular-nums text-gray-700 align-top">{formatMoney(item.base)}</td>
-              <td className={`px-5 py-4 text-right tabular-nums font-medium align-top ${item.leaveDeduction > 0 ? 'text-red-700' : 'text-gray-500'}`}>
+              <td className={`px-5 py-4 text-right tabular-nums font-medium align-top ${item.leaveDeduction > 0 ? 'text-brand-dark' : 'text-gray-500'}`}>
                 {item.leaveDeduction > 0 ? `-${formatMoney(item.leaveDeduction)}` : '0'}
                 {(item.approvedLeaveDays > 0 || item.overduePenaltyDays > 0) && (
                   <p className="mt-1 text-[10px] font-medium normal-case tracking-normal text-gray-500">
@@ -127,13 +127,13 @@ const PayrollTable = ({ run }) => {
                 )}
               </td>
               <td className="px-5 py-4 text-right tabular-nums font-semibold text-gray-900 align-top">{formatMoney(item.grossPay)}</td>
-              <td className={`px-5 py-4 text-right tabular-nums font-medium align-top ${item.advanceDeduction > 0 ? 'text-amber-700' : 'text-gray-500'}`}>
+              <td className={`px-5 py-4 text-right tabular-nums font-medium align-top ${item.advanceDeduction > 0 ? 'text-brand' : 'text-gray-500'}`}>
                 {formatMoney(item.advanceDeduction)}
               </td>
               <td className="px-5 py-4 text-right tabular-nums font-semibold text-gray-900 align-top">{formatMoney(item.net)}</td>
               <td className="px-5 py-4 text-center align-top">
                 <span className={`inline-flex items-center gap-1.5 rounded-md px-2.5 py-1 text-xs font-semibold ${
-                  item.status === 'PAID' ? 'text-emerald-700 bg-emerald-100' : 'text-amber-700 bg-amber-100'
+                  item.status === 'PAID' ? 'text-brand-dark bg-brand/15' : 'text-brand bg-brand/10'
                 }`}>
                   {item.status === 'PAID' ? <CheckCircle size={14} /> : <Clock size={14} />}
                   {item.status}
@@ -147,15 +147,37 @@ const PayrollTable = ({ run }) => {
           <tr>
             <td className="px-5 py-3">Totals</td>
             <td className="px-5 py-3 text-right tabular-nums">{formatMoney(summary.totalBase)}</td>
-            <td className="px-5 py-3 text-right tabular-nums text-red-700">-{formatMoney(summary.totalLeave)}</td>
+            <td className="px-5 py-3 text-right tabular-nums text-brand-dark">-{formatMoney(summary.totalLeave)}</td>
             <td className="px-5 py-3 text-right tabular-nums">{formatMoney(summary.totalGross)}</td>
-            <td className="px-5 py-3 text-right tabular-nums text-amber-700">{formatMoney(summary.totalDeductions)}</td>
+            <td className="px-5 py-3 text-right tabular-nums text-brand">{formatMoney(summary.totalDeductions)}</td>
             <td className="px-5 py-3 text-right tabular-nums text-gray-900">{formatMoney(summary.totalNet)}</td>
             <td className="px-5 py-3" />
             <td className="px-5 py-3" />
           </tr>
         </tfoot>
       </table>
+    </div>
+    <div className="space-y-3 p-3 md:hidden">
+      {summary.rows.map((item) => (
+        <article key={item.staffId} className="min-w-0 rounded-xl border border-ink/10 bg-surface p-4">
+          <div className="flex items-start justify-between gap-3">
+            <div className="min-w-0"><h4 className="truncate text-sm font-bold text-ink">{item.name}</h4><p className="mt-1 truncate text-xs text-ink-muted">{item.role}</p></div>
+            <span className="shrink-0 rounded-full bg-brand/10 px-2 py-1 text-[10px] font-semibold text-brand">{item.status}</span>
+          </div>
+          <div className="mt-3 grid grid-cols-2 gap-3 rounded-lg bg-surface-raised p-3 text-xs">
+            <div><p className="text-ink-muted">Base salary</p><p className="mt-1 font-semibold tabular-nums text-ink">KES {formatMoney(item.base)}</p></div>
+            <div><p className="text-ink-muted">Leave adjustment</p><p className="mt-1 font-semibold tabular-nums text-ink">KES {formatMoney(item.leaveDeduction)}</p></div>
+            <div><p className="text-ink-muted">Gross pay</p><p className="mt-1 font-semibold tabular-nums text-ink">KES {formatMoney(item.grossPay)}</p></div>
+            <div><p className="text-ink-muted">Deductions</p><p className="mt-1 font-semibold tabular-nums text-ink">KES {formatMoney(item.advanceDeduction)}</p></div>
+            <div className="col-span-2 border-t border-ink/10 pt-2"><p className="text-ink-muted">Net pay</p><p className="mt-1 text-base font-bold tabular-nums text-brand">KES {formatMoney(item.net)}</p></div>
+          </div>
+          {(item.approvedLeaveDays > 0 || item.overduePenaltyDays > 0) && <p className="mt-2 text-xs text-ink-muted">{item.approvedLeaveDays > 0 ? `${item.approvedLeaveDays} approved leave days` : 'No approved leave'}{item.overduePenaltyDays > 0 ? ` · ${item.overduePenaltyDays} overdue days` : ''}</p>}
+        </article>
+      ))}
+      <div className="rounded-xl border border-brand/20 bg-brand/5 p-4 text-xs">
+        <p className="font-bold text-brand">Run totals</p>
+        <div className="mt-2 grid grid-cols-2 gap-2 text-ink"><span>Base: KES {formatMoney(summary.totalBase)}</span><span>Gross: KES {formatMoney(summary.totalGross)}</span><span>Leave: KES {formatMoney(summary.totalLeave)}</span><span>Deductions: KES {formatMoney(summary.totalDeductions)}</span><span className="col-span-2 font-bold">Net: KES {formatMoney(summary.totalNet)}</span></div>
+      </div>
     </div>
   </div>
   );

@@ -1,58 +1,42 @@
-import React from 'react';
 import { NavLink } from 'react-router-dom';
-import { Activity, LayoutDashboard } from 'lucide-react';
+import { BookOpen, LayoutDashboard, Users, Wallet } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
-import { getDefaultLandingPath } from '../lib/roles';
+import { canViewAdminControls, getDefaultLandingPath } from '../lib/roles';
 
-void React;
+const tabs = [
+  { label: 'Dashboard', to: null, icon: LayoutDashboard, visible: () => true },
+  { label: 'Production Log', to: '/operations/yield', icon: BookOpen, visible: () => true },
+  { label: 'Buyer List', to: '/finance/buyers', icon: Users, visible: canViewAdminControls },
+  { label: 'Ledger', to: '/finance/ledger', icon: Wallet, visible: canViewAdminControls },
+];
 
 export default function MobileBottomNav() {
   const { currentUser } = useAuth();
-  const homePath = getDefaultLandingPath(currentUser);
-
-  const canViewTasks = true;
-  const taskLabel = 'Farm Task View';
+  const landingPath = getDefaultLandingPath(currentUser);
+  const items = tabs
+    .filter((tab) => tab.visible(currentUser))
+    .map((tab) => ({ ...tab, to: tab.to ?? landingPath }));
 
   return (
     <nav
-      className="fixed inset-x-0 bottom-0 z-30 border-t border-slate-200 bg-white/90 backdrop-blur md:hidden"
-      aria-label="Mobile navigation"
+      className="fixed inset-x-0 bottom-0 z-30 border-t border-ink/10 bg-surface/95 pb-[env(safe-area-inset-bottom)] backdrop-blur md:hidden"
+      aria-label="Primary mobile navigation"
     >
-      <div className="grid grid-cols-2 gap-2 px-3 py-2">
-        <NavLink
-          to={homePath}
-          className={({ isActive }) =>
-            `min-h-[56px] rounded-xl border px-3 py-2 flex items-center justify-center gap-2 text-xs font-semibold transition-colors ${
-              isActive
-                ? 'border-brand-400 bg-ink-900 text-white'
-                : 'border-slate-200 bg-white/90 text-slate-600'
-            }`
-          }
-        >
-          <LayoutDashboard size={18} />
-          <span>Dashboard</span>
-        </NavLink>
-
-        {canViewTasks ? (
+      <div className="grid w-full" style={{ gridTemplateColumns: `repeat(${items.length}, minmax(0, 1fr))` }}>
+        {items.map(({ label, to, icon: Icon }) => (
           <NavLink
-            to="/tasks"
-            className={({ isActive }) =>
-              `min-h-[56px] rounded-xl border px-3 py-2 flex items-center justify-center gap-2 text-xs font-semibold transition-colors ${
-                isActive
-                  ? 'border-brand-400 bg-ink-900 text-white'
-                  : 'border-slate-200 bg-white/90 text-slate-600'
-              }`
-            }
+            key={label}
+            to={to}
+            className={({ isActive }) => `flex min-h-[64px] min-w-0 flex-col items-center justify-center gap-1 border-t-2 px-1 py-2 text-center transition-colors ${
+              isActive
+                ? 'border-brand-400 bg-brand-50 text-brand-900'
+                : 'border-transparent text-ink-muted hover:bg-brand-50 hover:text-brand-900'
+            }`}
           >
-            <Activity size={18} />
-            <span>{taskLabel}</span>
+            <Icon size={19} aria-hidden="true" />
+            <span className="max-w-full truncate text-[10px] font-semibold leading-tight">{label}</span>
           </NavLink>
-        ) : (
-          <div className="flex min-h-[56px] items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white/90 px-3 py-2 text-xs font-semibold text-slate-600">
-            <Activity size={18} />
-            <span>{taskLabel}</span>
-          </div>
-        )}
+        ))}
       </div>
     </nav>
   );

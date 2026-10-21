@@ -641,8 +641,8 @@ export default function DairyUnitEconomicsReport() {
               </button>
             </div>
           ) : (
-            <div className="card-machined p-6 overflow-x-auto">
-              <table className="w-full text-left text-sm border-collapse">
+            <div className="card-machined min-w-0 p-3 sm:p-6">
+              <table className="hidden w-full text-left text-sm border-collapse md:table">
                 <thead>
                   <tr className="border-b border-ink/10 text-[11px] font-bold uppercase text-ink-muted">
                     <th className="py-3 px-4">Farm Name</th>
@@ -709,6 +709,24 @@ export default function DairyUnitEconomicsReport() {
                   )}
                 </tbody>
               </table>
+              <div className="space-y-3 md:hidden">
+                {Array.isArray(byFarmData?.farms || byFarmData?.data || byFarmData) && (byFarmData?.farms || byFarmData?.data || byFarmData).length > 0
+                  ? (byFarmData?.farms || byFarmData?.data || byFarmData).map((farm, i) => {
+                    const status = farm.benchmark_status || farm.status;
+                    const badge = getStatusBadge(status);
+                    const Icon = badge.icon;
+                    return <article key={farm.farm_id || farm.id || i} className="min-w-0 rounded-xl border border-ink/10 bg-surface p-4">
+                      <div className="flex items-start justify-between gap-3"><h3 className="min-w-0 break-words text-sm font-bold text-ink">{farm.farm_name || farm.name || 'Primary Farm'}</h3><span className={cn('inline-flex shrink-0 items-center gap-1 rounded-full border px-2 py-1 text-[10px]', badge.color)}><Icon size={12} />{badge.label}</span></div>
+                      <div className="mt-3 grid grid-cols-2 gap-3 rounded-lg bg-surface-raised p-3 text-xs">
+                        <div><p className="text-ink-muted">Customer cost</p><p className="mt-1 font-semibold tabular-nums text-ink">KES {Number(farm.cac_kes ?? farm.cac ?? 0).toLocaleString(undefined, { maximumFractionDigits: 2 })}</p></div>
+                        <div><p className="text-ink-muted">Profit per customer</p><p className="mt-1 font-semibold tabular-nums text-brand">KES {Number(farm.ltv_kes ?? farm.ltv ?? 0).toLocaleString(undefined, { maximumFractionDigits: 2 })}</p></div>
+                        <div><p className="text-ink-muted">Profit vs. cost</p><p className="mt-1 font-semibold tabular-nums text-ink">{farm.ltv_to_cac_ratio != null ? Number(farm.ltv_to_cac_ratio).toFixed(2) : '0.00'}x</p></div>
+                        <div><p className="text-ink-muted">Profit / L</p><p className="mt-1 font-semibold tabular-nums text-brand">KES {farm.gross_margin_per_liter_kes != null ? Number(farm.gross_margin_per_liter_kes).toFixed(2) : '0.00'}</p></div>
+                      </div>
+                    </article>;
+                  })
+                  : <p className="p-5 text-center text-sm text-ink-muted">No farm records available.</p>}
+              </div>
             </div>
           )}
         </div>

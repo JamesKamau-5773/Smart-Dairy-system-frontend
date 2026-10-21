@@ -98,8 +98,8 @@ export default function Money({
   /* ── Color classes ──────────────────────────────────────────────────── */
   const colorClass = !colored || !isValid
     ? ''
-    : isNeg ? 'text-red-500 dark:text-red-400'
-    : isPos ? 'text-emerald-600 dark:text-emerald-400'
+    : isNeg ? 'text-brand-dark'
+    : isPos ? 'text-brand'
     : 'text-inherit';
 
   /* ── Sign prefix ────────────────────────────────────────────────────── */

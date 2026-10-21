@@ -24,7 +24,7 @@ const TransactionRow = ({ tx }) => (
     <tr className="hover:bg-surface-raised transition-colors">
       <td className="p-4 text-sm text-ink-muted">{new Date(tx.date).toLocaleDateString()}</td>
       <td className="p-4 text-sm font-medium text-ink">{tx.description || tx.category || 'N/A'}</td>
-      <td className={`p-4 text-sm font-bold text-right ${tx.amount > 0 ? 'text-brand' : 'text-danger'}`}>
+      <td className="p-4 text-right text-sm font-bold text-brand">
         KES {Number(tx.amount || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
       </td>
       <td className="p-4 text-sm text-ink-muted text-right">{tx.reference || 'N/A'}</td>
@@ -52,11 +52,11 @@ const DeliveryRow = ({ delivery, onEdit, onDelete }) => {
       <td className="p-4 text-right">
         <Popover>
           <PopoverTrigger asChild>
-            <button type="button" className="inline-flex h-8 w-8 items-center justify-center rounded-button border border-slate-300 text-slate-600 hover:border-brand-400 hover:text-brand-700" aria-label={`Actions for delivery on ${delivery.date}`}><MoreVertical size={16} /></button>
+      <button type="button" className="inline-flex h-8 w-8 items-center justify-center rounded-button border border-brand/20 text-brand hover:border-brand-400 hover:bg-brand-50" aria-label={`Actions for delivery on ${delivery.date}`}><MoreVertical size={16} /></button>
           </PopoverTrigger>
           <PopoverContent align="end" className="w-40 p-1.5">
             <button type="button" onClick={() => onEdit(delivery)} className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm text-ink-900 hover:bg-brand-50"><Pencil size={14} /> Edit</button>
-            <button type="button" onClick={() => onDelete(delivery)} className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm text-danger hover:bg-danger/10"><Trash2 size={14} /> Delete</button>
+            <button type="button" onClick={() => onDelete(delivery)} className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm text-brand-dark hover:bg-brand-50"><Trash2 size={14} /> Delete</button>
           </PopoverContent>
         </Popover>
       </td>
@@ -190,7 +190,7 @@ export default function CustomerProfile() {
 
   if (isErrorCustomer) {
     return (
-      <div className="card-machined bg-danger/10 border-danger text-danger p-8 text-center">
+      <div className="card-machined border border-brand/20 bg-brand-50 p-8 text-center text-brand-dark">
         <h2 className="font-bold text-lg">Error Loading Customer</h2>
         <p className="mt-2 text-sm">{customerError.message || 'The customer profile could not be retrieved.'}</p>
         <Link to="/finance/buyers" className="btn-secondary mt-4">Go Back to Buyers List</Link>
@@ -240,7 +240,7 @@ export default function CustomerProfile() {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <div className="card-machined p-6">
           <h4 className="text-xs font-bold uppercase text-ink-muted flex items-center gap-2"><DollarSign size={14}/> Current Balance</h4>
-          <p className={`text-3xl font-black mt-2 ${(customer.account_balance ?? customer.balance ?? 0) > 0 ? 'text-danger' : 'text-brand'}`}>
+          <p className="mt-2 text-3xl font-black text-brand">
             KES {(customer.account_balance ?? customer.balance ?? 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}
           </p>
         </div>
@@ -268,7 +268,7 @@ export default function CustomerProfile() {
             <Plus size={14} /> Log Delivery
           </button>
         </div>
-        <div className="overflow-x-auto">
+        <div className="hidden overflow-x-auto md:block">
           <table className="w-full text-left">
             <thead className="bg-surface-raised">
               <tr>
@@ -304,13 +304,32 @@ export default function CustomerProfile() {
             </tbody>
           </table>
         </div>
+        <div className="divide-y divide-ink/10 md:hidden">
+          {isLoadingDeliveries ? <p className="p-5 text-sm text-ink-muted">Loading deliveries...</p> : deliveries.length ? deliveries.map((delivery) => {
+            const delivered = Number(delivery.liters_delivered) || 0;
+            const personalUse = Number(delivery.personal_consumption_liters) || 0;
+            const billable = delivery.billable_liters ?? delivered;
+            const amount = delivery.amount ?? delivery.billed_amount;
+            return (
+              <article key={delivery.id} className="min-w-0 space-y-3 p-4">
+                <div className="flex items-start justify-between gap-3"><time className="text-xs text-ink-muted">{new Date(delivery.date).toLocaleDateString()}</time><span className="text-right font-mono text-sm font-bold text-brand">{amount != null ? `KES ${Number(amount).toLocaleString(undefined, { minimumFractionDigits: 2 })}` : '—'}</span></div>
+                <dl className="grid grid-cols-2 gap-3 border-t border-ink/10 pt-3 text-xs">
+                  <div><dt className="text-ink-muted">Delivered</dt><dd className="mt-1 font-semibold text-ink">{delivered.toFixed(1)} L</dd></div>
+                  <div><dt className="text-ink-muted">Personal use</dt><dd className="mt-1 font-semibold text-ink">{personalUse.toFixed(1)} L</dd></div>
+                  <div><dt className="text-ink-muted">Billable</dt><dd className="mt-1 font-semibold text-ink">{Number(billable).toFixed(1)} L</dd></div>
+                </dl>
+                <div className="flex justify-end gap-2"><button type="button" onClick={() => handleEditDelivery(delivery)} className="rounded-lg border border-brand/20 px-3 py-2 text-xs font-semibold text-brand">Edit</button><button type="button" onClick={() => handleDeleteDelivery(delivery)} className="rounded-lg border border-brand/20 px-3 py-2 text-xs font-semibold text-brand-dark">Delete</button></div>
+              </article>
+            );
+          }) : <p className="p-5 text-sm text-ink-muted">No deliveries logged for this customer yet.</p>}
+        </div>
       </div>
 
       <div className="card-machined overflow-hidden !p-0">
         <div className="p-6 border-b border-ink/10">
           <h3 className="font-bold text-lg text-ink">Transaction History</h3>
         </div>
-        <div className="overflow-x-auto">
+        <div className="hidden overflow-x-auto md:block">
           <table className="w-full text-left">
             <thead className="bg-surface-raised">
               <tr>
@@ -336,6 +355,15 @@ export default function CustomerProfile() {
               )}
             </tbody>
           </table>
+        </div>
+        <div className="divide-y divide-ink/10 md:hidden">
+          {isLoadingTransactions ? <p className="p-5 text-sm text-ink-muted">Loading transactions...</p> : transactions.length ? transactions.map((tx) => (
+            <article key={tx.id} className="min-w-0 space-y-2 p-4">
+              <div className="flex items-start justify-between gap-3"><time className="text-xs text-ink-muted">{new Date(tx.date).toLocaleDateString()}</time><span className="shrink-0 text-right font-mono text-sm font-bold text-brand">KES {Number(tx.amount || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span></div>
+              <p className="break-words text-sm font-medium text-ink">{tx.description || tx.category || 'N/A'}</p>
+              <p className="break-all text-xs text-ink-muted">Reference: {tx.reference || 'N/A'}</p>
+            </article>
+          )) : <p className="p-5 text-sm text-ink-muted">No transactions found for this customer.</p>}
         </div>
       </div>
 

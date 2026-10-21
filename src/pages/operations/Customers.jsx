@@ -120,13 +120,13 @@ export default function CustomersPage() {
 
       <div className="card-machined p-4">
         <div className="relative">
-          <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-ink-muted" />
+          <Search size={16} className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-brand" />
           <input
             type="text"
             placeholder="Search by name, contact, phone, or type..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="input-machined pl-9"
+            className="input-machined pl-10"
           />
         </div>
       </div>
@@ -148,7 +148,7 @@ export default function CustomersPage() {
       <Confirmation {...confirmation} />
 
       <div className="card-machined overflow-hidden !p-0">
-        <div className="overflow-x-auto">
+        <div className="hidden overflow-x-auto md:block">
           <table className="w-full text-left border-collapse">
             <thead className="bg-brand-800">
               <tr>
@@ -208,6 +208,28 @@ export default function CustomersPage() {
               ))}
             </tbody>
           </table>
+        </div>
+        <div className="divide-y divide-ink/10 md:hidden">
+          {isLoading ? <p className="p-6 text-center text-sm text-ink-muted">Loading customers...</p> : isError ? <p className="p-6 text-center text-sm text-brand-dark">Failed to load customers.</p> : filteredCustomers.map((customer) => (
+            <article key={customer.id} className="min-w-0 space-y-3 p-4">
+              <div className="flex min-w-0 items-start justify-between gap-3">
+                <div className="min-w-0"><h3 className="break-words font-semibold text-ink">{customer.name}</h3><p className="mt-1 text-xs capitalize text-ink-muted">{customer.customer_type || 'Unknown'}</p></div>
+                <span className="shrink-0 font-mono text-sm font-bold text-brand">KES {Number(customer.account_balance ?? customer.existing_balance ?? customer.balance ?? 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+              </div>
+              <dl className="grid grid-cols-2 gap-3 border-t border-ink/10 pt-3 text-xs">
+                <div className="min-w-0"><dt className="text-ink-muted">Contact person</dt><dd className="mt-1 break-words text-ink">{customer.contact_person || 'N/A'}</dd></div>
+                <div className="min-w-0"><dt className="text-ink-muted">Phone</dt><dd className="mt-1 break-all font-mono text-ink">{customer.phone_number || 'N/A'}</dd></div>
+                <div className="min-w-0"><dt className="text-ink-muted">Rate</dt><dd className="mt-1 break-words font-mono text-ink">KES {Number(customer.agreed_rate_per_liter ?? customer.agreed_rate ?? 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}/L</dd></div>
+                {Number(customer.daily_contract_liters) > 0 && <div className="min-w-0"><dt className="text-ink-muted">Daily contract</dt><dd className="mt-1 font-mono text-ink">{Number(customer.daily_contract_liters).toLocaleString(undefined, { maximumFractionDigits: 2 })} L</dd></div>}
+                {customer.email && <div className="col-span-2 min-w-0"><dt className="text-ink-muted">Email</dt><dd className="mt-1 break-all text-ink">{customer.email}</dd></div>}
+              </dl>
+              <div className="flex justify-end gap-2 border-t border-ink/10 pt-3">
+                <button type="button" onClick={() => handleEdit(customer)} className="rounded-button border border-brand/20 px-3 py-2 text-xs font-semibold text-brand">Edit</button>
+                <button type="button" onClick={() => handleDelete(customer)} className="rounded-button border border-brand/20 px-3 py-2 text-xs font-semibold text-brand-dark">Delete</button>
+              </div>
+            </article>
+          ))}
+          {!isLoading && !isError && filteredCustomers.length === 0 && <p className="p-6 text-center text-sm text-ink-muted">No customers found.</p>}
         </div>
       </div>
     </div>

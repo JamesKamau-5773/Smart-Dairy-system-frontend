@@ -175,14 +175,14 @@ export default function StaffRegistry() {
   }, [staff, searchTerm]);
 
   const statusClasses = {
-    ACTIVE: 'bg-emerald-100 text-emerald-700',
-    ON_LEAVE: 'bg-gray-200 text-gray-700',
-    OVERDUE: 'bg-red-100 text-red-800',
-    INACTIVE: 'bg-slate-200 text-slate-600',
+    ACTIVE: 'bg-brand/10 text-brand',
+    ON_LEAVE: 'bg-surface-raised text-ink-muted',
+    OVERDUE: 'bg-brand/10 text-brand-dark',
+    INACTIVE: 'bg-surface-raised text-ink-muted',
   };
 
   return (
-    <div className="animate-reveal p-8">
+      <div className="animate-reveal p-4 sm:p-8">
       <Confirmation {...confirmation} />
       <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div>
@@ -216,17 +216,17 @@ export default function StaffRegistry() {
       </section>
 
       <div className="relative mb-6">
-        <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
+        <Search size={16} className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-brand" />
         <input
           type="text"
           placeholder="Search for an employee by name or role..."
           value={searchTerm}
           onChange={(event) => setSearchTerm(event.target.value)}
-          className="w-full rounded-lg border border-slate-200 py-3 pl-12 pr-4 text-sm font-medium outline-none focus:border-brand/50"
+          className="w-full rounded-lg border border-ink/20 py-3 pl-10 pr-4 text-sm font-medium outline-none focus:border-brand/50"
         />
       </div>
 
-      <div className="overflow-x-auto rounded-xl border border-slate-100 bg-white ">
+      <div className="hidden overflow-x-auto rounded-xl border border-slate-100 bg-white md:block">
         <table className="min-w-[960px] w-full text-left">
           <thead className="bg-slate-50 text-xs font-semibold text-slate-500">
             <tr>
@@ -249,13 +249,13 @@ export default function StaffRegistry() {
                     <div className="text-xs text-slate-500">{staffMember.role}</div>
                   </td>
                   <td className="px-6 py-4 text-sm font-medium text-slate-600">{staffMember.baseSalary.toLocaleString()}</td>
-                  <td className={`px-6 py-4 text-sm font-bold ${staffMember.loanBalance > 0 ? 'text-amber-600' : 'text-slate-500'}`}>{staffMember.loanBalance.toLocaleString()}</td>
+                  <td className={`px-6 py-4 text-sm font-bold ${staffMember.loanBalance > 0 ? 'text-brand' : 'text-slate-500'}`}>{staffMember.loanBalance.toLocaleString()}</td>
                   <td className="px-6 py-4">
                     <span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${
                       staffMember.accountStatus === 'ACTIVE'
-                        ? 'bg-emerald-100 text-emerald-700'
+                        ? 'bg-brand/10 text-brand'
                         : ['INVITED', 'INVITE_PENDING'].includes(staffMember.accountStatus)
-                          ? 'bg-amber-100 text-amber-700'
+                          ? 'bg-brand/15 text-brand-dark'
                           : 'bg-slate-100 text-slate-600'
                     }`}>
                       {staffMember.accountStatus === 'ACTIVE' ? 'ACTIVE' : ['INVITED', 'INVITE_PENDING'].includes(staffMember.accountStatus) ? 'INVITE PENDING' : 'NO ACCOUNT'}
@@ -279,7 +279,7 @@ export default function StaffRegistry() {
                         <KeyRound size={14} />
                       </button>
                       {staffMember.status === 'ACTIVE' ? (
-                        <button onClick={() => handleToggleStatus(staffMember)} className="p-2 text-slate-400 transition-colors hover:text-danger" title="Deactivate Employee">
+                        <button onClick={() => handleToggleStatus(staffMember)} className="p-2 text-slate-400 transition-colors hover:text-brand" title="Deactivate Employee">
                           <UserX size={14} />
                         </button>
                       ) : (
@@ -291,11 +291,11 @@ export default function StaffRegistry() {
                         <Edit2 size={14} />
                       </button>
                       {displayStatus === 'OVERDUE' ? (
-                        <button onClick={() => openVerifyModal(staffMember)} className="flex items-center gap-1.5 rounded-md bg-red-600 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-white transition-colors hover:bg-red-700">
+                        <button onClick={() => openVerifyModal(staffMember)} className="flex items-center gap-1.5 rounded-md bg-brand px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-white transition-colors hover:bg-brand-dark">
                           <UserCheck size={12} /> Verify Return
                         </button>
                       ) : (
-                        <button onClick={() => openDrawer(staffMember)} disabled={displayStatus !== 'ACTIVE'} className="flex items-center gap-1.5 rounded-md bg-amber-100 px-3 py-1 text-[10px] font-black uppercase text-amber-700 transition-colors hover:bg-amber-200 disabled:cursor-not-allowed disabled:opacity-50">
+                        <button onClick={() => openDrawer(staffMember)} disabled={displayStatus !== 'ACTIVE'} className="flex items-center gap-1.5 rounded-md bg-brand/10 px-3 py-1 text-[10px] font-black uppercase text-brand transition-colors hover:bg-brand/15 disabled:cursor-not-allowed disabled:opacity-50">
                           <DollarSign size={12} /> Issue Advance
                         </button>
                       )}
@@ -306,6 +306,35 @@ export default function StaffRegistry() {
             })}
           </tbody>
         </table>
+      </div>
+
+      <div className="space-y-3 md:hidden">
+        {filteredStaff.map((staffMember) => {
+          const displayStatus = staffMember.status ?? 'INACTIVE';
+          const accountLabel = staffMember.accountStatus === 'ACTIVE' ? 'ACTIVE' : ['INVITED', 'INVITE_PENDING'].includes(staffMember.accountStatus) ? 'INVITE PENDING' : 'NO ACCOUNT';
+          return (
+            <article key={staffMember.id} className="min-w-0 rounded-xl border border-ink/10 bg-surface p-4">
+              <div className="flex min-w-0 items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <h3 className="truncate text-sm font-bold text-ink">{staffMember.name}</h3>
+                  <p className="mt-0.5 truncate text-xs text-ink-muted">{staffMember.role}</p>
+                </div>
+                <span className={`shrink-0 rounded-full px-2 py-1 text-[10px] font-semibold ${statusClasses[displayStatus] || statusClasses.INACTIVE}`}>{displayStatus.replace('_', ' ')}</span>
+              </div>
+              <div className="mt-3 grid grid-cols-2 gap-3 rounded-lg bg-surface-raised p-3 text-xs">
+                <div><p className="text-ink-muted">Base salary</p><p className="mt-1 font-semibold tabular-nums text-ink">KES {staffMember.baseSalary.toLocaleString()}</p></div>
+                <div><p className="text-ink-muted">Outstanding loan</p><p className="mt-1 font-semibold tabular-nums text-ink">KES {staffMember.loanBalance.toLocaleString()}</p></div>
+                <div className="col-span-2"><p className="text-ink-muted">App access</p><p className="mt-1 font-semibold text-brand">{accountLabel}</p></div>
+              </div>
+              <div className="mt-3 flex flex-wrap gap-2">
+                <button type="button" onClick={() => setInviteStaffId(staffMember.id)} disabled={staffMember.accountStatus === 'ACTIVE'} className="rounded-lg border border-ink/15 px-3 py-2 text-xs font-semibold text-ink disabled:opacity-40">{accountLabel === 'INVITE PENDING' ? 'Manage access' : 'App access'}</button>
+                <button type="button" onClick={() => handleToggleStatus(staffMember)} className="rounded-lg border border-brand/25 px-3 py-2 text-xs font-semibold text-brand">{staffMember.status === 'ACTIVE' ? 'Deactivate' : 'Activate'}</button>
+                <button type="button" onClick={() => openDrawer(staffMember)} className="rounded-lg bg-brand px-3 py-2 text-xs font-semibold text-white">{displayStatus === 'OVERDUE' ? 'Edit / verify' : 'Edit staff'}</button>
+                {displayStatus === 'OVERDUE' && <button type="button" onClick={() => openVerifyModal(staffMember)} className="rounded-lg border border-brand/25 px-3 py-2 text-xs font-semibold text-brand">Verify return</button>}
+              </div>
+            </article>
+          );
+        })}
       </div>
 
       {isAddEmployeeModalOpen && (
