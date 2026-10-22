@@ -14,7 +14,7 @@ import toast from 'react-hot-toast';
 
 export default function StaffRegistry() {
   const { tenantId } = useTenant();
-  const { staff, addEmployee, inviteEmployeeAccount, provisionEmployeeAccount, issueAdvance, editEmployee, verifyReturn, toggleEmployeeStatus } = useStaff();
+  const { staff, addEmployee, inviteEmployeeAccount, provisionEmployeeAccount, updateEmployeePageAccess, issueAdvance, editEmployee, verifyReturn, toggleEmployeeStatus } = useStaff();
   const [searchTerm, setSearchTerm] = useState('');
   const [isAddEmployeeModalOpen, setIsAddEmployeeModalOpen] = useState(false);
   const [inviteStaffId, setInviteStaffId] = useState(null);
@@ -165,6 +165,11 @@ export default function StaffRegistry() {
     return provisioned;
   };
 
+  const handleSavePageAccess = async (staffId, pageAccess) => {
+    await updateEmployeePageAccess(staffId, pageAccess);
+    toast.success('Employee page access saved.');
+  };
+
   const filteredStaff = useMemo(() => {
     const term = searchTerm.toLowerCase();
     if (!term) return staff;
@@ -271,10 +276,9 @@ export default function StaffRegistry() {
                       <button
                         type="button"
                         onClick={() => setInviteStaffId(staffMember.id)}
-                        disabled={staffMember.accountStatus === 'ACTIVE'}
-                        className="p-2 text-slate-400 transition-colors hover:text-brand disabled:cursor-not-allowed disabled:opacity-40"
-                        title={staffMember.accountStatus === 'ACTIVE' ? 'Account is active' : ['INVITED', 'INVITE_PENDING'].includes(staffMember.accountStatus) ? 'Manage pending invitation' : 'Manage app access'}
-                        aria-label={staffMember.accountStatus === 'ACTIVE' ? `Account active for ${staffMember.name}` : `Invite ${staffMember.name} to the app`}
+                        className="p-2 text-slate-400 transition-colors hover:text-brand"
+                        title={staffMember.accountStatus === 'ACTIVE' ? 'Manage page access' : ['INVITED', 'INVITE_PENDING'].includes(staffMember.accountStatus) ? 'Manage pending invitation' : 'Manage app access'}
+                        aria-label={staffMember.accountStatus === 'ACTIVE' ? `Manage page access for ${staffMember.name}` : `Invite ${staffMember.name} to the app`}
                       >
                         <KeyRound size={14} />
                       </button>
@@ -327,7 +331,7 @@ export default function StaffRegistry() {
                 <div className="col-span-2"><p className="text-ink-muted">App access</p><p className="mt-1 font-semibold text-brand">{accountLabel}</p></div>
               </div>
               <div className="mt-3 flex flex-wrap gap-2">
-                <button type="button" onClick={() => setInviteStaffId(staffMember.id)} disabled={staffMember.accountStatus === 'ACTIVE'} className="rounded-lg border border-ink/15 px-3 py-2 text-xs font-semibold text-ink disabled:opacity-40">{accountLabel === 'INVITE PENDING' ? 'Manage access' : 'App access'}</button>
+                <button type="button" onClick={() => setInviteStaffId(staffMember.id)} className="rounded-lg border border-ink/15 px-3 py-2 text-xs font-semibold text-ink">{accountLabel === 'ACTIVE' || accountLabel === 'INVITE PENDING' ? 'Manage access' : 'App access'}</button>
                 <button type="button" onClick={() => handleToggleStatus(staffMember)} className="rounded-lg border border-brand/25 px-3 py-2 text-xs font-semibold text-brand">{staffMember.status === 'ACTIVE' ? 'Deactivate' : 'Activate'}</button>
                 <button type="button" onClick={() => openDrawer(staffMember)} className="rounded-lg bg-brand px-3 py-2 text-xs font-semibold text-white">{displayStatus === 'OVERDUE' ? 'Edit / verify' : 'Edit staff'}</button>
                 {displayStatus === 'OVERDUE' && <button type="button" onClick={() => openVerifyModal(staffMember)} className="rounded-lg border border-brand/25 px-3 py-2 text-xs font-semibold text-brand">Verify return</button>}
@@ -352,6 +356,7 @@ export default function StaffRegistry() {
           onClose={() => setInviteStaffId(null)}
           onInvite={handleInviteEmployee}
           onProvision={handleProvisionEmployee}
+          onSaveAccess={handleSavePageAccess}
         />
       )}
 

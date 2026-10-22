@@ -215,6 +215,7 @@ export function normalizeStaffRecord(record = {}) {
     role: record.role ?? '',
     phoneNumber: record.phoneNumber ?? record.phone_number ?? '',
     userId: record.userId ?? record.user_id ?? null,
+    page_access: Array.isArray(record.page_access) ? record.page_access : null,
     accountStatus: String(record.accountStatus ?? record.account_status ?? 'NONE').trim().replace(/\s+/g, '_').toUpperCase(),
     status: record.status ?? 'ACTIVE',
     baseSalary: Number(record.baseSalary ?? record.base_salary ?? record.salary ?? 0),
@@ -886,12 +887,14 @@ export const staffOnboardingApi = {
     return apiClient.post('/onboarding/invite', {
       employee_id: payload?.employee_id ?? payload?.employeeId,
       role: payload?.role,
+      page_access: payload?.page_access,
     }).then((response) => toObject(response.data));
   },
   provision(payload) {
     return apiClient.post('/onboarding/provision', {
       employee_id: payload?.employee_id ?? payload?.employeeId,
       role: payload?.role,
+      page_access: payload?.page_access,
       password: payload?.password,
       requires_password_reset: payload?.requires_password_reset ?? payload?.requiresPasswordReset ?? true,
     }).then((response) => toObject(response.data));
@@ -930,6 +933,10 @@ export const hrApi = {
     };
     const response = await apiClient.patch(`/hr/staff/${staffId}`, apiPayload);
     return normalizeStaffRecord(toObject(response.data) ?? apiPayload);
+  },
+  async updateStaffPageAccess(staffId, pageAccess) {
+    const response = await apiClient.patch(`/hr/staff/${staffId}/page-access`, { page_access: pageAccess });
+    return toObject(response.data);
   },
   async verifyReturn(staffId, payload) {
     const response = await requestWithFallback(apiClient, verifyRoutes(staffId).map((url) => ({ method: 'post', url, data: payload })));

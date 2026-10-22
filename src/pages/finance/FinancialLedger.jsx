@@ -237,6 +237,7 @@ const LedgerEntryFormModal = ({ onClose, transactionType, farmId, tenantId }) =>
       if (transactionType === 'income' && formData.incomePayerType === 'customer') {
         return financeApi.recordCustomerPayment(newEntry.customer_id, {
           amount: newEntry.amount,
+          category: newEntry.category,
           ...(newEntry.reference_code?.trim() ? { reference_code: newEntry.reference_code.trim() } : {}),
           note: newEntry.description,
           date: newEntry.date,

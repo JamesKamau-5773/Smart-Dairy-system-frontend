@@ -1,3 +1,5 @@
+import { FARM_STAFF_ROLE_OPTIONS } from './staffOnboarding';
+
 const AMBIGUITY_SAFE_PASSWORD_CHARACTERS = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789!@#$%';
 
 export const ACCESS_MODES = Object.freeze({
@@ -6,16 +8,13 @@ export const ACCESS_MODES = Object.freeze({
   PROVISION: 'provision',
 });
 
-export const EMPLOYEE_ROLE_OPTIONS = Object.freeze([
-  { value: 'FARM_HAND', label: 'Farmhand' },
-  { value: 'SUPERVISOR', label: 'Supervisor' },
-  { value: 'FARM_MANAGER', label: 'Farm manager' },
-]);
+export const EMPLOYEE_ROLE_OPTIONS = FARM_STAFF_ROLE_OPTIONS;
 
 export function normalizeEmployeeRole(value) {
   const token = String(value ?? '').trim().replace(/[-\s]+/g, '_').toUpperCase();
   if (token === 'FARMHAND') return 'FARM_HAND';
   if (token === 'MANAGER') return 'FARM_MANAGER';
+  if (token === 'SUPERVISOR') return 'FARM_SUPERVISOR';
   return EMPLOYEE_ROLE_OPTIONS.some((option) => option.value === token) ? token : 'FARM_HAND';
 }
 

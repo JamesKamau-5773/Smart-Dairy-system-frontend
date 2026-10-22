@@ -159,11 +159,17 @@ export const hasPermission = (user, permission) => {
   return getPermissionSet(user).includes(expected);
 };
 
+export const hasPageAccess = (user, pageKey) => {
+  if (!Array.isArray(user?.page_access)) return true;
+  return user.page_access.includes(pageKey);
+};
+
 // Command Center policy matrix (kept close to the guard for easy maintenance):
 // - single-farm users: always allowed (legacy self-serve behavior)
 // - organizational admins: SUPER_ADMIN, ADMIN, FARM_ADMIN
 // - delegated users: any role with explicit dashboard permission
 export const canAccessCommandCenter = (user) => {
+  if (Array.isArray(user?.page_access)) return hasPageAccess(user, 'dashboard');
   if (isSingleTenantUser(user)) return true;
   if (isSuperAdmin(user) || isCooperativeAdmin(user) || isFarmAdmin(user)) return true;
   if (hasRole(user, ['FARM_MANAGER'])) return true;
@@ -173,7 +179,10 @@ export const canAccessCommandCenter = (user) => {
     || hasPermission(user, 'view_command_center');
 };
 
-export const canViewAdminControls = (user) => isSingleTenantUser(user) || isSuperAdmin(user) || isCooperativeAdmin(user) || isFarmAdmin(user);
+export const canViewAdminControls = (user) => {
+  if (Array.isArray(user?.page_access)) return user.page_access.length > 0;
+  return isSingleTenantUser(user) || isSuperAdmin(user) || isCooperativeAdmin(user) || isFarmAdmin(user);
+};
 
 export const getDefaultLandingPath = (user) => {
   if (isSingleTenantUser(user)) return '/dashboard';

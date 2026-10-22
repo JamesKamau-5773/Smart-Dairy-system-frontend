@@ -100,6 +100,13 @@ export function StaffProvider({ children }) {
     return provisioned;
   };
 
+  const updateEmployeePageAccess = async (staffId, pageAccess) => {
+    const saved = await hrApi.updateStaffPageAccess(staffId, pageAccess);
+    const current = staffData.find((staff) => staff.id === staffId);
+    if (current) mergeStaffRecord({ ...current, page_access: saved.page_access });
+    return saved;
+  };
+
   const issueAdvance = async (staffMember, amount, monthlyDeduction) => {
     const currentLoanBalance = Number(staffMember?.loanBalance || 0);
     const updatedStaff = {
@@ -153,7 +160,7 @@ export function StaffProvider({ children }) {
     );
   };
 
-  const value = { staff: staffData, addEmployee, inviteEmployeeAccount, provisionEmployeeAccount, issueAdvance, editEmployee, verifyReturn, toggleEmployeeStatus, reduceLoanBalance, isHydrating };
+  const value = { staff: staffData, addEmployee, inviteEmployeeAccount, provisionEmployeeAccount, updateEmployeePageAccess, issueAdvance, editEmployee, verifyReturn, toggleEmployeeStatus, reduceLoanBalance, isHydrating };
 
   return (
     <StaffContext.Provider value={value}>

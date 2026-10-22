@@ -2,9 +2,9 @@ import { useState } from 'react';
 import { createPortal } from 'react-dom';
 import { X, UserPlus, Save, BriefcaseBusiness, WalletCards, Phone, CalendarDays, KeyRound, AlertTriangle } from 'lucide-react';
 import AccessProvisioningFields from './AccessProvisioningFields';
+import { FARM_STAFF_ROLE_OPTIONS, getDefaultStaffPageAccess, STAFF_PAGE_ACCESS_OPTIONS } from '../../lib/staffOnboarding';
 import {
   ACCESS_MODES,
-  EMPLOYEE_ROLE_OPTIONS,
   formatKenyanPhoneInput,
   formatSalaryInput,
   normalizeKenyanPhone,
@@ -25,6 +25,7 @@ export default function AddEmployeeModal({ isOpen, onClose, onSave }) {
   const [formData, setFormData] = useState(INITIAL_STATE);
   const [accessMode, setAccessMode] = useState(ACCESS_MODES.NONE);
   const [accessRole, setAccessRole] = useState('FARM_HAND');
+  const [pageAccess, setPageAccess] = useState(getDefaultStaffPageAccess('FARM_HAND'));
   const [temporaryPassword, setTemporaryPassword] = useState('');
   const [errors, setErrors] = useState({});
   const [partialFailureMessage, setPartialFailureMessage] = useState('');
@@ -68,6 +69,7 @@ export default function AddEmployeeModal({ isOpen, onClose, onSave }) {
       }, {
         mode: accessMode,
         role: accessRole,
+        page_access: pageAccess,
         password: temporaryPassword,
         requires_password_reset: true,
       });
@@ -126,7 +128,7 @@ export default function AddEmployeeModal({ isOpen, onClose, onSave }) {
                 <label className="block">
                   <span className="mb-2 flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-slate-500"><BriefcaseBusiness size={13} /> Job role <span className="text-danger">*</span></span>
                   <select required name="role" value={formData.role} onChange={handleChange} className="input-machined w-full">
-                    {EMPLOYEE_ROLE_OPTIONS.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
+                    {FARM_STAFF_ROLE_OPTIONS.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
                   </select>
                   {errors.role && <span className="mt-1.5 block text-xs text-danger">{errors.role}</span>}
                 </label>
@@ -159,13 +161,26 @@ export default function AddEmployeeModal({ isOpen, onClose, onSave }) {
                 mode={accessMode}
                 onModeChange={(mode) => { setAccessMode(mode); setErrors({}); }}
                 role={accessRole}
-                onRoleChange={setAccessRole}
+                onRoleChange={(nextRole) => { setAccessRole(nextRole); setPageAccess(getDefaultStaffPageAccess(nextRole)); }}
                 phoneNumber={formData.phoneNumber}
                 password={temporaryPassword}
                 onPasswordChange={setTemporaryPassword}
                 errors={errors}
                 allowNoAccess
               />
+              {accessMode !== ACCESS_MODES.NONE && (
+                <div className="mt-4 space-y-2 rounded-lg border border-slate-200 p-4">
+                  <p className="text-sm font-bold text-slate-800">Pages this employee can access</p>
+                  <div className="grid gap-2 sm:grid-cols-2">
+                    {STAFF_PAGE_ACCESS_OPTIONS.map(({ key, label }) => (
+                      <label key={key} className="flex items-center gap-2 text-sm text-slate-700">
+                        <input type="checkbox" checked={pageAccess.includes(key)} onChange={(event) => setPageAccess((current) => event.target.checked ? [...current, key] : current.filter((entry) => entry !== key))} />
+                        {label}
+                      </label>
+                    ))}
+                  </div>
+                </div>
+              )}
             </section>
 
             {partialFailureMessage && (

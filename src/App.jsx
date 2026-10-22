@@ -1,5 +1,5 @@
 import { Suspense, lazy } from 'react';
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from './contexts/AuthContext';
 import { canAccessCommandCenter, getDefaultLandingPath, hasRole, isSingleTenantUser } from './lib/roles';
 
@@ -103,6 +103,7 @@ export const RequiredPasswordResetRoute = ({ children }) => {
 
 const RoleRoute = ({ children, allowedRoles }) => {
   const { currentUser, isLoading } = useAuth();
+  const { pathname } = useLocation();
 
   if (isLoading) {
     return <RouteLoadingFallback label="Checking role access…" />;
@@ -110,6 +111,18 @@ const RoleRoute = ({ children, allowedRoles }) => {
 
   if (!currentUser) {
     return <Navigate to="/login" replace />;
+  }
+
+  if (Array.isArray(currentUser.page_access)) {
+    const pagePaths = [
+      '/dashboard', '/operations/yield', '/operations/milk-usage', '/operations/routine', '/tasks',
+      '/operations/herd', '/operations/breeding', '/operations/records', '/operations/milk-drop-reports',
+      '/feed-nutrition', '/operations/lab', '/settings/unit-conversions', '/operations/customers',
+      '/finance/buyers', '/finance/ledger', '/operations/inventory', '/operations/reports',
+      '/finance/reports', '/operations/safety', '/hr/staff', '/hr/payroll',
+    ];
+    const assignedPageRoute = pagePaths.some((path) => pathname === path || pathname.startsWith(`${path}/`));
+    if (assignedPageRoute) return children;
   }
 
   if (isSingleTenantUser(currentUser)) {

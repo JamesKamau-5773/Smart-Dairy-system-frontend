@@ -8,7 +8,7 @@ import {
 import LABELS from '../lib/labels';
 import { useAuth } from '../contexts/AuthContext';
 import FarmSwitcher from './FarmSwitcher';
-import { canAccessCommandCenter, canViewAdminControls, isCooperativeAdmin, isSuperAdmin, hasRole } from '../lib/roles';
+import { canAccessCommandCenter, canViewAdminControls, isCooperativeAdmin, isSuperAdmin, hasRole, hasPageAccess } from '../lib/roles';
 
 export default function Sidebar({ mobileOpen = false, setMobileOpen = () => {} }) {
   const { currentUser } = useAuth();
@@ -43,7 +43,9 @@ export default function Sidebar({ mobileOpen = false, setMobileOpen = () => {} }
   const canManageMemberAccess = isCoopAdmin || hasRole(currentUser, ['FARM_ADMIN']);
   const showCommandCenter = canAccessCommandCenter(currentUser);
   const canViewCustomers = showAdminControls || hasRole(currentUser, ['FARMER']);
-  const canViewMilkReport = hasRole(currentUser, ['ADMIN', 'FARM_MANAGER', 'FARMER']);
+  const canViewMilkReport = Array.isArray(currentUser?.page_access)
+    ? hasPageAccess(currentUser, 'reports') || hasPageAccess(currentUser, 'safety')
+    : hasRole(currentUser, ['ADMIN', 'FARM_MANAGER', 'FARMER']);
 
   const navGroups = [
     {
@@ -67,60 +69,60 @@ export default function Sidebar({ mobileOpen = false, setMobileOpen = () => {} }
     {
       title: LABELS.OPERATIONS,
       items: [
-        { label: LABELS.PRODUCTION_LOG, to: '/operations/yield', icon: Beaker, visible: true },
-        { label: 'Milk Usage', to: '/operations/milk-usage', icon: Droplets, visible: true },
-        { label: LABELS.DAILY_ROUTINE, to: '/operations/routine', icon: Activity, visible: true },
-        { label: herdsmanViewLabel, to: '/tasks', icon: Activity, visible: canViewHerdsmanView },
+        { label: LABELS.PRODUCTION_LOG, to: '/operations/yield', icon: Beaker, visible: hasPageAccess(currentUser, 'production') },
+        { label: 'Milk Usage', to: '/operations/milk-usage', icon: Droplets, visible: hasPageAccess(currentUser, 'production') },
+        { label: LABELS.DAILY_ROUTINE, to: '/operations/routine', icon: Activity, visible: hasPageAccess(currentUser, 'tasks') },
+        { label: herdsmanViewLabel, to: '/tasks', icon: Activity, visible: canViewHerdsmanView && hasPageAccess(currentUser, 'tasks') },
       ],
     },
     {
       title: 'Herd Management',
       items: [
-        { label: 'Cow Register', to: '/operations/herd', icon: BookOpen, visible: true },
-        { label: 'Breeding & Genetics', to: '/operations/breeding', icon: Dna, visible: canViewBreeding },
-        { label: LABELS.MEDICAL_RECORDS, to: '/operations/records', icon: BookHeart, visible: true },
+        { label: 'Cow Register', to: '/operations/herd', icon: BookOpen, visible: hasPageAccess(currentUser, 'herd') },
+        { label: 'Breeding & Genetics', to: '/operations/breeding', icon: Dna, visible: canViewBreeding && hasPageAccess(currentUser, 'breeding') },
+        { label: LABELS.MEDICAL_RECORDS, to: '/operations/records', icon: BookHeart, visible: hasPageAccess(currentUser, 'medical') },
         // NEW: Added Milk Drop Reports right under Medical Records
-        { label: 'Milk Drop Alerts', to: '/operations/milk-drop-reports', icon: FileWarning, visible: true },
+        { label: 'Milk Drop Alerts', to: '/operations/milk-drop-reports', icon: FileWarning, visible: hasPageAccess(currentUser, 'medical') },
       ],
     },
     {
       title: LABELS.FEED_NUTRITION || 'Feed Planning',
       items: [
-        { label: LABELS.FEED_DASHBOARD || LABELS.NUTRITION_PLANNER, to: '/feed-nutrition', icon: Wheat, visible: canViewFeedNutrition, exact: true },
-        { label: LABELS.FEED_FORMULATION, to: '/feed-nutrition/mix', icon: Dna, visible: canViewFeedNutrition },
-        { label: LABELS.MILK_LAB, to: '/operations/lab', icon: Pill, visible: canViewFeedNutrition },
-        { label: 'Unit Helpers', to: '/settings/unit-conversions', icon: BookOpen, visible: canViewFeedNutrition },
+        { label: LABELS.FEED_DASHBOARD || LABELS.NUTRITION_PLANNER, to: '/feed-nutrition', icon: Wheat, visible: canViewFeedNutrition && hasPageAccess(currentUser, 'feed'), exact: true },
+        { label: LABELS.FEED_FORMULATION, to: '/feed-nutrition/mix', icon: Dna, visible: canViewFeedNutrition && hasPageAccess(currentUser, 'feed') },
+        { label: LABELS.MILK_LAB, to: '/operations/lab', icon: Pill, visible: canViewFeedNutrition && hasPageAccess(currentUser, 'feed') },
+        { label: 'Unit Helpers', to: '/settings/unit-conversions', icon: BookOpen, visible: canViewFeedNutrition && hasPageAccess(currentUser, 'feed') },
       ],
     },
     {
       title: 'Finance & Supply',
       items: [
-        { label: 'Buyers List', to: '/finance/buyers', icon: Users, visible: canViewBuyers },
-        { label: 'Customer Management', to: '/operations/customers', icon: Users, visible: canViewCustomers },
-        { label: 'Inventory', to: '/operations/inventory', icon: Package, visible: showAdminControls },
-        { label: 'Ledger', to: '/finance/ledger', icon: Wallet, visible: showAdminControls },
+        { label: 'Buyers List', to: '/finance/buyers', icon: Users, visible: canViewBuyers && hasPageAccess(currentUser, 'customers') },
+        { label: 'Customer Management', to: '/operations/customers', icon: Users, visible: canViewCustomers && hasPageAccess(currentUser, 'customers') },
+        { label: 'Inventory', to: '/operations/inventory', icon: Package, visible: showAdminControls && hasPageAccess(currentUser, 'inventory') },
+        { label: 'Ledger', to: '/finance/ledger', icon: Wallet, visible: showAdminControls && hasPageAccess(currentUser, 'finance') },
       ],
     },
     {
       title: 'Reports',
       items: [
-        { label: 'Farm Reporting Dashboard', to: '/operations/reports', icon: TrendingUp, visible: canViewMilkReport },
-        { label: 'Customer Value & Profit', to: '/finance/reports/dairy-unit-economics', icon: TrendingUp, visible: showAdminControls },
-        { label: 'Cow Profitability', to: '/finance/reports/animal-economics', icon: TrendingUp, visible: showAdminControls },
-        { label: 'Milk Inventory Report', to: '/operations/reports/milk-inventory', icon: ClipboardList, visible: canViewMilkReport },
+        { label: 'Farm Reporting Dashboard', to: '/operations/reports', icon: TrendingUp, visible: canViewMilkReport && hasPageAccess(currentUser, 'reports') },
+        { label: 'Customer Value & Profit', to: '/finance/reports/dairy-unit-economics', icon: TrendingUp, visible: showAdminControls && hasPageAccess(currentUser, 'reports') },
+        { label: 'Cow Profitability', to: '/finance/reports/animal-economics', icon: TrendingUp, visible: showAdminControls && hasPageAccess(currentUser, 'reports') },
+        { label: 'Milk Inventory Report', to: '/operations/reports/milk-inventory', icon: ClipboardList, visible: canViewMilkReport && hasPageAccess(currentUser, 'reports') },
       ],
     },
     {
       title: 'Compliance',
       items: [
-        { label: 'Safety Dashboard', to: '/operations/safety', icon: ShieldCheck, visible: canViewMilkReport },
+        { label: 'Safety Dashboard', to: '/operations/safety', icon: ShieldCheck, visible: canViewMilkReport && hasPageAccess(currentUser, 'safety') },
       ],
     },
     {
       title: 'Human Resources',
       items: [
-        { label: 'Staff Registry', to: '/hr/staff', icon: Users, visible: canViewStaffRegistry },
-        { label: 'Payroll', to: '/hr/payroll', icon: Landmark, visible: canViewPayroll },
+        { label: 'Staff Registry', to: '/hr/staff', icon: Users, visible: canViewStaffRegistry && hasPageAccess(currentUser, 'staff') },
+        { label: 'Payroll', to: '/hr/payroll', icon: Landmark, visible: canViewPayroll && hasPageAccess(currentUser, 'payroll') },
       ],
     },
   ];

@@ -128,7 +128,7 @@ export function AuthProvider({ children }) {
       setCurrentUser(user);
       await saveSession(user);
 
-      return { success: true };
+      return { success: true, user };
     } catch (error) {
       const message = error?.response?.data?.message
         || error?.response?.data?.error

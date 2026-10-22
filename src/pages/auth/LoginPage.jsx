@@ -70,13 +70,13 @@ export default function LoginPage() {
         <form onSubmit={handleSubmit} className="space-y-6">
           <div className="animate-stagger" style={{animationDelay: '0.15s'}}>
             <label className="block font-sans font-medium text-xs tracking-normal text-ink-normal mb-2">
-              Username
+              Username or phone number
             </label>
             <input
               aria-label="Username"
               type="text"
               className="glass-input w-full rounded-md py-3 px-4 bg-surface/30 border border-white/10 backdrop-blur-md text-ink-normal placeholder:text-ink-muted focus:outline-none focus:ring-2 focus:ring-accent/30"
-              placeholder="Enter your username"
+              placeholder="Enter your username or registered phone number"
               value={username}
               onChange={(e) => setUsername(e.target.value)}
               autoComplete="username"
