@@ -1,14 +1,15 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { Eye, EyeOff, Lock, Building, ArrowRight, ShieldCheck, Users } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import AlertBanner from '../../components/ui/AlertBanner';
 import { getDefaultLandingPath, isSuperAdmin } from '../../lib/roles';
+import { authApi } from '../../lib/backendApi';
 
 export default function RegisterPage() {
   const navigate = useNavigate();
   const { currentUser, register } = useAuth();
-  const superAdminBootstrapEnabled = import.meta.env.VITE_ENABLE_SUPER_ADMIN_BOOTSTRAP === 'true';
+  const [superAdminBootstrapEnabled, setSuperAdminBootstrapEnabled] = useState(false);
   const [registrationMode, setRegistrationMode] = useState('single');
 
   const [formData, setFormData] = useState({
@@ -24,6 +25,24 @@ export default function RegisterPage() {
   const [successMessage, setSuccessMessage] = useState('');
 
   const [showPassword, setShowPassword] = useState(false);
+
+  useEffect(() => {
+    let isCurrent = true;
+
+    authApi.bootstrapStatus()
+      .then((status) => {
+        if (isCurrent) {
+          setSuperAdminBootstrapEnabled(status?.bootstrap_available === true);
+        }
+      })
+      .catch(() => {
+        if (isCurrent) setSuperAdminBootstrapEnabled(false);
+      });
+
+    return () => {
+      isCurrent = false;
+    };
+  }, []);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -50,17 +69,27 @@ export default function RegisterPage() {
         };
 
     if (payload.password.length < 8) {
-      setErrorMessage('Password must be at least 8 characters long.');
+      setErrorMessage('In the Password field, enter at least 8 characters.');
       return;
     }
 
     if (isSuperAdminBootstrap) {
-      if (!payload.full_name || !payload.phone_number || !payload.bootstrap_key) {
-        setErrorMessage('Full name, phone number, and bootstrap key are required for super admin setup.');
+      if (!payload.full_name) {
+        setErrorMessage('Enter your full name in the Full Name field above.');
+        return;
+      }
+      if (!payload.phone_number) {
+        setErrorMessage('Enter your phone number in the Phone Number field above.');
+        return;
+      }
+      if (!payload.bootstrap_key) {
+        setErrorMessage('Enter the owner setup code in the Owner Setup Code field. It is provided by your platform administrator.');
         return;
       }
     } else if (!payload.farm_name || !payload.phone_number) {
-      setErrorMessage('Farm name and phone number are required.');
+      setErrorMessage(!payload.farm_name
+        ? 'Enter your farm name in the Farm Name field above.'
+        : 'Enter your phone number in the Phone Number field above.');
       return;
     }
 
@@ -69,7 +98,7 @@ export default function RegisterPage() {
     const result = await register(payload);
 
     if (result.success) {
-      setSuccessMessage('Workspace created successfully. Redirecting to your dashboard.');
+      setSuccessMessage('Account created! Taking you to your dashboard...');
       const savedUser = sessionStorage.getItem('jivu_user');
       const user = savedUser ? JSON.parse(savedUser) : null;
       navigate(getDefaultLandingPath(user), { replace: true });
@@ -100,38 +129,33 @@ export default function RegisterPage() {
 
           {errorMessage && (
             <div className="fixed top-4 right-4 z-[60] w-[min(92vw,430px)]">
-              <AlertBanner type="danger" title="Registration failed" message={errorMessage} onDismiss={() => setErrorMessage('')} />
+              <AlertBanner type="danger" title="Couldn’t create account" message={errorMessage} onDismiss={() => setErrorMessage('')} />
             </div>
           )}
 
           <header className="mb-8 text-center">
             <div className="inline-flex items-center gap-2 bg-brand/5 text-brand border border-brand/10 px-4 py-1 mb-4 font-mono text-xs font-black tracking-widest rounded-full">
-              <Building size={12} /> WORKSPACE REGISTRATION
+              <Building size={12} /> FARM REGISTRATION
             </div>
             <h1 className="font-sans font-black text-3xl tracking-tighter text-brand uppercase">
-              Register <span className="text-ink/40">Workspace</span>
+              Register <span className="text-ink/40">Farm</span>
             </h1>
-            <p className="font-mono text-xs text-ink-muted mt-2">Single farm supports self-serve. Cooperative setup is invite-first and super-admin controlled.</p>
+            <p className="font-mono text-xs text-ink-muted mt-2">Built for everyone. Start your own farm instantly, or join your cooperative through a secure invite link.</p>
           </header>
 
           <div className="mb-6 space-y-2 rounded-xl border border-ink/10 bg-surface/40 p-4">
             <label className="font-mono text-[10px] font-black uppercase tracking-widest text-ink/60">
-              Account Type
+              Farm Type
             </label>
             <select
               value={registrationMode}
               onChange={(event) => setRegistrationMode(event.target.value)}
               className="input-machined w-full"
             >
-              <option value="single">Single Farm</option>
+              <option value="single">Own Farm</option>
               <option value="cooperative">Cooperative</option>
               {superAdminBootstrapEnabled && <option value="super_admin">Super Admin Bootstrap</option>}
             </select>
-            {!superAdminBootstrapEnabled && (
-              <p className="text-xs text-ink-muted">
-                Super admin bootstrap is disabled in this build. Enable <span className="font-mono">VITE_ENABLE_SUPER_ADMIN_BOOTSTRAP=true</span> to expose it.
-              </p>
-            )}
           </div>
 
           {registrationMode === 'cooperative' ? (
@@ -158,7 +182,7 @@ export default function RegisterPage() {
                 </div>
               )}
             </div>
-          ) : registrationMode === 'super_admin' ? (
+          ) : registrationMode === 'super_admin' && superAdminBootstrapEnabled ? (
             <form onSubmit={handleSubmit} className="space-y-5">
               <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
                 Super admin bootstrap should be used only for trusted platform owners. The backend should validate the bootstrap key before accepting this role.
@@ -200,6 +224,7 @@ export default function RegisterPage() {
                   <div className="absolute left-3 top-1/2 -translate-y-1/2 text-ink/40"><Lock size={16} /></div>
                   <input
                     type={showPassword ? 'text' : 'password'}
+                    minLength={8}
                     placeholder="••••••••••••"
                     className="input-machined pl-10 pr-12 font-mono tracking-widest"
                     value={formData.password}
@@ -214,15 +239,18 @@ export default function RegisterPage() {
                     {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
                   </button>
                 </div>
+                <p className="mt-1.5 text-xs text-ink-muted">Use at least 8 characters.</p>
               </div>
 
               <div className="space-y-2">
                 <label className="font-mono text-[10px] font-black uppercase tracking-widest text-ink/60">
-                  Bootstrap Key
+                  Owner Setup Code
                 </label>
                 <input
+                  aria-label="Owner setup code"
+                  autoComplete="off"
                   type="password"
-                  placeholder="Platform bootstrap key"
+                  placeholder="Provided by your platform administrator"
                   className="input-machined font-mono tracking-widest"
                   value={formData.bootstrap_key}
                   onChange={(e) => setFormData({ ...formData, bootstrap_key: e.target.value })}
@@ -277,6 +305,7 @@ export default function RegisterPage() {
                   <div className="absolute left-3 top-1/2 -translate-y-1/2 text-ink/40"><Lock size={16} /></div>
                   <input
                     type={showPassword ? 'text' : 'password'}
+                    minLength={8}
                     placeholder="••••••••••••"
                     className="input-machined pl-10 pr-12 font-mono tracking-widest"
                     value={formData.password}
@@ -291,6 +320,7 @@ export default function RegisterPage() {
                     {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
                   </button>
                 </div>
+                <p className="mt-1.5 text-xs text-ink-muted">Use at least 8 characters.</p>
               </div>
 
               <button type="submit" className="btn-command w-full py-4 text-lg mt-6 flex justify-center items-center gap-2" disabled={isSubmitting}>
@@ -301,7 +331,7 @@ export default function RegisterPage() {
 
           <div className="mt-8 text-center border-t border-ink/10 pt-6">
             <p className="font-mono text-xs text-ink/60">
-              Already have an active workspace?{' '}
+              Already have an active farm account?{' '}
               <Link to="/login" className="font-bold text-brand hover:text-accent transition-colors underline decoration-2 underline-offset-4">
                 Log In
               </Link>

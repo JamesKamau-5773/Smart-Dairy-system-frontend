@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { FileWarning, Filter, Stethoscope, Wheat, ThermometerSun, Settings, X, CheckCircle2 } from 'lucide-react';
 import toast from 'react-hot-toast';
-import { productionApi } from '../../lib/backendApi';
+import { getApiErrorMessage, productionApi } from '../../lib/backendApi';
 import { formatCowIdentity } from '../../lib/cowIdentity';
 import { normalizeMilkDropReport } from '../../lib/milkDropReport';
 import { useTenant } from '../../hooks/useTenant';
@@ -42,7 +42,7 @@ export default function MilkDropReports() {
       closeModal();
     },
     onError: (error) => {
-      setFormError(error?.response?.data?.error || error?.message || 'Could not update this investigation.');
+      setFormError(getApiErrorMessage(error, 'Could not update this investigation. Check your connection and try again.'));
     },
   });
 

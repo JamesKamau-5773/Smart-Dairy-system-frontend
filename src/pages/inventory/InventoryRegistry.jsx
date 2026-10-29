@@ -138,7 +138,7 @@ export default function InventoryRegistry() {
   const handleRegisterResource = (newResourceData) => {
     const isFeedCategory = String(newResourceData.category || '').toLowerCase() === 'bulk feed';
     if (isFeedCategory && areNutritionAndCostAllZero(newResourceData)) {
-      setErrorMessage('Bulk Feed items must have at least one non-zero nutrition or cost value (protein, energy, fiber, or cost per kg).');
+      setErrorMessage('Enter a value for at least one of these fields before saving: protein, energy, fiber, or cost per kilogram.');
       setShowError(true);
       return;
     }
@@ -183,7 +183,7 @@ export default function InventoryRegistry() {
   const handleSaveEdit = (updatedItem) => {
     const isFeedCategory = String(updatedItem.category || '').toLowerCase() === 'bulk feed';
     if (isFeedCategory && areNutritionAndCostAllZero(updatedItem)) {
-      setErrorMessage('Bulk Feed items must have at least one non-zero nutrition or cost value (protein, energy, fiber, or cost per kg).');
+      setErrorMessage('Enter a value for at least one of these fields before saving: protein, energy, fiber, or cost per kilogram.');
       setShowError(true);
       return;
     }

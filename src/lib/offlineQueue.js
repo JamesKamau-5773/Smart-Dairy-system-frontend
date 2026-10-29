@@ -1,5 +1,5 @@
 import apiClient, { createIdempotencyKey } from './apiClient';
-import { buildProductionYieldPayload } from './backendApi';
+import { buildProductionYieldPayload, getApiErrorMessage } from './backendApi';
 import { enqueueRequest, getAll, remove, update } from './offlineMutationStore';
 
 const BASE_RETRY_DELAY_MS = 2000;
@@ -41,7 +41,7 @@ async function markFailure(entry, error) {
     lastError: {
       status: status ?? null,
       code: code ?? null,
-      message: error?.response?.data?.message ?? error?.message ?? 'Synchronization failed.',
+      message: getApiErrorMessage(error, 'Could not sync this change. Tap “Sync now” to retry.'),
       occurredAt: new Date().toISOString(),
     },
   });

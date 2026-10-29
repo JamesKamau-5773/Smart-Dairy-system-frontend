@@ -95,7 +95,7 @@ export default class ErrorBoundary extends React.Component {
             {/* Error Count Warning */}
             {this.state.errorCount > 3 && (
               <div className="mt-4 rounded-lg bg-amber-50 p-3 text-sm text-amber-900">
-                This error has occurred {this.state.errorCount} times. If this continues, please clear your browser cache or contact support.
+                This error has occurred {this.state.errorCount} times. Refresh the page. If it keeps happening, contact support.
               </div>
             )}
           </div>

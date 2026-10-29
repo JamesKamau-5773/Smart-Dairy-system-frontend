@@ -3,7 +3,7 @@ import { FileSpreadsheet, Mail, Upload, UserPlus } from 'lucide-react';
 import AlertBanner from '../../components/ui/AlertBanner';
 import InviteClaimPreview from '../../components/auth/InviteClaimPreview';
 import { useAuth } from '../../contexts/AuthContext';
-import { onboardingApi } from '../../lib/backendApi';
+import { getApiErrorMessage, onboardingApi } from '../../lib/backendApi';
 import { getAssignableFarmMemberRoles } from '../../lib/staffOnboarding';
 
 export default function CooperativeAdminOnboardingPage() {
@@ -39,8 +39,7 @@ export default function CooperativeAdminOnboardingPage() {
       setManualInvite({ full_name: '', email: '', phone_number: '', role: 'FARM_HAND' });
       setMessage({ type: 'success', text: 'Member invitation created. Share the server-issued claim link below.' });
     } catch (error) {
-      const serverMessage = error?.response?.data?.message || error?.response?.data?.error;
-      setMessage({ type: 'danger', text: serverMessage || 'Member invite failed.' });
+      setMessage({ type: 'danger', text: getApiErrorMessage(error, 'Could not send this invitation. Check the details and try again.') });
     } finally {
       setIsInviting(false);
     }
@@ -63,8 +62,7 @@ export default function CooperativeAdminOnboardingPage() {
       event.currentTarget.reset();
       setMessage({ type: 'success', text: 'CSV import queued successfully.' });
     } catch (error) {
-      const serverMessage = error?.response?.data?.message || error?.response?.data?.error;
-      setMessage({ type: 'danger', text: serverMessage || 'CSV import failed.' });
+      setMessage({ type: 'danger', text: getApiErrorMessage(error, 'Could not import the member list. Check the file format and try again.') });
     } finally {
       setIsUploadingCsv(false);
     }

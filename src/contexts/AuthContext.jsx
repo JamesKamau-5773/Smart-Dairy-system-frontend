@@ -3,6 +3,7 @@ import React, { createContext, useContext, useState, useEffect } from 'react';
 import { authApi, normalizeSessionUser, normalizeTenantProfile, tenantApi } from '../lib/backendApi';
 import { clearSession, loadSession, saveSession } from '../lib/sessionStore';
 import { tenantRef } from '../lib/tenantRef';
+import { getAuthErrorMessage } from '../lib/authErrorMessages';
 
 const AuthContext = createContext();
 
@@ -94,12 +95,7 @@ export function AuthProvider({ children }) {
       
       return { success: true, user };
     } catch (error) {
-      const message = error?.response?.data?.message
-        || error?.response?.data?.error
-        || error?.response?.data?.detail
-        || 'Invalid credentials or inactive account';
-
-      return { success: false, error: message };
+      return { success: false, error: getAuthErrorMessage(error, 'login') };
     }
   };
 
@@ -112,12 +108,8 @@ export function AuthProvider({ children }) {
 
       return { success: true };
     } catch (error) {
-      const message = error?.response?.data?.message
-        || error?.response?.data?.error
-        || error?.response?.data?.detail
-        || 'Registration failed. Please check your details and try again.';
-
-      return { success: false, error: message };
+      const flow = payload?.role === 'SUPER_ADMIN' ? 'bootstrap' : 'register';
+      return { success: false, error: getAuthErrorMessage(error, flow) };
     }
   };
 
@@ -130,12 +122,7 @@ export function AuthProvider({ children }) {
 
       return { success: true, user };
     } catch (error) {
-      const message = error?.response?.data?.message
-        || error?.response?.data?.error
-        || error?.response?.data?.detail
-        || 'Invite claim failed. Please verify your invite token and try again.';
-
-      return { success: false, error: message };
+      return { success: false, error: getAuthErrorMessage(error, 'claim') };
     }
   };
 
@@ -148,12 +135,7 @@ export function AuthProvider({ children }) {
 
       return { success: true, user };
     } catch (error) {
-      const message = error?.response?.data?.message
-        || error?.response?.data?.error
-        || error?.response?.data?.detail
-        || 'Password update failed. Please try again.';
-
-      return { success: false, error: message };
+      return { success: false, error: getAuthErrorMessage(error, 'passwordReset') };
     }
   };
 

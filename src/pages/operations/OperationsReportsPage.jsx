@@ -4,6 +4,7 @@ import { ChartColumn, ChevronDown, Check, DollarSign, Droplets, Filter, Layers3,
 import { format } from 'date-fns';
 import { Button } from '@/components/ui/button';
 import apiClient from '@/lib/apiClient';
+import { getApiErrorMessage } from '@/lib/backendApi';
 import { cn } from '@/lib/utils';
 import { REPORT_PERIODS, getRangeForPeriod, isValidRange } from './reports/dashboardRange';
 
@@ -234,7 +235,7 @@ export default function OperationsReportsPage() {
       .catch((error) => {
         if (!ignore) {
           setDashboardData(null);
-          setFetchState({ status: 'error', error: error.message || 'Unable to load the reporting dashboard.' });
+          setFetchState({ status: 'error', error: getApiErrorMessage(error, 'Could not load reports. Check your connection and try again.') });
         }
       });
 

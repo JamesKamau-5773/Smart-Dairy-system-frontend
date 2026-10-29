@@ -104,12 +104,12 @@ export default function HerdsmanView() {
       setSuccessMessage(`Logged feed task for ${feedTask.cow}. Inventory has been updated.`);
 
       if (response?.reorder_alert) {
-        setErrorMessage(`CRITICAL STOCK ALERT: ${feedTask.concentrate} is below the minimum threshold. Only ${response.new_balance} ${response.unit} remaining.`);
+        setErrorMessage(`Low stock: ${feedTask.concentrate} is below its reorder level, with ${response.new_balance} ${response.unit} remaining.`);
       }
     },
     onError: (error) => {
       console.error('Failed to log feeding', error);
-      setErrorMessage('System Error: Could not deduct inventory. Proceed with feeding and notify the manager.');
+        setErrorMessage('The feeding task was not recorded, and stock was not deducted. Check the connection and ask your manager to review the stock before trying again.');
     },
   });
 

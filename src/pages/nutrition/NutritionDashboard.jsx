@@ -6,7 +6,7 @@ import toast from 'react-hot-toast';
 import CurrentMixCard from '../../components/nutrition/CurrentMixCard';
 import ProfitabilityChart from '../../components/nutrition/ProfitabilityChart';
 import TopRecipesList from './TopRecipesList';
-import { nutritionApi } from '../../lib/backendApi';
+import { getApiErrorMessage, nutritionApi } from '../../lib/backendApi';
 import { useTenant } from '../../hooks/useTenant';
 
 export default function NutritionDashboard() {
@@ -78,7 +78,7 @@ export default function NutritionDashboard() {
       toast.success('Feeding recorded.');
     },
     onError: (error) => {
-      toast.error(error?.response?.data?.error ?? 'Unable to record feeding.');
+      toast.error(getApiErrorMessage(error, 'Could not record feeding. Check the details and try again.'));
     },
   });
 

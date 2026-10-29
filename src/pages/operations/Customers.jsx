@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { financeApi } from '../../lib/backendApi'; 
+import { financeApi, getApiErrorMessage } from '../../lib/backendApi';
 import { Plus, Pencil, Trash2, Search, Users, MoreVertical } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 
@@ -18,7 +18,7 @@ export default function CustomersPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const confirmation = useConfirmation();
 
-  const { data: customers = [], isLoading, isError } = useQuery({
+  const { data: customers = [], isLoading, isError, refetch } = useQuery({
     queryKey: ['customers'],
     queryFn: () => financeApi.listCustomers().then(res => res.items || res.data || res || []),
   });
@@ -37,7 +37,7 @@ export default function CustomersPage() {
       setSelectedCustomer(null);
     },
     onError: (error, variables) => {
-      toast.error(error.message || `Failed to ${variables.id ? 'update' : 'create'} customer.`);
+      toast.error(getApiErrorMessage(error, `Could not ${variables.id ? 'update' : 'create'} this customer. Check the details and try again.`));
     },
   });
 
@@ -48,7 +48,7 @@ export default function CustomersPage() {
       queryClient.invalidateQueries({ queryKey: ['customers'] });
     },
     onError: (error) => {
-      toast.error(error.message || 'Failed to delete customer.');
+      toast.error(getApiErrorMessage(error, 'Could not delete this customer. Please try again.'));
     },
     onSettled: () => {
       confirmation.setLoading(false);
@@ -163,7 +163,10 @@ export default function CustomersPage() {
                 <tr><td colSpan="4" className="p-6 text-center text-ink-muted">Loading customers...</td></tr>
               )}
               {isError && (
-                <tr><td colSpan="4" className="p-6 text-center text-danger">Failed to load customers.</td></tr>
+                <tr><td colSpan="4" className="p-6 text-center text-danger">
+                  <p>Could not load customers. Check your connection and try again.</p>
+                  <button type="button" onClick={() => refetch()} className="mt-2 font-semibold underline">Retry</button>
+                </td></tr>
               )}
               {!isLoading && filteredCustomers.length === 0 && (
                 <tr><td className="p-6 text-center text-ink-muted" colSpan="4">No customers found.</td></tr>
@@ -210,7 +213,7 @@ export default function CustomersPage() {
           </table>
         </div>
         <div className="divide-y divide-ink/10 md:hidden">
-          {isLoading ? <p className="p-6 text-center text-sm text-ink-muted">Loading customers...</p> : isError ? <p className="p-6 text-center text-sm text-brand-dark">Failed to load customers.</p> : filteredCustomers.map((customer) => (
+          {isLoading ? <p className="p-6 text-center text-sm text-ink-muted">Loading customers...</p> : isError ? <div className="p-6 text-center text-sm text-brand-dark"><p>Could not load customers. Check your connection and try again.</p><button type="button" onClick={() => refetch()} className="mt-2 font-semibold underline">Retry</button></div> : filteredCustomers.map((customer) => (
             <article key={customer.id} className="min-w-0 space-y-3 p-4">
               <div className="flex min-w-0 items-start justify-between gap-3">
                 <div className="min-w-0"><h3 className="break-words font-semibold text-ink">{customer.name}</h3><p className="mt-1 text-xs capitalize text-ink-muted">{customer.customer_type || 'Unknown'}</p></div>

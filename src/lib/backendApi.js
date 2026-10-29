@@ -335,7 +335,7 @@ export function normalizeInventoryItem(item = {}) {
   };
 }
 
-export function getApiErrorMessage(error, fallback = 'Request failed. Please try again.') {
+export function getApiErrorMessage(error, fallback = 'Could not complete this request. Please try again shortly.') {
   const status = error?.response?.status;
   const responseData = error?.response?.data;
   const explicitMessage = typeof responseData === 'string'
@@ -346,20 +346,46 @@ export function getApiErrorMessage(error, fallback = 'Request failed. Please try
     : typeof explicitMessage?.message === 'string'
       ? explicitMessage.message
       : null;
+  const technicalMessage = /sql|database|constraint|integrity|traceback|exception|stack trace|foreign key|not null|unique key|relation .* does not exist|column .* does not exist|sqlalchemy|sqlite|psycopg|request failed with status code|network error/i;
+  const isSafeMessage = (message) => typeof message === 'string'
+    && message.trim().length > 0
+    && message.trim().length <= 240
+    && !technicalMessage.test(message);
 
-  if (displayMessage) {
-    return displayMessage;
+  if (!error?.response) {
+    if (error?.isAxiosError || error?.code === 'ERR_NETWORK' || error?.code === 'ECONNABORTED') {
+      return 'We couldn’t reach the server. Check your connection and try again.';
+    }
+    if (isSafeMessage(error?.message)) return error.message;
+    return fallback || 'Something went wrong. Please try again.';
+  }
+
+  if (status >= 500) {
+    return fallback || 'The service is temporarily unavailable. Please try again shortly.';
+  }
+
+  if ([400, 422].includes(status)) {
+    if (isSafeMessage(displayMessage)) return displayMessage.trim();
+    const fieldDetail = explicitMessage && typeof explicitMessage === 'object'
+      ? explicitMessage.message
+      : null;
+    if (isSafeMessage(fieldDetail)) return fieldDetail.trim();
+    return 'Some information is missing or needs correction. Review the form fields and try again.';
   }
 
   if (status === 409) {
-    return 'This record already exists for the current tenant.';
+    return isSafeMessage(displayMessage)
+      ? displayMessage.trim()
+      : 'A record with these details already exists. Check the existing records and try again.';
   }
 
-  if (status === 400) {
-    return 'The submitted data is invalid.';
-  }
+  if (status === 401) return 'Your session may have expired. Sign in again, then retry.';
+  if (status === 403) return 'You don’t have access to do that. Check that you’re in the right farm or ask your farm administrator.';
+  if (status === 404) return 'This item may no longer be available. Refresh the page and try again.';
+  if (status === 429) return 'Too many attempts were made. Wait a moment, then try again.';
 
-  return error?.message ?? fallback;
+  if (isSafeMessage(displayMessage)) return displayMessage.trim();
+  return fallback || 'Something went wrong. Please try again.';
 }
 
 export function normalizeMedicalRecord(record = {}) {
@@ -691,6 +717,9 @@ export const extractBreedingLogsArray = (data) => {
 const REQUIRED_PASSWORD_RESET_ENDPOINT = '/auth/change-password';
 
 export const authApi = {
+  bootstrapStatus() {
+    return authClient.get('/auth/bootstrap-status').then((response) => response.data);
+  },
   login(credentials) {
     const payload = {
       username: credentials?.username ?? credentials?.identifier ?? '',

@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { Loader2, AlertCircle, Calculator, ArrowRight, Droplets, Wheat, Clock, Beaker } from 'lucide-react';
-import { feedApi, herdApi } from '../../lib/backendApi';
+import { feedApi, getApiErrorMessage, herdApi } from '../../lib/backendApi';
 import { Skeleton } from '../../components/ui';
 import LABELS from '../../lib/labels';
 import { useTenant } from '../../hooks/useTenant';
@@ -439,7 +439,7 @@ export default function MilkLab() {
               <AlertCircle size={18} />
               <div>
                 <p className="font-bold">Could not prepare feeding plan.</p>
-                <p className="mt-1">{calcMutation.error?.response?.data?.error || 'Please try again. If it keeps failing, check saved cow goals and backend status.'}</p>
+                <p className="mt-1">{getApiErrorMessage(calcMutation.error, 'Could not calculate this feeding plan. Check the cow goals and try again.')}</p>
               </div>
             </div>
           )}

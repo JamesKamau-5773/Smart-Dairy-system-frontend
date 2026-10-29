@@ -6,6 +6,7 @@ import BaseModal from '../ui/BaseModal';
 import AccessProvisioningFields from './AccessProvisioningFields';
 import { ACCESS_MODES, validateProvisioningFields } from '../../lib/staffAccessForm';
 import { getDefaultStaffPageAccess, STAFF_PAGE_ACCESS_OPTIONS } from '../../lib/staffOnboarding';
+import { getApiErrorMessage } from '../../lib/backendApi';
 
 export default function EmployeeAccountInviteModal({ isOpen, staff, onClose, onInvite, onProvision, onSaveAccess }) {
   const [mode, setMode] = useState(ACCESS_MODES.INVITE);
@@ -57,7 +58,7 @@ export default function EmployeeAccountInviteModal({ isOpen, staff, onClose, onI
         setProvisioned(true);
       }
     } catch (error) {
-      setErrorMessage(error?.response?.data?.error || error?.response?.data?.message || 'Unable to grant employee access.');
+      setErrorMessage(getApiErrorMessage(error, 'Could not create app access for this employee. Review the access details and try again.'));
     } finally {
       setIsSubmitting(false);
     }
@@ -70,7 +71,7 @@ export default function EmployeeAccountInviteModal({ isOpen, staff, onClose, onI
       await onSaveAccess(staff.id, pageAccess);
       setSavedMessage('Access settings saved.');
     } catch (error) {
-      setErrorMessage(error?.response?.data?.error || 'Unable to save access settings.');
+      setErrorMessage(getApiErrorMessage(error, 'Could not save these access settings. Please try again.'));
     } finally {
       setIsSubmitting(false);
     }
@@ -149,7 +150,7 @@ export default function EmployeeAccountInviteModal({ isOpen, staff, onClose, onI
           />
         )}
 
-        {provisioned && <AlertBanner type="success" title="Account provisioned" message="The backend created and linked the account. The employee must replace the temporary password at first login." />}
+        {provisioned && <AlertBanner type="success" title="App access is ready" message="The employee must change the temporary password at first sign-in." />}
 
       </form>
     </BaseModal>

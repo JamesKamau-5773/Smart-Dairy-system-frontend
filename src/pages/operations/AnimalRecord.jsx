@@ -26,7 +26,7 @@ import {
   buildGeneralEventPayload,
 } from '../../lib/animalActionLog';
 import LABELS from '../../lib/labels';
-import { animalsApi, medicalApi, breedingApi } from '../../lib/backendApi';
+import { animalsApi, medicalApi, breedingApi, getApiErrorMessage } from '../../lib/backendApi';
 import { useTenant } from '../../hooks/useTenant';
 import { formatCowIdentity } from '../../lib/cowIdentity';
 import cowAvatar from '../../assets/cow-avatar.svg';
@@ -160,7 +160,7 @@ export default function AnimalPassport() {
       notifySuccess(`Certified Biological Record is ready to preview for ${animalDisplayName}.`);
     } catch (error) {
       console.error('Failed to generate PDF', error);
-      notifyError(error?.response?.data?.error || `Could not generate the Certified Biological Record for ${animalDisplayName}.`);
+      notifyError(getApiErrorMessage(error, `Could not generate the record for ${animalDisplayName}. Please try again.`));
     } finally {
       setIsGeneratingCertificate(false);
     }
@@ -285,7 +285,7 @@ export default function AnimalPassport() {
           notes: `Recorded calving for ${resolvedAnimal.id}`,
         }));
 
-        notifySuccess(`Birth recorded for ${resolvedAnimal.id}. Cow status and lactation data were refreshed from the backend.`);
+        notifySuccess(`Birth recorded for ${resolvedAnimal.id}. The animal record is up to date.`);
       } else {
         const eventData = buildGeneralEventPayload(newEvent);
         const createdEvent = await createEventMutation.mutateAsync(eventData);
@@ -308,7 +308,7 @@ export default function AnimalPassport() {
       setIsEventOpen(false);
     } catch (error) {
       console.error('Error adding event:', error);
-      notifyError(error?.message || 'Failed to add event. Please try again.');
+      notifyError(getApiErrorMessage(error, 'Could not save this event. Check the details and try again.'));
     } finally {
       setIsSaving(false);
     }
@@ -659,7 +659,7 @@ export default function AnimalPassport() {
 
           {newEvent.type === 'Calving' && (
             <div className="space-y-4 rounded-lg border border-brand-100 bg-brand-50/50 p-4">
-              <p className="text-xs text-brand-800">The backend will update the mother, breeding log, lactation cycle, and calf register atomically after saving.</p>
+              <p className="text-xs text-brand-800">When you save, the mother’s details, breeding record, lactation cycle, and calf record will all be updated together.</p>
               <div>
                 <label className="mb-1 block text-xs font-bold uppercase tracking-wider text-ink-muted">Delivery outcome *</label>
                 <select className="input-machined w-full" value={newEvent.deliveryOutcome} onChange={(event) => setNewEvent((current) => ({ ...current, deliveryOutcome: event.target.value }))}>
