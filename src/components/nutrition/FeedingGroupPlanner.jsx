@@ -2,7 +2,7 @@ import React, { useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import { ChevronDown, ChevronUp, Plus, Ruler, Save, Users } from 'lucide-react';
-import { nutritionApi } from '../../lib/backendApi';
+import { getApiErrorMessage, nutritionApi } from '../../lib/backendApi';
 import { useTenant } from '../../hooks/useTenant';
 
 const GROUP_LABELS = {
@@ -173,7 +173,7 @@ export default function FeedingGroupPlanner() {
       queryClient.invalidateQueries({ queryKey: ['feeding-group-profiles', tenantId, farmId] });
       queryClient.invalidateQueries({ queryKey: ['feeding-plan-by-group', tenantId, farmId] });
     },
-    onError: (error) => setMessage(error?.response?.data?.error || 'Could not save this profile.'),
+    onError: (error) => setMessage(getApiErrorMessage(error, 'Could not save this feeding profile. Check the details and try again.')),
   });
   const saveRecipe = useMutation({
     mutationFn: ({ recipeId, payload }) => nutritionApi.updateRecipe(recipeId, {
@@ -188,7 +188,7 @@ export default function FeedingGroupPlanner() {
       queryClient.invalidateQueries({ queryKey: ['feeding-plan-by-group', tenantId, farmId] });
       queryClient.invalidateQueries({ queryKey: ['nutrition-recipes', tenantId, farmId] });
     },
-    onError: (error) => setMessage(error?.response?.data?.error || 'Could not save mix measures.'),
+    onError: (error) => setMessage(getApiErrorMessage(error, 'Could not save these mix measurements. Check the details and try again.')),
   });
 
   return (

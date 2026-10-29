@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { getApiErrorMessage as getSafeApiErrorMessage } from '../../lib/backendApi';
 
 // A base instance for all API calls, configured to your backend's base URL.
 const api = axios.create({
@@ -17,7 +18,7 @@ const api = axios.create({
  * @returns {string} A user-friendly error message.
  */
 export const getApiErrorMessage = (error) => {
-  return error?.response?.data?.error || error.message || 'An unknown error occurred.';
+  return getSafeApiErrorMessage(error, 'Could not complete this request. Please try again.');
 };
 
 /**

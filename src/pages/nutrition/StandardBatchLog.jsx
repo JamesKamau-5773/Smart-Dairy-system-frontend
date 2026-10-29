@@ -270,7 +270,7 @@ export default function StandardBatchLog({ onCancel, onSaveComplete }) {
               <Loader2 size={20} className="animate-spin text-brand" />
               <div>
                 <p className="font-black text-sm">Saving {quantity}{selectedItem?.unit} of {selectedItem?.name}</p>
-                <p className="text-xs font-medium text-white/60">Committing to database in {countdown}s...</p>
+                <p className="text-xs font-medium text-white/60">Saving delivery in {countdown}s...</p>
               </div>
             </div>
             <button onClick={handleUndo} className="bg-white/10 hover:bg-white/20 text-white px-4 py-2 rounded-button font-black text-xs flex items-center gap-2 transition-colors">

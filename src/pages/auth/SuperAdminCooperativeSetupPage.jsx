@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { Building2, Mail, Phone, UserRound, UserRoundPlus } from 'lucide-react';
 import AlertBanner from '../../components/ui/AlertBanner';
 import InviteClaimPreview from '../../components/auth/InviteClaimPreview';
-import { onboardingApi } from '../../lib/backendApi';
+import { getApiErrorMessage, onboardingApi } from '../../lib/backendApi';
 
 const panelClassName = 'rounded-2xl border border-ink/10 bg-white/90  backdrop-blur';
 const inputClassName = 'mt-2 w-full rounded-lg border border-ink/10 bg-[#fbfcfa] px-4 py-3 text-sm text-ink-strong outline-none transition focus:border-brand focus:ring-2 focus:ring-brand/15';
@@ -72,8 +72,7 @@ export default function SuperAdminCooperativeSetupPage() {
       setCooperative(created);
       setMessage({ type: 'success', text: 'Cooperative created. Add the first admin invite next.' });
     } catch (error) {
-      const serverMessage = error?.response?.data?.message || error?.response?.data?.error;
-      setMessage({ type: 'danger', text: serverMessage || 'Failed to create cooperative.' });
+      setMessage({ type: 'danger', text: getApiErrorMessage(error, 'Could not create this cooperative. Check the details and try again.') });
     } finally {
       setIsSavingCooperative(false);
     }
@@ -102,8 +101,7 @@ export default function SuperAdminCooperativeSetupPage() {
       setAdminForm({ full_name: '', email: '', phone_number: '', role: 'COOP_ADMIN' });
       setMessage({ type: 'success', text: 'First cooperative admin invite sent.' });
     } catch (error) {
-      const serverMessage = error?.response?.data?.message || error?.response?.data?.error;
-      setMessage({ type: 'danger', text: serverMessage || 'Failed to send first admin invite.' });
+      setMessage({ type: 'danger', text: getApiErrorMessage(error, 'Could not send the administrator invitation. Check the details and try again.') });
     } finally {
       setIsSendingInvite(false);
     }

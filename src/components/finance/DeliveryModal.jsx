@@ -138,7 +138,7 @@ export default function DeliveryModal({ isOpen, onClose, onSave, delivery, custo
             <div>
               <p className="text-[10px] font-black text-ink-muted uppercase">Estimated Amount</p>
               <p className="text-sm font-black text-ink">KES {estimatedAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
-              <p className="text-[9px] text-ink-muted">Final amount is confirmed by the backend.</p>
+              <p className="text-[9px] text-ink-muted">The final amount is calculated when you save.</p>
             </div>
           </div>
 

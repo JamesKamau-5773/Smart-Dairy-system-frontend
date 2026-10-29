@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import toast from 'react-hot-toast';
-import { breedingApi } from '../../../lib/backendApi';
+import { breedingApi, getApiErrorMessage } from '../../../lib/backendApi';
 import { resolveCowIdentity } from '../../../lib/breedingUtils';
 import { formatCowIdentity } from '../../../lib/cowIdentity';
 
@@ -53,7 +53,7 @@ export default function LogHeatObservationForm({ herdOptions = [], onSuccess, on
       });
       onSuccess?.(observation, `Heat observation recorded for ${formatCowIdentity({ name: resolvedCow.name, earTag: resolvedCow.earTag })}.`);
     } catch (error) {
-      const message = error?.response?.data?.error || 'Failed to record heat observation.';
+      const message = getApiErrorMessage(error, 'Could not save this heat observation. Check the details and try again.');
       onError?.(message);
       toast.error(message);
     } finally {

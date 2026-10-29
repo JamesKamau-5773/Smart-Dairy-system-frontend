@@ -5,7 +5,7 @@ import { Beaker, Tractor, Save, AlertCircle, XCircle } from 'lucide-react';
 import RecipeBuilder from '../nutrition/RecipeBuilder';
 import CreateBatchModal from '../../components/nutrition/CreateBatchModal';
 import FeedingGroupPlanner from '../../components/nutrition/FeedingGroupPlanner';
-import { nutritionApi, inventoryApi } from '../../lib/backendApi';
+import { getApiErrorMessage, nutritionApi, inventoryApi } from '../../lib/backendApi';
 import { useTenant } from '../../hooks/useTenant';
 
 const DEFAULT_BATCH_SIZE_BY_TYPE = {
@@ -42,10 +42,7 @@ function normalizeIngredientIdentifier(value) {
 }
 
 function getRequestErrorMessage(error, fallbackMessage) {
-  return error?.response?.data?.message
-    ?? error?.response?.data?.error
-    ?? error?.message
-    ?? fallbackMessage;
+  return getApiErrorMessage(error, fallbackMessage);
 }
 
 export function mapInventoryItemToRecipeIngredient(item = {}) {

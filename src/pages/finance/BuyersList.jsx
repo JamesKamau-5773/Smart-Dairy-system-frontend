@@ -7,7 +7,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { useTenant } from '../../hooks/useTenant';
-import { financeApi } from '../../lib/backendApi';
+import { financeApi, getApiErrorMessage } from '../../lib/backendApi';
 import { Skeleton } from '../../components/ui';
 import SlidePanel from '../../components/ui/SlidePanel';
 import { Popover, PopoverContent, PopoverTrigger } from '../../components/ui/popover';
@@ -67,7 +67,7 @@ export default function BuyersList() {
       setIsAddPanelOpen(false);
     },
     onError: (error) => {
-      toast.error(error.message || `Failed to create customer.`);
+      toast.error(getApiErrorMessage(error, 'Could not add this customer. Check the details and try again.'));
     },
   });
 

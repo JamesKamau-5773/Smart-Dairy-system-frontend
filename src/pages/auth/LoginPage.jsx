@@ -57,13 +57,13 @@ export default function LoginPage() {
             Secure access
           </div>
           <h1 className="font-display font-semibold text-4xl tracking-tight text-ink-strong">
-            Jivu Smart <br /> <span className="text-ink-muted">Dairy System</span>
+            Maziwa Smart <br /> <span className="text-ink-muted">Dairy System</span>
           </h1>
         </header>
 
         {error && (
           <div className="mb-6 animate-reveal" style={{animationDelay: '0.1s'}}>
-            <AlertBanner type="danger" title="Access Denied" message={error} />
+            <AlertBanner type="danger" title="Couldn’t sign in" message={error} />
           </div>
         )}
 
@@ -82,6 +82,7 @@ export default function LoginPage() {
               autoComplete="username"
               required
             />
+            <p className="mt-1.5 text-xs text-ink-muted">Use the username you chose when activating your account, or your registered phone number.</p>
           </div>
 
           <div style={{ animationDelay: '0.25s' }} className="animate-stagger">

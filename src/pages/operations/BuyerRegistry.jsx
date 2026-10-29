@@ -171,7 +171,9 @@ export default function BuyerRegistry() {
               {filteredBuyers.length === 0 && (
                 <tr>
                   <td className="p-8 text-center text-sm text-ink-muted" colSpan={4}>
-                    No buyers found. Connect the backend buyers endpoint to show customer records here.
+                    {searchTerm || statusFilter !== 'All'
+                      ? 'No buyers match these filters. Change your search or reset the filters.'
+                      : 'No buyer records yet. Add a customer to get started.'}
                   </td>
                 </tr>
               )}

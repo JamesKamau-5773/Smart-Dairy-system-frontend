@@ -158,9 +158,7 @@ export default function CommandCenter() {
         <section className="rounded-xl border border-brand/20 bg-brand-50 px-4 py-3 text-sm text-brand-dark">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <p>
-              Some dashboard totals are unavailable right now. Check the backend responses for
-              {' '}
-              <span className="font-bold">/api/production/summary</span>
+              Some dashboard totals could not be loaded. Check your connection and retry.
             </p>
             <button
               type="button"

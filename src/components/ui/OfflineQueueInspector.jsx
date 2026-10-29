@@ -4,7 +4,13 @@ import Modal from './Modal';
 import offlineQueue from '../../lib/offlineQueue';
 
 function operationLabel(item) {
-  return `${item.request.method} ${item.request.url}`;
+  const path = String(item.request.url || '').toLowerCase();
+  if (path.includes('production/yield')) return 'Milk production record';
+  if (path.includes('inventory')) return 'Inventory update';
+  if (path.includes('customer') || path.includes('buyer')) return 'Customer record';
+  if (path.includes('payroll') || path.includes('staff')) return 'Staff record';
+  if (path.includes('finance') || path.includes('ledger')) return 'Financial record';
+  return 'Saved change';
 }
 
 export default function OfflineQueueInspector({ isOpen, onClose } = {}) {
@@ -58,7 +64,11 @@ export default function OfflineQueueInspector({ isOpen, onClose } = {}) {
                 </div>
                 <div className="mt-1 text-xs text-ink-muted">{new Date(item.createdAt).toLocaleString()}</div>
                 {item.lastError ? (
-                  <p className="mt-2 text-xs text-danger-800">{item.lastError.message}</p>
+                  <p className="mt-2 text-xs text-danger-800">
+                    {item.status === 'NEEDS_ATTENTION'
+                      ? `This change could not be accepted. ${item.lastError.message} Correct the details on the relevant page, then remove this queued copy if it is no longer needed.`
+                      : item.lastError.message}
+                  </p>
                 ) : null}
               </div>
               <button

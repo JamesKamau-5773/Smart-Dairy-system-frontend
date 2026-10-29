@@ -175,7 +175,7 @@ export default function StandardBatchLog({ onCancel, onSaveComplete }) {
               <Loader2 size={20} className="animate-spin text-brand" />
               <div>
                 <p className="font-black text-sm tracking-normal">Saving {quantity}kg of {selectedItem.name}</p>
-                <p className="text-xs font-medium text-white/60">Committing to database in {countdown}s...</p>
+                <p className="text-xs font-medium text-white/60">Saving batch in {countdown}s...</p>
               </div>
             </div>
             <button 

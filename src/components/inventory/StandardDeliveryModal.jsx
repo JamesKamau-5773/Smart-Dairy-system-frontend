@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { X, ClipboardList, Search, Minus, Plus, CheckCircle2, PackageCheck } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
-import { inventoryApi } from '../../lib/backendApi';
+import { getApiErrorMessage, inventoryApi } from '../../lib/backendApi';
 
 export default function StandardDeliveryModal({ isOpen, onClose, item, onRestock, tenantId, farmId }) {
   const [amount, setAmount] = useState(0);
@@ -45,11 +45,7 @@ export default function StandardDeliveryModal({ isOpen, onClose, item, onRestock
       await onRestock(selectedItem, amount);
       onClose();
     } catch (error) {
-      setSubmitError(
-        error?.response?.data?.error
-        ?? error?.response?.data?.message
-        ?? 'Could not record this delivery.'
-      );
+      setSubmitError(getApiErrorMessage(error, 'Could not record this delivery. Check the quantity and try again.'));
     }
   };
 

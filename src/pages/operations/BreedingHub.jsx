@@ -19,7 +19,7 @@ import {
   normalizeSemenInventory,
 } from '../../lib/breedingUtils';
 import { createAuditEntry, logToAuditTrail } from '../../lib/audit';
-import { breedingApi, herdApi } from '../../lib/backendApi';
+import { breedingApi, getApiErrorMessage, herdApi } from '../../lib/backendApi';
 import { formatCowIdentity, resolveCowIdentityFromHerd } from '../../lib/cowIdentity';
 import { useTenant } from '../../hooks/useTenant';
 import {
@@ -546,7 +546,7 @@ export default function BreedingHub() {
       await queryClient.invalidateQueries({ queryKey: ['breeding', 'logs', tenantId, farmId] });
     } catch (error) {
       console.error('Failed to update breeding log status:', error);
-      setErrorMessage(error?.response?.data?.error || 'Failed to confirm vet outcome. Please retry.');
+      setErrorMessage(getApiErrorMessage(error, 'Could not save the vet outcome. Check the connection and retry.'));
       setShowError(true);
     } finally {
       setStatusUpdatingById((current) => {
@@ -641,7 +641,7 @@ export default function BreedingHub() {
       notifyInfo(`Deleted ${bull.name} from semen inventory.`);
     } catch (error) {
       console.error('Error deleting inventory:', error);
-      notifyError(error?.response?.data?.error || 'Failed to delete semen inventory. Please try again.');
+      notifyError(getApiErrorMessage(error, 'Could not remove this semen inventory item. Please try again.'));
     } finally {
       confirmation.setLoading(false);
       confirmation.close();

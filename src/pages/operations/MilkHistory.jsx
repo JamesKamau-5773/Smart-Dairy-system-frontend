@@ -2,7 +2,7 @@ import React, { useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Link, useParams } from 'react-router-dom';
 import { ArrowLeft, Activity, Calendar, Droplets, ShieldAlert, TrendingUp, Search, Filter, RotateCcw, ChevronDown } from 'lucide-react';
-import { animalsApi, herdApi } from '../../lib/backendApi';
+import { animalsApi, getApiErrorMessage, herdApi } from '../../lib/backendApi';
 import { normalizeAnimal } from '../../lib/animalUtils';
 import {
   filterMilkHistorySessions,
@@ -142,7 +142,7 @@ export default function MilkHistory() {
       <div className="animate-reveal space-y-6 max-w-6xl mx-auto">
         <div className="rounded-2xl border border-danger/20 bg-danger/5 p-6 text-sm text-danger">
           <p className="font-semibold">Unable to load this cow&apos;s milk history.</p>
-          <p className="mt-1 text-danger/80">{error?.response?.data?.error || error?.message || 'Please try again.'}</p>
+          <p className="mt-1 text-danger/80">{getApiErrorMessage(error, 'Check your connection and retry the milk history request.')}</p>
           <button type="button" onClick={() => refetch()} className="btn-command mt-4">Retry</button>
         </div>
       </div>

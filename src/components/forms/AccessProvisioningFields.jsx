@@ -66,7 +66,7 @@ export default function AccessProvisioningFields({
           </label>
 
           {mode === ACCESS_MODES.INVITE && (
-            <p className="rounded-md border border-brand/20 bg-brand-50 px-4 py-3 text-sm leading-6 text-ink-700">The backend will issue a time-limited, single-use claim link for this employee.</p>
+            <p className="rounded-md border border-brand/20 bg-brand-50 px-4 py-3 text-sm leading-6 text-ink-700">A secure invite link will be created for this employee. The link can only be used once and expires after a limited time.</p>
           )}
 
           {mode === ACCESS_MODES.PROVISION && (

@@ -9,6 +9,7 @@ import {
   normalizeBreedingLogPayload,
   normalizeBreedingLog,
 } from '../../../lib/breedingUtils';
+import { getApiErrorMessage } from '../../../lib/backendApi';
 import { createAuditEntry, logToAuditTrail } from '../../../lib/audit';
 import { formatCowIdentity } from '../../../lib/cowIdentity';
 import { breedingApi } from '../../../lib/backendApi';
@@ -218,7 +219,7 @@ export default function LogAIServiceForm({
       setIsCowPickerOpen(false);
     } catch (error) {
       console.error('Error logging service:', error);
-      const errorMsg = error?.response?.data?.error || 'Failed to log AI service. Please try again.';
+      const errorMsg = getApiErrorMessage(error, 'Could not save this AI service. Check the details and try again.');
       onError?.(errorMsg);
       toast.error(errorMsg);
     } finally {

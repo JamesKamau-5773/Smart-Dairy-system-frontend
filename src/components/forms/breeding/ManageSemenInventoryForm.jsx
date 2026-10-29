@@ -3,7 +3,7 @@ import toast from 'react-hot-toast';
 import { validateForm, ValidationRules, getFirstErrorMessage } from '../../../lib/validation';
 import { normalizeSemenInventory } from '../../../lib/breedingUtils';
 import { createAuditEntry, logToAuditTrail } from '../../../lib/audit';
-import { breedingApi } from '../../../lib/backendApi';
+import { breedingApi, getApiErrorMessage } from '../../../lib/backendApi';
 
 /**
  * ManageSemenInventoryForm
@@ -100,7 +100,7 @@ export default function ManageSemenInventoryForm({
       });
     } catch (error) {
       console.error('Error adding inventory:', error);
-      const errorMsg = error?.response?.data?.error || 'Failed to add inventory. Please try again.';
+      const errorMsg = getApiErrorMessage(error, 'Could not add this semen inventory item. Check the details and try again.');
       onError?.(errorMsg);
       toast.error(errorMsg);
     } finally {

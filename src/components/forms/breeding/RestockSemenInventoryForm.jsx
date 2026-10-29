@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import toast from 'react-hot-toast';
 import { normalizeSemenInventory } from '../../../lib/breedingUtils';
 import { createAuditEntry, logToAuditTrail } from '../../../lib/audit';
-import { breedingApi } from '../../../lib/backendApi';
+import { breedingApi, getApiErrorMessage } from '../../../lib/backendApi';
 
 /**
  * RestockSemenInventoryForm
@@ -77,7 +77,7 @@ export default function RestockSemenInventoryForm({
       setRestockForm({ amount: '' });
     } catch (error) {
       console.error('Error restocking inventory:', error);
-      const errorMsg = error?.response?.data?.error || 'Failed to restock semen inventory. Please try again.';
+      const errorMsg = getApiErrorMessage(error, 'Could not restock this semen inventory. Check the quantity and try again.');
       onError?.(errorMsg);
       toast.error(errorMsg);
     } finally {

@@ -8,7 +8,7 @@ import VerifyReturnModal from '../../components/forms/VerifyReturnModal';
 import Confirmation, { useConfirmation } from '../../components/ui/Confirmation';
 import { useStaff } from '../../providers/StaffProvider';
 import { useTenant } from '../../hooks/useTenant';
-import { hrApi } from '../../lib/backendApi';
+import { getApiErrorMessage, hrApi } from '../../lib/backendApi';
 import { FARM_STAFF_ROLE_OPTIONS } from '../../lib/staffOnboarding';
 import toast from 'react-hot-toast';
 
@@ -129,7 +129,7 @@ export default function StaffRegistry() {
       createdEmployee = await addEmployee(employee);
       staffingRecommendationQuery.refetch();
     } catch (error) {
-      toast.error(error?.response?.data?.error || 'Failed to add employee.');
+      toast.error(getApiErrorMessage(error, 'Could not add this employee. Check the details and try again.'));
       throw error;
     }
 
@@ -146,7 +146,7 @@ export default function StaffRegistry() {
       toast.success(access?.mode === 'none' ? 'Employee added successfully.' : 'Employee and app access created.');
       return createdEmployee;
     } catch (error) {
-      toast.error('Employee saved, but app access failed. Retry from the key action.');
+      toast.error('Employee was saved, but app access was not created. Open this employee’s Access settings and try again.');
       const partialFailure = new Error('Employee created but access provisioning failed.', { cause: error });
       partialFailure.employeeCreated = true;
       throw partialFailure;

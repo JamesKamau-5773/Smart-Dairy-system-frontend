@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'react-hot-toast';
-import { financeApi } from '../../lib/backendApi';
+import { financeApi, getApiErrorMessage } from '../../lib/backendApi';
 import { User, Mail, Phone, MapPin, DollarSign, Receipt, ArrowLeft, Edit, Droplets, Plus, Pencil, Trash2, MoreVertical } from 'lucide-react';
 import { Skeleton } from '../../components/ui';
 import Confirmation, { useConfirmation } from '../../components/ui/Confirmation';
@@ -126,7 +126,7 @@ export default function CustomerProfile() {
       setEditingDelivery(null);
     },
     onError: (error, variables) => {
-      toast.error(error.message || `Failed to ${variables.id ? 'update' : 'log'} delivery.`);
+      toast.error(getApiErrorMessage(error, `Could not ${variables.id ? 'update' : 'log'} this delivery. Check the details and try again.`));
     },
   });
 
@@ -138,7 +138,7 @@ export default function CustomerProfile() {
       invalidateDeliveryRelatedQueries();
     },
     onError: (error) => {
-      toast.error(error.message || 'Failed to delete delivery.');
+      toast.error(getApiErrorMessage(error, 'Could not delete this delivery. Please try again.'));
     },
     onSettled: () => {
       confirmation.setLoading(false);
