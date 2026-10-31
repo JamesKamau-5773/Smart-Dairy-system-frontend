@@ -2,22 +2,34 @@ import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import { VitePWA } from 'vite-plugin-pwa'
 import path from 'path'
+import { landingPage } from './src/landing/landingPlugin.js'
+import { spaFallback } from './src/landing/spaFallback.js'
 
-// https://vitejs.dev/config/
 export default defineConfig({
+  appType: 'mpa',
+  build: {
+    rollupOptions: {
+      input: {
+        landing: path.resolve(import.meta.dirname, 'index.html'),
+        app: path.resolve(import.meta.dirname, 'app.html'),
+      },
+    },
+  },
   plugins: [
+    spaFallback(),
+    landingPage(),
     react(),
     VitePWA({
       registerType: 'autoUpdate',
       includeAssets: ['favicon.svg', 'pwa-192x192.png', 'pwa-512x512.png'],
       manifest: {
-        name: 'Jivu Smart Farm ERP',
-        short_name: 'Jivu ERP',
-        description: 'Offline-capable dairy farm operations and enterprise resource planning.',
-        theme_color: '#166534',
+        name: 'Maziwa Smart',
+        short_name: 'Maziwa Smart',
+        description: 'Dairy farm management for Kenyan farmers: milk records, breeding, feed, buyers and finances, with offline support.',
+        theme_color: '#0369A1',
         background_color: '#f9f8f6',
         display: 'standalone',
-        start_url: '/',
+        start_url: '/app',
         scope: '/',
         icons: [
           {
@@ -34,8 +46,9 @@ export default defineConfig({
         ],
       },
       workbox: {
-        navigateFallback: '/index.html',
-        navigateFallbackDenylist: [/^\/api\//, /^\/uploads\//],
+        navigateFallback: '/app.html',
+        // "/" is the static landing page, and robots.txt / sitemap.xml must reach the network.
+        navigateFallbackDenylist: [/^\/$/, /^\/index\.html$/, /^\/robots\.txt$/, /^\/sitemap\.xml$/, /^\/api\//, /^\/uploads\//],
         cleanupOutdatedCaches: true,
         clientsClaim: true,
         skipWaiting: true,

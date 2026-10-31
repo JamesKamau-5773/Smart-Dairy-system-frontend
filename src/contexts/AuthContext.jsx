@@ -7,6 +7,8 @@ import { getAuthErrorMessage } from '../lib/authErrorMessages';
 
 const AuthContext = createContext();
 
+const isSessionRejected = (error) => [401, 403].includes(error?.response?.status);
+
 export function AuthProvider({ children }) {
   const [currentUser, setCurrentUser] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -18,29 +20,47 @@ export function AuthProvider({ children }) {
       const savedUser = await loadSession();
 
       if (savedUser) {
+        let restoredUser = null;
         try {
-          const restoredUser = normalizeSessionUser(savedUser);
+          restoredUser = normalizeSessionUser(savedUser);
+        } catch (error) {
+          console.warn('Discarding unreadable saved session.', error);
+          await clearSession();
+        }
+
+        if (restoredUser) {
+          // Open the app from the stored session straight away, so farmers can keep
+          // working from cached data and the offline queue without a connection.
           tenantRef.tenantId = restoredUser.tenant_id ?? restoredUser.cooperative_id ?? null;
           tenantRef.farmId = restoredUser.farm_id ?? null;
           setCurrentUser(restoredUser);
-
-          // Validate the saved token with the backend before continuing.
-          // A stale, revoked, or incomplete session must not remain authenticated.
-          const verifiedUser = await authApi.me();
-          if (cancelled) return;
-
-          const normalizedUser = normalizeSessionUser(verifiedUser);
-          tenantRef.tenantId = normalizedUser.tenant_id ?? normalizedUser.cooperative_id ?? null;
-          tenantRef.farmId = normalizedUser.farm_id ?? null;
-          setCurrentUser(normalizedUser);
-          await saveSession(normalizedUser);
           setIsLoading(false);
+
+          // Verify the token in the background. Only an explicit rejection from the
+          // server ends the session; no network, timeouts and server errors keep it.
+          try {
+            const verifiedUser = await authApi.me();
+            if (cancelled) return;
+
+            const normalizedUser = normalizeSessionUser(verifiedUser);
+            tenantRef.tenantId = normalizedUser.tenant_id ?? normalizedUser.cooperative_id ?? null;
+            tenantRef.farmId = normalizedUser.farm_id ?? null;
+            setCurrentUser(normalizedUser);
+            await saveSession(normalizedUser);
+          } catch (error) {
+            if (cancelled) return;
+            if (!isSessionRejected(error)) {
+              console.warn('Could not verify the saved session; continuing with it.', error);
+              return;
+            }
+
+            console.warn('Saved session was rejected by the server.', error);
+            setCurrentUser(null);
+            await clearSession();
+            tenantRef.tenantId = null;
+            tenantRef.farmId = null;
+          }
           return;
-        } catch (error) {
-          console.warn('Failed to validate saved session.', error);
-          await clearSession();
-          tenantRef.tenantId = null;
-          tenantRef.farmId = null;
         }
       }
 

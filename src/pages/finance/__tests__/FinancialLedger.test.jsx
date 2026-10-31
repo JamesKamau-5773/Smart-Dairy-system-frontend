@@ -63,7 +63,7 @@ describe('buildLedgerEntryPayload', () => {
     expect(payload.item_name).toBe('Maize Meal');
     expect(payload.quantity).toBe(50);
     expect(payload.cost_class).toBe('production_cost');
-    expect(payload.description).toBe('Bulk purchase for cows');
+    expect(payload.description).toBe('Purchased quantity: 50 kg · Bulk purchase for cows');
     expect(payload).not.toHaveProperty('customer_id');
     expect(payload).not.toHaveProperty('income_source');
   });

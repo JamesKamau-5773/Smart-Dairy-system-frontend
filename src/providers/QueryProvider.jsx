@@ -7,6 +7,8 @@ import { PersistQueryClientProvider } from '@tanstack/react-query-persist-client
 import { useAuth } from '../contexts/AuthContext';
 import offlineQueue from '../lib/offlineQueue';
 
+const OFFLINE_RETRY_INTERVAL_MS = 30 * 1000;
+
 const queryStorage = localforage.createInstance({
   name: 'jivu',
   storeName: 'query_cache',
@@ -36,7 +38,15 @@ export const queryClient = new QueryClient({
     queries: {
       staleTime: 1000 * 60 * 5, 
       retry: 2,                 
-      refetchOnWindowFocus: false, 
+      refetchOnWindowFocus: false,
+    },
+    mutations: {
+      // Offline writes are handled by apiClient's queue, not by React Query. With the default
+      // 'online' mode a save made offline would sit paused (no queue entry, no message) and
+      // fire later without the farmer knowing. 'always' sends it now: replayable writes are
+      // queued with a "saved on this phone" message, online-only ones (payments, payroll) fail
+      // with a clear error.
+      networkMode: 'always',
     },
   },
 });
@@ -63,14 +73,33 @@ export function QueryProvider({ children }) {
     if (typeof indexedDB === 'undefined') return; // test env or old browser — skip
 
     const onOnline = () => {
-      offlineQueue.flush().catch((e) => console.warn('offlineQueue flush failed', e));
+      offlineQueue.flush()
+        .then((result) => {
+          // Saved-offline changes are now on the server; refresh lists so they appear as real rows.
+          if (result?.synced > 0) queryClient.invalidateQueries();
+        })
+        .catch((e) => console.warn('offlineQueue flush failed', e));
     };
 
+    // Entries that failed while online back off (offlineQueue retryDelay); without a timer they
+    // would wait for the next reconnect. flush() skips entries whose retry time hasn't come yet.
+    const onVisible = () => {
+      if (document.visibilityState === 'visible') onOnline();
+    };
+    const retryTimer = window.setInterval(() => {
+      if (navigator.onLine) onOnline();
+    }, OFFLINE_RETRY_INTERVAL_MS);
+
     window.addEventListener('online', onOnline);
+    document.addEventListener('visibilitychange', onVisible);
     // Try a flush on startup as well
     onOnline();
 
-    return () => window.removeEventListener('online', onOnline);
+    return () => {
+      window.clearInterval(retryTimer);
+      window.removeEventListener('online', onOnline);
+      document.removeEventListener('visibilitychange', onVisible);
+    };
   }, []);
 
   return (

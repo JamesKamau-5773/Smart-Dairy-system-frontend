@@ -7,10 +7,13 @@ import { financeApi, productionApi, safetyApi } from "../../lib/backendApi";
 import { Plus, Beaker, AlertTriangle, ShieldCheck, Search, Filter, RotateCcw, ChevronDown, Pencil, Trash2, Baby, MoreVertical } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import FastMilkLog from "../../components/operations/FastMilkLog";
+import QueuedMilkEntries from "../../components/operations/QueuedMilkEntries";
 import CalfMilkFeedModal from "../../components/operations/CalfMilkFeedModal";
 import MilkDispositionHistory from "../../components/operations/MilkDispositionHistory";
 import Confirmation, { useConfirmation } from "../../components/ui/Confirmation";
 import GroupedDateRows from "../../components/ui/GroupedDateRows";
+import { CardSkeletons, ListLoadMessage, StaleDataNotice, StatValue, TableSkeletonRows } from "../../components/ui/ListLoadState";
+import { getListLoadState } from "../../lib/listLoadState";
 import toast from "react-hot-toast";
 import { toNormalizedSessionLabel } from "../../lib/milkUtils";
 import { formatDate } from "../../lib/herdUtils";
@@ -143,10 +146,15 @@ export default function YieldLog() {
     data: yieldRowsRaw,
     error: yieldRowsError,
     isError: hasYieldRowsError,
+    status: yieldRowsStatus,
+    fetchStatus: yieldRowsFetchStatus,
+    refetch: refetchYieldRows,
   } = useQuery({
     queryKey: ['production-yield-rows', tenantId, farmId],
     queryFn: () => productionApi.listYield(),
   });
+  const milkLoadState = getListLoadState({ status: yieldRowsStatus, fetchStatus: yieldRowsFetchStatus, data: yieldRowsRaw });
+  const hasMilkRowsToShow = milkLoadState === 'ready' || milkLoadState === 'stale';
 
   // Fetch the production summary which now includes accurate financial data
   const { data: productionSummary, isLoading: isLoadingProductionSummary } = useQuery({
@@ -439,7 +447,7 @@ export default function YieldLog() {
           ].map((item) => (
             <div key={item.label} className="rounded-2xl border border-ink/10 bg-surface p-4 ">
               <p className="text-[10px] font-bold uppercase tracking-widest text-ink-muted">{item.label}</p>
-              <p className={`mt-2 break-words text-2xl font-black tabular-nums ${summaryTone[item.tone]} sm:text-3xl`}>{item.value}</p>
+              <StatValue state={milkLoadState} label="milk records" className={`mt-2 break-words text-2xl font-black tabular-nums ${summaryTone[item.tone]} sm:text-3xl`}>{item.value}</StatValue>
             </div>
           ))}
         </div>
@@ -513,10 +521,12 @@ export default function YieldLog() {
           </button>
         </div>
 
-        <div className="flex items-center gap-2 text-xs text-ink-muted">
-          <Search size={14} />
-          Showing all {filteredMilkRows.length} of {milkRows.length} records
-        </div>
+        {hasMilkRowsToShow && (
+          <div className="flex items-center gap-2 text-xs text-ink-muted">
+            <Search size={14} />
+            Showing all {filteredMilkRows.length} of {milkRows.length} records
+          </div>
+        )}
 
         {filtersOpen && (
           <div id="production-filter-panel" className="space-y-4">
@@ -593,8 +603,14 @@ export default function YieldLog() {
         )}
       </div>
 
+      <QueuedMilkEntries />
+
       <div className="card-machined !p-0">
-        <table className="hidden w-full min-w-[720px] border-collapse text-left md:table">
+        {milkLoadState === 'stale' && <StaleDataNotice label="milk records" error={yieldRowsError} onRetry={refetchYieldRows} />}
+        {(milkLoadState === 'offline' || milkLoadState === 'error') && (
+          <ListLoadMessage state={milkLoadState} label="milk records" error={yieldRowsError} onRetry={refetchYieldRows} />
+        )}
+        <table className={`hidden w-full min-w-[720px] border-collapse text-left ${hasMilkRowsToShow || milkLoadState === 'loading' ? 'md:table' : ''}`}>
           <thead>
             <tr className="bg-brand text-surface">
               <th className="p-5 font-sans text-xs font-semibold uppercase tracking-[0.12em] text-surface/95">Date</th>
@@ -606,8 +622,8 @@ export default function YieldLog() {
               <th className="p-5 font-sans text-xs font-semibold uppercase tracking-[0.12em] text-right text-surface/95">Actions</th>
             </tr>
           </thead>
-          <tbody className="divide-y-2 divide-ink/5">
-            <GroupedDateRows
+          <tbody className="divide-y-2 divide-ink/5" aria-busy={milkLoadState === 'loading'}>
+            {milkLoadState === 'loading' ? <TableSkeletonRows columns={7} /> : hasMilkRowsToShow && <GroupedDateRows
               items={filteredMilkRows}
               getDate={(row) => row.date}
               colSpan={7}
@@ -673,15 +689,16 @@ export default function YieldLog() {
               empty={filteredMilkRows.length === 0 && (
               <tr>
                 <td className="p-6 text-center text-ink-muted" colSpan={7}>
-                  No milk log entries match the selected filters.
+                  {milkRows.length === 0 ? 'No milk recorded yet. Logged milkings will appear here.' : 'No milk log entries match the selected filters.'}
                 </td>
               </tr>
               )}
-            />
+            />}
           </tbody>
         </table>
-        <div className="divide-y divide-ink/10 md:hidden">
-          {filteredMilkRows.map((row) => {
+        <div className="divide-y divide-ink/10 md:hidden" aria-busy={milkLoadState === 'loading'}>
+          {milkLoadState === 'loading' && <CardSkeletons />}
+          {hasMilkRowsToShow && filteredMilkRows.map((row) => {
             const milker = String(row.milker || 'SYSTEM');
             const digits = milker.replace(/\D/g, '');
             const displayMilker = digits.length === 12 && digits.startsWith('254') ? `+254 ${digits.slice(3, 6)} ${digits.slice(6, 9)} ${digits.slice(9)}` : milker;
@@ -713,7 +730,7 @@ export default function YieldLog() {
               </article>
             );
           })}
-          {filteredMilkRows.length === 0 && <p className="p-6 text-center text-sm text-ink-muted">No milk log entries match the selected filters.</p>}
+          {hasMilkRowsToShow && filteredMilkRows.length === 0 && <p className="p-6 text-center text-sm text-ink-muted">{milkRows.length === 0 ? 'No milk recorded yet. Logged milkings will appear here.' : 'No milk log entries match the selected filters.'}</p>}
         </div>
       </div>
     </div>

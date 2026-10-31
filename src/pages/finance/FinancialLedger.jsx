@@ -7,6 +7,7 @@ import { useTenant } from '../../hooks/useTenant';
 import { useAuth } from '../../contexts/AuthContext';
 import { hasRole } from '../../lib/roles';
 import { financeApi, getApiErrorMessage, herdApi } from '../../lib/backendApi';
+import { QUEUED_OFFLINE_MESSAGE, isQueuedOffline } from '../../lib/offlinePolicy';
 import { QUERY_KEYS } from '../../providers/QueryProvider';
 import Money from '../../components/ui/Money';
 import ReceiptPreview from '../../components/finance/ReceiptPreview';
@@ -246,10 +247,14 @@ const LedgerEntryFormModal = ({ onClose, transactionType, farmId, tenantId }) =>
       }
       return financeApi.createLedgerEntry(newEntry);
     },
-    onSuccess: () => {
+    onSuccess: (result) => {
       queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.LEDGER_ENTRIES, tenantId, farmId] });
       queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.CUSTOMERS, tenantId, farmId] });
-      toast.success(transactionType === 'income' && formData.incomePayerType === 'customer' ? 'Customer payment recorded.' : 'Transaction logged successfully!');
+      if (isQueuedOffline(result)) {
+        toast(QUEUED_OFFLINE_MESSAGE);
+      } else {
+        toast.success(transactionType === 'income' && formData.incomePayerType === 'customer' ? 'Customer payment recorded.' : 'Transaction logged successfully!');
+      }
       onClose();
     },
     onError: (error) => {

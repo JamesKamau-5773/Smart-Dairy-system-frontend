@@ -5,6 +5,7 @@ import { getPermissionSet, getRoleSet, normalizeRole } from './roles';
 import { API_CONTRACTS, validateResponse } from './apiContracts';
 import { buildCalfMilkFeedPayload, normalizeMilkDisposition } from './milkDisposition';
 import { API_BASE_URL, BACKEND_BASE_URL } from './apiBaseUrl';
+import { readActiveSession } from './sessionStore';
 
 import { normalizeNutritionRequestPayload } from './feedUtils';
 const HEALTH_BASE_URL = BACKEND_BASE_URL;
@@ -121,6 +122,13 @@ const parseCsvList = (value) => {
 
   return value.split(',').map((item) => item.trim()).filter(Boolean);
 };
+
+// /auth/me describes the user but doesn't re-issue a token; keep the one the request was made with.
+export function withCurrentToken(data, currentToken) {
+  const hasToken = Boolean(data?.token ?? data?.access_token ?? data?.accessToken);
+  if (!data || typeof data !== 'object' || !currentToken || hasToken) return data;
+  return { ...data, token: currentToken };
+}
 
 export function normalizeSessionUser(payload) {
   const session = toObject(payload);
@@ -763,7 +771,7 @@ export const authApi = {
     return requestWithFallback(authClient, [
       { method: 'get', url: '/auth/me' },
       { method: 'get', url: '/auth/status' },
-    ]).then((response) => normalizeSessionUser(response.data));
+    ]).then((response) => normalizeSessionUser(withCurrentToken(response.data, readActiveSession()?.token)));
   },
   status() {
     return authClient.get('/auth/status').then((response) => normalizeSessionUser(response.data));

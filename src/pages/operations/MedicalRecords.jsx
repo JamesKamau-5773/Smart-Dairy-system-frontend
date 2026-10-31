@@ -29,6 +29,8 @@ import { findCowIdentityMatch, formatCowIdentity, resolveCowIdentityFromHerd } f
 import { normalizeHerdCow } from '../../lib/herdUtils';
 import { useTenant } from '../../hooks/useTenant';
 import GroupedDateRows from '../../components/ui/GroupedDateRows';
+import { CardSkeletons, ListLoadMessage, StaleDataNotice, StatValue, TableSkeletonRows } from '../../components/ui/ListLoadState';
+import { getListLoadState } from '../../lib/listLoadState';
 
 const EMPTY_FORM = {
   cowTag: '',
@@ -79,11 +81,19 @@ export default function VetRecords() {
   // Mirror to the global Toaster so feedback renders above any open modal.
   const notifySuccess = (msg) => { setSuccessMessage(msg); setShowSuccess(true); toast.success(msg); };
   const notifyError = (msg) => { setErrorMessage(msg); setShowError(true); toast.error(msg); };
-  const { data: backendRecords } = useQuery({
+  const {
+    data: backendRecords,
+    error: recordsError,
+    status: recordsStatus,
+    fetchStatus: recordsFetchStatus,
+    refetch: refetchRecords,
+  } = useQuery({
     queryKey: ['medical-records', tenantId, farmId],
     queryFn: () => medicalApi.listRecords(),
     enabled: !!tenantId && !!farmId,
   });
+  const recordsLoadState = getListLoadState({ status: recordsStatus, fetchStatus: recordsFetchStatus, data: backendRecords });
+  const hasRecordsToShow = recordsLoadState === 'ready' || recordsLoadState === 'stale';
   const { data: herdData } = useQuery({
     queryKey: ['medical-records-cows', tenantId, farmId],
     queryFn: () => herdApi.list(),
@@ -381,7 +391,7 @@ export default function VetRecords() {
             <div className="flex items-start justify-between gap-3">
               <div>
                 <p className="text-[10px] font-bold uppercase tracking-widest text-ink-muted">Open cases</p>
-                <p className="mt-2 text-3xl font-black text-ink">{stats.open}</p>
+                <StatValue state={recordsLoadState} label="medical records" className="mt-2 text-3xl font-black text-ink">{stats.open}</StatValue>
               </div>
               <div className="rounded-2xl border border-slate-200 bg-white/90 p-3 text-brand-400"><Clock3 size={18} /></div>
             </div>
@@ -390,7 +400,7 @@ export default function VetRecords() {
             <div className="flex items-start justify-between gap-3">
               <div>
                 <p className="text-[10px] font-bold uppercase tracking-widest text-ink-muted">Critical cases</p>
-                <p className="mt-2 text-3xl font-black text-ink">{stats.critical}</p>
+                <StatValue state={recordsLoadState} label="medical records" className="mt-2 text-3xl font-black text-ink">{stats.critical}</StatValue>
               </div>
               <div className="rounded-2xl border border-brand/20 bg-brand-50 p-3 text-brand-dark"><ShieldAlert size={18} /></div>
             </div>
@@ -399,7 +409,7 @@ export default function VetRecords() {
             <div className="flex items-start justify-between gap-3">
               <div>
                 <p className="text-[10px] font-bold uppercase tracking-widest text-ink-muted">Follow-ups due</p>
-                <p className="mt-2 text-3xl font-black text-ink">{stats.dueToday}</p>
+                <StatValue state={recordsLoadState} label="medical records" className="mt-2 text-3xl font-black text-ink">{stats.dueToday}</StatValue>
               </div>
               <div className="rounded-2xl border border-slate-200 bg-white/90 p-3 text-brand-400"><CalendarDays size={18} /></div>
             </div>
@@ -408,7 +418,7 @@ export default function VetRecords() {
             <div className="flex items-start justify-between gap-3">
               <div>
                 <p className="text-[10px] font-bold uppercase tracking-widest text-ink-muted">Resolved</p>
-                <p className="mt-2 text-3xl font-black text-ink">{stats.resolved}</p>
+                <StatValue state={recordsLoadState} label="medical records" className="mt-2 text-3xl font-black text-ink">{stats.resolved}</StatValue>
               </div>
               <div className="rounded-2xl border border-slate-200 bg-white/90 p-3 text-brand-400"><CheckCircle2 size={18} /></div>
             </div>
@@ -664,8 +674,12 @@ export default function VetRecords() {
             <Eye size={12} /> Clinical registry
           </div>
         </div>
+        {recordsLoadState === 'stale' && <StaleDataNotice label="medical records" error={recordsError} onRetry={refetchRecords} />}
+        {(recordsLoadState === 'offline' || recordsLoadState === 'error') && (
+          <ListLoadMessage state={recordsLoadState} label="medical records" error={recordsError} onRetry={refetchRecords} />
+        )}
 
-        <table className="hidden w-full text-left md:table">
+        <table className={`hidden w-full text-left ${hasRecordsToShow || recordsLoadState === 'loading' ? 'md:table' : ''}`}>
           <thead className="bg-brand/10 text-ink-muted">
             <tr>
               <th className="p-4 text-[10px] font-bold uppercase text-ink-muted">Date</th>
@@ -677,8 +691,8 @@ export default function VetRecords() {
               <th className="p-4 text-[10px] font-bold uppercase text-ink-muted">{LABELS.VIEW_DETAIL}</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-ink/5">
-            <GroupedDateRows
+          <tbody className="divide-y divide-ink/5" aria-busy={recordsLoadState === 'loading'}>
+            {recordsLoadState === 'loading' ? <TableSkeletonRows columns={7} /> : hasRecordsToShow && <GroupedDateRows
               items={filteredRecords}
               getDate={(visit) => visit.date}
               colSpan={7}
@@ -723,20 +737,27 @@ export default function VetRecords() {
                     <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-brand/10 text-brand">
                       <Search size={18} />
                     </div>
-                    <p className="font-semibold text-ink">No medical records match the current filters.</p>
-                    <p className="text-sm leading-6">Try clearing the filters or searching by cow tag, diagnosis, status, or vet.</p>
-                    <button type="button" onClick={clearFilters} className="btn-command bg-surface-raised text-ink">
-                      Clear filters
-                    </button>
+                    {records.length === 0 ? (
+                      <p className="font-semibold text-ink">No medical records yet. Treatments and vet visits you record will appear here.</p>
+                    ) : (
+                      <>
+                        <p className="font-semibold text-ink">No medical records match the current filters.</p>
+                        <p className="text-sm leading-6">Try clearing the filters or searching by cow tag, diagnosis, status, or vet.</p>
+                        <button type="button" onClick={clearFilters} className="btn-command bg-surface-raised text-ink">
+                          Clear filters
+                        </button>
+                      </>
+                    )}
                   </div>
                 </td>
               </tr>
               )}
-            />
+            />}
           </tbody>
         </table>
-        <div className="divide-y divide-ink/10 md:hidden">
-          {filteredRecords.map((visit) => (
+        <div className="divide-y divide-ink/10 md:hidden" aria-busy={recordsLoadState === 'loading'}>
+          {recordsLoadState === 'loading' && <CardSkeletons />}
+          {hasRecordsToShow && filteredRecords.map((visit) => (
             <article key={visit.id} className="min-w-0 space-y-3 p-4">
               <div className="flex min-w-0 items-start justify-between gap-3">
                 <div className="min-w-0">
@@ -757,7 +778,7 @@ export default function VetRecords() {
               </div>
             </article>
           ))}
-          {filteredRecords.length === 0 && <p className="p-6 text-center text-sm text-ink-muted">No medical records match the current filters.</p>}
+          {hasRecordsToShow && filteredRecords.length === 0 && <p className="p-6 text-center text-sm text-ink-muted">{records.length === 0 ? 'No medical records yet. Treatments and vet visits you record will appear here.' : 'No medical records match the current filters.'}</p>}
         </div>
       </div>
 

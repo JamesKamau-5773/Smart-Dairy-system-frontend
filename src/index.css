@@ -2,65 +2,12 @@
   FONTS: Unified readable UI typography
   ============================================================ */
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Inter+Tight:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap');
+@import './styles/brand.css';
 
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-/* ============================================================
-   GLASS CLINICAL TOKENS
-   ============================================================ */
-:root {
-  --ink:            #0F172A;
-  --ink-muted:      #475569;
-  --surface:        rgba(255, 255, 255, 0.90);
-  --surface-warm:   rgba(56, 189, 248, 0.12);
-  --surface-raised: rgba(255, 255, 255, 0.90);
-  --surface-strong: rgba(255, 255, 255, 0.96);
-  --brand:          #0369A1;
-  --brand-dark:     #0C4A6E;
-  --accent-sky:     #38BDF8;
-  --canvas-warm:    #F9F8F6;
-  --danger:         #EF4444;
-  --warning:        #F59E0B;
-
-  --background: 40 20% 97.1%;
-  --foreground: 224 71.4% 4.1%;
-  --card: 0 0% 100%;
-  --card-foreground: 224 71.4% 4.1%;
-  --popover: 0 0% 100%;
-  --popover-foreground: 224 71.4% 4.1%;
-  --primary: 201 96% 32%;
-  --primary-foreground: 210 20% 98%;
-  --secondary: 220 14.3% 95.9%;
-  --secondary-foreground: 220.9 39.3% 11%;
-  --muted: 220 14.3% 95.9%;
-  --muted-foreground: 220 8.9% 46.1%;
-  --accent: 207 90% 54%; /* Sky Blue (#38BDF8) as HSL components */
-  --accent-foreground: 220.9 39.3% 11%;
-  --destructive: 0 84.2% 60.2%;
-  --destructive-foreground: 210 20% 98%;
-  --border: 220 13% 91%;
-  --input: 220 13% 91%;
-  --ring: 199 89% 60%;
-
-  --glass-border:   rgba(71, 85, 105, 0.20);
-  --glass-rim:      rgba(56, 189, 248, 0.72);
-  --shadow-clinical: none;
-  --shadow-hover:   none;
-
-  --border-thick:   1px;
-  --radius:         16px;
-  --sans:           'Inter Tight', 'Inter', system-ui, sans-serif;
-  --display:        'Inter Tight', 'Inter', system-ui, sans-serif;
-  --mono:           'JetBrains Mono', SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', monospace;
-  
-  --text-strong: rgba(15,23,42,0.92);
-  --text-normal: rgba(15,23,42,0.78);
-  --text-muted:  rgba(15,23,42,0.52);
-  --heading-weight: 700;
-  --ui-weight: 600;
-}
 
 :root[data-theme="soft"] {
   --text-strong: rgba(15,23,42,0.88);
@@ -213,121 +160,6 @@ time {
     transition-timing-function: ease-in-out;
   }
 
-  .card-machined {
-    position: relative;
-    overflow: hidden;
-    background: var(--surface);
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
-    border: 1px solid var(--glass-border);
-    border-top: 3px solid var(--accent-sky);
-    border-radius: var(--radius);
-    box-shadow: none;
-    transition: border-color 180ms ease, background-color 180ms ease;
-    animation: glass-frosting 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94) both;
-    color: var(--text-strong);
-  }
-
-  .card-machined::before {
-    content: none;
-  }
-
-  .card-machined:hover {
-    background: rgba(255, 255, 255, 0.86);
-    border-color: var(--glass-rim);
-    box-shadow: none;
-    transform: none;
-  }
-
-  .card-machined--inverse {
-    color: rgba(255, 255, 255, 0.96);
-  }
-
-  .btn-command {
-    @apply flex items-center justify-center font-semibold transition-all relative;
-    background: var(--brand);
-    color: white;
-    border: 1px solid rgba(3, 105, 161, 0.2);
-    border-radius: 10px;
-    min-height: 40px;
-    padding: 0.65rem 1.2rem;
-    box-shadow: none;
-    letter-spacing: normal;
-    text-transform: none;
-    overflow: hidden;
-  }
-
-  .btn-command::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: -100%;
-    width: 100%;
-    height: 100%;
-    background: linear-gradient(90deg, transparent 0%, rgba(255, 255, 255, 0.2) 50%, transparent 100%);
-    transition: left 0.5s ease;
-  }
-
-  .btn-command:hover::before {
-    left: 100%;
-  }
-
-  .btn-command:hover {
-    background: var(--brand-dark);
-    box-shadow: none;
-    transform: none;
-  }
-
-  .btn-command:active {
-    box-shadow: none;
-    transform: none;
-  }
-
-  .btn-secondary {
-    @apply inline-flex items-center justify-center;
-    min-height: 40px;
-    padding: 0.62rem 1rem;
-    background: rgba(255, 255, 255, 0.82);
-    color: var(--text-strong);
-    border: 1px solid rgba(15, 23, 42, 0.14);
-    box-shadow: none;
-  }
-
-  .btn-secondary:hover {
-    background: rgba(255, 255, 255, 0.96);
-    border-color: rgba(3, 105, 161, 0.2);
-    color: var(--brand-dark);
-  }
-
-  .btn-danger {
-    @apply inline-flex items-center justify-center;
-    min-height: 40px;
-    padding: 0.62rem 1rem;
-    background: rgba(239, 68, 68, 0.08);
-    color: var(--danger);
-    border: 1px solid rgba(239, 68, 68, 0.35);
-    box-shadow: none;
-  }
-
-  .btn-danger:hover {
-    background: rgba(239, 68, 68, 0.16);
-    border-color: var(--danger);
-  }
-
-  .btn-ghost {
-    @apply inline-flex items-center justify-center;
-    min-height: 40px;
-    padding: 0.62rem 1rem;
-    background: transparent;
-    color: var(--text-muted);
-    border: 1px solid rgba(15, 23, 42, 0.14);
-  }
-
-  .btn-ghost:hover {
-    background: rgba(15, 23, 42, 0.05);
-    color: var(--text-strong);
-    border-color: rgba(15, 23, 42, 0.2);
-  }
 
   .input-machined {
     @apply w-full transition-all;
@@ -487,19 +319,6 @@ time {
   }
 }
 
-/* ── Glass Panel Entrance: Blur Reveal ── */
-@keyframes glass-frosting {
-  from {
-    backdrop-filter: blur(0px) saturate(100%);
-    opacity: 0;
-    transform: translateY(8px);
-  }
-  to {
-    backdrop-filter: blur(32px) saturate(180%);
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
 
 /* ── Button Shimmer: Elegant Light Sweep ── */
 @keyframes shimmer-light {

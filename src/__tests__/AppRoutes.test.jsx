@@ -2,7 +2,7 @@ import React from 'react';
 import { cleanup, render, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
-import { ProtectedRoute, RequiredPasswordResetRoute } from '../App';
+import { ProtectedRoute, RequiredPasswordResetRoute, RoleLandingRedirect } from '../App';
 import { useAuth } from '../contexts/AuthContext';
 
 void React;
@@ -45,5 +45,31 @@ describe('forced password reset routing', () => {
   it('sends unauthenticated protected requests to login', () => {
     renderProtectedPath({ currentUser: null, isLoading: false });
     expect(screen.getByText('Login page')).toBeTruthy();
+  });
+});
+
+describe('/app entry point', () => {
+  const renderAppEntry = (authState) => {
+    useAuth.mockReturnValue(authState);
+    return render(
+      <MemoryRouter initialEntries={['/app']}>
+        <Routes>
+          <Route path="/login" element={<div>Login page</div>} />
+          <Route path="/dashboard" element={<div>Command center</div>} />
+          <Route path="/system-admin/dashboard" element={<div>System admin</div>} />
+          <Route path="/app" element={<ProtectedRoute><RoleLandingRedirect /></ProtectedRoute>} />
+        </Routes>
+      </MemoryRouter>
+    );
+  };
+
+  it('sends signed-out visitors from the landing page CTA to login', () => {
+    renderAppEntry({ currentUser: null, isLoading: false });
+    expect(screen.getByText('Login page')).toBeTruthy();
+  });
+
+  it('sends signed-in users to their role landing page', () => {
+    renderAppEntry({ currentUser: { id: 1, role: 'SUPER_ADMIN' }, isLoading: false });
+    expect(screen.getByText('System admin')).toBeTruthy();
   });
 });

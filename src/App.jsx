@@ -154,7 +154,7 @@ const CommandCenterRoute = ({ children }) => {
   return children;
 };
 
-const RoleLandingRedirect = () => {
+export const RoleLandingRedirect = () => {
   const { currentUser, isLoading } = useAuth();
 
   if (isLoading) {
@@ -195,6 +195,8 @@ export default function App() {
             </ProtectedRoute>
           }>
             <Route index element={<RoleLandingRedirect />} />
+            {/* Public "/" is the static landing page (index.html); /app is the SPA's entry point. */}
+            <Route path="app" element={<RoleLandingRedirect />} />
 
             {/* Role-based landing areas */}
             <Route

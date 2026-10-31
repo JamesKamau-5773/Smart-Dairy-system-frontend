@@ -1,34 +1,62 @@
-import { useState } from 'react';
-import { useNavigate, Link  } from 'react-router-dom';
+import { useRef, useState } from 'react';
+import { useNavigate, Link } from 'react-router-dom';
+import { Loader2, MessageCircle, UserRound } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import AlertBanner from '../../components/ui/AlertBanner';
-import { Eye, EyeOff } from 'lucide-react';
+import AuthLayout from '../../components/auth/AuthLayout';
+import { PasswordField, TextField } from '../../components/auth/AuthFields';
+import { useOnlineStatus } from '../../hooks/useOnlineStatus';
 import { getDefaultLandingPath } from '../../lib/roles';
+import { forgetLogin, getLastLogin, maskIdentifier, rememberLogin } from '../../lib/lastLogin';
+import { SITE } from '../../landing/content';
 
-const resolveLandingPath = (user) => {
-  return getDefaultLandingPath(user);
-};
-
+const FORGOT_PASSWORD_HREF = `https://wa.me/${SITE.whatsapp}?text=${encodeURIComponent('Hello, I forgot my Maziwa Smart password. Please help me reset it.')}`;
 
 export default function LoginPage() {
-  const [username, setUsername] = useState('');
+  const [rememberedLogin, setRememberedLogin] = useState(getLastLogin);
+  const [username, setUsername] = useState(rememberedLogin);
   const [password, setPassword] = useState('');
+  const [fieldErrors, setFieldErrors] = useState({});
   const [error, setError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [showPassword, setShowPassword] = useState(false);
-  
+  const usernameRef = useRef(null);
+  const passwordRef = useRef(null);
+
+  const online = useOnlineStatus();
   const { login } = useAuth();
   const navigate = useNavigate();
+
+  const switchAccount = () => {
+    forgetLogin();
+    setRememberedLogin('');
+    setUsername('');
+    // The username field mounts on the next render.
+    setTimeout(() => usernameRef.current?.focus(), 0);
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
-    setIsSubmitting(true);
 
-    const result = await login({ username, password });
+    const errors = {};
+    if (!username.trim()) errors.username = 'Enter your phone number or username.';
+    if (!password) errors.password = 'Enter your password.';
+    setFieldErrors(errors);
+    if (errors.username) {
+      usernameRef.current?.focus();
+      return;
+    }
+    if (errors.password) {
+      passwordRef.current?.focus();
+      return;
+    }
+
+    setIsSubmitting(true);
+    const result = await login({ username: username.trim(), password });
 
     if (result.success) {
-      navigate(result.user?.requires_password_reset ? '/reset-required-password' : resolveLandingPath(result.user), { replace: true });
+      rememberLogin(username);
+      navigate(result.user?.requires_password_reset ? '/reset-required-password' : getDefaultLandingPath(result.user), { replace: true });
     } else {
       setError(result.error);
       setIsSubmitting(false);
@@ -36,105 +64,84 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen w-full bg-white relative overflow-hidden isolate">
-      <div
-        className="absolute inset-0 z-0 pointer-events-none"
-        style={{
-          backgroundImage: 'radial-gradient(125% 125% at 50% 90%, #ffffff 40%, #14b8a6 100%)',
-          backgroundSize: '100% 100%',
-        }}
-      />
+    <AuthLayout
+      offline={!online}
+      headerAction={<Link to="/register" className="btn-secondary text-sm">Create account</Link>}
+    >
+      <header className="mb-6">
+        <h1 className="text-2xl font-bold tracking-tight text-ink-900 sm:text-3xl">
+          {rememberedLogin ? 'Karibu tena' : 'Log in to your farm'}
+        </h1>
+        <p className="mt-2 text-sm text-ink-muted">
+          {rememberedLogin ? 'Welcome back. Enter your password to open your farm.' : 'Use the phone number or username you signed up with.'}
+        </p>
+      </header>
 
-      <div className="relative z-10 flex min-h-screen items-center justify-center p-4">
-      <div className="glass-panel w-full max-w-md p-6 sm:p-10 relative z-10 transform hover:scale-[1.01] transition-transform">
-        <div className="absolute inset-0 pointer-events-none">
-          <div className="glass-sheen absolute top-0 left-0 w-1/2 h-full bg-white/6 blur-sm mix-blend-screen opacity-60"></div>
-          <div className="glass-noise absolute inset-0 bg-[url('/assets/noise.svg')] opacity-5 mix-blend-overlay"></div>
+      {error && (
+        <div className="mb-5">
+          <AlertBanner type="danger" title="Couldn’t log in" message={error} />
         </div>
-        
-        <header className="mb-10 text-center relative z-10 animate-reveal">
-          <div className="inline-block bg-brand/10 text-brand px-4 py-1 mb-4 font-sans text-xs font-medium tracking-normal rounded-md border border-brand/20 transition-all hover:bg-brand/15 hover:border-brand/30">
-            Secure access
-          </div>
-          <h1 className="font-display font-semibold text-4xl tracking-tight text-ink-strong">
-            Maziwa Smart <br /> <span className="text-ink-muted">Dairy System</span>
-          </h1>
-        </header>
+      )}
 
-        {error && (
-          <div className="mb-6 animate-reveal" style={{animationDelay: '0.1s'}}>
-            <AlertBanner type="danger" title="Couldn’t sign in" message={error} />
+      <form onSubmit={handleSubmit} noValidate className="space-y-5">
+        {rememberedLogin ? (
+          <div className="flex items-center justify-between gap-3 rounded-card border border-brand/10 bg-brand/5 px-4 py-3">
+            <span className="flex min-w-0 items-center gap-3 text-sm font-semibold text-ink-900">
+              <UserRound size={18} className="shrink-0 text-brand" aria-hidden="true" />
+              <span className="truncate font-mono">{maskIdentifier(rememberedLogin)}</span>
+            </span>
+            <button type="button" onClick={switchAccount} className="shrink-0 text-sm font-semibold text-brand underline-offset-4 hover:underline">
+              Not you?
+            </button>
+            {/* Lets password managers pair the saved password with this account. */}
+            <input type="text" name="username" autoComplete="username" value={username} readOnly hidden />
           </div>
+        ) : (
+          <TextField
+            ref={usernameRef}
+            id="login-username"
+            name="username"
+            label="Phone number or username"
+            placeholder="e.g. 0712 345 678"
+            autoComplete="username"
+            autoCapitalize="none"
+            autoCorrect="off"
+            spellCheck={false}
+            value={username}
+            onChange={(e) => setUsername(e.target.value)}
+            error={fieldErrors.username}
+          />
         )}
 
-        <form onSubmit={handleSubmit} className="space-y-6">
-          <div className="animate-stagger" style={{animationDelay: '0.15s'}}>
-            <label className="block font-sans font-medium text-xs tracking-normal text-ink-normal mb-2">
-              Username or phone number
-            </label>
-            <input
-              aria-label="Username"
-              type="text"
-              className="glass-input w-full rounded-md py-3 px-4 bg-surface/30 border border-white/10 backdrop-blur-md text-ink-normal placeholder:text-ink-muted focus:outline-none focus:ring-2 focus:ring-accent/30"
-              placeholder="Enter your username or registered phone number"
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
-              autoComplete="username"
-              required
-            />
-            <p className="mt-1.5 text-xs text-ink-muted">Use the username you chose when activating your account, or your registered phone number.</p>
-          </div>
-
-          <div style={{ animationDelay: '0.25s' }} className="animate-stagger">
-            <label className="block font-sans font-medium text-xs tracking-normal text-ink-normal mb-2">
-              Password
-            </label>
-            {/* Added relative positioning wrapper for the toggle */}
-            <div className="relative">
-              <input
-                aria-label="Password"
-                type={showPassword ? "text" : "password"}
-                // Changed px-4 to pl-4 pr-12 to make room for the eye icon
-                className="glass-input w-full rounded-md py-3 pl-4 pr-12 bg-surface/30 border border-white/10 backdrop-blur-md text-ink-normal placeholder:text-ink-muted focus:outline-none focus:ring-2 focus:ring-accent/30"
-                placeholder="••••••••"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-              />
-              
-              {/* Toggle Button */}
-              <button
-                type="button"
-                onClick={() => setShowPassword(!showPassword)}
-                className="btn-ghost absolute right-2 top-1/2 h-8 w-8 !min-h-0 -translate-y-1/2 !p-0 text-ink-muted"
-                aria-label={showPassword ? "Hide password" : "Show password"}
-              >
-                {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-              </button>
-            </div>
-          </div>
-
-          <div style={{ animationDelay: '0.3s' }} className="animate-stagger">
-            <button 
-              type="submit" 
-              className="btn-command w-full py-4"
-              disabled={isSubmitting}
-            >
-              {isSubmitting ? 'Logging in…' : 'Log in'}
-            </button>
-          </div>
-        </form>
-        <div className="mt-8 text-center border-t border-ink/10 pt-6">
-          <p className="font-mono text-xs text-ink/60">
-            No active workspace detected?{' '}
-            <Link to="/register" className="font-bold text-brand hover:text-accent transition-colors underline decoration-2 underline-offset-4">
-              Register New Farm
-            </Link>
-          </p>
+        <div>
+          <PasswordField
+            ref={passwordRef}
+            id="login-password"
+            name="password"
+            autoComplete="current-password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            error={fieldErrors.password}
+          />
+          <a
+            href={FORGOT_PASSWORD_HREF}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="mt-2 inline-flex min-h-11 items-center gap-1.5 text-sm font-semibold text-brand underline-offset-4 hover:underline"
+          >
+            <MessageCircle size={16} aria-hidden="true" /> Forgot password? Chat with us on WhatsApp
+          </a>
         </div>
 
-      </div>
-      </div>
-    </div>
+        <button type="submit" className="btn-command w-full gap-2 py-4 text-base" disabled={isSubmitting || !online}>
+          {isSubmitting ? <><Loader2 size={18} className="animate-spin" aria-hidden="true" /> Logging in…</> : 'Log in'}
+        </button>
+      </form>
+
+      <p className="mt-6 border-t border-ink/10 pt-6 text-center text-sm text-ink-muted">
+        New here?{' '}
+        <Link to="/register" className="font-semibold text-brand underline-offset-4 hover:underline">Create your farm account</Link>
+      </p>
+    </AuthLayout>
   );
 }

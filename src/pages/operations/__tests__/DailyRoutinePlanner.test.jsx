@@ -4,11 +4,18 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 import DailyRoutinePlanner from '../DailyRoutinePlanner';
 import { QueryProvider } from '../../../providers/QueryProvider';
 
+void React;
+
 vi.mock('../../../hooks/useTenant', () => ({
   useTenant: () => ({ tenantId: 'tnt_riftvalley_01', farmId: 'frm_rvd_main' }),
 }));
 
-vi.mock('../../../lib/backendApi', async (importOriginal) => {
+// QueryProvider namespaces its persisted cache by the signed-in user.
+vi.mock('../../../contexts/AuthContext', () => ({
+  useAuth: () => ({ currentUser: null }),
+}));
+
+vi.mock('../../../lib/backendApi',async (importOriginal) => {
   const actual = await importOriginal();
 
   return {

@@ -97,3 +97,35 @@ describe('offlineQueue (memory/localforage fallback) enqueue & flush', () => {
     requestSpy.mockRestore();
   });
 });
+
+describe('offlineQueue flush scheduling', () => {
+  beforeEach(async () => {
+    sessionStorage.setItem('jivu_user', JSON.stringify({ id: 7, tenant_id: 11, farm_id: 13 }));
+    for (const entry of await offlineQueue.getAll()) await offlineQueue.remove(entry.id);
+    vi.restoreAllMocks();
+  });
+
+  it('shares one run when flush is requested several times at once', async () => {
+    await offlineQueue.enqueue({ cowId: 'C-1', volume: 4, session: 'morning', milkingDate: '2026-06-02' });
+    const requestSpy = vi.spyOn(apiClient, 'request').mockResolvedValue({ data: { ok: true } });
+
+    const [first, second, third] = await Promise.all([offlineQueue.flush(), offlineQueue.flush(), offlineQueue.flush()]);
+
+    expect(requestSpy).toHaveBeenCalledTimes(1);
+    expect(first).toBe(second);
+    expect(second).toBe(third);
+    expect(first.synced).toBe(1);
+  });
+
+  it('does not signal syncing when nothing is due', async () => {
+    const events = [];
+    const handler = (event) => events.push(event.detail);
+    window.addEventListener('offlineQueue:flushing', handler);
+    try {
+      expect(await offlineQueue.flush()).toEqual({ synced: 0, pending: 0 });
+      expect(events).toEqual([]);
+    } finally {
+      window.removeEventListener('offlineQueue:flushing', handler);
+    }
+  });
+});

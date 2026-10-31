@@ -2,6 +2,7 @@ import { useState, useMemo, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { financeApi, getApiErrorMessage } from '../../lib/backendApi';
+import { QUEUED_OFFLINE_MESSAGE, isQueuedOffline } from '../../lib/offlinePolicy';
 import { Plus, Pencil, Trash2, Search, Users, MoreVertical } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 
@@ -30,8 +31,12 @@ export default function CustomersPage() {
         ? financeApi.updateCustomer(id, rest)
         : financeApi.createCustomer(rest);
     },
-    onSuccess: (_, variables) => {
-      toast.success(`Customer ${variables.id ? 'updated' : 'created'} successfully!`);
+    onSuccess: (result, variables) => {
+      if (isQueuedOffline(result)) {
+        toast(QUEUED_OFFLINE_MESSAGE);
+      } else {
+        toast.success(`Customer ${variables.id ? 'updated' : 'created'} successfully!`);
+      }
       queryClient.invalidateQueries({ queryKey: ['customers'] });
       setIsPanelOpen(false);
       setSelectedCustomer(null);
