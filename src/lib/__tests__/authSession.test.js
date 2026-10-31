@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it } from 'vitest';
-import { normalizeSessionUser } from '../backendApi';
+import { normalizeSessionUser, withCurrentToken } from '../backendApi';
 import { clearSession, loadSession, saveSession } from '../sessionStore';
 
 const backendSession = {
@@ -42,5 +42,22 @@ describe('authentication session handling', () => {
 
     expect(saved.token).toBe('valid-token');
     expect(await loadSession()).toMatchObject({ token: 'valid-token' });
+  });
+});
+
+describe('verifying a saved session with /auth/me', () => {
+  const meResponse = { ...backendSession };
+  delete meResponse.access_token;
+
+  it('keeps the current token when the response has none', () => {
+    expect(normalizeSessionUser(withCurrentToken(meResponse, 'current-token'))).toMatchObject({ id: 7, token: 'current-token' });
+  });
+
+  it('prefers a token the server does return', () => {
+    expect(withCurrentToken(backendSession, 'current-token')).toBe(backendSession);
+  });
+
+  it('still rejects a response when there is no token anywhere', () => {
+    expect(() => normalizeSessionUser(withCurrentToken(meResponse, null))).toThrow('missing an access token');
   });
 });

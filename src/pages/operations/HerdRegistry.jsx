@@ -26,7 +26,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '../../components/ui/pop
 import { validateForm, ValidationRules, getFirstErrorMessage } from '../../lib/validation';
 import { formatDateTime, getRelativeTime, createAuditEntry, logToAuditTrail } from '../../lib/audit';
 import { getApiErrorMessage, herdApi } from '../../lib/backendApi'; 
-import { ANIMAL_PHOTO_ACCEPT, getAnimalPhotoValidationError } from '../../lib/animalPhoto';
+import { ANIMAL_PHOTO_ACCEPT, compressAnimalPhoto, formatPhotoSize, getAnimalPhotoSourceError, getAnimalPhotoValidationError } from '../../lib/animalPhoto';
 import { formatCowIdentity } from '../../lib/cowIdentity';
 import { useTenant } from '../../hooks/useTenant';
 import {
@@ -87,6 +87,9 @@ export default function HerdRegistry() {
   const [isEditSaving, setIsEditSaving] = useState(false);
   const [editPhotoFile, setEditPhotoFile] = useState(null);
   const [isPhotoSaving, setIsPhotoSaving] = useState(false);
+  const [isPhotoPreparing, setIsPhotoPreparing] = useState(false);
+  const [photoUploadProgress, setPhotoUploadProgress] = useState(null);
+  const [photoSourceSize, setPhotoSourceSize] = useState(null);
   const searchInputRef = useRef(null);
   const photoInputRef = useRef(null);
   const confirmation = useConfirmation();
@@ -341,22 +344,41 @@ export default function HerdRegistry() {
     setEditingCow(null);
     setEditCow({ tagNumber: '', name: '', breed: '', dateOfBirth: '' });
     setEditPhotoFile(null);
+    setPhotoSourceSize(null);
     if (photoInputRef.current) photoInputRef.current.value = '';
     setEditFormErrors({});
   };
 
-  const handlePhotoSelection = (event) => {
-    const photoFile = event.target.files?.[0] ?? null;
-    const validationError = getAnimalPhotoValidationError(photoFile);
-
-    if (validationError) {
+  const handlePhotoSelection = async (event) => {
+    const input = event.target;
+    const sourceFile = input.files?.[0] ?? null;
+    const rejectPhoto = (message) => {
       setEditPhotoFile(null);
-      event.target.value = '';
-      notifyError(validationError);
+      setPhotoSourceSize(null);
+      input.value = '';
+      notifyError(message);
+    };
+
+    const sourceError = getAnimalPhotoSourceError(sourceFile);
+    if (sourceError) {
+      rejectPhoto(sourceError);
       return;
     }
 
-    setEditPhotoFile(photoFile);
+    // Shrink on the phone first so farmers don't spend mobile data on full-size camera photos.
+    setIsPhotoPreparing(true);
+    try {
+      const photoFile = await compressAnimalPhoto(sourceFile);
+      const validationError = getAnimalPhotoValidationError(photoFile);
+      if (validationError) {
+        rejectPhoto(validationError);
+        return;
+      }
+      setEditPhotoFile(photoFile);
+      setPhotoSourceSize(sourceFile.size);
+    } finally {
+      setIsPhotoPreparing(false);
+    }
   };
 
   const handleUploadPhoto = async () => {
@@ -374,9 +396,11 @@ export default function HerdRegistry() {
 
     try {
       setIsPhotoSaving(true);
-      const savedCow = normalizeHerdCow(await herdApi.uploadPhoto(routeId, editPhotoFile), editingCow);
+      setPhotoUploadProgress(0);
+      const savedCow = normalizeHerdCow(await herdApi.uploadPhoto(routeId, editPhotoFile, { onProgress: setPhotoUploadProgress }), editingCow);
       setEditingCow(savedCow);
       setEditPhotoFile(null);
+      setPhotoSourceSize(null);
       if (photoInputRef.current) photoInputRef.current.value = '';
       await refreshHerdViews(routeId);
       notifySuccess(`Updated photo for ${savedCow.name}`);
@@ -385,6 +409,7 @@ export default function HerdRegistry() {
       notifyError(getApiErrorMessage(error, 'Failed to upload animal photo. Please try again.'));
     } finally {
       setIsPhotoSaving(false);
+      setPhotoUploadProgress(null);
     }
   };
 
@@ -410,6 +435,7 @@ export default function HerdRegistry() {
       const savedCow = normalizeHerdCow(await herdApi.deletePhoto(routeId), editingCow);
       setEditingCow(savedCow);
       setEditPhotoFile(null);
+      setPhotoSourceSize(null);
       if (photoInputRef.current) photoInputRef.current.value = '';
       await refreshHerdViews(routeId);
       notifySuccess(`Removed photo for ${savedCow.name}`);
@@ -1098,11 +1124,15 @@ export default function HerdRegistry() {
                   type="file"
                   accept={ANIMAL_PHOTO_ACCEPT}
                   onChange={handlePhotoSelection}
-                  disabled={isPhotoSaving}
+                  disabled={isPhotoSaving || isPhotoPreparing}
                   className="block w-full text-xs text-ink-muted file:mr-3 file:rounded-md file:border-0 file:bg-brand/10 file:px-3 file:py-2 file:font-bold file:text-brand hover:file:bg-brand/15"
                 />
-                <p className="mt-1 truncate text-xs text-ink-muted">
-                  {editPhotoFile ? editPhotoFile.name : 'JPG, PNG, or WebP. Maximum 3 MB.'}
+                <p className="mt-1 truncate text-xs text-ink-muted" aria-live="polite">
+                  {isPhotoPreparing
+                    ? 'Making the photo smaller to save data…'
+                    : editPhotoFile
+                      ? `${editPhotoFile.name} · ${formatPhotoSize(editPhotoFile.size)}${photoSourceSize && photoSourceSize > editPhotoFile.size ? ` (from ${formatPhotoSize(photoSourceSize)})` : ''}`
+                      : 'JPG, PNG, or WebP. Large phone photos are made smaller before upload.'}
                 </p>
               </div>
             </div>
@@ -1120,12 +1150,14 @@ export default function HerdRegistry() {
               <button
                 type="button"
                 onClick={handleUploadPhoto}
-                disabled={!editPhotoFile || isPhotoSaving}
+                disabled={!editPhotoFile || isPhotoSaving || isPhotoPreparing}
                 className="btn-command inline-flex items-center gap-2 disabled:opacity-50"
                 aria-busy={isPhotoSaving}
               >
                 <Upload size={15} aria-hidden="true" />
-                {isPhotoSaving ? 'Uploading...' : editingCow?.photoUrl ? 'Replace Photo' : 'Upload Photo'}
+                {isPhotoSaving
+                  ? `Uploading${photoUploadProgress ? ` ${photoUploadProgress}%` : '…'}`
+                  : editingCow?.photoUrl ? 'Replace Photo' : 'Upload Photo'}
               </button>
             </div>
           </div>

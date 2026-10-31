@@ -3,6 +3,7 @@ import Sidebar from './Sidebar';
 import Header from './Header';
 import MobileBottomNav from './MobileBottomNav';
 import DebugBar from './DebugBar';
+import OfflineBanner from '../components/ui/OfflineBanner';
 import { useLayoutEffect, useRef, useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { hasPageAccess } from '../lib/roles';
@@ -88,6 +89,7 @@ export default function DashboardLayout() {
       <main className={`relative z-10 flex h-dvh min-h-0 min-w-0 flex-1 flex-col overflow-hidden md:pl-60 xl:pl-64 ${isDevelopment ? 'pb-40 md:pb-16' : 'pb-24 md:pb-0'}`}>
         
         <Header onMenuClick={() => setMobileMenuOpen((open) => !open)} />
+        <OfflineBanner />
         
         {/* Page Content Injection - responsive padding */}
         <div ref={pageContentRef} className="min-h-0 min-w-0 flex-1 overflow-x-hidden overflow-y-auto overscroll-contain p-4 sm:p-6 md:p-8">

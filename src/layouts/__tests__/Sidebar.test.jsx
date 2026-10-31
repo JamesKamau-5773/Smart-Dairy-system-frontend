@@ -1,67 +1,76 @@
 import React from 'react';
-import { render, screen } from '@testing-library/react';
-import { describe, it, expect, beforeEach } from 'vitest';
+import { cleanup, render, screen } from '@testing-library/react';
+import { afterEach, describe, it, expect, vi } from 'vitest';
 import { MemoryRouter } from 'react-router-dom';
-import { AuthProvider } from '../../contexts/AuthContext';
-import { TenantProvider } from '../../contexts/TenantContext';
+import { useAuth } from '../../contexts/AuthContext';
 import Sidebar from '../Sidebar';
+import { getDefaultStaffPageAccess } from '../../lib/staffOnboarding';
 
 void React;
 
-function renderWithProviders(ui) {
+vi.mock('../../contexts/AuthContext', () => ({ useAuth: vi.fn() }));
+// FarmSwitcher loads farms from the backend; it is not under test here.
+vi.mock('../FarmSwitcher', () => ({ default: () => null }));
+afterEach(cleanup);
+
+// Staff accounts carry backend-assigned page_access; a herdsman gets the FARM_HAND defaults.
+const herdsman = {
+  name: 'Herdsman',
+  role: 'Herdsman',
+  tenant_id: 't1',
+  farm_id: 'f1',
+  farm_name: 'F1',
+  page_access: getDefaultStaffPageAccess('FARM_HAND'),
+};
+
+function renderAs(currentUser) {
+  useAuth.mockReturnValue({ currentUser });
   return render(
     <MemoryRouter>
-      <AuthProvider>
-        <TenantProvider>{ui}</TenantProvider>
-      </AuthProvider>
+      <Sidebar />
     </MemoryRouter>
   );
 }
 
 describe('Sidebar', () => {
-  beforeEach(() => sessionStorage.removeItem('jivu_user'));
-
-  it('does not show Customer Management for farmhands', () => {
-    sessionStorage.setItem('jivu_user', JSON.stringify({ name: 'Test', role: 'Herdsman', tenant_id: 't1', farm_id: 'f1', farm_name: 'F1' }));
-    renderWithProviders(<Sidebar />);
+  it('does not show customer, finance or payroll pages to farmhands', () => {
+    renderAs(herdsman);
     expect(screen.queryByRole('link', { name: 'Customer Management' })).toBeNull();
+    expect(screen.queryByRole('link', { name: 'Ledger' })).toBeNull();
+    expect(screen.queryByRole('link', { name: 'Payroll' })).toBeNull();
+    expect(screen.getAllByRole('link', { name: 'Cow Register' }).length).toBeGreaterThan(0);
   });
 
   it('shows Customer Management for farmer', () => {
-    sessionStorage.setItem('jivu_user', JSON.stringify({ name: 'Farmer', role: 'FARMER', tenant_id: 't1', farm_id: 'f1', farm_name: 'F1' }));
-    renderWithProviders(<Sidebar />);
+    renderAs({ name: 'Farmer', role: 'FARMER', tenant_id: 't1', farm_id: 'f1', farm_name: 'F1' });
     expect(screen.getAllByRole('link', { name: 'Customer Management' }).length).toBeGreaterThan(0);
   });
 
   it('shows staff onboarding for a cooperative farmer', () => {
-    sessionStorage.setItem('jivu_user', JSON.stringify({
+    renderAs({
       name: 'Farm Owner',
       role: 'FARMER',
       tenant_type: 'cooperative',
       tenant_id: 't1',
       cooperative_id: 't1',
       farm_id: 'f1',
-    }));
-    renderWithProviders(<Sidebar />);
+    });
 
     expect(screen.getAllByRole('link', { name: 'Staff Registry' }).length).toBeGreaterThan(0);
   });
 
   it('shows Customer Management for primary admin', () => {
-    sessionStorage.setItem('jivu_user', JSON.stringify({ name: 'Admin', role: 'PRIMARY_ADMIN', tenant_id: 't1', farm_id: 'f1', farm_name: 'F1' }));
-    renderWithProviders(<Sidebar />);
+    renderAs({ name: 'Admin', role: 'PRIMARY_ADMIN', tenant_id: 't1', farm_id: 'f1', farm_name: 'F1' });
     expect(screen.getAllByRole('link', { name: 'Customer Management' }).length).toBeGreaterThan(0);
   });
 
   it('shows Farm Task View for farmer', () => {
-    sessionStorage.setItem('jivu_user', JSON.stringify({ name: 'Farmer', role: 'FARMER', tenant_id: 't1', farm_id: 'f1', farm_name: 'F1' }));
-    renderWithProviders(<Sidebar />);
+    renderAs({ name: 'Farmer', role: 'FARMER', tenant_id: 't1', farm_id: 'f1', farm_name: 'F1' });
     expect(screen.getAllByText('Farm Task View').length).toBeGreaterThan(0);
   });
 
   it('shows Farm Task View for herdsman', () => {
-    sessionStorage.setItem('jivu_user', JSON.stringify({ name: 'Herdsman', role: 'Herdsman', tenant_id: 't1', farm_id: 'f1', farm_name: 'F1' }));
-    renderWithProviders(<Sidebar />);
+    renderAs(herdsman);
     expect(screen.getAllByText('Farm Task View').length).toBeGreaterThan(0);
   });
 });

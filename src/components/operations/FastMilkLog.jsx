@@ -8,8 +8,9 @@ import { herdApi, productionApi, safetyApi } from '../../lib/backendApi';
 import { createIdempotencyKey } from '../../lib/apiClient';
 import AlertBanner from '../../components/ui/AlertBanner';
 import offlineQueue from '../../lib/offlineQueue';
+import { QUEUED_OFFLINE_MESSAGE, isQueuedOffline } from '../../lib/offlinePolicy';
 import { formatCowIdentity, resolveCowIdentityFromHerd } from '../../lib/cowIdentity';
-import { ArrowLeft, Droplets, CheckCircle2, AlertOctagon, Trash2, X } from 'lucide-react';
+import { ArrowLeft, Droplets, CheckCircle2, AlertOctagon, CloudOff, Trash2, X } from 'lucide-react';
 
 const todayIso = () => new Date().toISOString().slice(0, 10);
 
@@ -49,11 +50,19 @@ const FastMilkUI = ({
   const isEditMode = mode === 'edit';
 
   if (saveStatus === 'success') {
+    // 'info' = kept on this phone (not yet on the server); 'warning' = duplicate blocked.
+    const outcome = messageType === 'info'
+      ? { Icon: CloudOff, iconClass: 'text-warning-700', title: 'Saved on this phone' }
+      : messageType === 'warning'
+        ? { Icon: AlertOctagon, iconClass: 'text-warning-700', title: 'Already recorded' }
+        : { Icon: CheckCircle2, iconClass: 'text-brand', title: 'Saved!' };
     return (
-      <div className="my-auto max-h-[calc(100dvh-2rem)] w-full max-w-md overflow-y-auto overscroll-contain bg-white rounded-3xl p-6 flex flex-col items-center justify-center text-center space-y-4 animate-reveal touch-pan-y sm:p-12 sm:max-h-[90dvh]">
-        <CheckCircle2 size={64} className="text-success scale-150 mb-2" />
-        <h3 className="font-black text-3xl text-ink">Saved!</h3>
-        <p className="text-ink-muted font-bold">Ready for the next cow...</p>
+      <div role="status" className="my-auto max-h-[calc(100dvh-2rem)] w-full max-w-md overflow-y-auto overscroll-contain bg-white rounded-3xl p-6 flex flex-col items-center justify-center text-center space-y-4 animate-reveal touch-pan-y sm:p-12 sm:max-h-[90dvh]">
+        <outcome.Icon size={64} className={`${outcome.iconClass} scale-150 mb-2`} />
+        <h3 className="font-black text-3xl text-ink">{outcome.title}</h3>
+        <p className="text-ink-muted font-bold">
+          {messageType === 'success' ? 'Ready for the next cow...' : messageType === 'info' ? 'It will be sent when you’re back online.' : message}
+        </p>
       </div>
     );
   }
@@ -281,6 +290,25 @@ export default function FastMilkLog({ onClose, onSaveSuccess, onDeleteSuccess, m
       return productionApi.createYield(requestPayload, { headers: { 'Idempotency-Key': idempotencyKey } });
     },
     onSuccess: (data, variables) => {
+      if (isQueuedOffline(data)) {
+        // Queued by apiClient: there is no saved record yet. The milk log lists it under
+        // "Not sent yet" from the offline queue until it syncs.
+        setSaveStatus('success');
+        setMessage(QUEUED_OFFLINE_MESSAGE);
+        setMessageType('info');
+        setTimeout(() => {
+          setSaveStatus(null);
+          setMessage('');
+          if (isEditMode && onClose) {
+            onClose();
+            return;
+          }
+          setFormData(normalizeFormData(null, defaultCreateDate));
+          if (inputRef.current) inputRef.current.focus();
+        }, 1400);
+        return;
+      }
+
       const rawSavedRecord = data?.received || data?.updated || data;
       // Backend currently echoes today's date instead of the submitted milking date;
       // trust what the user entered until the server-side bug is fixed.
@@ -336,7 +364,7 @@ export default function FastMilkLog({ onClose, onSaveSuccess, onDeleteSuccess, m
             milkingDate: variables.milkingDate || variables.milking_date || todayIso(),
           });
           setMessageType('info');
-          setMessage('Saved to device. Will sync when internet returns.');
+          setMessage(QUEUED_OFFLINE_MESSAGE);
           setSaveStatus('success');
           setTimeout(() => {
             setSaveStatus(null);

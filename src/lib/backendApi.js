@@ -5,6 +5,7 @@ import { getPermissionSet, getRoleSet, normalizeRole } from './roles';
 import { API_CONTRACTS, validateResponse } from './apiContracts';
 import { buildCalfMilkFeedPayload, normalizeMilkDisposition } from './milkDisposition';
 import { API_BASE_URL, BACKEND_BASE_URL } from './apiBaseUrl';
+import { readActiveSession } from './sessionStore';
 
 import { normalizeNutritionRequestPayload } from './feedUtils';
 const HEALTH_BASE_URL = BACKEND_BASE_URL;
@@ -45,6 +46,7 @@ const healthClient = axios.create({
 });
 
 const ALIASABLE_STATUSES = new Set([404, 405, 501]);
+const PHOTO_UPLOAD_TIMEOUT_MS = 2 * 60 * 1000;
 
 const toArray = (value) => {
   if (Array.isArray(value)) {
@@ -87,9 +89,10 @@ const toObject = (value) => {
   return value;
 };
 
+// Only a "route not here" answer means another URL might work. With no response (offline,
+// timeout) the alias would fail the same way, and on 2G each attempt costs a full timeout.
 function canUseAlias(error) {
-  const status = error?.response?.status;
-  return !status || ALIASABLE_STATUSES.has(status);
+  return ALIASABLE_STATUSES.has(error?.response?.status);
 }
 
 async function requestWithFallback(client, requests) {
@@ -121,6 +124,13 @@ const parseCsvList = (value) => {
 
   return value.split(',').map((item) => item.trim()).filter(Boolean);
 };
+
+// /auth/me describes the user but doesn't re-issue a token; keep the one the request was made with.
+export function withCurrentToken(data, currentToken) {
+  const hasToken = Boolean(data?.token ?? data?.access_token ?? data?.accessToken);
+  if (!data || typeof data !== 'object' || !currentToken || hasToken) return data;
+  return { ...data, token: currentToken };
+}
 
 export function normalizeSessionUser(payload) {
   const session = toObject(payload);
@@ -763,7 +773,7 @@ export const authApi = {
     return requestWithFallback(authClient, [
       { method: 'get', url: '/auth/me' },
       { method: 'get', url: '/auth/status' },
-    ]).then((response) => normalizeSessionUser(response.data));
+    ]).then((response) => normalizeSessionUser(withCurrentToken(response.data, readActiveSession()?.token)));
   },
   status() {
     return authClient.get('/auth/status').then((response) => normalizeSessionUser(response.data));
@@ -1161,11 +1171,16 @@ export const herdApi = {
   delete(id) {
     return apiClient.delete(`/herd/${id}`);
   },
-  uploadPhoto(id, photoFile) {
+  uploadPhoto(id, photoFile, { onProgress } = {}) {
     const formData = new FormData();
     formData.append('photo', photoFile);
-    return apiClient.post(`/herd/${id}/photo`, formData)
-      .then((response) => normalizeHerdRecord(toObject(response.data) ?? {}));
+    return apiClient.post(`/herd/${id}/photo`, formData, {
+      // A photo can take well over the default 10 s on 2G/3G.
+      timeout: PHOTO_UPLOAD_TIMEOUT_MS,
+      onUploadProgress: onProgress
+        ? (event) => { if (event.total) onProgress(Math.round((event.loaded / event.total) * 100)); }
+        : undefined,
+    }).then((response) => normalizeHerdRecord(toObject(response.data) ?? {}));
   },
   deletePhoto(id) {
     return apiClient.delete(`/herd/${id}/photo`)

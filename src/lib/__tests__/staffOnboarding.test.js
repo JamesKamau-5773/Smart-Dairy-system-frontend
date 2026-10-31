@@ -51,8 +51,8 @@ describe('staff account normalization', () => {
 
   it('normalizes invite status and preserves the forced-reset session flag', () => {
     expect(normalizeStaffRecord({ account_status: 'INVITE PENDING' }).accountStatus).toBe('INVITE_PENDING');
-    expect(normalizeSessionUser({ id: 42, requires_password_reset: true }).requires_password_reset).toBe(true);
-    expect(normalizeSessionUser({ id: 42, requiresPasswordReset: true }).requires_password_reset).toBe(true);
+    expect(normalizeSessionUser({ id: 42, token: 'session-token', requires_password_reset: true }).requires_password_reset).toBe(true);
+    expect(normalizeSessionUser({ id: 42, token: 'session-token', requiresPasswordReset: true }).requires_password_reset).toBe(true);
   });
 
   it('maps edited phone numbers to the backend staff update contract', async () => {

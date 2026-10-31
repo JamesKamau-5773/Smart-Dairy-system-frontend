@@ -7,9 +7,9 @@ describe('ExpenseModal', () => {
   it('saves the commodity name as item_name for expense entries', () => {
     const onSave = vi.fn();
     const onClose = vi.fn();
-    const { container } = render(createElement(ExpenseModal, { isOpen: true, onClose, onSave }));
+    render(createElement(ExpenseModal, { isOpen: true, onClose, onSave }));
 
-    fireEvent.change(container.querySelector('input[name="date"]'), { target: { value: '2026-08-28' } });
+    fireEvent.change(screen.getByLabelText('Date of Expense'), { target: { value: '2026-08-28' } });
     fireEvent.change(screen.getByPlaceholderText('0.00'), { target: { value: '1800' } });
     fireEvent.change(screen.getByPlaceholderText('e.g. AgroVet Supply'), { target: { value: 'Kamau Feeds' } });
     fireEvent.change(screen.getByPlaceholderText('e.g. Maize Meal, Dairy Meal, Vet Drugs'), { target: { value: '  Maize Meal  ' } });

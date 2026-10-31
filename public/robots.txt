@@ -1,0 +1,20 @@
+# Only the public landing page is meant for search engines.
+# /login and /register stay crawlable so Google can read their noindex tag
+# (every SPA route serves app.html, which is marked noindex).
+User-agent: *
+Disallow: /app
+Disallow: /claim-account
+Disallow: /reset-required-password
+Disallow: /shared/
+Disallow: /dashboard
+Disallow: /member/
+Disallow: /system-admin
+Disallow: /cooperative-admin
+Disallow: /operations/
+Disallow: /finance/
+Disallow: /hr/
+Disallow: /settings/
+Disallow: /feed-nutrition
+Disallow: /tasks
+
+Sitemap: https://www.maziwasmart.co.ke/sitemap.xml

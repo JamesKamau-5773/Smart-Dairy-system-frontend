@@ -47,15 +47,26 @@ async function markFailure(entry, error) {
   });
 }
 
-async function flush() {
-  if (!navigator.onLine) return { synced: 0, pending: (await getAll()).length };
+let activeFlush = null;
+
+// Online events, the retry timer and "Sync now" can all ask for a flush at once;
+// share one run so the same entry is never sent twice in parallel.
+function flush() {
+  activeFlush ??= runFlush().finally(() => { activeFlush = null; });
+  return activeFlush;
+}
+
+const isDue = (entry) => entry.status !== 'NEEDS_ATTENTION'
+  && !(entry.nextAttemptAt && Date.parse(entry.nextAttemptAt) > Date.now());
+
+async function runFlush() {
+  const entries = await getAll();
+  if (!navigator.onLine || !entries.some(isDue)) return { synced: 0, pending: entries.length };
   emitFlushing(true);
   let synced = 0;
   try {
-    const entries = await getAll();
     for (const entry of entries) {
-      if (entry.status === 'NEEDS_ATTENTION') continue;
-      if (entry.nextAttemptAt && Date.parse(entry.nextAttemptAt) > Date.now()) continue;
+      if (!isDue(entry)) continue;
       try {
         await apiClient.request({ ...entry.request, skipOfflineQueue: true });
         await remove(entry.id);

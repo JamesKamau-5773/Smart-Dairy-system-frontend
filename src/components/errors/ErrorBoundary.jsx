@@ -85,7 +85,7 @@ export default class ErrorBoundary extends React.Component {
                 Try Again
               </button>
               <button
-                onClick={() => window.location.href = '/'}
+                onClick={() => window.location.href = '/app'}
                 className="rounded-lg border border-ink/10 bg-surface px-4 py-2.5 font-medium text-ink transition-colors hover:bg-surface-raised"
               >
                 Go Home

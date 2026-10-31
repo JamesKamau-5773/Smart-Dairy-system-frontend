@@ -5,6 +5,7 @@ export default {
   darkMode: ['attr', 'data-theme'],
   content: [
     "./index.html",
+    "./app.html",
     "./src/**/*.{js,ts,jsx,tsx}",
   ],
   theme: {

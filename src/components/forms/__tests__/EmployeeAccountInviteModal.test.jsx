@@ -2,6 +2,7 @@ import React from 'react';
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import EmployeeAccountInviteModal from '../EmployeeAccountInviteModal';
+import { getDefaultStaffPageAccess } from '../../../lib/staffOnboarding';
 
 void React;
 
@@ -28,8 +29,10 @@ describe('EmployeeAccountInviteModal', () => {
     fireEvent.change(screen.getByLabelText(/system role/i), { target: { value: 'FARM_SUPERVISOR' } });
     fireEvent.click(screen.getByRole('button', { name: /generate link/i }));
 
+    // Changing the role resets page access to that role's defaults.
     await waitFor(() => expect(onInvite).toHaveBeenCalledWith(7, {
       role: 'FARM_SUPERVISOR',
+      page_access: getDefaultStaffPageAccess('FARM_SUPERVISOR'),
     }));
     expect(await screen.findByText(/server-issued-token/)).toBeTruthy();
     expect(screen.getByText(/expires in 48 hours and can be used once/i)).toBeTruthy();
@@ -69,9 +72,10 @@ describe('EmployeeAccountInviteModal', () => {
     await waitFor(() => expect(onProvision).toHaveBeenCalledWith(7, {
       role: 'FARM_HAND',
       password: 'SecurePass#2468',
+      page_access: getDefaultStaffPageAccess('FARM_HAND'),
       requires_password_reset: true,
     }));
-    expect(await screen.findByText(/account provisioned/i)).toBeTruthy();
+    expect(await screen.findByText(/app access is ready/i)).toBeTruthy();
     expect(screen.queryByDisplayValue('SecurePass#2468')).toBeNull();
   });
 });

@@ -8,6 +8,7 @@ import {
 import { toast } from 'react-hot-toast';
 import { useTenant } from '../../hooks/useTenant';
 import { financeApi, getApiErrorMessage } from '../../lib/backendApi';
+import { QUEUED_OFFLINE_MESSAGE, isQueuedOffline } from '../../lib/offlinePolicy';
 import { Skeleton } from '../../components/ui';
 import SlidePanel from '../../components/ui/SlidePanel';
 import { Popover, PopoverContent, PopoverTrigger } from '../../components/ui/popover';
@@ -61,8 +62,12 @@ export default function BuyersList() {
   // We only need 'create' on this page. The full management is on Customers.jsx
   const { mutate: createCustomer, isLoading: isSaving } = useMutation({
     mutationFn: (customerData) => financeApi.createCustomer(customerData),
-    onSuccess: () => {
-      toast.success(`Customer created successfully!`);
+    onSuccess: (result) => {
+      if (isQueuedOffline(result)) {
+        toast(QUEUED_OFFLINE_MESSAGE);
+      } else {
+        toast.success(`Customer created successfully!`);
+      }
       queryClient.invalidateQueries({ queryKey: ['customers', tenantId, farmId] });
       setIsAddPanelOpen(false);
     },

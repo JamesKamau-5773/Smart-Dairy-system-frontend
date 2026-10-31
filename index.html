@@ -1,17 +1,255 @@
 <!doctype html>
-<html lang="en">
+<html lang="en-KE">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="theme-color" content="#166534" />
-    <meta name="apple-mobile-web-app-capable" content="yes" />
-    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <title>Maziwa Smart: Dairy Farm Management Software for Kenyan Farmers</title>
+    <meta name="description" content="Record milk per cow, track heat and calving, plan feed, manage buyers and know your cost per litre. Dairy farm software built for Kenyan farmers. Works offline." />
+    <link rel="canonical" href="{{SITE_URL}}/" />
+    <meta name="robots" content="index, follow, max-image-preview:large" />
+    <meta name="theme-color" content="#0369A1" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <link rel="apple-touch-icon" href="/pwa-192x192.png" />
-    <title>Maziwa Smart</title>
+
+    <!-- Open Graph -->
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="{{SITE_NAME}}" />
+    <meta property="og:locale" content="en_KE" />
+    <meta property="og:url" content="{{SITE_URL}}/" />
+    <meta property="og:title" content="Maziwa Smart: Dairy Farm Management Software for Kenyan Farmers" />
+    <meta property="og:description" content="Milk records, breeding, feed, buyers and money for your dairy farm, all on your phone. Works offline." />
+    <meta property="og:image" content="{{OG_IMAGE}}" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="Maziwa Smart dairy farm management software" />
+
+    <!-- Twitter -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Maziwa Smart: Dairy Farm Management Software for Kenyan Farmers" />
+    <meta name="twitter:description" content="Milk records, breeding, feed, buyers and money for your dairy farm, all on your phone. Works offline." />
+    <meta name="twitter:image" content="{{OG_IMAGE}}" />
+    <meta name="twitter:image:alt" content="Maziwa Smart dairy farm management software" />
+
+    <!-- landing:jsonld -->
+
+    <script>
+      document.documentElement.classList.add('js');
+      // Signed-in users in this tab go straight to their workspace.
+      try {
+        if (sessionStorage.getItem('jivu_user')) location.replace('/app');
+      } catch {
+        // Storage blocked: stay on the landing page.
+      }
+    </script>
+
+    <!-- The app's fonts (same families as src/index.css) -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Inter+Tight:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" />
+    <link rel="stylesheet" href="/src/landing/landing.css" />
+    <script type="module" src="/src/landing/landing.js"></script>
   </head>
   <body>
-    <div id="root"></div>
-    <script type="module" src="/src/main.jsx"></script>
+    <a href="#main" class="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-50 focus:rounded-button focus:bg-white focus:px-4 focus:py-2">Skip to content</a>
+
+    <header class="sticky top-0 z-40 border-b border-ink/10 bg-[#F9F8F6]/95 backdrop-blur">
+      <nav class="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-3" aria-label="Main">
+        <a href="/" class="flex items-center gap-2 text-xl font-bold tracking-tight text-brand" aria-label="Maziwa Smart home">
+          <img src="/logo.png" alt="" width="32" height="32" class="size-8 rounded-badge" />
+          <span class="hidden sm:inline">Maziwa Smart</span>
+        </a>
+        <ul class="hidden items-center gap-6 text-lg font-medium text-ink-700 md:flex">
+          <li><a href="#features" class="hover:text-brand">Features</a></li>
+          <li><a href="#pricing" class="hover:text-brand">Pricing</a></li>
+          <li><a href="#faq" class="hover:text-brand">FAQ</a></li>
+        </ul>
+        <div class="flex items-center gap-2">
+          <a href="/login" class="btn-ghost border-transparent text-lg">Log in</a>
+          <a href="/register" class="btn-command text-lg">Start free</a>
+        </div>
+      </nav>
+    </header>
+
+    <main id="main">
+      <!-- Hero -->
+      <section class="mx-auto grid max-w-6xl items-center gap-12 px-4 py-16 md:grid-cols-2 md:py-24">
+        <div>
+          <p class="inline-flex items-center gap-2 rounded-full border border-brand/10 bg-brand/5 px-3 py-1 text-xs font-bold uppercase tracking-widest text-brand">
+            {{icon:milk size-4}} Dairy farm software for Kenya
+          </p>
+          <h1 class="mt-5 text-4xl font-bold leading-tight tracking-tight text-ink-900 sm:text-5xl">
+            Every litre. Every cow. <span class="text-brand">Every shilling.</span>
+          </h1>
+          <p class="mt-6 text-xl leading-relaxed text-ink-700">
+            Maziwa Smart replaces the milk notebook: record milk per cow, catch every heat, plan feed and know which buyer owes you, all from your phone, even without network.
+          </p>
+          <div class="mt-8 flex flex-col gap-3 sm:flex-row">
+            <a href="/register" class="btn-command text-lg">Start free</a>
+            <a href="{{WHATSAPP_HREF}}" rel="noopener" class="btn-secondary gap-2 text-lg">{{icon:message-circle}} Chat on WhatsApp</a>
+          </div>
+          <p class="mt-4 text-lg text-ink-600">Works on any smartphone. No computer needed.</p>
+        </div>
+
+        <div class="mx-auto w-full max-w-md overflow-hidden rounded-card border border-ink-200 bg-white">
+          <img src="{{HERO_SRC}}" alt="{{HERO_ALT}}" width="{{HERO_WIDTH}}" height="{{HERO_HEIGHT}}" fetchpriority="high" decoding="async" class="aspect-[4/3] w-full object-cover md:aspect-[4/5]" />
+        </div>
+      </section>
+
+      <!-- Problems -->
+      <section class="border-y border-ink/10 bg-white" aria-labelledby="problems-title">
+        <div class="mx-auto max-w-6xl px-4 py-16 md:py-20">
+          <h2 id="problems-title" class="text-3xl font-bold tracking-tight text-ink-900 sm:text-4xl">Sound familiar?</h2>
+          <ul class="mt-10 grid gap-6 md:grid-cols-3">
+            <li class="card-machined p-6">
+              <span class="inline-flex rounded-button bg-brand/5 p-2 text-brand">{{icon:notebook-pen}}</span>
+              <h3 class="mt-4 text-xl font-bold text-ink-900">The notebook goes missing</h3>
+              <p class="mt-2 text-lg text-ink-700">It gets wet, torn or misplaced, and nobody can say how much each cow gave last month.</p>
+            </li>
+            <li class="card-machined p-6">
+              <span class="inline-flex rounded-button bg-brand/5 p-2 text-brand">{{icon:hand-coins}}</span>
+              <h3 class="mt-4 text-xl font-bold text-ink-900">Payments slip through</h3>
+              <p class="mt-2 text-lg text-ink-700">Neighbours, hotels and the collection centre all take milk. Who has paid, and who still owes?</p>
+            </li>
+            <li class="card-machined border-danger/20 bg-danger/5 p-6">
+              <span class="inline-flex rounded-button bg-danger/10 p-2 text-danger">{{icon:flame}}</span>
+              <h3 class="mt-4 text-xl font-bold text-ink-900">A heat is missed</h3>
+              <p class="mt-2 text-lg text-ink-700">One missed heat means weeks of lost milk and a longer wait for the next calf.</p>
+            </li>
+          </ul>
+        </div>
+      </section>
+
+      <!-- App showcase -->
+      <section id="features" class="mx-auto max-w-6xl px-4 py-16 md:py-20" aria-labelledby="showcase-title">
+        <h2 id="showcase-title" class="text-3xl font-bold tracking-tight text-ink-900 sm:text-4xl">Your whole dairy farm, in one app</h2>
+        <p class="mt-4 max-w-3xl text-xl text-ink-700">Milk, money, herd and feed, the way you already run your farm.</p>
+        <div class="mt-10">
+          <!-- landing:showcase -->
+        </div>
+      </section>
+
+      <!-- More features -->
+      <section class="border-y border-ink/10 bg-white" aria-labelledby="more-features-title">
+        <div class="mx-auto max-w-6xl px-4 py-16 md:py-20">
+          <h2 id="more-features-title" class="text-3xl font-bold tracking-tight text-ink-900 sm:text-4xl">Built for the real work of a farm</h2>
+          <ul class="mt-10 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+            <li class="card-machined p-6">
+              <span class="inline-flex rounded-button bg-brand/5 p-2 text-brand">{{icon:wifi-off}}</span>
+              <h3 class="mt-4 text-xl font-bold text-ink-900">Works offline</h3>
+              <p class="mt-2 text-lg text-ink-700">No network in the shed? Keep recording. Everything sends when you reconnect.</p>
+            </li>
+            <li class="card-machined p-6">
+              <span class="inline-flex rounded-button bg-brand/5 p-2 text-brand">{{icon:shield-check}}</span>
+              <h3 class="mt-4 text-xl font-bold text-ink-900">Milk safety</h3>
+              <p class="mt-2 text-lg text-ink-700">Keep treatment records and see which cows’ milk must not be sold yet.</p>
+            </li>
+            <li class="card-machined p-6">
+              <span class="inline-flex rounded-button bg-brand/5 p-2 text-brand">{{icon:calculator}}</span>
+              <h3 class="mt-4 text-xl font-bold text-ink-900">Cost per litre</h3>
+              <p class="mt-2 text-lg text-ink-700">Record income and expenses and find out which cows make you money.</p>
+            </li>
+            <li class="card-machined p-6">
+              <span class="inline-flex rounded-button bg-brand/5 p-2 text-brand">{{icon:users}}</span>
+              <h3 class="mt-4 text-xl font-bold text-ink-900">Staff and payroll</h3>
+              <p class="mt-2 text-lg text-ink-700">Give each milker and herdsman the right access, plan daily tasks and run payroll.</p>
+            </li>
+          </ul>
+        </div>
+      </section>
+
+      <!-- How it works -->
+      <section class="mx-auto max-w-6xl px-4 py-16 md:py-20" aria-labelledby="steps-title">
+        <h2 id="steps-title" class="text-3xl font-bold tracking-tight text-ink-900 sm:text-4xl">Start in three steps</h2>
+        <ol class="mt-10 grid gap-6 md:grid-cols-3">
+          <li class="rounded-card border border-ink-200 bg-white p-6">
+            <span class="font-mono text-sm font-semibold text-brand">01</span>
+            <h3 class="mt-3 flex items-center gap-2 text-xl font-bold text-ink-900">{{icon:user-plus size-5 text-brand}} Create your farm</h3>
+            <p class="mt-2 text-lg text-ink-700">Sign up with your phone in a few minutes.</p>
+          </li>
+          <li class="rounded-card border border-ink-200 bg-white p-6">
+            <span class="font-mono text-sm font-semibold text-brand">02</span>
+            <h3 class="mt-3 flex items-center gap-2 text-xl font-bold text-ink-900">{{icon:clipboard-list size-5 text-brand}} Add your cows</h3>
+            <p class="mt-2 text-lg text-ink-700">Enter each cow’s name or tag. Add your workers if you have them.</p>
+          </li>
+          <li class="rounded-card border border-ink-200 bg-white p-6">
+            <span class="font-mono text-sm font-semibold text-brand">03</span>
+            <h3 class="mt-3 flex items-center gap-2 text-xl font-bold text-ink-900">{{icon:milk size-5 text-brand}} Record the next milking</h3>
+            <p class="mt-2 text-lg text-ink-700">Log litres per cow and watch your records build up from day one.</p>
+          </li>
+        </ol>
+      </section>
+
+      <!-- Farmers -->
+      <!-- PLACEHOLDER: add real farmer quotes to TESTIMONIALS in src/landing/content.js -->
+      <section class="border-y border-ink/10 bg-white" aria-labelledby="farmers-title">
+        <div class="mx-auto max-w-6xl px-4 py-16 md:py-20">
+          <h2 id="farmers-title" class="text-3xl font-bold tracking-tight text-ink-900 sm:text-4xl">From farmers using Maziwa Smart</h2>
+          <ul class="mt-10 grid gap-6 md:grid-cols-3">
+            <!-- landing:testimonials -->
+          </ul>
+        </div>
+      </section>
+
+      <!-- Pricing -->
+      <section id="pricing" class="mx-auto max-w-6xl px-4 py-16 md:py-20" aria-labelledby="pricing-title">
+        <h2 id="pricing-title" class="text-3xl font-bold tracking-tight text-ink-900 sm:text-4xl">Simple pricing in Kenya shillings</h2>
+        <p class="mt-4 max-w-3xl text-xl text-ink-700">Choose the plan that fits your farm. Change plans at any time.</p>
+        <div class="mt-10 grid gap-6 lg:grid-cols-3">
+          <!-- landing:pricing -->
+        </div>
+      </section>
+
+      <!-- FAQ -->
+      <section id="faq" class="border-y border-ink/10 bg-white" aria-labelledby="faq-title">
+        <div class="mx-auto max-w-3xl px-4 py-16 md:py-20">
+          <h2 id="faq-title" class="text-3xl font-bold tracking-tight text-ink-900 sm:text-4xl">Frequently asked questions</h2>
+          <div class="mt-10 space-y-4">
+            <!-- landing:faq -->
+          </div>
+        </div>
+      </section>
+
+      <!-- Final CTA -->
+      <section class="mx-auto max-w-6xl px-4 py-16 md:py-20" aria-labelledby="cta-title">
+        <div class="rounded-lg bg-brand px-6 py-12 text-center text-white md:px-12">
+          <h2 id="cta-title" class="text-3xl font-bold tracking-tight text-white sm:text-4xl">Put away the notebook</h2>
+          <p class="mx-auto mt-4 max-w-2xl text-xl text-brand-50">Record tomorrow morning’s milking in Maziwa Smart and see every litre, cow and shilling in one place.</p>
+          <div class="mt-8 flex flex-col justify-center gap-3 sm:flex-row">
+            <a href="/register" class="btn-secondary text-lg">Start free</a>
+            <a href="{{WHATSAPP_HREF}}" rel="noopener" class="btn-command gap-2 border-white/40 text-lg">{{icon:message-circle}} Chat on WhatsApp</a>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <footer id="contact" class="border-t border-ink/10 bg-white">
+      <div class="mx-auto grid max-w-6xl gap-10 px-4 py-12 md:grid-cols-3">
+        <div>
+          <a href="/" class="flex items-center gap-2 text-xl font-bold tracking-tight text-brand">
+            <img src="/logo.png" alt="" width="32" height="32" loading="lazy" class="size-8 rounded-badge" />
+            {{SITE_NAME}}
+          </a>
+          <p class="mt-3 text-lg text-ink-600">Dairy farm management software for Kenya.</p>
+        </div>
+        <address class="space-y-3 text-lg not-italic text-ink-700 md:col-span-1">
+          <p class="text-sm font-bold uppercase tracking-widest text-ink-muted">Talk to us</p>
+          <p><a href="{{PHONE_HREF}}" class="inline-flex items-center gap-2 hover:text-brand">{{icon:phone size-5 text-brand}} <span class="font-mono">{{PHONE}}</span></a></p>
+          <p><a href="{{WHATSAPP_HREF}}" rel="noopener" class="inline-flex items-center gap-2 hover:text-brand">{{icon:message-circle size-5 text-brand}} Chat on WhatsApp</a></p>
+          <p><a href="mailto:{{EMAIL}}" class="inline-flex items-center gap-2 hover:text-brand">{{icon:mail size-5 text-brand}} {{EMAIL}}</a></p>
+          <p class="inline-flex items-center gap-2">{{icon:map-pin size-5 text-brand}} {{LOCATION}}</p>
+        </address>
+        <nav aria-label="Footer">
+          <p class="text-sm font-bold uppercase tracking-widest text-ink-muted">Maziwa Smart</p>
+          <ul class="mt-3 space-y-3 text-lg text-ink-700">
+            <li><a href="#features" class="hover:text-brand">Features</a></li>
+            <li><a href="#pricing" class="hover:text-brand">Pricing</a></li>
+            <li><a href="#faq" class="hover:text-brand">FAQ</a></li>
+            <li><a href="/login" class="hover:text-brand">Log in</a></li>
+            <li><a href="/register" class="hover:text-brand">Start free</a></li>
+          </ul>
+        </nav>
+      </div>
+      <p class="mx-auto max-w-6xl border-t border-ink/10 px-4 py-6 text-sm text-ink-600">© {{YEAR}} {{SITE_NAME}}</p>
+    </footer>
   </body>
 </html>

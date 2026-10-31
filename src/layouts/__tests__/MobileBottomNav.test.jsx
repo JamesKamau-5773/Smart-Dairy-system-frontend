@@ -1,36 +1,44 @@
 import React from 'react';
-import { render, screen } from '@testing-library/react';
-import { describe, it, expect, beforeEach } from 'vitest';
+import { cleanup, render, screen } from '@testing-library/react';
+import { afterEach, describe, it, expect, vi } from 'vitest';
 import { MemoryRouter } from 'react-router-dom';
-import { AuthProvider } from '../../contexts/AuthContext';
-import { TenantProvider } from '../../contexts/TenantContext';
+import { useAuth } from '../../contexts/AuthContext';
 import MobileBottomNav from '../MobileBottomNav';
 
 void React;
 
-function renderWithProviders(ui) {
+vi.mock('../../contexts/AuthContext', () => ({ useAuth: vi.fn() }));
+afterEach(cleanup);
+
+function renderAs(currentUser) {
+  useAuth.mockReturnValue({ currentUser });
   return render(
     <MemoryRouter>
-      <AuthProvider>
-        <TenantProvider>{ui}</TenantProvider>
-      </AuthProvider>
+      <MobileBottomNav />
     </MemoryRouter>
   );
 }
 
-describe('MobileBottomNav', () => {
-  beforeEach(() => sessionStorage.removeItem('jivu_user'));
+const tabLabels = () => screen.getAllByRole('link').map((link) => link.textContent);
 
-  it('shows Farm Task View for farmer and admin', () => {
-    sessionStorage.setItem('jivu_user', JSON.stringify({ name: 'Farmer', role: 'FARMER', tenant_id: 't1', farm_id: 'f1', farm_name: 'F1' }));
-    renderWithProviders(<MobileBottomNav />);
-    expect(screen.getAllByText('Farm Task View').length).toBeGreaterThan(0);
+describe('MobileBottomNav', () => {
+  it('shows every tab to a single-farm owner, with Dashboard opening their landing page', () => {
+    renderAs({ name: 'Owner', role: 'FARMER', tenant_type: 'single', tenant_id: 't1' });
+
+    expect(tabLabels()).toEqual(['Dashboard', 'Production Log', 'Buyer List', 'Ledger']);
+    expect(screen.getByRole('link', { name: 'Dashboard' }).getAttribute('href')).toBe('/dashboard');
   });
 
-  it('shows Farm Task View for herdsman', () => {
-    sessionStorage.setItem('jivu_user', JSON.stringify({ name: 'Herdsman', role: 'Herdsman', tenant_id: 't1', farm_id: 'f1', farm_name: 'F1' }));
-    renderWithProviders(<MobileBottomNav />);
-    // The label renders inside the NavLink (icon span + text node both match).
-    expect(screen.getAllByText('Farm Task View').length).toBeGreaterThan(0);
+  it('hides buyer and ledger tabs from a cooperative member farmer', () => {
+    renderAs({ name: 'Member', role: 'FARMER', tenant_id: 't1', cooperative_id: 'c1' });
+
+    expect(tabLabels()).toEqual(['Dashboard', 'Production Log']);
+    expect(screen.getByRole('link', { name: 'Dashboard' }).getAttribute('href')).toBe('/member/dashboard');
+  });
+
+  it('limits tabs by page_access when the backend assigns pages', () => {
+    renderAs({ name: 'Clerk', role: 'CLERK', tenant_id: 't1', cooperative_id: 'c1', page_access: [] });
+
+    expect(tabLabels()).toEqual(['Dashboard', 'Production Log']);
   });
 });

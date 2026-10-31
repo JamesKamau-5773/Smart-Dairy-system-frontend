@@ -16,6 +16,7 @@ function operationLabel(item) {
 export default function OfflineQueueInspector({ isOpen, onClose } = {}) {
   const [items, setItems] = useState([]);
   const [working, setWorking] = useState(false);
+  const [confirmingId, setConfirmingId] = useState(null);
 
   const load = async () => {
     const all = await offlineQueue.getAll();
@@ -43,6 +44,7 @@ export default function OfflineQueueInspector({ isOpen, onClose } = {}) {
   };
 
   const handleRemove = async (id) => {
+    setConfirmingId(null);
     await offlineQueue.remove(id);
     await load();
   };
@@ -64,22 +66,32 @@ export default function OfflineQueueInspector({ isOpen, onClose } = {}) {
                 </div>
                 <div className="mt-1 text-xs text-ink-muted">{new Date(item.createdAt).toLocaleString()}</div>
                 {item.lastError ? (
-                  <p className="mt-2 text-xs text-danger-800">
+                  <p className="mt-2 text-xs text-danger-900">
                     {item.status === 'NEEDS_ATTENTION'
                       ? `This change could not be accepted. ${item.lastError.message} Correct the details on the relevant page, then remove this queued copy if it is no longer needed.`
                       : item.lastError.message}
                   </p>
                 ) : null}
               </div>
-              <button
-                type="button"
-                onClick={() => handleRemove(item.id)}
-                className="btn-ghost h-9 w-9 shrink-0 !p-0 text-danger-800"
-                aria-label={`Remove ${operationLabel(item)}`}
-                title="Remove pending change"
-              >
-                <Trash2 size={16} />
-              </button>
+              {confirmingId === item.id ? (
+                <div className="flex shrink-0 flex-col items-end gap-1.5 text-xs">
+                  <span className="font-semibold text-danger-900">Remove this unsent change?</span>
+                  <div className="flex gap-2">
+                    <button type="button" onClick={() => setConfirmingId(null)} className="btn-secondary h-8 px-3 text-xs">Keep</button>
+                    <button type="button" onClick={() => handleRemove(item.id)} className="h-8 rounded-button bg-danger-500 px-3 text-xs font-semibold text-white hover:bg-danger-900">Remove</button>
+                  </div>
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => setConfirmingId(item.id)}
+                  className="btn-ghost h-9 w-9 shrink-0 !p-0 text-danger-900"
+                  aria-label={`Remove ${operationLabel(item)}`}
+                  title="Remove pending change"
+                >
+                  <Trash2 size={16} />
+                </button>
+              )}
             </div>
           ))}
         </div>

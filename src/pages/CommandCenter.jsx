@@ -10,7 +10,10 @@ import { buildTrendData, extractYieldCowId, extractYieldDate, extractYieldAmount
 // Components
 const MilkTrendChart = lazy(() => import('../components/dashboard/MilkTrendChart'));
 import ManagerInboxWidget from '../components/dashboard/ManagerInboxWidget';
+import WelcomeChecklist from '../components/dashboard/WelcomeChecklist';
+import MilestoneBanner from '../components/dashboard/MilestoneBanner';
 import Money from '../components/ui/Money';
+import { swahiliGreeting } from '../lib/welcomeProgress';
 import { Skeleton } from '@/components/ui';
 
 const SummaryCard = ({ title, value, unit, icon: Icon, trend, loading = false }) => (
@@ -146,9 +149,25 @@ export default function CommandCenter() {
       <div className="flex justify-between items-end border-b border-ink/10 pb-4">
         <div>
           <h2 className="font-sans font-bold text-3xl tracking-tight text-brand m-0">Daily Summary</h2>
-          <p className="font-sans text-sm text-ink-muted mt-1">Live Farm Data</p>
+          <p className="font-sans text-sm text-ink-muted mt-1">{swahiliGreeting()} · Live farm data</p>
         </div>
       </div>
+
+      <WelcomeChecklist
+        key={`welcome:${tenantId}:${farmId}`}
+        tenantId={tenantId}
+        farmId={farmId}
+        milkRecords={trendQuery.data}
+        milkLoaded={trendQuery.isSuccess}
+      />
+
+      <MilestoneBanner
+        key={`milestone:${tenantId}:${farmId}`}
+        tenantId={tenantId}
+        farmId={farmId}
+        milkRecords={trendQuery.data}
+        milkLoaded={trendQuery.isSuccess}
+      />
 
       <section>
         <ManagerInboxWidget />
