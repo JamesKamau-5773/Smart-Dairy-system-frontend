@@ -60,7 +60,9 @@ const FastMilkUI = ({
       <div role="status" className="my-auto max-h-[calc(100dvh-2rem)] w-full max-w-md overflow-y-auto overscroll-contain bg-white rounded-3xl p-6 flex flex-col items-center justify-center text-center space-y-4 animate-reveal touch-pan-y sm:p-12 sm:max-h-[90dvh]">
         <outcome.Icon size={64} className={`${outcome.iconClass} scale-150 mb-2`} />
         <h3 className="font-black text-3xl text-ink">{outcome.title}</h3>
-        <p className="text-ink-muted font-bold">{messageType === 'success' ? 'Ready for the next cow...' : message}</p>
+        <p className="text-ink-muted font-bold">
+          {messageType === 'success' ? 'Ready for the next cow...' : messageType === 'info' ? 'It will be sent when you’re back online.' : message}
+        </p>
       </div>
     );
   }

@@ -46,6 +46,7 @@ const healthClient = axios.create({
 });
 
 const ALIASABLE_STATUSES = new Set([404, 405, 501]);
+const PHOTO_UPLOAD_TIMEOUT_MS = 2 * 60 * 1000;
 
 const toArray = (value) => {
   if (Array.isArray(value)) {
@@ -88,9 +89,10 @@ const toObject = (value) => {
   return value;
 };
 
+// Only a "route not here" answer means another URL might work. With no response (offline,
+// timeout) the alias would fail the same way, and on 2G each attempt costs a full timeout.
 function canUseAlias(error) {
-  const status = error?.response?.status;
-  return !status || ALIASABLE_STATUSES.has(status);
+  return ALIASABLE_STATUSES.has(error?.response?.status);
 }
 
 async function requestWithFallback(client, requests) {
@@ -1169,11 +1171,16 @@ export const herdApi = {
   delete(id) {
     return apiClient.delete(`/herd/${id}`);
   },
-  uploadPhoto(id, photoFile) {
+  uploadPhoto(id, photoFile, { onProgress } = {}) {
     const formData = new FormData();
     formData.append('photo', photoFile);
-    return apiClient.post(`/herd/${id}/photo`, formData)
-      .then((response) => normalizeHerdRecord(toObject(response.data) ?? {}));
+    return apiClient.post(`/herd/${id}/photo`, formData, {
+      // A photo can take well over the default 10 s on 2G/3G.
+      timeout: PHOTO_UPLOAD_TIMEOUT_MS,
+      onUploadProgress: onProgress
+        ? (event) => { if (event.total) onProgress(Math.round((event.loaded / event.total) * 100)); }
+        : undefined,
+    }).then((response) => normalizeHerdRecord(toObject(response.data) ?? {}));
   },
   deletePhoto(id) {
     return apiClient.delete(`/herd/${id}/photo`)

@@ -49,7 +49,8 @@ describe('FastMilkLog when the save is queued offline', () => {
     onlineManager.setOnline(false);
     fireEvent.click(screen.getByRole('button', { name: /Save Record/i }));
 
-    expect(await screen.findByText('Saved on this phone. It will be sent when you’re back online.')).toBeTruthy();
+    expect(await screen.findByText('Saved on this phone')).toBeTruthy();
+    expect(screen.getByText('It will be sent when you’re back online.')).toBeTruthy();
     expect(productionApi.createYield).toHaveBeenCalled();
     expect(onSaveSuccess).not.toHaveBeenCalled();
   });

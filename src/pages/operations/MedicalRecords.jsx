@@ -29,7 +29,7 @@ import { findCowIdentityMatch, formatCowIdentity, resolveCowIdentityFromHerd } f
 import { normalizeHerdCow } from '../../lib/herdUtils';
 import { useTenant } from '../../hooks/useTenant';
 import GroupedDateRows from '../../components/ui/GroupedDateRows';
-import { CardSkeletons, ListLoadMessage, StaleDataNotice, StatValue, TableSkeletonRows } from '../../components/ui/ListLoadState';
+import { CardSkeletons, ListLoadMessage, SlowLoadingHint, StaleDataNotice, StatValue, TableSkeletonRows } from '../../components/ui/ListLoadState';
 import { getListLoadState } from '../../lib/listLoadState';
 
 const EMPTY_FORM = {
@@ -674,6 +674,7 @@ export default function VetRecords() {
             <Eye size={12} /> Clinical registry
           </div>
         </div>
+        {recordsLoadState === 'loading' && <SlowLoadingHint label="medical records" />}
         {recordsLoadState === 'stale' && <StaleDataNotice label="medical records" error={recordsError} onRetry={refetchRecords} />}
         {(recordsLoadState === 'offline' || recordsLoadState === 'error') && (
           <ListLoadMessage state={recordsLoadState} label="medical records" error={recordsError} onRetry={refetchRecords} />

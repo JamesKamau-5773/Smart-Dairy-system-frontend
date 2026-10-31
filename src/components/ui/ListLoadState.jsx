@@ -1,4 +1,5 @@
-import { AlertTriangle, CloudOff, RefreshCw } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { AlertTriangle, CloudOff, Loader2, RefreshCw } from 'lucide-react';
 import Skeleton from './Skeleton';
 import { getApiErrorMessage } from '../../lib/backendApi';
 
@@ -88,4 +89,20 @@ export function StatValue({ state, label, className, children }) {
     );
   }
   return <p className={className}>{children}</p>;
+}
+
+/** Appears only when loading drags on, so a slow connection isn't mistaken for a frozen app. */
+export function SlowLoadingHint({ label, after = 4000 }) {
+  const [visible, setVisible] = useState(false);
+  useEffect(() => {
+    const timer = setTimeout(() => setVisible(true), after);
+    return () => clearTimeout(timer);
+  }, [after]);
+  if (!visible) return null;
+  return (
+    <p role="status" className="flex items-center gap-2 border-b border-ink/10 bg-brand-50 px-4 py-2.5 text-sm text-brand-900">
+      <Loader2 size={14} className="shrink-0 animate-spin motion-reduce:animate-none" aria-hidden="true" />
+      Still loading {label} – your connection seems slow. They’ll appear as soon as they arrive.
+    </p>
+  );
 }

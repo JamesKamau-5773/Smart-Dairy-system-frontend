@@ -12,7 +12,7 @@ import CalfMilkFeedModal from "../../components/operations/CalfMilkFeedModal";
 import MilkDispositionHistory from "../../components/operations/MilkDispositionHistory";
 import Confirmation, { useConfirmation } from "../../components/ui/Confirmation";
 import GroupedDateRows from "../../components/ui/GroupedDateRows";
-import { CardSkeletons, ListLoadMessage, StaleDataNotice, StatValue, TableSkeletonRows } from "../../components/ui/ListLoadState";
+import { CardSkeletons, ListLoadMessage, SlowLoadingHint, StaleDataNotice, StatValue, TableSkeletonRows } from "../../components/ui/ListLoadState";
 import { getListLoadState } from "../../lib/listLoadState";
 import toast from "react-hot-toast";
 import { toNormalizedSessionLabel } from "../../lib/milkUtils";
@@ -606,6 +606,7 @@ export default function YieldLog() {
       <QueuedMilkEntries />
 
       <div className="card-machined !p-0">
+        {milkLoadState === 'loading' && <SlowLoadingHint label="milk records" />}
         {milkLoadState === 'stale' && <StaleDataNotice label="milk records" error={yieldRowsError} onRetry={refetchYieldRows} />}
         {(milkLoadState === 'offline' || milkLoadState === 'error') && (
           <ListLoadMessage state={milkLoadState} label="milk records" error={yieldRowsError} onRetry={refetchYieldRows} />
