@@ -129,7 +129,7 @@ export default function MilkDropReports() {
               empty={reports.length === 0 && (
               <tr>
                 <td className="px-6 py-6 text-center text-ink/50" colSpan={4}>
-                  No milk drop alerts recorded yet.
+                  No milk drop alerts. They appear here automatically when a cow gives much less milk than usual, so you can check her health and feed.
                 </td>
               </tr>
               )}
@@ -154,7 +154,7 @@ export default function MilkDropReports() {
               {report.status !== 'RESOLVED' && <button type="button" onClick={() => openInvestigateModal(report)} className="w-full rounded-button bg-brand px-3 py-2 text-sm font-semibold text-white">{report.status === 'OPEN' ? 'Check cow' : 'Continue investigation'}</button>}
             </article>
           ))}
-          {reports.length === 0 && <p className="p-6 text-center text-sm text-ink-muted">No milk drop alerts recorded yet.</p>}
+          {reports.length === 0 && <p className="p-6 text-center text-sm text-ink-muted">No milk drop alerts. They appear here automatically when a cow gives much less milk than usual, so you can check her health and feed.</p>}
         </div>
       </div>
 

@@ -6,6 +6,9 @@ import { ChevronDown, LogOut, UserCircle, Menu } from 'lucide-react';
 import OfflineIndicator from '../components/ui/OfflineIndicator';
 import OfflineQueueInspector from '../components/ui/OfflineQueueInspector';
 import ThemeToggle from '../components/ui/ThemeToggle';
+import Confirmation, { useConfirmation } from '../components/ui/Confirmation';
+import offlineQueue from '../lib/offlineQueue';
+import { useDataSaver } from '../hooks/useDataSaver';
 
 export default function Header({ onMenuClick = () => {} }) {
   const { activeFarm } = useTenant();
@@ -15,6 +18,8 @@ export default function Header({ onMenuClick = () => {} }) {
   const [profileOpen, setProfileOpen] = useState(false);
   const [syncOpen, setSyncOpen] = useState(false);
   const profileRef = useRef(null);
+  const signOutConfirmation = useConfirmation();
+  const [dataSaver, setDataSaver] = useDataSaver();
 
   useEffect(() => {
     const closeProfile = (event) => {
@@ -25,6 +30,26 @@ export default function Header({ onMenuClick = () => {} }) {
   }, []);
 
   const handleLogout = async () => {
+    setProfileOpen(false);
+    const pending = (await offlineQueue.getAll().catch(() => [])).length;
+    if (pending > 0) {
+      const changes = pending === 1 ? '1 change' : `${pending} changes`;
+      const signOutAnyway = await signOutConfirmation.confirm({
+        title: 'Changes not sent yet',
+        message: `${changes} saved on this phone ${pending === 1 ? 'hasn’t' : 'haven’t'} been sent yet. `
+          + (navigator.onLine
+            ? 'Stay signed in for a moment so they can be sent. '
+            : 'Stay signed in and they’ll be sent when you’re back online. ')
+          + 'If you sign out, they stay on this phone and are sent the next time you sign in here.',
+        type: 'warning',
+        confirmText: 'Sign out anyway',
+        cancelText: 'Stay signed in',
+      });
+      if (!signOutAnyway) {
+        if (navigator.onLine) offlineQueue.flush().catch(() => {});
+        return;
+      }
+    }
     await logout();
     navigate('/login');
   };
@@ -74,6 +99,20 @@ export default function Header({ onMenuClick = () => {} }) {
                 <p className="mb-2 text-[10px] font-bold uppercase tracking-wider text-ink-muted">Interface density</p>
                 <ThemeToggle />
               </div>
+              <label className="flex cursor-pointer items-start justify-between gap-3 border-b border-ink/10 px-3 py-3" htmlFor="data-saver-toggle">
+                <span>
+                  <span className="block text-sm font-semibold text-ink-900">Data saver</span>
+                  <span className="mt-0.5 block text-xs text-ink-muted">Hides cow photos until you tap them and refreshes less often, to save mobile data.</span>
+                </span>
+                <input
+                  id="data-saver-toggle"
+                  type="checkbox"
+                  role="switch"
+                  checked={dataSaver}
+                  onChange={(event) => setDataSaver(event.target.checked)}
+                  className="mt-1 h-5 w-5 shrink-0 accent-brand-700"
+                />
+              </label>
               <button
                 type="button"
                 onClick={handleLogout}
@@ -87,6 +126,16 @@ export default function Header({ onMenuClick = () => {} }) {
         </div>
       </div>
       <OfflineQueueInspector isOpen={syncOpen} onClose={() => setSyncOpen(false)} />
+      <Confirmation
+        isOpen={signOutConfirmation.isOpen}
+        title={signOutConfirmation.title}
+        message={signOutConfirmation.message}
+        type={signOutConfirmation.type}
+        confirmText={signOutConfirmation.confirmText}
+        cancelText={signOutConfirmation.cancelText}
+        onConfirm={signOutConfirmation.onConfirm}
+        onCancel={signOutConfirmation.onCancel}
+      />
     </header>
   );
 }

@@ -9,6 +9,8 @@ import { toast } from 'react-hot-toast';
 import { useTenant } from '../../hooks/useTenant';
 import { financeApi, getApiErrorMessage } from '../../lib/backendApi';
 import { QUEUED_OFFLINE_MESSAGE, isQueuedOffline } from '../../lib/offlinePolicy';
+import { getSearchSuggestions, matchesSearch } from '../../lib/fuzzySearch';
+import SearchSuggestions from '../../components/ui/SearchSuggestions';
 import { Skeleton } from '../../components/ui';
 import SlidePanel from '../../components/ui/SlidePanel';
 import { Popover, PopoverContent, PopoverTrigger } from '../../components/ui/popover';
@@ -87,18 +89,31 @@ export default function BuyersList() {
       const matchesStatus = statusFilter === 'all'
         || (statusFilter === 'outstanding' && balance > 0)
         || (statusFilter === 'settled' && balance <= 0);
-      const matchesSearch = !term || [
+      const matchesTerm = !term || matchesSearch([
         customer?.name,
         customer?.id,
         customer?.type,
         customer?.contact,
         customer?.phone_number,
         customer?.contact_person,
-      ].some((value) => String(value || '').toLowerCase().includes(term));
+      ], term);
 
-      return matchesStatus && matchesSearch;
+      return matchesStatus && matchesTerm;
     });
   }, [safeCustomers, searchTerm, statusFilter]);
+
+  // Typo-tolerant "Did you mean…" for buyer names when a search finds nothing.
+  const buyerSuggestions = searchTerm.trim() && filteredCustomers.length === 0
+    ? getSearchSuggestions(safeCustomers, searchTerm, (customer) => [customer?.name, customer?.contact_person])
+    : [];
+  const buyerSuggestionChips = (
+    <SearchSuggestions
+      items={buyerSuggestions}
+      getKey={(customer) => customer.id}
+      getLabel={(customer) => customer.name}
+      onPick={(customer) => setSearchTerm(customer.name)}
+    />
+  );
 
   // Derived State (KPIs)
   // Credits/overpayments are shown on the individual account but must not reduce
@@ -351,6 +366,7 @@ export default function BuyersList() {
                           <Search className="mx-auto mb-3 text-ink-500" size={26} />
                           <p className="font-display font-bold text-ink-900">No buyers match these filters</p>
                           <p className="mt-1 text-sm font-medium text-ink-600">Adjust the search term or account status.</p>
+                          {buyerSuggestionChips}
                         </td>
                       </tr>
                     )}
@@ -390,7 +406,7 @@ export default function BuyersList() {
                     </article>
                   );
                 })}
-                {filteredCustomers.length === 0 && <p className="p-6 text-center text-sm text-ink-muted">No buyers match these filters.</p>}
+                {filteredCustomers.length === 0 && <div className="p-6 text-center text-sm text-ink-muted"><p>No buyers match these filters.</p>{buyerSuggestionChips}</div>}
               </div>
             </section>
           </div>

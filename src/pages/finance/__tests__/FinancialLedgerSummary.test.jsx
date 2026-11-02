@@ -1,7 +1,7 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import * as React from 'react';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 globalThis.React = React;
 
@@ -63,6 +63,8 @@ const renderLedger = () => {
   ));
 };
 
+afterEach(cleanup);
+
 beforeEach(() => {
   vi.clearAllMocks();
   backendMocks.listLedgerEntries.mockImplementation((params) => (
@@ -99,6 +101,19 @@ describe('FinancialLedger summaries', () => {
         search_query: 'Auntie',
       }));
     });
+  });
+
+  it('says when a misspelt search was matched to a close customer name', async () => {
+    backendMocks.listLedgerEntries.mockImplementation((params) => Promise.resolve(params.search_query
+      ? { ...auntieResponse, summary_scope: { mode: 'search', search_query: 'Antie', typo_matched: true, matched_names: ['Auntie Grace'] } }
+      : allAccountsResponse));
+    renderLedger();
+
+    await screen.findByText('Total Sales');
+    fireEvent.click(screen.getByRole('button', { name: /Search and filter transactions/i }));
+    fireEvent.change(screen.getByRole('searchbox'), { target: { value: 'Antie' } });
+
+    expect(await screen.findByText('No exact match for “Antie”. Showing results for Auntie Grace.')).toBeTruthy();
   });
 
   it('toggles selected animals through a collapsible checkbox list', async () => {

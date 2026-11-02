@@ -28,3 +28,13 @@ export function isReplayableMutation(config) {
 export function isQueuedOffline(result) {
   return Boolean(result?.queued && result?.offline);
 }
+
+/**
+ * For online-only actions (payments, payroll, corrections): when the request never reached the
+ * server, say plainly that nothing happened, so a farmer doesn't assume staff were paid.
+ * Returns null when the server did answer, so callers fall back to the server's message.
+ */
+export function offlineFailureMessage(error, whatDidNotHappen) {
+  if (error?.response) return null;
+  return `No internet connection. ${whatDidNotHappen} Try again when you’re back online.`;
+}

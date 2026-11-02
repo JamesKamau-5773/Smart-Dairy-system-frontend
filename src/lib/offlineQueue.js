@@ -30,7 +30,8 @@ async function markFailure(entry, error) {
   const status = error?.response?.status;
   const code = error?.response?.data?.code;
   const attempts = entry.attempts + 1;
-  const isRetryable = !status || status >= 500 || code === 'IDEMPOTENCY_IN_PROGRESS';
+  // 401: the session ended; keep the change and send it after the farmer signs in again.
+  const isRetryable = !status || status >= 500 || status === 401 || code === 'IDEMPOTENCY_IN_PROGRESS';
   await update({
     ...entry,
     attempts,

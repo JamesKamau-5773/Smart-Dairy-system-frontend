@@ -4,6 +4,7 @@ import { authApi, normalizeSessionUser, normalizeTenantProfile, tenantApi } from
 import { clearSession, loadSession, saveSession } from '../lib/sessionStore';
 import { tenantRef } from '../lib/tenantRef';
 import { getAuthErrorMessage } from '../lib/authErrorMessages';
+import { SESSION_EXPIRED_EVENT } from '../lib/sessionEvents';
 
 const AuthContext = createContext();
 
@@ -12,6 +13,13 @@ const isSessionRejected = (error) => [401, 403].includes(error?.response?.status
 export function AuthProvider({ children }) {
   const [currentUser, setCurrentUser] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [sessionExpired, setSessionExpired] = useState(false);
+
+  useEffect(() => {
+    const onExpired = () => setSessionExpired(true);
+    window.addEventListener(SESSION_EXPIRED_EVENT, onExpired);
+    return () => window.removeEventListener(SESSION_EXPIRED_EVENT, onExpired);
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -112,6 +120,7 @@ export function AuthProvider({ children }) {
       
       setCurrentUser(user);
       await saveSession(user);
+      setSessionExpired(false);
       
       return { success: true, user };
     } catch (error) {
@@ -166,6 +175,7 @@ export function AuthProvider({ children }) {
       console.error('Logout request failed, clearing local state anyway.');
     } finally {
       setCurrentUser(null);
+      setSessionExpired(false);
       await clearSession();
       
       // Wipe the network interceptor variables
@@ -183,7 +193,7 @@ export function AuthProvider({ children }) {
 
   return React.createElement(
     AuthContext.Provider,
-    { value: { currentUser, login, register, claimAccount, completeRequiredPasswordReset, logout, updateSession, isLoading } },
+    { value: { currentUser, login, register, claimAccount, completeRequiredPasswordReset, logout, updateSession, isLoading, sessionExpired } },
     children,
   );
 }

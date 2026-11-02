@@ -1,4 +1,5 @@
 import { format, isValid, parseISO } from 'date-fns';
+import CowPhoto from '../../ui/CowPhoto';
 import { Skeleton } from '../../ui';
 import { getAvatarLabel } from './animalRecordUtils';
 
@@ -20,10 +21,8 @@ export default function AnimalSummaryCards({ animal, isLoading }) {
         <div className="relative mb-4 flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-full border border-brand/10 bg-gradient-to-br from-brand/15 via-accent/10 to-surface text-xl font-black text-brand ">
           {isLoading ? (
             <Skeleton className="h-full w-full rounded-full" />
-          ) : displayAnimal.photoUrl ? (
-            <img src={displayAnimal.photoUrl} alt="Cow Avatar" className="h-full w-full object-cover" />
           ) : (
-            getAvatarLabel(displayAnimal)
+            <CowPhoto src={displayAnimal.photoUrl} alt="Cow Avatar" size={64} fallback={getAvatarLabel(displayAnimal)} />
           )}
         </div>
         <div className="mb-1 text-[10px] font-bold uppercase tracking-widest text-ink-muted">Breed & Parents</div>

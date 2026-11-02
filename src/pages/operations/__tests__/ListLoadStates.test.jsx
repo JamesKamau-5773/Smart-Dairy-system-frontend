@@ -61,6 +61,7 @@ const screens = [
     label: 'milk records',
     noResults: /No milk log entries match/i,
     firstTimeEmpty: /No milk recorded yet/i,
+    firstTimeAction: /Record the first milking/i,
     cachedRow: { id: 'y1', cow_id: 'C-102', cow_name: 'Neema', amount: 12.5, session: 'morning', date: '2026-10-30' },
     cachedText: /Neema/,
   },
@@ -72,12 +73,13 @@ const screens = [
     label: 'medical records',
     noResults: /No medical records match/i,
     firstTimeEmpty: /No medical records yet/i,
+    firstTimeAction: /Log New Visit/i,
     cachedRow: { id: 12, cow: 'Mrembo · 005', date: '2026-09-23', diagnosis: 'Weight loss', vet: 'Dr. Njoroge', status: 'Closed', severity: 'Low' },
     cachedText: /Weight loss/,
   },
 ];
 
-describe.each(screens)('$name list states', ({ Page, load, queryKey, label, noResults, firstTimeEmpty, cachedRow, cachedText }) => {
+describe.each(screens)('$name list states', ({ Page, load, queryKey, label, noResults, firstTimeEmpty, firstTimeAction, cachedRow, cachedText }) => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
@@ -127,11 +129,12 @@ describe.each(screens)('$name list states', ({ Page, load, queryKey, label, noRe
     }
   });
 
-  it('distinguishes a first-time empty list from filters that match nothing', async () => {
+  it('distinguishes a first-time empty list from filters that match nothing, and offers the first action', async () => {
     load.mockResolvedValue([]);
     renderWithClient(<Page />);
 
     expect((await screen.findAllByText(firstTimeEmpty)).length).toBeGreaterThan(0);
     expect(screen.queryByText(noResults)).toBeNull();
+    expect(screen.getAllByRole('button', { name: firstTimeAction }).length).toBeGreaterThan(0);
   });
 });

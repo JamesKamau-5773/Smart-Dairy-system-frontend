@@ -1,4 +1,7 @@
 import { useState, useEffect } from 'react';
+import { normalizeKenyanPhone } from '../../lib/staffAccessForm';
+
+const PHONE_ERROR = 'Enter a Kenyan mobile number, for example 0712 345 678.';
 
 export default function CustomerForm({ customer, onSave, onCancel, isSaving }) {
   const [formData, setFormData] = useState({
@@ -58,13 +61,20 @@ export default function CustomerForm({ customer, onSave, onCancel, isSaving }) {
     }
   }, [customer]);
 
+  const [phoneError, setPhoneError] = useState('');
+
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
+    if (name === 'phone_number' && phoneError && normalizeKenyanPhone(value)) setPhoneError('');
   };
 
   const handleSubmit = (e) => {
     e.preventDefault();
+    if (!normalizeKenyanPhone(formData.phone_number)) {
+      setPhoneError(PHONE_ERROR);
+      return;
+    }
     
     // Determine the final customer type string to send to the backend
     const finalCustomerType = formData.customer_type === 'other' 
@@ -157,12 +167,19 @@ export default function CustomerForm({ customer, onSave, onCancel, isSaving }) {
           <input
             type="tel"
             name="phone_number"
+            inputMode="tel"
+            autoComplete="tel"
+            placeholder="0712 345 678"
             value={formData.phone_number}
             onChange={handleChange}
+            onBlur={() => setPhoneError(formData.phone_number && !normalizeKenyanPhone(formData.phone_number) ? PHONE_ERROR : '')}
             className="input-machined mt-1"
             required
             disabled={isSaving}
+            aria-invalid={Boolean(phoneError)}
+            aria-describedby={phoneError ? 'customer-phone-error' : undefined}
           />
+          {phoneError && <span id="customer-phone-error" className="mt-1.5 block text-xs text-danger-900">{phoneError}</span>}
         </label>
       </div>
 

@@ -12,6 +12,7 @@ import {
   Search,
   ShieldCheck,
   AlertCircle,
+  Plus,
   Trash2,
   Pencil,
   ImagePlus,
@@ -26,6 +27,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '../../components/ui/pop
 import { validateForm, ValidationRules, getFirstErrorMessage } from '../../lib/validation';
 import { formatDateTime, getRelativeTime, createAuditEntry, logToAuditTrail } from '../../lib/audit';
 import { getApiErrorMessage, herdApi } from '../../lib/backendApi'; 
+import CowPhoto from '../../components/ui/CowPhoto';
 import { ANIMAL_PHOTO_ACCEPT, compressAnimalPhoto, formatPhotoSize, getAnimalPhotoSourceError, getAnimalPhotoValidationError } from '../../lib/animalPhoto';
 import { formatCowIdentity } from '../../lib/cowIdentity';
 import { useTenant } from '../../hooks/useTenant';
@@ -36,6 +38,7 @@ import {
   hasValidTimestamp,
   normalizeHerdCow,
   getFilteredHerd,
+  getHerdSearchSuggestions,
   getHerdSummary,
   isMilkingStatus,
   isDryStatus,
@@ -519,6 +522,41 @@ export default function HerdRegistry() {
     setHerdSearch('');
   };
 
+  // Typo-tolerant "Did you mean…" when a search finds nothing (e.g. "Nema" → Neema, "KE12" → KE-012).
+  const herdSuggestions = herdSearch.trim() && visibleHerd.length === 0 ? getHerdSearchSuggestions(herdState, herdSearch) : [];
+  const emptyHerdContent = (
+    <div className="flex flex-col items-center gap-2">
+      <AlertCircle size={24} className="text-ink-muted" aria-hidden="true" />
+      <p className="text-sm font-medium text-ink-muted">
+        {hasActiveFilters ? 'No animals match your search or filters.' : 'Your herd is empty.'}
+      </p>
+      {herdSuggestions.length > 0 && (
+        <div className="flex flex-wrap items-center justify-center gap-2 text-sm">
+          <span className="text-ink-muted">Did you mean</span>
+          {herdSuggestions.map((cow) => (
+            <button
+              key={cow.recordId || cow.id}
+              type="button"
+              onClick={() => setHerdSearch(cow.name && cow.name !== 'Unnamed' ? cow.name : cow.id)}
+              className="rounded-full border border-brand/30 bg-brand-50 px-3 py-1 font-semibold text-brand hover:bg-brand-100"
+            >
+              {cow.name && cow.name !== 'Unnamed' ? `${cow.name} · ${cow.id}` : cow.id}
+            </button>
+          ))}
+        </div>
+      )}
+      {hasActiveFilters ? (
+        <button type="button" onClick={handleClearFilters} className="mt-1 text-xs font-bold text-brand hover:underline">
+          Clear filters
+        </button>
+      ) : (
+        <button type="button" onClick={() => setIsAddOpen(true)} className="btn-command mt-2 inline-flex items-center gap-2">
+          <Plus size={16} aria-hidden="true" /> Add your first cow
+        </button>
+      )}
+    </div>
+  );
+
   // ─────────────────────────────────────────────────────────────────────────
   // RENDER
   // ─────────────────────────────────────────────────────────────────────────
@@ -789,25 +827,7 @@ export default function HerdRegistry() {
                 : visibleHerd.length === 0
                   ? (
                     <tr>
-                      <td colSpan="8" className="px-4 py-8 text-center">
-                        <div className="flex flex-col items-center gap-2">
-                          <AlertCircle size={24} className="text-ink-muted" />
-                          <p className="text-sm text-ink-muted font-medium">
-                            {herdSearch || statusFilter !== 'All'
-                              ? 'No animals match your filters'
-                              : 'Your herd is empty. Add your first animal!'}
-                          </p>
-                          {(herdSearch || statusFilter !== 'All') && (
-                            <button
-                              type="button"
-                              onClick={handleClearFilters}
-                              className="text-xs text-brand font-bold hover:underline mt-2"
-                            >
-                              Clear filters
-                            </button>
-                          )}
-                        </div>
-                      </td>
+                      <td colSpan="8" className="px-4 py-8 text-center">{emptyHerdContent}</td>
                     </tr>
                   )
                   : visibleHerd.map((cow) => {
@@ -881,7 +901,7 @@ export default function HerdRegistry() {
         </div>
         <div className="space-y-3 p-3 md:hidden">
           {isLoading ? Array.from({ length: 4 }, (_, index) => <Skeleton key={index} className="h-36 w-full" />)
-            : visibleHerd.length === 0 ? <p className="p-5 text-center text-sm text-ink-muted">{herdSearch || statusFilter !== 'All' ? 'No animals match your filters.' : 'Your herd is empty.'}</p>
+            : visibleHerd.length === 0 ? <div className="p-5 text-center">{emptyHerdContent}</div>
               : visibleHerd.map((cow) => {
                 const routeId = getCowRouteId(cow);
                 return (
@@ -1104,15 +1124,12 @@ export default function HerdRegistry() {
           <div className="rounded-lg border border-ink/10 bg-surface-raised p-4">
             <div className="flex items-center gap-4">
               <div className="flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-ink/10 bg-surface text-brand">
-                {editingCow?.photoUrl ? (
-                  <img
-                    src={editingCow.photoUrl}
-                    alt={`${editingCow.name} profile`}
-                    className="h-full w-full object-cover"
-                  />
-                ) : (
-                  <ImagePlus size={28} aria-hidden="true" />
-                )}
+                <CowPhoto
+                  src={editingCow?.photoUrl}
+                  alt={`${editingCow?.name} profile`}
+                  size={80}
+                  fallback={<ImagePlus size={28} aria-hidden="true" />}
+                />
               </div>
               <div className="min-w-0 flex-1">
                 <label className="mb-1 block text-xs font-bold uppercase text-ink-muted" htmlFor="edit-animal-photo">

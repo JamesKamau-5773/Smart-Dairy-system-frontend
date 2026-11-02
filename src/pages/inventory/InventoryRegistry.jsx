@@ -275,8 +275,18 @@ export default function InventoryRegistry() {
       {/* STOCK TABLE */}
       <div className="min-w-0 overflow-hidden rounded-xl border border-slate-100 bg-white">
         {filteredInventoryData.length === 0 ? (
-          <div className="p-8 text-center text-sm text-slate-500">
-            No inventory items are available yet.
+          <div className="flex flex-col items-center gap-3 p-8 text-center text-sm text-ink-muted">
+            {(backendInventory || []).length === 0 ? (
+              <>
+                <p>No inventory items yet. Register your feed, medicines and supplies to track stock.</p>
+                <button type="button" onClick={() => setIsRegisterModalOpen(true)} className="btn-command">Register your first item</button>
+              </>
+            ) : (
+              <>
+                <p>No items match your search or category.</p>
+                <button type="button" onClick={() => { setSearchTerm(''); setCategoryFilter('All'); }} className="text-xs font-bold text-brand hover:underline">Clear filters</button>
+              </>
+            )}
           </div>
         ) : (
         <>

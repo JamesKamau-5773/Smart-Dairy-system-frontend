@@ -331,6 +331,14 @@ export default function YieldLog() {
     setShowFastLog(true);
   };
 
+  const milkFirstTimeEmpty = (
+    <div className="flex flex-col items-center gap-3">
+      <p>No milk recorded yet. Logged milkings will appear here.</p>
+      <button type="button" onClick={() => openCreateLog()} className="btn-command">Record the first milking</button>
+    </div>
+  );
+
+
   const openEditLog = (row) => {
     setFastLogMode('edit');
     setSelectedRecord(row);
@@ -690,7 +698,7 @@ export default function YieldLog() {
               empty={filteredMilkRows.length === 0 && (
               <tr>
                 <td className="p-6 text-center text-ink-muted" colSpan={7}>
-                  {milkRows.length === 0 ? 'No milk recorded yet. Logged milkings will appear here.' : 'No milk log entries match the selected filters.'}
+                  {milkRows.length === 0 ? milkFirstTimeEmpty : 'No milk log entries match the selected filters.'}
                 </td>
               </tr>
               )}
@@ -731,7 +739,7 @@ export default function YieldLog() {
               </article>
             );
           })}
-          {hasMilkRowsToShow && filteredMilkRows.length === 0 && <p className="p-6 text-center text-sm text-ink-muted">{milkRows.length === 0 ? 'No milk recorded yet. Logged milkings will appear here.' : 'No milk log entries match the selected filters.'}</p>}
+          {hasMilkRowsToShow && filteredMilkRows.length === 0 && <div className="p-6 text-center text-sm text-ink-muted">{milkRows.length === 0 ? milkFirstTimeEmpty : 'No milk log entries match the selected filters.'}</div>}
         </div>
       </div>
     </div>

@@ -31,6 +31,10 @@ import { useTenant } from '../../hooks/useTenant';
 import GroupedDateRows from '../../components/ui/GroupedDateRows';
 import { CardSkeletons, ListLoadMessage, SlowLoadingHint, StaleDataNotice, StatValue, TableSkeletonRows } from '../../components/ui/ListLoadState';
 import { getListLoadState } from '../../lib/listLoadState';
+import { useFormDraft } from '../../hooks/useFormDraft';
+import { getSearchSuggestions, matchesSearch } from '../../lib/fuzzySearch';
+import SearchSuggestions from '../../components/ui/SearchSuggestions';
+import DraftRestoredNotice from '../../components/ui/DraftRestoredNotice';
 
 const EMPTY_FORM = {
   cowTag: '',
@@ -44,6 +48,10 @@ const EMPTY_FORM = {
   severity: 'Medium',
   followUp: '',
 };
+
+// A visit draft is worth keeping once a cow or any clinical detail has been entered.
+const isVisitDraftEmpty = (values) => !['cowTag', 'symptoms', 'diagnosis', 'medications', 'recommendations', 'followUp']
+  .some((field) => String(values?.[field] ?? '').trim());
 
 const SEVERITY_STYLES = {
   High: 'bg-brand-100 text-brand-dark border-brand-200',
@@ -73,6 +81,12 @@ export default function VetRecords() {
   const [formErrors, setFormErrors] = useState({});
   const [isSaving, setIsSaving] = useState(false);
   const [editingRecordId, setEditingRecordId] = useState(null);
+  // New visits only: editing an existing record must not overwrite or reuse the draft.
+  const visitDraft = useFormDraft('medical-visit', form, setForm, {
+    enabled: editingRecordId == null,
+    isEmpty: isVisitDraftEmpty,
+    onRestore: () => setShowForm(true),
+  });
   const [showError, setShowError] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
@@ -202,10 +216,8 @@ export default function VetRecords() {
     const normalizedQuery = query.trim().toLowerCase();
 
     return records.filter((record) => {
-      const matchesQuery = !normalizedQuery || [record.cow, record.diagnosis, record.reason, record.vet, record.status, record.severity]
-        .join(' ')
-        .toLowerCase()
-        .includes(normalizedQuery);
+      const matchesQuery = !normalizedQuery
+        || matchesSearch([record.cow, record.diagnosis, record.reason, record.vet, record.status, record.severity], normalizedQuery);
       const matchesStatus = statusFilter === 'All' || record.status === statusFilter;
       const matchesSeverity = severityFilter === 'All' || record.severity === severityFilter;
 
@@ -214,6 +226,23 @@ export default function VetRecords() {
   }, [records, query, statusFilter, severityFilter]);
 
   const activeFilterCount = [query.trim(), statusFilter !== 'All', severityFilter !== 'All'].filter(Boolean).length;
+
+  // Typo-tolerant "Did you mean…" for cows and diagnoses when a search finds nothing.
+  const recordSuggestions = query.trim() && filteredRecords.length === 0
+    ? getSearchSuggestions(
+      [...new Map(records.map((record) => [record.cow, record])).values()],
+      query,
+      (record) => [String(record.cow ?? '').split(' · ')[0], String(record.cow ?? '').split(' · ')[1], record.diagnosis],
+    )
+    : [];
+  const recordSuggestionChips = (
+    <SearchSuggestions
+      items={recordSuggestions}
+      getKey={(record) => record.id ?? record.cow}
+      getLabel={(record) => record.cow}
+      onPick={(record) => setQuery(String(record.cow ?? '').split(' · ')[0])}
+    />
+  );
 
   const handleFieldChange = (field, value) => {
     setForm((current) => ({ ...current, [field]: value }));
@@ -325,6 +354,15 @@ export default function VetRecords() {
     setShowError(false);
     setShowForm(true);
     setSelectedRecord(null);
+  };
+
+  const startNewVisit = () => {
+    setEditingRecordId(null);
+    setForm(EMPTY_FORM);
+    setFormErrors({});
+    setShowForm(true);
+    // The form opens near the top of the page; bring it into view from the empty list.
+    requestAnimationFrame(() => document.getElementById('medical-visit-form')?.scrollIntoView({ behavior: 'smooth', block: 'start' }));
   };
 
   const clearFilters = () => {
@@ -500,7 +538,15 @@ export default function VetRecords() {
       </div>
 
       {showForm && (
-        <div className="card-machined border-brand/20 bg-surface/90 p-6 ">
+        <div id="medical-visit-form" className="card-machined border-brand/20 bg-surface/90 p-6 ">
+          {visitDraft.restored && (
+            <div className="mb-4">
+              <DraftRestoredNotice
+                onStartOver={() => { visitDraft.clearDraft(); setForm(EMPTY_FORM); }}
+                onDismiss={visitDraft.dismissRestored}
+              />
+            </div>
+          )}
           <div className="mb-6 flex items-center gap-3">
             <div className="rounded-2xl bg-brand/10 p-3 text-brand"><Stethoscope size={18} /></div>
             <div>
@@ -739,10 +785,14 @@ export default function VetRecords() {
                       <Search size={18} />
                     </div>
                     {records.length === 0 ? (
-                      <p className="font-semibold text-ink">No medical records yet. Treatments and vet visits you record will appear here.</p>
+                      <>
+                        <p className="font-semibold text-ink">No medical records yet. Treatments and vet visits you record will appear here.</p>
+                        <button type="button" onClick={startNewVisit} className="btn-command">{LABELS.LOG_NEW_VISIT}</button>
+                      </>
                     ) : (
                       <>
                         <p className="font-semibold text-ink">No medical records match the current filters.</p>
+                        {recordSuggestionChips}
                         <p className="text-sm leading-6">Try clearing the filters or searching by cow tag, diagnosis, status, or vet.</p>
                         <button type="button" onClick={clearFilters} className="btn-command bg-surface-raised text-ink">
                           Clear filters
@@ -779,7 +829,12 @@ export default function VetRecords() {
               </div>
             </article>
           ))}
-          {hasRecordsToShow && filteredRecords.length === 0 && <p className="p-6 text-center text-sm text-ink-muted">{records.length === 0 ? 'No medical records yet. Treatments and vet visits you record will appear here.' : 'No medical records match the current filters.'}</p>}
+          {hasRecordsToShow && filteredRecords.length === 0 && (records.length === 0 ? (
+            <div className="flex flex-col items-center gap-3 p-6 text-center text-sm text-ink-muted">
+              <p>No medical records yet. Treatments and vet visits you record will appear here.</p>
+              <button type="button" onClick={startNewVisit} className="btn-command">{LABELS.LOG_NEW_VISIT}</button>
+            </div>
+          ) : <div className="p-6 text-center text-sm text-ink-muted"><p>No medical records match the current filters.</p>{recordSuggestionChips}</div>)}
         </div>
       </div>
 

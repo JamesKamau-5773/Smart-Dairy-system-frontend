@@ -7,7 +7,17 @@ import { useTenant } from '../../hooks/useTenant';
 import { useAuth } from '../../contexts/AuthContext';
 import { hasRole } from '../../lib/roles';
 import { financeApi, getApiErrorMessage, herdApi } from '../../lib/backendApi';
-import { QUEUED_OFFLINE_MESSAGE, isQueuedOffline } from '../../lib/offlinePolicy';
+import { QUEUED_OFFLINE_MESSAGE, isQueuedOffline, offlineFailureMessage } from '../../lib/offlinePolicy';
+import { getMpesaCodeError } from '../../lib/validation';
+import Skeleton from '../../components/ui/Skeleton';
+import { CardSkeletons, ListLoadMessage, SlowLoadingHint, StaleDataNotice, TableSkeletonRows } from '../../components/ui/ListLoadState';
+import { getListLoadState } from '../../lib/listLoadState';
+import { useFormDraft } from '../../hooks/useFormDraft';
+import DraftRestoredNotice from '../../components/ui/DraftRestoredNotice';
+
+// A ledger draft is worth keeping once any amount, party, item or note has been typed.
+const isLedgerDraftEmpty = (values) => !['amount', 'party', 'item_name', 'description', 'reference_code', 'customer_id', 'income_source']
+  .some((field) => String(values?.[field] ?? '').trim());
 import { QUERY_KEYS } from '../../providers/QueryProvider';
 import Money from '../../components/ui/Money';
 import ReceiptPreview from '../../components/finance/ReceiptPreview';
@@ -200,7 +210,7 @@ const LedgerCorrectionModal = ({ transaction, onClose, onSubmit, isPending }) =>
   );
 };
 
-const LedgerEntryFormModal = ({ onClose, transactionType, farmId, tenantId }) => {
+const LedgerEntryFormModal = ({ onClose: closeModal, transactionType, farmId, tenantId }) => {
   const queryClient = useQueryClient();
   const [isAnimalListOpen, setIsAnimalListOpen] = useState(false);
   const [formData, setFormData] = useState(() => ({
@@ -221,6 +231,13 @@ const LedgerEntryFormModal = ({ onClose, transactionType, farmId, tenantId }) =>
     reference_code: '',
     description: '',
   }));
+  const [blankForm] = useState(formData);
+  const ledgerDraft = useFormDraft(`ledger-${transactionType}`, formData, setFormData, { isEmpty: isLedgerDraftEmpty });
+  // Any close (saved, cancelled or dismissed) ends the draft; only a reload or crash keeps it.
+  const onClose = () => {
+    ledgerDraft.clearDraft();
+    closeModal();
+  };
 
   const { data: customers = [] } = useQuery({
     queryKey: [QUERY_KEYS.CUSTOMERS, tenantId, farmId],
@@ -239,7 +256,7 @@ const LedgerEntryFormModal = ({ onClose, transactionType, farmId, tenantId }) =>
         return financeApi.recordCustomerPayment(newEntry.customer_id, {
           amount: newEntry.amount,
           category: newEntry.category,
-          ...(newEntry.reference_code?.trim() ? { reference_code: newEntry.reference_code.trim() } : {}),
+          ...(newEntry.reference_code?.trim() ? { reference_code: newEntry.reference_code.trim().toUpperCase() } : {}),
           note: newEntry.description,
           date: newEntry.date,
           payment_method: newEntry.payment_method,
@@ -258,7 +275,10 @@ const LedgerEntryFormModal = ({ onClose, transactionType, farmId, tenantId }) =>
       onClose();
     },
     onError: (error) => {
-      toast.error(`Failed to log transaction: ${getApiErrorMessage(error)}`);
+      toast.error(
+        (isCustomerPayment && offlineFailureMessage(error, 'This payment was not recorded.'))
+          || `Failed to log transaction: ${getApiErrorMessage(error)}`,
+      );
       console.error(error);
     },
   });
@@ -296,7 +316,8 @@ const LedgerEntryFormModal = ({ onClose, transactionType, farmId, tenantId }) =>
     : !formData.income_source.trim();
   const isCustomerPayment = transactionType === 'income' && formData.incomePayerType === 'customer';
   const isPaymentReferenceRequired = isCustomerPayment && formData.paymentMethod !== 'Cash';
-  const isIncomeFormInvalid = !formData.date || !formData.amount || !formData.category || isIncomeCounterpartyMissing || (isPaymentReferenceRequired && !formData.reference_code.trim());
+  const mpesaCodeError = isCustomerPayment && formData.paymentMethod === 'M-Pesa' ? getMpesaCodeError(formData.reference_code) : null;
+  const isIncomeFormInvalid = !formData.date || !formData.amount || !formData.category || isIncomeCounterpartyMissing || (isPaymentReferenceRequired && !formData.reference_code.trim()) || Boolean(mpesaCodeError);
   const requiresCommodityQuantity = transactionType === 'expense' && formData.category === 'Feed Purchase';
   const hasSelectedAnimals = formData.animal_ids.length > 0;
   const isAnimalAllocationIncomplete = hasSelectedAnimals !== Boolean(formData.animal_cost_type);
@@ -316,6 +337,12 @@ const LedgerEntryFormModal = ({ onClose, transactionType, farmId, tenantId }) =>
         </div>
         <form onSubmit={handleSubmit} className="flex min-h-0 flex-1 flex-col overflow-hidden">
           <div className="min-h-0 flex-1 space-y-4 overflow-y-auto overscroll-contain p-4 touch-pan-y sm:p-6">
+            {ledgerDraft.restored && (
+              <DraftRestoredNotice
+                onStartOver={() => { ledgerDraft.clearDraft(); setFormData(blankForm); }}
+                onDismiss={ledgerDraft.dismissRestored}
+              />
+            )}
             {transactionType === 'income' ? (
               <>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -358,7 +385,7 @@ const LedgerEntryFormModal = ({ onClose, transactionType, farmId, tenantId }) =>
                     </select>
                   </label>
                 </div>
-                <label className="form-control"><span className="label-text">Payment reference{isPaymentReferenceRequired ? ' (required)' : ' (optional)'}</span><input type="text" name="reference_code" value={formData.reference_code} onChange={handleChange} className="input-machined" placeholder={formData.paymentMethod === 'Cash' ? 'Optional for cash payments' : 'M-Pesa or bank transaction code'} required={isPaymentReferenceRequired} /></label>
+                <label className="form-control"><span className="label-text">Payment reference{isPaymentReferenceRequired ? ' (required)' : ' (optional)'}</span><input type="text" name="reference_code" value={formData.reference_code} onChange={handleChange} className="input-machined uppercase" placeholder={formData.paymentMethod === 'Cash' ? 'Optional for cash payments' : 'M-Pesa or bank transaction code'} required={isPaymentReferenceRequired} aria-invalid={Boolean(mpesaCodeError)} aria-describedby={mpesaCodeError ? 'reference-code-error' : undefined} />{mpesaCodeError && <span id="reference-code-error" className="mt-1.5 block text-xs text-danger-900">{mpesaCodeError}</span>}</label>
                 <label className="form-control"><span className="label-text">Income notes</span><textarea name="description" value={formData.description} onChange={handleChange} className="input-machined" rows="2" placeholder="What was this payment for?" /></label>
               </>
             ) : (
@@ -540,7 +567,7 @@ const FinancialLedger = () => {
     return () => window.clearTimeout(timeoutId);
   }, [searchQuery]);
 
-  const { data, isLoading, isError, error } = useQuery({
+  const { data, error, refetch, status: ledgerStatus, fetchStatus: ledgerFetchStatus } = useQuery({
     queryKey: [QUERY_KEYS.LEDGER_ENTRIES, tenantId, farmId, filters, debouncedSearchQuery],
     // The backend endpoint for the general ledger requires a scope. While this should
     // be handled by the tenant/farm ID in the headers, the ledger endpoint specifically
@@ -555,6 +582,17 @@ const FinancialLedger = () => {
     enabled: !!tenantId && !!farmId,
     keepPreviousData: true,
   });
+  const ledgerLoadState = getListLoadState({ status: ledgerStatus, fetchStatus: ledgerFetchStatus, data });
+  const isLoading = ledgerLoadState === 'loading';
+  const isListUnavailable = ledgerLoadState === 'offline' || ledgerLoadState === 'error';
+  // Totals come from the same request; never show a computed KES 0 for data that hasn't loaded.
+  const summaryValue = (node, { inverse = false } = {}) => {
+    if (isLoading) return <Skeleton className={`mt-1 h-7 w-24 ${inverse ? 'bg-white/20' : ''}`} />;
+    if (isListUnavailable) {
+      return <span className={`text-2xl font-black ${inverse ? 'text-white/60' : 'text-ink-muted'}`} title="Not available until transactions load">—</span>;
+    }
+    return node;
+  };
 
   const transactions = useMemo(() => data?.items || [], [data]);
   const filteredTransactions = useMemo(() => {
@@ -578,13 +616,27 @@ const FinancialLedger = () => {
       setTransactionToCorrect(null);
       toast.success('Expense corrected. The original entry is now voided.');
     },
-    onError: (correctionError) => toast.error(`Could not correct expense: ${getApiErrorMessage(correctionError)}`),
+    onError: (correctionError) => toast.error(
+      offlineFailureMessage(correctionError, 'The expense was not corrected and the original entry is unchanged.')
+        || `Could not correct expense: ${getApiErrorMessage(correctionError)}`,
+    ),
   });
 
   const handleOpenModal = (type) => {
     setModalTransactionType(type);
     setIsModalOpen(true);
   };
+
+  const ledgerFirstTimeEmpty = (
+    <div className="flex flex-col items-center gap-3">
+      <p>No transactions recorded yet. Record milk sales, payments and costs to see your profit.</p>
+      <div className="flex flex-wrap justify-center gap-2">
+        <button type="button" onClick={() => handleOpenModal('income')} className="btn-command inline-flex items-center gap-2"><Plus size={16} aria-hidden="true" /> Log income</button>
+        <button type="button" onClick={() => handleOpenModal('expense')} className="btn-secondary inline-flex items-center gap-2"><Plus size={16} aria-hidden="true" /> Log expense</button>
+      </div>
+    </div>
+  );
+
 
   const handleCloseModal = () => {
     setIsModalOpen(false);
@@ -642,16 +694,16 @@ const FinancialLedger = () => {
       <div className={`grid min-w-0 grid-cols-2 gap-3 sm:gap-4 ${searchQuery ? '' : 'lg:grid-cols-3'}`}>
         <SummaryCard
           title="Total Sales"
-          value={<CurrencyValue amount={summary.recognized_sales} />}
+          value={summaryValue(<CurrencyValue amount={summary.recognized_sales} />)}
           icon={TrendingUp}
           tone="success"
           tooltip="The total value of all milk billed through this ledger, whether the buyer has paid yet or not."
         />
         {!searchQuery && (
-          <SummaryCard title="Posted Costs" value={<CurrencyValue amount={summary.posted_costs} />} icon={TrendingDown} tone="danger" />
+          <SummaryCard title="Posted Costs" value={summaryValue(<CurrencyValue amount={summary.posted_costs} />)} icon={TrendingDown} tone="danger" />
         )}
         {!searchQuery && (
-          <SummaryCard title="Net Profit" value={<CurrencyValue amount={summary.net_profit} />} icon={ChevronsRight} />
+          <SummaryCard title="Net Profit" value={summaryValue(<CurrencyValue amount={summary.net_profit} />)} icon={ChevronsRight} />
         )}
       </div>
 
@@ -659,20 +711,20 @@ const FinancialLedger = () => {
         <div className="grid grid-cols-1 gap-px rounded-lg bg-white/20 sm:grid-cols-3">
           <LiquidityCard
             title="Customer Credit"
-            value={<CurrencyValue amount={summary.customer_credit} inverse />}
+            value={summaryValue(<CurrencyValue amount={summary.customer_credit} inverse />, { inverse: true })}
             icon={BadgeDollarSign}
           />
           <LiquidityCard
             title="Unpaid Money"
-            value={<CurrencyValue amount={summary.outstanding_receivables} inverse />}
+            value={summaryValue(<CurrencyValue amount={summary.outstanding_receivables} inverse />, { inverse: true })}
             icon={TrendingDown}
             tooltip="The total amount buyers currently owe you. This includes older debts that were added to a buyer's profile before you started using this daily ledger."
           />
           <LiquidityCard
             title="Ledger Records"
-            value={transactionTotal == null
+            value={summaryValue(transactionTotal == null
               ? <span className="text-base font-semibold text-white/70">Not available</span>
-              : <span className="font-mono text-2xl font-bold tabular-nums tracking-tight text-white">{Number(transactionTotal).toLocaleString()}</span>}
+              : <span className="font-mono text-2xl font-bold tabular-nums tracking-tight text-white">{Number(transactionTotal).toLocaleString()}</span>, { inverse: true })}
             icon={ListChecks}
           />
         </div>
@@ -722,6 +774,13 @@ const FinancialLedger = () => {
       </div>
 
       <div className="card-machined overflow-hidden !p-0">
+        {isLoading && <SlowLoadingHint label="transactions" />}
+        {data?.summary_scope?.typo_matched && (
+          <p role="status" className="border-b border-ink/10 bg-brand-50 px-4 py-2.5 text-sm text-brand-900">
+            No exact match for “{data.summary_scope.search_query}”. Showing results for {data.summary_scope.matched_names?.join(', ')}.
+          </p>
+        )}
+        {ledgerLoadState === 'stale' && <StaleDataNotice label="transactions" error={error} onRetry={refetch} />}
         <div className="hidden overflow-x-auto md:block">
           <table className="w-full text-left border-collapse">
             <thead className="bg-brand-800">
@@ -739,9 +798,9 @@ const FinancialLedger = () => {
             </thead>
             <tbody className="divide-y divide-ink/5 bg-white">
               {isLoading ? (
-                <tr><td colSpan="9" className="p-10 text-center text-ink-muted">Loading transactions...</td></tr>
-              ) : isError ? (
-                <tr><td colSpan="9" className="p-10 text-center text-brand-dark">Error: {getApiErrorMessage(error)}</td></tr>
+                <TableSkeletonRows columns={9} />
+              ) : isListUnavailable ? (
+                <tr><td colSpan="9"><ListLoadMessage state={ledgerLoadState} label="transactions" error={error} onRetry={refetch} /></td></tr>
               ) : filteredTransactions.length > 0 ? (
                 <GroupedDateRows
                   items={filteredTransactions}
@@ -790,14 +849,14 @@ const FinancialLedger = () => {
                   )}
                 />
               ) : null}
-              {!isLoading && !isError && filteredTransactions.length === 0 && (
-                <tr><td colSpan="9" className="p-10 text-center text-ink-muted">{transactions.length === 0 ? 'No transactions recorded yet.' : 'No transactions match the selected filters.'}</td></tr>
+              {!isLoading && !isListUnavailable && filteredTransactions.length === 0 && (
+                <tr><td colSpan="9" className="p-10 text-center text-ink-muted">{transactions.length === 0 ? ledgerFirstTimeEmpty : 'No transactions match the selected filters.'}</td></tr>
               )}
             </tbody>
           </table>
         </div>
         <div className="divide-y divide-ink/10 md:hidden">
-          {isLoading ? <p className="p-5 text-center text-sm text-ink-muted">Loading transactions...</p> : isError ? <p className="p-5 text-center text-sm text-brand-dark">Error: {getApiErrorMessage(error)}</p> : filteredTransactions.map((tx) => (
+          {isLoading ? <CardSkeletons /> : isListUnavailable ? <ListLoadMessage state={ledgerLoadState} label="transactions" error={error} onRetry={refetch} /> : filteredTransactions.map((tx) => (
             <article key={tx.id} className="min-w-0 space-y-3 p-4">
               <div className="flex min-w-0 items-start justify-between gap-3">
                 <div className="min-w-0"><time className="text-xs text-ink-muted">{format(parseISO(tx.date), 'PPP')}</time><p className="mt-1 break-words font-semibold text-ink">{tx.counterparty_name || tx.customer_name || tx.buyer_name || 'N/A'}</p></div>
@@ -815,7 +874,7 @@ const FinancialLedger = () => {
               </div>
             </article>
           ))}
-          {!isLoading && !isError && filteredTransactions.length === 0 && <p className="p-6 text-center text-sm text-ink-muted">{transactions.length === 0 ? 'No transactions recorded yet.' : 'No transactions match the selected filters.'}</p>}
+          {!isLoading && !isListUnavailable && filteredTransactions.length === 0 && <div className="p-6 text-center text-sm text-ink-muted">{transactions.length === 0 ? ledgerFirstTimeEmpty : 'No transactions match the selected filters.'}</div>}
         </div>
       </div>
 

@@ -178,3 +178,15 @@ export function parseFormData(formData) {
   });
   return data;
 }
+
+/**
+ * M-Pesa transaction codes are 10 letters and digits (shown in the M-Pesa SMS).
+ * Returns an error message, or null when the code is empty or looks valid.
+ */
+export function getMpesaCodeError(value) {
+  const code = String(value ?? '').trim().toUpperCase();
+  if (!code) return null;
+  return /^[A-Z0-9]{10}$/.test(code)
+    ? null
+    : 'M-Pesa codes have 10 letters and numbers, for example SBK7X2Y9QZ. Copy it from the M-Pesa SMS.';
+}

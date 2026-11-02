@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { normalizeEarTag, normalizeHerdCow } from '../herdUtils';
+import { getFilteredHerd, getHerdSearchSuggestions, normalizeEarTag, normalizeHerdCow } from '../herdUtils';
 
 describe('normalizeHerdCow', () => {
   it('normalizes casing and whitespace without changing the user identifier', () => {
@@ -29,5 +29,28 @@ describe('normalizeHerdCow', () => {
     const cow = normalizeHerdCow({ photoUrl: null }, { photoUrl: 'http://localhost:5000/uploads/old.jpg' });
 
     expect(cow.photoUrl).toBeNull();
+  });
+});
+describe('typo-tolerant herd search', () => {
+  const herd = [
+    { id: 'KE-012', recordId: '1', name: 'Neema Wanjiru', breed: 'Friesian', status: 'Milking' },
+    { id: 'KE-045', recordId: '2', name: 'Baraka', breed: 'Ayrshire', status: 'Dry' },
+    { id: 'KE-101', recordId: '3', name: 'Zawadi', breed: 'Jersey', status: 'Milking' },
+  ];
+
+  it('matches ear tags regardless of dashes, spaces and case', () => {
+    expect(getFilteredHerd(herd, 'All', 'ke012').map((cow) => cow.id)).toEqual(['KE-012']);
+    expect(getFilteredHerd(herd, 'All', 'KE 045').map((cow) => cow.id)).toEqual(['KE-045']);
+  });
+
+  it('suggests the closest cows for a misspelt name or tag', () => {
+    expect(getHerdSearchSuggestions(herd, 'Nema').map((cow) => cow.name)).toEqual(['Neema Wanjiru']);
+    expect(getHerdSearchSuggestions(herd, 'Barka').map((cow) => cow.name)).toEqual(['Baraka']);
+    expect(getHerdSearchSuggestions(herd, 'KE-102').map((cow) => cow.id)).toContain('KE-101');
+  });
+
+  it('does not suggest unrelated cows', () => {
+    expect(getHerdSearchSuggestions(herd, 'Princess')).toEqual([]);
+    expect(getHerdSearchSuggestions(herd, 'a')).toEqual([]);
   });
 });

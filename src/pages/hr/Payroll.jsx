@@ -1,5 +1,6 @@
 import { useState, useMemo, useEffect } from 'react';
 import { getApiErrorMessage, hrApi } from '../../lib/backendApi';
+import { offlineFailureMessage } from '../../lib/offlinePolicy';
 import { Calendar, CheckCircle, Clock, Users, Banknote, CalendarClock, History } from 'lucide-react';
 import { useStaff } from '../../providers/StaffProvider';
 import SlidePanel from '../../components/ui/SlidePanel';
@@ -255,8 +256,9 @@ export default function Payroll() {
         setLoadError('');
         toast.success(newRun.message || 'Payroll run created.');
       } catch (error) {
-        setLoadError(getApiErrorMessage(error) || 'Could not run payroll.');
-        toast.error(getApiErrorMessage(error) || 'Could not run payroll.');
+        const message = offlineFailureMessage(error, 'The payroll run was not created.') || getApiErrorMessage(error) || 'Could not run payroll.';
+        setLoadError(message);
+        toast.error(message);
       } finally {
         setIsRunning(false);
       }
@@ -273,7 +275,11 @@ export default function Payroll() {
       setAllRuns((current) => current.map((run) => run.id === updatedRun.id ? updatedRun : run));
       toast.success(action === 'finalize' ? 'Payroll run finalized.' : 'Payroll run paid successfully.');
     } catch (error) {
-      toast.error(getApiErrorMessage(error) || `Could not ${action} payroll run.`);
+      toast.error(
+        offlineFailureMessage(error, action === 'finalize' ? 'The payroll run was not finalized.' : 'Nobody was paid and nothing was changed.')
+          || getApiErrorMessage(error)
+          || `Could not ${action} payroll run.`,
+      );
     } finally {
       setIsUpdatingLifecycle(false);
     }

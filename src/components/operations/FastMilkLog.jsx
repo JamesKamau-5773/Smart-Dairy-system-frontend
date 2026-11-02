@@ -9,12 +9,17 @@ import { createIdempotencyKey } from '../../lib/apiClient';
 import AlertBanner from '../../components/ui/AlertBanner';
 import offlineQueue from '../../lib/offlineQueue';
 import { QUEUED_OFFLINE_MESSAGE, isQueuedOffline } from '../../lib/offlinePolicy';
+import { useFormDraft } from '../../hooks/useFormDraft';
+import DraftRestoredNotice from '../ui/DraftRestoredNotice';
 import { formatCowIdentity, resolveCowIdentityFromHerd } from '../../lib/cowIdentity';
 import { ArrowLeft, Droplets, CheckCircle2, AlertOctagon, CloudOff, Trash2, X } from 'lucide-react';
 
 const todayIso = () => new Date().toISOString().slice(0, 10);
 
 const SESSION_OPTIONS = ['morning', 'midday', 'evening'];
+
+// A milk draft is worth keeping once a cow or a volume has been entered.
+const isMilkDraftEmpty = (values) => !values?.cowId && !values?.volume;
 
 const normalizeFormData = (record, fallbackDate = todayIso()) => ({
   cowId: record?.cowId || '',
@@ -46,6 +51,7 @@ const FastMilkUI = ({
   messageType,
   onDismissMessage,
   mode,
+  draftNotice = null,
 }) => {
   const isEditMode = mode === 'edit';
 
@@ -105,6 +111,7 @@ const FastMilkUI = ({
       </div>
 
       <form onSubmit={onSubmit} className="p-8 space-y-6 bg-surface-warm/30">
+        {draftNotice}
         <div className="space-y-2">
           <label className="text-[11px] font-black text-ink-muted uppercase tracking-widest block">Select Cow</label>
           <div className="relative">
@@ -267,6 +274,11 @@ export default function FastMilkLog({ onClose, onSaveSuccess, onDeleteSuccess, m
     setIsDeleting(false);
   }, [record, mode, defaultCreateDate]);
 
+  const milkDraft = useFormDraft('milk-log', formData, setFormData, { enabled: !isEditMode, isEmpty: isMilkDraftEmpty });
+  const handleClose = onClose
+    ? () => { milkDraft.clearDraft(); onClose(); }
+    : undefined;
+
   // Mutation with idempotency and robust error handling
   const mutation = useMutation({
     mutationFn: async (payload) => {
@@ -380,7 +392,9 @@ export default function FastMilkLog({ onClose, onSaveSuccess, onDeleteSuccess, m
 
       console.error('Fast log save failed', err);
       setMessageType('danger');
-      setMessage('Failed to save. Try again.');
+      setMessage(status === 401
+        ? 'You were signed out, so this wasn’t saved. Sign in again, then press Save.'
+        : 'Failed to save. Try again.');
     },
   });
 
@@ -452,8 +466,14 @@ export default function FastMilkLog({ onClose, onSaveSuccess, onDeleteSuccess, m
         saveStatus={saveStatus}
         isPending={mutation.isLoading}
         isDeleting={isDeleting}
-        onClose={onClose}
+        onClose={handleClose}
         onBack={!onClose ? () => navigate(-1) : undefined}
+        draftNotice={milkDraft.restored ? (
+          <DraftRestoredNotice
+            onStartOver={() => { milkDraft.clearDraft(); setFormData(normalizeFormData(null, defaultCreateDate)); }}
+            onDismiss={milkDraft.dismissRestored}
+          />
+        ) : null}
         message={message}
         messageType={messageType}
         onDismissMessage={() => setMessage('')}

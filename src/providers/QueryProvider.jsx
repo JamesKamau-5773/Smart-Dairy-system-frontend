@@ -6,6 +6,7 @@ import { createAsyncStoragePersister } from '@tanstack/query-async-storage-persi
 import { PersistQueryClientProvider } from '@tanstack/react-query-persist-client';
 import { useAuth } from '../contexts/AuthContext';
 import offlineQueue from '../lib/offlineQueue';
+import { DATA_SAVER_EVENT, DATA_SAVER_STALE_TIME_MS, NORMAL_STALE_TIME_MS, isDataSaverEnabled } from '../lib/dataSaver';
 
 const OFFLINE_RETRY_INTERVAL_MS = 30 * 1000;
 
@@ -36,7 +37,7 @@ export const QUERY_KEYS = {
 export const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      staleTime: 1000 * 60 * 5, 
+      staleTime: isDataSaverEnabled() ? DATA_SAVER_STALE_TIME_MS : NORMAL_STALE_TIME_MS,
       retry: 2,                 
       refetchOnWindowFocus: false,
     },
@@ -67,6 +68,19 @@ export function QueryProvider({ children }) {
       previousNamespace.current = namespace;
     }
   }, [namespace]);
+
+  useEffect(() => {
+    // Data saver keeps data "fresh" longer, so pages refetch less often on mobile data.
+    const onDataSaverChange = (event) => {
+      const queries = queryClient.getDefaultOptions().queries ?? {};
+      queryClient.setDefaultOptions({
+        ...queryClient.getDefaultOptions(),
+        queries: { ...queries, staleTime: event.detail ? DATA_SAVER_STALE_TIME_MS : NORMAL_STALE_TIME_MS },
+      });
+    };
+    window.addEventListener(DATA_SAVER_EVENT, onDataSaverChange);
+    return () => window.removeEventListener(DATA_SAVER_EVENT, onDataSaverChange);
+  }, []);
 
   useEffect(() => {
     // Flush any queued offline writes when back online

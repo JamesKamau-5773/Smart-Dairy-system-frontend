@@ -1,4 +1,5 @@
 import { normalizeCowIdentity } from './cowIdentity';
+import { getSearchSuggestions, matchesSearch } from './fuzzySearch';
 
 /**
  * @file Utility functions for processing and normalizing herd registry data.
@@ -120,12 +121,7 @@ export function getFilteredHerd(herd, statusFilter, searchTerm) {
   const normalizedSearch = searchTerm.trim().toLowerCase();
   return herd
     .filter((cow) => matchesStatusFilter(cow.status, statusFilter))
-    .filter((cow) => {
-      if (!normalizedSearch) return true;
-      return [cow.id, cow.name, cow.breed, cow.status].some((field) =>
-        String(field).toLowerCase().includes(normalizedSearch)
-      );
-    })
+    .filter((cow) => !normalizedSearch || matchesSearch([cow.id, cow.name, cow.breed, cow.status], normalizedSearch))
     .slice()
     .sort((a, b) => {
       if (a.id === b.id) return 0;
@@ -161,4 +157,11 @@ export function getHerdSummary(herd) {
     latestCalved,
     latestUpdatedAt,
   };
+}
+/**
+ * "Did you mean…" for a herd search with no results: cows whose name (or any word of it) or ear tag
+ * is within a couple of typos of what was typed. Closest first.
+ */
+export function getHerdSearchSuggestions(herd, searchTerm, limit = 3) {
+  return getSearchSuggestions(herd, searchTerm, (cow) => [cow.id, cow.name], limit);
 }

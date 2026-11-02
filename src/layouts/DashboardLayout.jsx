@@ -4,6 +4,9 @@ import Header from './Header';
 import MobileBottomNav from './MobileBottomNav';
 import DebugBar from './DebugBar';
 import OfflineBanner from '../components/ui/OfflineBanner';
+import ErrorBoundary from '../components/errors/ErrorBoundary';
+import SessionExpiredSheet from '../components/ui/SessionExpiredSheet';
+import { usePrefetchOfflineEssentials } from '../hooks/usePrefetchOfflineEssentials';
 import { useLayoutEffect, useRef, useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { hasPageAccess } from '../lib/roles';
@@ -37,6 +40,7 @@ export default function DashboardLayout() {
   const { pathname } = useLocation();
   const shellRef = useRef(null);
   const pageContentRef = useRef(null);
+  usePrefetchOfflineEssentials();
 
   useLayoutEffect(() => {
     const html = document.documentElement;
@@ -93,11 +97,14 @@ export default function DashboardLayout() {
         
         {/* Page Content Injection - responsive padding */}
         <div ref={pageContentRef} className="min-h-0 min-w-0 flex-1 overflow-x-hidden overflow-y-auto overscroll-contain p-4 sm:p-6 md:p-8">
-          <PageAccessGate><Outlet /></PageAccessGate>
+          <ErrorBoundary variant="page" resetKey={pathname}>
+            <PageAccessGate><Outlet /></PageAccessGate>
+          </ErrorBoundary>
         </div>
       </main>
 
       <MobileBottomNav />
+      <SessionExpiredSheet />
       <DebugBar />
 
       </div>

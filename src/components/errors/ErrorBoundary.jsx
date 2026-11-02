@@ -1,5 +1,6 @@
 import React from 'react';
 import { AlertTriangle, RefreshCw } from 'lucide-react';
+import { SITE } from '../../landing/content';
 
 /**
  * Error Boundary Component
@@ -31,6 +32,11 @@ export default class ErrorBoundary extends React.Component {
     console.error('[Error Boundary]', error, errorInfo);
   }
 
+  componentDidUpdate(prevProps) {
+    // A page-level boundary is keyed to the route; moving to another page clears the error.
+    if (this.state.hasError && prevProps.resetKey !== this.props.resetKey) this.handleReset();
+  }
+
   handleReset = () => {
     this.setState({
       hasError: false,
@@ -41,29 +47,27 @@ export default class ErrorBoundary extends React.Component {
 
   render() {
     if (this.state.hasError) {
-      const isDevelopment = process.env.NODE_ENV === 'development';
+      const isPage = this.props.variant === 'page';
 
       return (
-        <div className="flex min-h-screen items-center justify-center bg-surface p-4">
-          <div className="w-full max-w-md rounded-2xl bg-surface-raised p-8 ">
-            {/* Icon */}
+        <div role="alert" className={`flex items-center justify-center p-4 ${isPage ? 'min-h-[60vh]' : 'min-h-screen bg-background'}`}>
+          <div className="w-full max-w-md rounded-modal border border-ink/10 bg-white p-8">
             <div className="mb-4 flex justify-center">
-              <div className="rounded-full bg-rose-100 p-4">
-                <AlertTriangle size={32} className="text-rose-600" />
+              <div className="rounded-full bg-danger-50 p-4">
+                <AlertTriangle size={32} className="text-danger-900" aria-hidden="true" />
               </div>
             </div>
 
-            {/* Title & Message */}
             <h1 className="mb-2 text-center text-xl font-bold text-ink">
-              Something went wrong
+              {isPage ? 'This page stopped working' : 'Maziwa Smart stopped working'}
             </h1>
             <p className="mb-6 text-center text-sm text-ink-muted">
-              We encountered an unexpected error. Try refreshing the page or contact support if the problem persists.
+              This is a problem in the app, not something you did. Records you already saved are safe,
+              and anything saved on this phone will still be sent. Try again, or reload the app.
             </p>
 
-            {/* Error Details (Development Only) */}
-            {isDevelopment && this.state.error && (
-              <div className="mb-6 max-h-40 overflow-auto rounded-lg bg-rose-50 p-3 font-mono text-xs text-rose-900">
+            {import.meta.env.DEV && this.state.error && (
+              <div className="mb-6 max-h-40 overflow-auto rounded-input bg-danger-50 p-3 font-mono text-xs text-danger-900">
                 <p className="font-bold">Error:</p>
                 <p>{this.state.error.toString()}</p>
                 {this.state.errorInfo?.componentStack && (
@@ -75,28 +79,28 @@ export default class ErrorBoundary extends React.Component {
               </div>
             )}
 
-            {/* Actions */}
             <div className="flex flex-col gap-3">
               <button
+                type="button"
                 onClick={this.handleReset}
-                className="flex items-center justify-center gap-2 rounded-lg bg-brand px-4 py-2.5 font-medium text-white transition-colors hover:bg-brand-dark"
+                className="flex items-center justify-center gap-2 rounded-button bg-brand px-4 py-2.5 font-medium text-white transition-colors hover:bg-brand-dark"
               >
-                <RefreshCw size={18} />
-                Try Again
+                <RefreshCw size={18} aria-hidden="true" />
+                Try again
               </button>
               <button
-                onClick={() => window.location.href = '/app'}
-                className="rounded-lg border border-ink/10 bg-surface px-4 py-2.5 font-medium text-ink transition-colors hover:bg-surface-raised"
+                type="button"
+                onClick={() => window.location.reload()}
+                className="rounded-button border border-ink/10 bg-surface px-4 py-2.5 font-medium text-ink transition-colors hover:bg-brand-50"
               >
-                Go Home
+                Reload the app
               </button>
             </div>
 
-            {/* Error Count Warning */}
             {this.state.errorCount > 3 && (
-              <div className="mt-4 rounded-lg bg-amber-50 p-3 text-sm text-amber-900">
-                This error has occurred {this.state.errorCount} times. Refresh the page. If it keeps happening, contact support.
-              </div>
+              <p className="mt-4 rounded-input bg-warning-50 p-3 text-sm text-ink">
+                This keeps happening. Reload the app, and if it still doesn’t work, call us on {SITE.phoneDisplay}.
+              </p>
             )}
           </div>
         </div>

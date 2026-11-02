@@ -1,4 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
+import Skeleton from '../../components/ui/Skeleton';
+import { ListLoadMessage, SlowLoadingHint } from '../../components/ui/ListLoadState';
+import { getListLoadState } from '../../lib/listLoadState';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import toast from 'react-hot-toast';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
@@ -321,8 +324,9 @@ function SemenInventory({ stock, onAddInventory, onRestockInventory, onDeleteInv
 
       <div className="space-y-3">
         {stock.length === 0 && (
-          <div className="rounded-lg border border-dashed border-ink/10 bg-surface-raised p-4 text-sm text-ink-muted">
-            No semen inventory records yet.
+          <div className="flex flex-col items-start gap-3 rounded-lg border border-dashed border-ink/10 bg-surface-raised p-4 text-sm text-ink-muted">
+            <p>No semen inventory records yet. Add straws you have in the tank so services can be logged against them.</p>
+            <button type="button" onClick={onAddInventory} className="btn-command">Add semen inventory</button>
           </div>
         )}
 
@@ -446,17 +450,21 @@ export default function BreedingHub() {
     enabled: !!tenantId && !!farmId,
   });
 
-  const { data: geneticProgressData, isLoading: isLoadingGeneticProgress } = useQuery({
+  const {
+    data: geneticProgressData,
+    error: geneticProgressError,
+    refetch: refetchGeneticProgress,
+    status: geneticProgressStatus,
+    fetchStatus: geneticProgressFetchStatus,
+  } = useQuery({
     queryKey: ['herd', 'genetic-progress', tenantId, farmId],
-    queryFn: async () => {
-      try {
-        return await herdApi.geneticProgress();
-      } catch (error) {
-        console.error('Failed to load genetic progress data:', error);
-        return [];
-      }
-    },
+    queryFn: () => herdApi.geneticProgress(),
     enabled: !!tenantId && !!farmId,
+  });
+  const geneticProgressLoadState = getListLoadState({
+    status: geneticProgressStatus,
+    fetchStatus: geneticProgressFetchStatus,
+    data: geneticProgressData,
   });
 
   const { data: breedingLogsData } = useQuery({
@@ -708,8 +716,13 @@ export default function BreedingHub() {
               <TrendingUp size={16} className="text-accent" /> Herd Genetic Progress
             </h3>
 
-            {isLoadingGeneticProgress ? (
-              <div className="h-[300px] flex items-center justify-center text-ink-muted">Loading chart data...</div>
+            {geneticProgressLoadState === 'loading' ? (
+              <div aria-busy="true">
+                <SlowLoadingHint label="the chart" />
+                <Skeleton className="h-[300px] w-full" />
+              </div>
+            ) : geneticProgressLoadState === 'error' || geneticProgressLoadState === 'offline' ? (
+              <ListLoadMessage state={geneticProgressLoadState} label="the genetic progress chart" error={geneticProgressError} onRetry={refetchGeneticProgress} />
             ) : geneticProgressData && geneticProgressData.length > 0 ? (
               <ResponsiveContainer width="100%" height={300}>
                 <LineChart data={geneticProgressData} margin={{ top: 5, right: 20, left: -10, bottom: 5 }}>

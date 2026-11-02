@@ -2,7 +2,7 @@ import React, { useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Link, useParams } from 'react-router-dom';
 import { ArrowLeft, Activity, Calendar, Droplets, ShieldAlert, TrendingUp, Search, Filter, RotateCcw, ChevronDown } from 'lucide-react';
-import { animalsApi, getApiErrorMessage, herdApi } from '../../lib/backendApi';
+import { animalsApi, herdApi } from '../../lib/backendApi';
 import { normalizeAnimal } from '../../lib/animalUtils';
 import {
   filterMilkHistorySessions,
@@ -10,6 +10,9 @@ import {
 } from '../../lib/milkUtils';
 import { useTenant } from '../../hooks/useTenant';
 import GroupedDateRows from '../../components/ui/GroupedDateRows';
+import Skeleton from '../../components/ui/Skeleton';
+import { CardSkeletons, ListLoadMessage, SlowLoadingHint, TableSkeletonRows } from '../../components/ui/ListLoadState';
+import { getListLoadState } from '../../lib/listLoadState';
 import { CartesianGrid, Legend, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 
 export function buildMilkYieldTrend(sessions, range = 'all') {
@@ -33,7 +36,7 @@ export function buildMilkYieldTrend(sessions, range = 'all') {
   return records.slice(-Number(range));
 }
 
-function MetricCard({ label, value, icon: Icon, tone = 'brand' }) {
+function MetricCard({ label, value, icon: Icon, tone = 'brand', loading = false }) {
   const toneStyles = {
     brand: 'bg-brand/10 text-brand',
     accent: 'bg-accent/10 text-accent-dark',
@@ -48,7 +51,7 @@ function MetricCard({ label, value, icon: Icon, tone = 'brand' }) {
       </div>
       <div>
         <div className="text-[10px] uppercase tracking-widest text-ink-muted font-bold">{label}</div>
-        <div className="text-xl font-black text-ink">{value}</div>
+        {loading ? <Skeleton className="mt-1.5 h-6 w-20" /> : <div className="text-xl font-black text-ink">{value}</div>}
       </div>
     </div>
   );
@@ -65,7 +68,7 @@ export default function MilkHistory() {
     session: 'all',
   });
 
-  const { data: history, isLoading, isError, error, refetch } = useQuery({
+  const { data: history, isLoading, error, refetch, status, fetchStatus } = useQuery({
     queryKey: ['milk-history', tenantId, farmId, id],
     queryFn: async () => {
       let resolvedId = id;
@@ -137,13 +140,13 @@ export default function MilkHistory() {
 
   const clearFilters = () => setFilters({ search: '', date: '', status: 'all', session: 'all' });
 
-  if (isError) {
+  const loadState = getListLoadState({ status, fetchStatus, data: history });
+
+  if (loadState === 'error' || loadState === 'offline') {
     return (
       <div className="animate-reveal space-y-6 max-w-6xl mx-auto">
-        <div className="rounded-2xl border border-danger/20 bg-danger/5 p-6 text-sm text-danger">
-          <p className="font-semibold">Unable to load this cow&apos;s milk history.</p>
-          <p className="mt-1 text-danger/80">{getApiErrorMessage(error, 'Check your connection and retry the milk history request.')}</p>
-          <button type="button" onClick={() => refetch()} className="btn-command mt-4">Retry</button>
+        <div className="card-machined bg-surface">
+          <ListLoadMessage state={loadState} label="this cow’s milk history" error={error} onRetry={refetch} />
         </div>
       </div>
     );
@@ -185,10 +188,10 @@ export default function MilkHistory() {
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
-        <MetricCard label="Cow" value={resolvedHistory?.animal?.name || 'Unknown Cow'} icon={Droplets} />
-        <MetricCard label="Average Yield" value={averageYield} icon={TrendingUp} />
-        <MetricCard label="Peak Yield" value={peakYield} icon={Calendar} />
-        <MetricCard label="Total Logged" value={`${totalYield} L`} icon={ShieldAlert} tone="accent" />
+        <MetricCard loading={isLoading} label="Cow" value={resolvedHistory?.animal?.name || 'Unknown Cow'} icon={Droplets} />
+        <MetricCard loading={isLoading} label="Average Yield" value={averageYield} icon={TrendingUp} />
+        <MetricCard loading={isLoading} label="Peak Yield" value={peakYield} icon={Calendar} />
+        <MetricCard loading={isLoading} label="Total Logged" value={`${totalYield} L`} icon={ShieldAlert} tone="accent" />
       </div>
 
       <section className="card-machined overflow-hidden bg-surface">
@@ -206,7 +209,9 @@ export default function MilkHistory() {
           </div>
         </div>
         <div className="h-96 px-3 py-4 sm:px-5">
-          {trendData.length > 0 ? (
+          {isLoading ? (
+            <Skeleton className="h-full w-full" />
+          ) : trendData.length > 0 ? (
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={trendData} margin={{ top: 5, right: 20, left: -10, bottom: 5 }}>
                 <CartesianGrid strokeDasharray="3 3" strokeOpacity={0.2} />
@@ -327,7 +332,11 @@ export default function MilkHistory() {
         </div>
 
         {isLoading ? (
-          <div className="p-8 text-center text-ink-muted">Loading milk history…</div>
+          <div aria-busy="true">
+            <SlowLoadingHint label="milk history" />
+            <table className="hidden w-full md:table"><tbody><TableSkeletonRows columns={5} /></tbody></table>
+            <div className="divide-y divide-ink/10 md:hidden"><CardSkeletons /></div>
+          </div>
         ) : filteredSessions.length > 0 ? (
           <>
             <div className="hidden overflow-x-auto md:block">
