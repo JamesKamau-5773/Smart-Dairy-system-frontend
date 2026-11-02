@@ -4,6 +4,7 @@ import Header from './Header';
 import MobileBottomNav from './MobileBottomNav';
 import DebugBar from './DebugBar';
 import OfflineBanner from '../components/ui/OfflineBanner';
+import PhoneVerificationBanner from '../components/auth/PhoneVerificationBanner';
 import ErrorBoundary from '../components/errors/ErrorBoundary';
 import SessionExpiredSheet from '../components/ui/SessionExpiredSheet';
 import { usePrefetchOfflineEssentials } from '../hooks/usePrefetchOfflineEssentials';
@@ -94,6 +95,7 @@ export default function DashboardLayout() {
         
         <Header onMenuClick={() => setMobileMenuOpen((open) => !open)} />
         <OfflineBanner />
+        <PhoneVerificationBanner />
         
         {/* Page Content Injection - responsive padding */}
         <div ref={pageContentRef} className="min-h-0 min-w-0 flex-1 overflow-x-hidden overflow-y-auto overscroll-contain p-4 sm:p-6 md:p-8">

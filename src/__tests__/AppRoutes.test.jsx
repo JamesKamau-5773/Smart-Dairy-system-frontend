@@ -2,7 +2,7 @@ import React from 'react';
 import { cleanup, render, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
-import { ProtectedRoute, RequiredPasswordResetRoute, RoleLandingRedirect } from '../App';
+import { PhoneVerificationRoute, ProtectedRoute, RequiredPasswordResetRoute, RoleLandingRedirect } from '../App';
 import { useAuth } from '../contexts/AuthContext';
 
 void React;
@@ -17,6 +17,7 @@ const renderProtectedPath = (authState) => {
       <Routes>
         <Route path="/login" element={<div>Login page</div>} />
         <Route path="/reset-required-password" element={<div>Required reset page</div>} />
+        <Route path="/verify-phone" element={<div>Verify phone page</div>} />
         <Route path="/hr/staff" element={<ProtectedRoute><div>Staff registry</div></ProtectedRoute>} />
       </Routes>
     </MemoryRouter>
@@ -71,5 +72,45 @@ describe('/app entry point', () => {
   it('sends signed-in users to their role landing page', () => {
     renderAppEntry({ currentUser: { id: 1, role: 'SUPER_ADMIN' }, isLoading: false });
     expect(screen.getByText('System admin')).toBeTruthy();
+  });
+});
+
+describe('phone verification gate (AUTH_API_CONTRACT §2.3)', () => {
+  it('keeps a Google user without a verified phone out of the app', () => {
+    renderProtectedPath({ currentUser: { id: 7, auth_state: 'PHONE_VERIFICATION_REQUIRED' }, isLoading: false });
+    expect(screen.getByText('Verify phone page')).toBeTruthy();
+    expect(screen.queryByText('Staff registry')).toBeNull();
+  });
+
+  it('lets an active user into the app even with an unverified phone (banner only)', () => {
+    renderProtectedPath({ currentUser: { id: 7, auth_state: 'ACTIVE', account_flags: { phone_verified: false } }, isLoading: false });
+    expect(screen.getByText('Staff registry')).toBeTruthy();
+  });
+
+  it('sends a password reset before phone verification', () => {
+    renderProtectedPath({ currentUser: { id: 7, auth_state: 'PHONE_VERIFICATION_REQUIRED', requires_password_reset: true }, isLoading: false });
+    expect(screen.getByText('Required reset page')).toBeTruthy();
+  });
+
+  it('opens the phone screen for any signed-in user, but not signed-out visitors', () => {
+    useAuth.mockReturnValue({ currentUser: { id: 7, auth_state: 'ACTIVE' }, isLoading: false });
+    const { unmount } = render(
+      <MemoryRouter initialEntries={['/verify-phone']}>
+        <PhoneVerificationRoute><div>Phone form</div></PhoneVerificationRoute>
+      </MemoryRouter>
+    );
+    expect(screen.getByText('Phone form')).toBeTruthy();
+    unmount();
+
+    useAuth.mockReturnValue({ currentUser: null, isLoading: false });
+    render(
+      <MemoryRouter initialEntries={['/verify-phone']}>
+        <Routes>
+          <Route path="/login" element={<div>Login page</div>} />
+          <Route path="/verify-phone" element={<PhoneVerificationRoute><div>Phone form</div></PhoneVerificationRoute>} />
+        </Routes>
+      </MemoryRouter>
+    );
+    expect(screen.getByText('Login page')).toBeTruthy();
   });
 });

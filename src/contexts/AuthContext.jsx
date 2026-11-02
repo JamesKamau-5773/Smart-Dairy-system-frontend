@@ -3,7 +3,7 @@ import React, { createContext, useContext, useState, useEffect } from 'react';
 import { authApi, normalizeSessionUser, normalizeTenantProfile, tenantApi } from '../lib/backendApi';
 import { clearSession, loadSession, saveSession } from '../lib/sessionStore';
 import { tenantRef } from '../lib/tenantRef';
-import { getAuthErrorMessage } from '../lib/authErrorMessages';
+import { describeAuthError, getAuthErrorMessage } from '../lib/authErrorMessages';
 import { SESSION_EXPIRED_EVENT } from '../lib/sessionEvents';
 
 const AuthContext = createContext();
@@ -124,7 +124,8 @@ export function AuthProvider({ children }) {
       
       return { success: true, user };
     } catch (error) {
-      return { success: false, error: getAuthErrorMessage(error, 'login') };
+      const details = describeAuthError(error, 'login');
+      return { success: false, error: details.message, details };
     }
   };
 
@@ -138,7 +139,8 @@ export function AuthProvider({ children }) {
       return { success: true };
     } catch (error) {
       const flow = payload?.role === 'SUPER_ADMIN' ? 'bootstrap' : 'register';
-      return { success: false, error: getAuthErrorMessage(error, flow) };
+      const details = describeAuthError(error, flow);
+      return { success: false, error: details.message, details };
     }
   };
 
@@ -191,9 +193,18 @@ export function AuthProvider({ children }) {
     await saveSession(normalizedUser);
   };
 
+  // Re-reads the account from the server, e.g. after Google sign-in set the session
+  // cookie or a phone was verified. Throws so the caller can show its own error.
+  const refreshUser = async () => {
+    const user = await authApi.me();
+    await updateSession(user);
+    setSessionExpired(false);
+    return normalizeSessionUser(user);
+  };
+
   return React.createElement(
     AuthContext.Provider,
-    { value: { currentUser, login, register, claimAccount, completeRequiredPasswordReset, logout, updateSession, isLoading, sessionExpired } },
+    { value: { currentUser, login, register, claimAccount, completeRequiredPasswordReset, logout, updateSession, refreshUser, isLoading, sessionExpired } },
     children,
   );
 }

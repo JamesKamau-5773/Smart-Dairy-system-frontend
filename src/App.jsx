@@ -2,6 +2,7 @@ import { Suspense, lazy } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from './contexts/AuthContext';
 import { canAccessCommandCenter, getDefaultLandingPath, hasRole, isSingleTenantUser } from './lib/roles';
+import { AUTH_STATES, getAuthState, getGateRoute } from './lib/authState';
 
 // Import the StaffProvider to fix the useStaff context error
 import { StaffProvider } from './providers/StaffProvider';
@@ -14,6 +15,11 @@ const LoginPage = lazy(() => import('./pages/auth/LoginPage.jsx'));
 const RegisterPage = lazy(() => import('./pages/auth/RegisterPage.jsx'));
 const ClaimAccountPage = lazy(() => import('./pages/auth/ClaimAccountPage.jsx'));
 const RequiredPasswordResetPage = lazy(() => import('./pages/auth/RequiredPasswordResetPage.jsx'));
+const ForgotPasswordPage = lazy(() => import('./pages/auth/ForgotPasswordPage.jsx'));
+const ResetPasswordPage = lazy(() => import('./pages/auth/ResetPasswordPage.jsx'));
+const VerifyPhonePage = lazy(() => import('./pages/auth/VerifyPhonePage.jsx'));
+const VerifyEmailPage = lazy(() => import('./pages/auth/VerifyEmailPage.jsx'));
+const GoogleCompletePage = lazy(() => import('./pages/auth/GoogleCompletePage.jsx'));
 const SystemAdminDashboardPage = lazy(() => import('./pages/auth/SystemAdminDashboardPage.jsx'));
 const SuperAdminCooperativeSetupPage = lazy(() => import('./pages/auth/SuperAdminCooperativeSetupPage.jsx'));
 const CooperativeAdminOnboardingPage = lazy(() => import('./pages/auth/CooperativeAdminOnboardingPage.jsx'));
@@ -70,7 +76,8 @@ export const ProtectedRoute = ({ children }) => {
   }
 
   if (!currentUser) return <Navigate to="/login" replace />;
-  if (currentUser.requires_password_reset) return <Navigate to="/reset-required-password" replace />;
+  const gateRoute = getGateRoute(currentUser);
+  if (gateRoute) return <Navigate to={gateRoute} replace />;
 
   return children;
 };
@@ -96,7 +103,20 @@ export const RequiredPasswordResetRoute = ({ children }) => {
 
   if (isLoading) return <RouteLoadingFallback label="Checking password status…" />;
   if (!currentUser) return <Navigate to="/login" replace />;
-  if (!currentUser.requires_password_reset) return <Navigate to={getDefaultRoute(currentUser)} replace />;
+  if (getAuthState(currentUser) !== AUTH_STATES.PASSWORD_RESET_REQUIRED) return <Navigate to={getDefaultRoute(currentUser)} replace />;
+
+  return children;
+};
+
+// Open to any signed-in user: the Google sign-in gate sends people here, and the
+// dashboard banner lets everyone else add or verify a phone. A required password
+// reset still comes first.
+export const PhoneVerificationRoute = ({ children }) => {
+  const { currentUser, isLoading } = useAuth();
+
+  if (isLoading) return <RouteLoadingFallback label="Checking your account…" />;
+  if (!currentUser) return <Navigate to="/login" replace />;
+  if (getAuthState(currentUser) === AUTH_STATES.PASSWORD_RESET_REQUIRED) return <Navigate to="/reset-required-password" replace />;
 
   return children;
 };
@@ -180,6 +200,18 @@ export default function App() {
           <Route path="/register" element={renderLazyPage(RegisterPage, 'Loading registration…')} />
           <Route path="/login" element={renderLazyPage(LoginPage, 'Loading login…')} />
           <Route path="/claim-account" element={renderLazyPage(ClaimAccountPage, 'Loading claim account…')} />
+          <Route path="/forgot-password" element={renderLazyPage(ForgotPasswordPage, 'Loading password reset…')} />
+          <Route path="/reset-password" element={renderLazyPage(ResetPasswordPage, 'Loading password reset…')} />
+          <Route path="/verify-email" element={renderLazyPage(VerifyEmailPage, 'Loading email verification…')} />
+          <Route path="/auth/google/complete" element={renderLazyPage(GoogleCompletePage, 'Signing you in…')} />
+          <Route
+            path="/verify-phone"
+            element={(
+              <PhoneVerificationRoute>
+                {renderLazyPage(VerifyPhonePage, 'Loading phone verification…')}
+              </PhoneVerificationRoute>
+            )}
+          />
           <Route
             path="/reset-required-password"
             element={(

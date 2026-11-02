@@ -56,7 +56,10 @@ apiClient.interceptors.request.use((config) => {
   
   if (sessionStr) {
     const session = JSON.parse(sessionStr);
-    config.headers['Authorization'] = `Bearer ${session.token}`;
+    // Cookie-only sessions (Google sign-in) have no token; the HttpOnly cookie authenticates them.
+    if (session.token) {
+      config.headers['Authorization'] = `Bearer ${session.token}`;
+    }
 
     const sessionTenantId = session.tenant_id ?? session.cooperative_id;
 

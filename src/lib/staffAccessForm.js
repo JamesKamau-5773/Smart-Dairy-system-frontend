@@ -1,4 +1,8 @@
 import { FARM_STAFF_ROLE_OPTIONS } from './staffOnboarding';
+import { normalizeKenyanPhone } from './phone';
+
+// Phone helpers moved to ./phone; re-exported so existing staff forms keep working.
+export { formatKenyanPhoneInput, normalizeKenyanPhone } from './phone';
 
 const AMBIGUITY_SAFE_PASSWORD_CHARACTERS = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789!@#$%';
 
@@ -26,27 +30,6 @@ export function formatSalaryInput(value) {
 export function parseSalaryInput(value) {
   const digits = String(value ?? '').replace(/\D/g, '');
   return digits ? Number(digits) : 0;
-}
-
-export function formatKenyanPhoneInput(value) {
-  const raw = String(value ?? '').trim();
-  let digits = raw.replace(/\D/g, '');
-
-  if (digits.startsWith('254')) {
-    digits = digits.slice(0, 12);
-    const local = digits.slice(3);
-    return `+254${local ? ` ${local.slice(0, 3)}` : ''}${local.length > 3 ? ` ${local.slice(3, 6)}` : ''}${local.length > 6 ? ` ${local.slice(6, 9)}` : ''}`;
-  }
-
-  digits = digits.slice(0, 10);
-  return `${digits.slice(0, 4)}${digits.length > 4 ? ` ${digits.slice(4, 7)}` : ''}${digits.length > 7 ? ` ${digits.slice(7, 10)}` : ''}`;
-}
-
-export function normalizeKenyanPhone(value) {
-  const digits = String(value ?? '').replace(/\D/g, '');
-  if (/^254(?:7|1)\d{8}$/.test(digits)) return digits;
-  if (/^0(?:7|1)\d{8}$/.test(digits)) return `254${digits.slice(1)}`;
-  return '';
 }
 
 export function validateEmployeeFields({ name, role, phoneNumber, baseSalary }) {

@@ -1,37 +1,45 @@
 import { useRef, useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
-import { Loader2, MessageCircle, UserRound } from 'lucide-react';
+import { useNavigate, Link, useLocation } from 'react-router-dom';
+import { UserRound } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import AlertBanner from '../../components/ui/AlertBanner';
 import AuthLayout from '../../components/auth/AuthLayout';
+import AuthDivider from '../../components/auth/AuthDivider';
+import GoogleSignInButton from '../../components/auth/GoogleSignInButton';
+import SubmitButton from '../../components/auth/SubmitButton';
 import { PasswordField, TextField } from '../../components/auth/AuthFields';
 import { useOnlineStatus } from '../../hooks/useOnlineStatus';
+import { useCountdown } from '../../hooks/useCountdown';
 import { getDefaultLandingPath } from '../../lib/roles';
+import { getGateRoute } from '../../lib/authState';
 import { forgetLogin, getLastLogin, maskIdentifier, rememberLogin } from '../../lib/lastLogin';
-import { SITE } from '../../landing/content';
+import { authCopy } from '../../i18n/auth.en';
 
-const FORGOT_PASSWORD_HREF = `https://wa.me/${SITE.whatsapp}?text=${encodeURIComponent('Hello, I forgot my Maziwa Smart password. Please help me reset it.')}`;
+const { login: copy, common } = authCopy;
 
 export default function LoginPage() {
   const [rememberedLogin, setRememberedLogin] = useState(getLastLogin);
-  const [username, setUsername] = useState(rememberedLogin);
+  const [identifier, setIdentifier] = useState(rememberedLogin);
   const [password, setPassword] = useState('');
   const [fieldErrors, setFieldErrors] = useState({});
   const [error, setError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const usernameRef = useRef(null);
+  const { seconds: retryIn, startFor: waitFor } = useCountdown();
+  const identifierRef = useRef(null);
   const passwordRef = useRef(null);
 
   const online = useOnlineStatus();
   const { login } = useAuth();
   const navigate = useNavigate();
+  const { state } = useLocation();
+  const passwordUpdated = state?.notice === 'passwordUpdated';
 
   const switchAccount = () => {
     forgetLogin();
     setRememberedLogin('');
-    setUsername('');
-    // The username field mounts on the next render.
-    setTimeout(() => usernameRef.current?.focus(), 0);
+    setIdentifier('');
+    // The identifier field mounts on the next render.
+    setTimeout(() => identifierRef.current?.focus(), 0);
   };
 
   const handleSubmit = async (e) => {
@@ -39,11 +47,11 @@ export default function LoginPage() {
     setError('');
 
     const errors = {};
-    if (!username.trim()) errors.username = 'Enter your phone number or username.';
-    if (!password) errors.password = 'Enter your password.';
+    if (!identifier.trim()) errors.identifier = copy.identifierRequired;
+    if (!password) errors.password = authCopy.fields.passwordRequired;
     setFieldErrors(errors);
-    if (errors.username) {
-      usernameRef.current?.focus();
+    if (errors.identifier) {
+      identifierRef.current?.focus();
       return;
     }
     if (errors.password) {
@@ -52,13 +60,14 @@ export default function LoginPage() {
     }
 
     setIsSubmitting(true);
-    const result = await login({ username: username.trim(), password });
+    const result = await login({ login: identifier.trim(), password });
 
     if (result.success) {
-      rememberLogin(username);
-      navigate(result.user?.requires_password_reset ? '/reset-required-password' : getDefaultLandingPath(result.user), { replace: true });
+      rememberLogin(identifier);
+      navigate(getGateRoute(result.user) ?? getDefaultLandingPath(result.user), { replace: true });
     } else {
       setError(result.error);
+      if (result.details?.retryAfter) waitFor(result.details.retryAfter);
       setIsSubmitting(false);
     }
   };
@@ -66,20 +75,26 @@ export default function LoginPage() {
   return (
     <AuthLayout
       offline={!online}
-      headerAction={<Link to="/register" className="btn-secondary text-sm">Create account</Link>}
+      headerAction={<Link to="/register" className="btn-secondary text-sm">{common.createAccount}</Link>}
     >
       <header className="mb-6">
         <h1 className="text-2xl font-bold tracking-tight text-ink-900 sm:text-3xl">
-          {rememberedLogin ? 'Karibu tena' : 'Log in to your farm'}
+          {rememberedLogin ? copy.titleReturning : copy.title}
         </h1>
         <p className="mt-2 text-sm text-ink-muted">
-          {rememberedLogin ? 'Welcome back. Enter your password to open your farm.' : 'Use the phone number or username you signed up with.'}
+          {rememberedLogin ? copy.subtitleReturning : copy.subtitle}
         </p>
       </header>
 
+      {passwordUpdated && !error && (
+        <div className="mb-5">
+          <AlertBanner type="success" message={copy.passwordUpdated} />
+        </div>
+      )}
+
       {error && (
         <div className="mb-5">
-          <AlertBanner type="danger" title="Couldn’t log in" message={error} />
+          <AlertBanner type="danger" title={copy.errorTitle} message={error} />
         </div>
       )}
 
@@ -91,25 +106,26 @@ export default function LoginPage() {
               <span className="truncate font-mono">{maskIdentifier(rememberedLogin)}</span>
             </span>
             <button type="button" onClick={switchAccount} className="shrink-0 text-sm font-semibold text-brand underline-offset-4 hover:underline">
-              Not you?
+              {copy.notYou}
             </button>
             {/* Lets password managers pair the saved password with this account. */}
-            <input type="text" name="username" autoComplete="username" value={username} readOnly hidden />
+            <input type="text" name="username" autoComplete="username" value={identifier} readOnly hidden />
           </div>
         ) : (
           <TextField
-            ref={usernameRef}
-            id="login-username"
+            ref={identifierRef}
+            id="login-identifier"
             name="username"
-            label="Phone number or username"
-            placeholder="e.g. 0712 345 678"
+            type="text"
+            label={copy.identifier}
+            placeholder={copy.identifierPlaceholder}
             autoComplete="username"
             autoCapitalize="none"
             autoCorrect="off"
             spellCheck={false}
-            value={username}
-            onChange={(e) => setUsername(e.target.value)}
-            error={fieldErrors.username}
+            value={identifier}
+            onChange={(e) => setIdentifier(e.target.value)}
+            error={fieldErrors.identifier}
           />
         )}
 
@@ -123,24 +139,25 @@ export default function LoginPage() {
             onChange={(e) => setPassword(e.target.value)}
             error={fieldErrors.password}
           />
-          <a
-            href={FORGOT_PASSWORD_HREF}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="mt-2 inline-flex min-h-11 items-center gap-1.5 text-sm font-semibold text-brand underline-offset-4 hover:underline"
+          <Link
+            to="/forgot-password"
+            className="mt-2 inline-flex min-h-11 items-center text-sm font-semibold text-brand underline-offset-4 hover:underline"
           >
-            <MessageCircle size={16} aria-hidden="true" /> Forgot password? Chat with us on WhatsApp
-          </a>
+            {copy.forgotPassword}
+          </Link>
         </div>
 
-        <button type="submit" className="btn-command w-full gap-2 py-4 text-base" disabled={isSubmitting || !online}>
-          {isSubmitting ? <><Loader2 size={18} className="animate-spin" aria-hidden="true" /> Logging in…</> : 'Log in'}
-        </button>
+        <SubmitButton pending={isSubmitting} pendingLabel={copy.submitting} retryIn={retryIn} disabled={!online}>
+          {copy.submit}
+        </SubmitButton>
       </form>
 
+      <AuthDivider />
+      <GoogleSignInButton next="/app" disabled={!online} />
+
       <p className="mt-6 border-t border-ink/10 pt-6 text-center text-sm text-ink-muted">
-        New here?{' '}
-        <Link to="/register" className="font-semibold text-brand underline-offset-4 hover:underline">Create your farm account</Link>
+        {copy.newHere}{' '}
+        <Link to="/register" className="font-semibold text-brand underline-offset-4 hover:underline">{copy.createFarmAccount}</Link>
       </p>
     </AuthLayout>
   );

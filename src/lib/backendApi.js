@@ -6,6 +6,7 @@ import { API_CONTRACTS, validateResponse } from './apiContracts';
 import { buildCalfMilkFeedPayload, normalizeMilkDisposition } from './milkDisposition';
 import { API_BASE_URL, BACKEND_BASE_URL } from './apiBaseUrl';
 import { readActiveSession } from './sessionStore';
+import { toLoginPayload } from './identifier';
 
 import { normalizeNutritionRequestPayload } from './feedUtils';
 const HEALTH_BASE_URL = BACKEND_BASE_URL;
@@ -132,7 +133,12 @@ export function withCurrentToken(data, currentToken) {
   return { ...data, token: currentToken };
 }
 
-export function normalizeSessionUser(payload) {
+/**
+ * `allowCookieSession` accepts a response without a token as long as it names a
+ * user: the browser is then authenticated by the HttpOnly cookie alone (Google
+ * sign-in). Without it, a missing token is still an error.
+ */
+export function normalizeSessionUser(payload, { allowCookieSession = false } = {}) {
   const session = toObject(payload);
 
   if (!session) {
@@ -140,8 +146,13 @@ export function normalizeSessionUser(payload) {
   }
 
   const token = session.token ?? session.access_token ?? session.accessToken ?? payload?.token ?? payload?.access_token ?? payload?.accessToken ?? null;
+  const hasToken = Boolean(token && String(token).trim());
+  const isCookieSession = !hasToken
+    && typeof session === 'object'
+    && session.id != null
+    && (allowCookieSession || session.cookie_session === true);
 
-  if (typeof session !== 'object' || !token || !String(token).trim()) {
+  if (typeof session !== 'object' || (!hasToken && !isCookieSession)) {
     throw new Error('Authentication response is missing an access token.');
   }
 
@@ -185,6 +196,7 @@ export function normalizeSessionUser(payload) {
     farm_name: session.farm_name ?? session.farmName ?? null,
     available_farms: session.available_farms ?? session.availableFarms ?? [],
     requires_password_reset: Boolean(session.requires_password_reset ?? session.requiresPasswordReset),
+    cookie_session: isCookieSession,
   };
 }
 
@@ -731,10 +743,11 @@ export const authApi = {
     return authClient.get('/auth/bootstrap-status').then((response) => response.data);
   },
   login(credentials) {
-    const payload = {
-      username: credentials?.username ?? credentials?.identifier ?? '',
-      password: credentials?.password ?? '',
-    };
+    const payload = toLoginPayload(
+      credentials?.login ?? credentials?.identifier ?? credentials?.username ?? '',
+      credentials?.password,
+    );
+    if (credentials?.farm_id) payload.farm_id = credentials.farm_id;
 
     return authClient.post('/auth/login', payload).then((response) => normalizeSessionUser(response.data));
   },
@@ -744,6 +757,7 @@ export const authApi = {
       full_name: payload?.full_name ?? payload?.fullName ?? '',
       cooperative_name: payload?.cooperative_name ?? payload?.cooperativeName ?? '',
       phone_number: payload?.phone_number ?? payload?.phoneNumber ?? payload?.phone ?? '',
+      email: payload?.email?.trim() ? payload.email.trim().toLowerCase() : undefined,
       password: payload?.password ?? '',
       role: payload?.role ?? payload?.account_role ?? payload?.accountRole ?? undefined,
       organization_role: payload?.organization_role ?? payload?.organizationRole ?? undefined,
@@ -769,14 +783,64 @@ export const authApi = {
   switchFarm(farmId) {
     return authClient.post('/auth/switch-farm', { farm_id: farmId }).then((response) => normalizeSessionUser(response.data));
   },
+  // A response that names a user is a valid session even without a token: after
+  // Google sign-in the HttpOnly cookie is the only credential (contract §5).
   me() {
     return requestWithFallback(authClient, [
       { method: 'get', url: '/auth/me' },
       { method: 'get', url: '/auth/status' },
-    ]).then((response) => normalizeSessionUser(withCurrentToken(response.data, readActiveSession()?.token)));
+    ]).then((response) => normalizeSessionUser(
+      withCurrentToken(response.data, readActiveSession()?.token),
+      { allowCookieSession: true },
+    ));
   },
   status() {
     return authClient.get('/auth/status').then((response) => normalizeSessionUser(response.data));
+  },
+
+  // Google sign-in is a full-page redirect, not a request (contract §5.1).
+  googleStartUrl({ next, intent = 'signin' } = {}) {
+    const params = new URLSearchParams({ intent });
+    if (next) params.set('next', next);
+    return `${API_BASE_URL}/auth/google/start?${params}`;
+  },
+  googlePendingSignup() {
+    return authClient.get('/auth/google/pending-signup').then((response) => response.data);
+  },
+  googleSignup(payload) {
+    return authClient.post('/auth/google/signup', {
+      signup_token: payload?.signup_token ?? '',
+      farm_name: payload?.farm_name ?? '',
+      phone_number: payload?.phone_number ?? '',
+      name: payload?.name || undefined,
+    }).then((response) => normalizeSessionUser(response.data, { allowCookieSession: true }));
+  },
+
+  startPhoneVerification(phoneNumber) {
+    const body = phoneNumber ? { phone_number: phoneNumber } : {};
+    return authClient.post('/auth/phone/verification', body).then((response) => response.data);
+  },
+  phoneVerificationStatus(verificationId) {
+    return authClient.get(`/auth/phone/verification/${encodeURIComponent(verificationId)}`).then((response) => response.data);
+  },
+
+  forgotPasswordOptions() {
+    return authClient.get('/auth/password/forgot/options').then((response) => response.data);
+  },
+  requestPasswordReset({ channel, phone_number: phoneNumber, email }) {
+    const body = channel === 'email' ? { channel, email } : { channel, phone_number: phoneNumber };
+    return authClient.post('/auth/password/forgot', body).then((response) => response.data);
+  },
+  validateResetToken(token) {
+    return authClient.post('/auth/password/reset/validate', { token }).then((response) => response.data);
+  },
+  resetPassword({ token, password, confirm_password: confirmPassword }) {
+    return authClient.post('/auth/password/reset', { token, password, confirm_password: confirmPassword })
+      .then((response) => response.data);
+  },
+
+  confirmEmailVerification(token) {
+    return authClient.post('/auth/email/verification/confirm', { token }).then((response) => response.data);
   },
 };
 

@@ -6,11 +6,12 @@ const durableSessionStore = localforage.createInstance({
   storeName: 'authenticated_session',
 });
 
+// A session authenticates either with a bearer token (password login) or with the
+// HttpOnly cookie alone (Google sign-in), which never exposes a token to scripts.
 function isValidSession(session) {
-  return session
-    && typeof session === 'object'
-    && typeof session.token === 'string'
-    && session.token.trim().length > 0;
+  if (!session || typeof session !== 'object') return false;
+  if (typeof session.token === 'string' && session.token.trim().length > 0) return true;
+  return session.cookie_session === true && session.id != null;
 }
 
 export async function loadSession() {
