@@ -68,6 +68,8 @@ describe('isFeatureEnabled', () => {
     // Off until the backend can delete customers (BR-007).
     expect(isFeatureEnabled('customerDelete', {})).toBe(false);
     expect(isFeatureEnabled('customerDelete', { VITE_FEATURE_CUSTOMER_DELETE: 'true' })).toBe(true);
+    // Off until statement links use private tokens (BR-016).
+    expect(isFeatureEnabled('customerPortal', {})).toBe(false);
   });
 });
 

@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import { 
-  Users, Search, Plus, TrendingDown, CheckCircle2, FileSpreadsheet,
+  Users, Search, Plus, TrendingDown, CheckCircle2,
   FileText, MessageCircle, MoreVertical, SlidersHorizontal
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
@@ -179,11 +179,6 @@ export default function BuyersList() {
     ].join('\n');
     const phone = String(customer?.phone_number || customer?.contact || '').replace(/\D/g, '').replace(/^0/, '254');
     window.open(`https://wa.me/${phone}?text=${encodeURIComponent(message)}`, '_blank', 'noopener,noreferrer');
-  };
-
-  const handleImport = () => {
-    console.log('[BuyersList] Excel import not yet implemented.');
-    toast('Excel import is coming soon.');
   };
 
   return (
@@ -461,10 +456,7 @@ export default function BuyersList() {
               >
                 <Plus size={18} /> Add Your First Buyer
               </button>
-              
-              <button onClick={handleImport} className="w-full sm:w-auto flex items-center justify-center gap-2 bg-surface border border-ink/20 text-ink-strong px-6 py-3 rounded-button font-bold text-sm hover:bg-ink/5 transition-colors">
-                <FileSpreadsheet size={18} className="text-brand" /> Import from Excel
-              </button>
+
             </div>
 
           </div>

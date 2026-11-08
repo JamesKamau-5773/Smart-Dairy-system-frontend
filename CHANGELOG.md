@@ -4,6 +4,17 @@ What changed for farmers and staff using Maziwa Smart. Newest first.
 
 ## Unreleased
 
+### Shared statements and buyer list
+
+- **Shared statement links are switched off for now.** The statement page showed made-up details
+  (a 0 balance, "Monthly (Net 30)", "Verified" deliveries) because it didn't read what the server
+  sends, and the server finds a statement by the buyer's phone number, so anyone with a number
+  could see that buyer's account. The page now says links aren't available yet and asks the
+  buyer to request their statement on WhatsApp. When it is switched back on
+  (`VITE_FEATURE_CUSTOMER_PORTAL=true`, only after BR-016), it shows only the server's own
+  figures, "—" for anything missing, and a clear message for an invalid link.
+- The **"Import from Excel"** button on an empty buyer list is gone: it did nothing.
+
 ### Small fixes
 
 - **Delete is hidden on the Customers page** until the server can delete customers (it always

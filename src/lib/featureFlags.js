@@ -7,10 +7,12 @@
  * |-------------------|---------------------------------|---------|------------------|
  * | planIndicators    | VITE_FEATURE_PLAN_INDICATORS    | on      | Demo banner, locked-feature cards |
  * | customerDelete    | VITE_FEATURE_CUSTOMER_DELETE    | off     | Delete on the Customers page; turn on once the backend route exists (BR-007) |
+ * | customerPortal    | VITE_FEATURE_CUSTOMER_PORTAL    | off     | Shared buyer statement page; turn on only once links use private tokens (BR-016) |
  */
 const FLAGS = {
   planIndicators: { env: 'VITE_FEATURE_PLAN_INDICATORS', default: true },
   customerDelete: { env: 'VITE_FEATURE_CUSTOMER_DELETE', default: false },
+  customerPortal: { env: 'VITE_FEATURE_CUSTOMER_PORTAL', default: false },
 };
 
 /**

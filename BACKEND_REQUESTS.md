@@ -372,3 +372,39 @@ Request: return the user's capabilities on the session, decided by the backend, 
 `"capabilities": ["milk.record", "milk.delete", "herd.manage", "inventory.manage", "ledger.view", "payroll.run", "reports.view", "staff.manage"]`,
 alongside `page_access`. The frontend would then show or hide pages and actions from these
 alone and delete the role-alias tables. (Not changed in Phase 5, as agreed.)
+
+---
+
+## BR-016 — Shared statement links expose any buyer's account by phone number (security)
+
+**Status:** Open · **Priority:** High · **Raised:** 2026-11-09 · **Frontend:** `CustomerPortal.jsx` (behind the `customerPortal` flag, off), `lib/customerStatement.js`
+
+`GET /api/statements/<token>` (`backend/app/api/webhooks.py`) needs no login, and its "token" is
+the customer's **phone number**: `Customer.query.filter_by(phone_number=token).first()`. Anyone who
+knows or guesses a buyer's phone number gets their balance and every transaction. The lookup is
+not scoped to a farm, so a number shared by buyers on two farms returns whichever comes first.
+It also puts the phone number in the URL, where it ends up in browser history and server logs.
+
+**Asked now:** disable or protect this route until the fix below ships. The frontend no
+longer calls it (the portal page is off and says links aren't available yet).
+
+Requested contract:
+
+`POST /api/finance/customers/<customer_id>/statement-links` (authenticated; the farm's own customer only)
+
+| Status | Body | When |
+|---|---|---|
+| 201 | `{ "url": "https://…/shared/statement/<token>", "expires_at": "ISO-8601" }` | Link created. `<token>` is random (≥128 bits) and opaque, and does not contain the phone number or IDs. Store only its hash. |
+| 403 | `{ "code": "FORBIDDEN" }` | Not this farm's customer, or no permission. |
+| 404 | `{ "code": "NOT_FOUND" }` | No such customer. |
+
+`GET /api/statements/<token>` (public)
+
+| Status | Body | When |
+|---|---|---|
+| 200 | `{ "farm": { "name": "…" }, "customer": { "name": "…", "account_balance": "1234.00" \| null }, "transactions": [ { "id", "date", "description", "category", "reference_code", "amount" } ], "generated_at": "ISO-8601" }` | Valid, unexpired token. Omit the customer's phone number. Send `account_balance: null` rather than 0 when unknown. |
+| 404 | `{ "code": "STATEMENT_LINK_INVALID" }` | Unknown, expired or revoked token (same answer for each, so tokens can't be probed). |
+| 429 | `{ "code": "RATE_LIMITED" }` | Too many attempts from one address. |
+
+Also wanted: `DELETE /api/finance/statement-links/<id>` to revoke a link. The frontend will add
+"Share statement link" to the buyer actions once this exists, and turn the portal flag on.
