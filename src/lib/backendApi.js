@@ -10,6 +10,7 @@ import { toLoginPayload } from './identifier';
 
 import { normalizeNutritionRequestPayload } from './feedUtils';
 import { todayLocalIso } from './localDate';
+import { getPlanErrorMessage } from './apiErrors';
 const HEALTH_BASE_URL = BACKEND_BASE_URL;
 
 const authClient = axios.create({
@@ -398,6 +399,9 @@ export function normalizeInventoryItem(item = {}) {
 }
 
 export function getApiErrorMessage(error, fallback = 'Could not complete this request. Please try again shortly.') {
+  // Plan, subscription and demo refusals read the same on every page.
+  const planMessage = getPlanErrorMessage(error);
+  if (planMessage) return planMessage;
   const status = error?.response?.status;
   const responseData = error?.response?.data;
   const explicitMessage = typeof responseData === 'string'

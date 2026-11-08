@@ -4,6 +4,16 @@ What changed for farmers and staff using Maziwa Smart. Newest first.
 
 ## Unreleased
 
+### Phase 5 — Plan, limits and demo (UX audit)
+
+- **Ready for plans and the demo farm.** When the server starts sending a farm's plan, the app will:
+  mark the demo farm with a "Demo farm" banner on every page; show a clear "isn't in your plan"
+  card with how to upgrade for features the plan doesn't include; and explain plan limits,
+  ended subscriptions and demo restrictions in plain words when the server refuses a change.
+  Until then nothing changes for farmers: no plan is assumed and nothing is locked.
+- Receipt photo limits (size and number per entry) follow the server's figures once it sends them.
+- These indicators can be switched off with the `VITE_FEATURE_PLAN_INDICATORS=false` build setting.
+
 ### Phase 4 follow-ups
 
 - **Unit helpers work.** Saving a unit helper never reached the server: the page sent a free-text

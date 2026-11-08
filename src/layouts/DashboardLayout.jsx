@@ -5,6 +5,7 @@ import MobileBottomNav from './MobileBottomNav';
 import DebugBar from './DebugBar';
 import OfflineBanner from '../components/ui/OfflineBanner';
 import PhoneVerificationBanner from '../components/auth/PhoneVerificationBanner';
+import DemoBanner from '../components/plan/DemoBanner';
 import ErrorBoundary from '../components/errors/ErrorBoundary';
 import SessionExpiredSheet from '../components/ui/SessionExpiredSheet';
 import { usePrefetchOfflineEssentials } from '../hooks/usePrefetchOfflineEssentials';
@@ -90,6 +91,7 @@ export default function DashboardLayout({ children = null }) {
       <main className={`relative z-10 flex h-dvh min-h-0 min-w-0 flex-1 flex-col overflow-hidden md:pl-60 xl:pl-64 ${isDevelopment ? 'pb-40 md:pb-16' : 'pb-24 md:pb-0'}`}>
         
         <Header onMenuClick={() => setMobileMenuOpen((open) => !open)} />
+        <DemoBanner />
         <OfflineBanner />
         <PhoneVerificationBanner />
         

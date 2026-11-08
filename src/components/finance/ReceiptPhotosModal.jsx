@@ -5,7 +5,9 @@ import BaseModal from '../ui/BaseModal';
 import AlertBanner from '../ui/AlertBanner';
 import AttachmentThumb from './AttachmentThumb';
 import { financeApi, getApiErrorMessage } from '../../lib/backendApi';
-import { RECEIPT_ACCEPT, RECEIPT_MAX_PER_ENTRY, prepareReceiptFile, readAttachments } from '../../lib/receiptAttachments';
+import { RECEIPT_ACCEPT, prepareReceiptFile, readAttachments, receiptLimits } from '../../lib/receiptAttachments';
+import { formatPhotoSize } from '../../lib/animalPhoto';
+import { useEntitlements } from '../../hooks/useEntitlements';
 
 /**
  * Receipt photos kept with one ledger entry: see them, and add more (up to the
@@ -22,7 +24,9 @@ export default function ReceiptPhotosModal({ transaction, title, canUpload, onCl
 
   const known = readAttachments(transaction);
   const attachments = [...known, ...added.filter((item) => !known.some((existing) => existing.id === item.id))];
-  const isFull = attachments.length >= RECEIPT_MAX_PER_ENTRY;
+  const entitlements = useEntitlements();
+  const { maxBytes, maxPerEntry } = receiptLimits(entitlements);
+  const isFull = attachments.length >= maxPerEntry;
 
   const upload = useMutation({
     mutationFn: (file) => financeApi.uploadAttachment(transaction.id, file, { onProgress: setProgress }),
@@ -41,7 +45,7 @@ export default function ReceiptPhotosModal({ transaction, title, canUpload, onCl
     event.target.value = '';
     if (!picked) return;
     setError('');
-    const { file, error: fileError } = await prepareReceiptFile(picked);
+    const { file, error: fileError } = await prepareReceiptFile(picked, { maxBytes });
     if (fileError) {
       setError(fileError);
       return;
@@ -68,7 +72,7 @@ export default function ReceiptPhotosModal({ transaction, title, canUpload, onCl
 
         {canUpload && (
           isFull ? (
-            <p className="text-xs text-ink-muted">This entry has the most receipts it can hold ({RECEIPT_MAX_PER_ENTRY}).</p>
+            <p className="text-xs text-ink-muted">This entry has the most receipts it can hold ({maxPerEntry}).</p>
           ) : (
             <div className="space-y-2">
               <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
@@ -84,7 +88,7 @@ export default function ReceiptPhotosModal({ transaction, title, canUpload, onCl
               <p className="text-xs text-ink-muted" role="status">
                 {upload.isPending
                   ? `Uploading${progress !== null ? ` ${progress}%` : '…'}`
-                  : `Photos are shrunk on this phone to save data. Up to ${RECEIPT_MAX_PER_ENTRY} per entry, 4 MB each.`}
+                  : `Photos are shrunk on this phone to save data. Up to ${maxPerEntry} per entry, ${formatPhotoSize(maxBytes)} each.`}
               </p>
             </div>
           )

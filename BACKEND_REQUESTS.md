@@ -304,3 +304,66 @@ Add to `GET /api/animals/<id>/milk-history`:
 ```
 
 (honouring `start_date` / `end_date`).
+
+---
+
+## BR-014 — Plan, limits and demo status on the session (`entitlements`)
+
+**Status:** Open · **Raised:** 2026-11-09 (UX audit Phase 5) · **Frontend:** `useEntitlements`, `DemoBanner`, `LockedFeature`, `receiptAttachments.receiptLimits`, `apiErrors.getPlanErrorMessage`
+
+Maziwa Smart has paid plans and a demo account, but the backend sends nothing about either, so
+the app can't show a plan, a limit, a locked feature or a demo marker. The frontend is ready
+and shows nothing until this arrives (it never assumes a plan); the backend enforces access.
+
+Add `entitlements` to the session returned by login, `GET /api/auth/me` and switch-farm:
+
+```json
+{
+  "entitlements": {
+    "plan": { "id": "starter", "name": "Starter" },
+    "is_demo": false,
+    "features": ["milk_records", "herd", "breeding", "feed", "buyers", "ledger", "reports", "payroll"],
+    "limits": {
+      "cows": 50,
+      "staff_accounts": 3,
+      "receipt_upload_max_bytes": 4194304,
+      "receipts_per_entry": 5
+    },
+    "usage": { "cows": 42, "staff_accounts": 2 },
+    "upgrade_url": "https://maziwasmart.co.ke/plans"
+  }
+}
+```
+
+- `features`: every feature key the plan includes. A key missing from the list means locked.
+  Please confirm the list of keys and which plans include which; the frontend will wrap the
+  matching pages in `<LockedFeature feature="…">`.
+- `limits` / `usage`: numbers, or `null` for unlimited / unknown.
+- `upgrade_url`: https only; when absent the app shows the support phone number instead.
+- `is_demo: true` for the shared demo account. The backend must refuse changes that would alter
+  or delete shared demo data.
+
+Refusals, with these codes (the app shows a clear message for each; `apiErrors.js`):
+
+| Status | Code | Body extras | When |
+|---|---|---|---|
+| 402 | `PLAN_LIMIT_REACHED` | `limit`, `resource` (e.g. `50`, `"cows"`) | Creating beyond a plan limit. |
+| 402 | `FEATURE_NOT_IN_PLAN` | `feature` | Using a feature the plan lacks. |
+| 402 | `SUBSCRIPTION_EXPIRED` | — | Writes after the subscription ended (reads still allowed). |
+| 403 | `DEMO_READ_ONLY` | — | Destructive or shared-data changes on the demo account. |
+
+---
+
+## BR-015 — Page and menu access from backend capabilities
+
+**Status:** Open · **Raised:** 2026-11-09 (UX audit Phase 5) · **Frontend:** `roles.js`, `permissions.js`, `Sidebar.jsx`, `MobileBottomNav.jsx` (not changed yet)
+
+Which pages and menu items a user sees is still partly decided in the frontend from role names
+(`roles.js` alias tables such as `canViewAdminControls`, `canAccessCommandCenter`,
+`canManageInventoryItems`). `page_access` is respected when present, but not every account has
+it, and the role tables can drift from what the backend actually allows.
+
+Request: return the user's capabilities on the session, decided by the backend, e.g.
+`"capabilities": ["milk.record", "milk.delete", "herd.manage", "inventory.manage", "ledger.view", "payroll.run", "reports.view", "staff.manage"]`,
+alongside `page_access`. The frontend would then show or hide pages and actions from these
+alone and delete the role-alias tables. (Not changed in Phase 5, as agreed.)
