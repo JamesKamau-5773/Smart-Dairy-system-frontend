@@ -3,8 +3,12 @@ import { useSearchParams } from 'react-router-dom';
 import { ChartColumn, ChevronDown, Check, DollarSign, Droplets, Filter, Layers3, RotateCcw, Search, TrendingUp, Wallet } from 'lucide-react';
 import { format } from 'date-fns';
 import { Button } from '@/components/ui/button';
-import apiClient from '@/lib/apiClient';
-import { getApiErrorMessage } from '@/lib/backendApi';
+import { useQuery } from '@tanstack/react-query';
+import { financeApi, reportsApi } from '@/lib/backendApi';
+import { useTenant } from '@/hooks/useTenant';
+import { QUERY_KEYS } from '@/providers/QueryProvider';
+import { getListLoadState, hasRowsToShow } from '@/lib/listLoadState';
+import { ListLoadMessage, SlowLoadingHint, StaleDataNotice } from '@/components/ui/ListLoadState';
 import { cn } from '@/lib/utils';
 import { REPORT_PERIODS, getRangeForPeriod, isValidRange } from './reports/dashboardRange';
 
@@ -51,38 +55,17 @@ function normalizeSummary(payload = {}) {
   };
 }
 
-async function fetchDashboardData(startDate, endDate, buyerIds = [], searchQuery = '') {
-  const start = format(startDate, 'yyyy-MM-dd');
-  const end = format(endDate, 'yyyy-MM-dd');
-  const searchParam = searchQuery ? `&search=${encodeURIComponent(searchQuery)}` : '';
-  
-  const buyerPerformanceResponses = buyerIds.length
-    ? await Promise.all(buyerIds.map((buyerId) => apiClient.get(
-      `/reports/buyer-performance?buyer_id=${encodeURIComponent(buyerId)}&start_date=${start}&end_date=${end}${searchParam}`,
-    )))
-    : [];
-
-  const failedResponse = [...buyerPerformanceResponses].find((response) => response && response.status >= 400);
-
-  if (failedResponse) {
-    throw new Error(`Request failed with status ${failedResponse.status}`);
-  }
-
-  const [ledgerResponse, milkInventoryResponse, dairyEconomicsResponse] = await Promise.all([
-    apiClient.get(`/finance/ledger?start_date=${start}&end_date=${end}${searchParam}`),
-    apiClient.get(`/reports/milk-inventory?start_date=${start}&end_date=${end}${searchParam}`),
-    apiClient.get(`/reports/dairy-unit-economics?start_date=${start}&end_date=${end}${searchParam}`),
-  ]);
-
-  const responses = [ledgerResponse, milkInventoryResponse, dairyEconomicsResponse, ...buyerPerformanceResponses];
-  const requestFailure = responses.find((response) => response && response.status >= 400);
-
-  if (requestFailure) {
-    throw new Error(`Request failed with status ${requestFailure.status}`);
-  }
-
-  const [ledgerData, milkInventoryData, dairyEconomicsData, ...buyerPerformanceData] = responses.map((response) => response?.data ?? null);
-  
+/**
+ * Combines the backend's report responses into what the dashboard shows.
+ * TODO(BR-012): with several buyers selected, their figures are added up here; the backend
+ * should accept several buyer ids and return the combined figures.
+ */
+function combineDashboardData({
+  ledger: ledgerData,
+  milkInventory: milkInventoryData,
+  dairyEconomics: dairyEconomicsData,
+  buyerPerformance: buyerPerformanceData,
+}) {
   const aggregatedBuyerPerformance = buyerPerformanceData.length
     ? buyerPerformanceData.reduce((summary, buyerSummary) => ({
         buyer: buyerSummary?.buyer ?? summary.buyer,
@@ -113,12 +96,6 @@ async function fetchDashboardData(startDate, endDate, buyerIds = [], searchQuery
   };
 }
 
-async function fetchCustomersAndBuyers() {
-  const response = await apiClient.get('/finance/customers');
-  // Extract the .items array from the paginated backend response
-  return response.data?.items || [];
-}
-
 function SummaryCard({ label, value, icon: Icon, accentClass = 'text-brand' }) {
   return (
     <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm transition-shadow hover:shadow-md">
@@ -136,6 +113,7 @@ function SummaryCard({ label, value, icon: Icon, accentClass = 'text-brand' }) {
 }
 
 export default function OperationsReportsPage() {
+  const { tenantId, farmId } = useTenant();
   const [searchParams, setSearchParams] = useSearchParams();
   const period = searchParams.get('period') || 'daily';
   const startDateValue = searchParams.get('start_date');
@@ -157,30 +135,19 @@ export default function OperationsReportsPage() {
   
   const [isBuyerMenuOpen, setIsBuyerMenuOpen] = useState(false);
   const buyerMenuRef = useRef(null);
-  const [fetchState, setFetchState] = useState({ status: 'loading', error: null });
-  const [dashboardData, setDashboardData] = useState(null);
 
   const resolvedRange = useMemo(() => ({
     start: format(range.startDate, 'yyyy-MM-dd'),
     end: format(range.endDate, 'yyyy-MM-dd'),
   }), [range.endDate, range.startDate]);
 
-  const [customers, setCustomers] = useState([]);
-  
-  useEffect(() => {
-    let ignore = false;
-    fetchCustomersAndBuyers()
-      .then((items) => {
-        if (!ignore) {
-          setCustomers(Array.isArray(items) ? items : []);
-        }
-      })
-      .catch(() => {
-        if (!ignore) setCustomers([]);
-      });
-
-    return () => { ignore = true; };
-  }, []);
+  // Same list and cache as the Customers and Buyers pages.
+  const customersQuery = useQuery({
+    queryKey: QUERY_KEYS.CUSTOMERS(tenantId, farmId),
+    queryFn: () => financeApi.listCustomers().then((res) => res?.items || res?.data || res || []),
+    enabled: !!farmId,
+  });
+  const customers = Array.isArray(customersQuery.data) ? customersQuery.data : [];
 
   useEffect(() => {
     const handlePointerDown = (event) => {
@@ -212,37 +179,19 @@ export default function OperationsReportsPage() {
     return () => clearTimeout(delayDebounceFn);
   }, [searchValue, setSearchParams]);
 
-  useEffect(() => {
-    const start = range.startDate;
-    const end = range.endDate;
-
-    if (!isValidRange(start, end)) {
-      setFetchState({ status: 'error', error: 'The selected date range is invalid.' });
-      setDashboardData(null);
-      return;
-    }
-
-    setFetchState({ status: 'loading', error: null });
-
-    let ignore = false;
-    fetchDashboardData(start, end, selectedBuyerIds, searchQuery)
-      .then((data) => {
-        if (!ignore) {
-          setDashboardData(data);
-          setFetchState({ status: 'success', error: null });
-        }
-      })
-      .catch((error) => {
-        if (!ignore) {
-          setDashboardData(null);
-          setFetchState({ status: 'error', error: getApiErrorMessage(error, 'Could not load reports. Check your connection and try again.') });
-        }
-      });
-
-    return () => {
-      ignore = true;
-    };
-  }, [range.endDate, range.startDate, selectedBuyerIds, searchQuery]);
+  const rangeIsValid = isValidRange(range.startDate, range.endDate);
+  const dashboardQuery = useQuery({
+    queryKey: ['operations-reports', tenantId, farmId, resolvedRange.start, resolvedRange.end, selectedBuyerIds.join(','), searchQuery],
+    queryFn: () => reportsApi.getOperationsDashboard({
+      startDate: resolvedRange.start,
+      endDate: resolvedRange.end,
+      buyerIds: selectedBuyerIds,
+      search: searchQuery,
+    }).then(combineDashboardData),
+    enabled: rangeIsValid && !!farmId,
+  });
+  const reportState = getListLoadState(dashboardQuery);
+  const dashboardData = hasRowsToShow(reportState) ? dashboardQuery.data : null;
 
   const setPeriod = (nextPeriod) => {
     const nextRange = getRangeForPeriod(nextPeriod, startDateValue, endDateValue);
@@ -457,7 +406,15 @@ export default function OperationsReportsPage() {
       </div>
 
       {/* DASHBOARD CONTENT */}
-      {fetchState.status === 'loading' && (
+      {!rangeIsValid && (
+        <div role="alert" className="rounded-xl border border-rose-200 bg-rose-50 p-6 text-center text-rose-700">
+          <p className="font-bold">The selected date range is invalid.</p>
+          <p className="mt-1 text-sm">Choose an end date on or after the start date.</p>
+        </div>
+      )}
+
+      {rangeIsValid && reportState === 'loading' && <SlowLoadingHint label="reports" />}
+      {rangeIsValid && reportState === 'loading' && (
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4" aria-live="polite" aria-busy="true">
           {Array.from({ length: 8 }).map((_, index) => (
             <div key={index} className="h-28 rounded-xl animate-pulse bg-slate-100" />
@@ -466,14 +423,19 @@ export default function OperationsReportsPage() {
         </div>
       )}
 
-      {fetchState.status === 'error' && (
-        <div className="rounded-xl border border-rose-200 bg-rose-50 p-6 text-center text-rose-700">
-          <p className="font-bold">Unable to load the reporting dashboard.</p>
-          <p className="mt-1 text-sm">{fetchState.error || 'Please try another date range.'}</p>
+      {rangeIsValid && (reportState === 'error' || reportState === 'offline') && (
+        <div className="rounded-xl border border-slate-200 bg-white">
+          <ListLoadMessage state={reportState} label="reports" error={dashboardQuery.error} onRetry={dashboardQuery.refetch} />
         </div>
       )}
 
-      {fetchState.status === 'success' && (
+      {rangeIsValid && reportState === 'stale' && (
+        <div className="overflow-hidden rounded-xl border border-slate-200">
+          <StaleDataNotice label="reports" error={dashboardQuery.error} onRetry={dashboardQuery.refetch} />
+        </div>
+      )}
+
+      {rangeIsValid && dashboardData && (
         <>
           <div className="flex items-center justify-between text-sm text-slate-500">
             <span>Showing: <strong className="text-slate-900">{selectedPeriodLabel}</strong>

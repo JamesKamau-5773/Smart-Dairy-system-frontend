@@ -936,6 +936,20 @@ export const productionApi = {
       return items.concat(...remainingPages.map(toArray));
     });
   },
+  /**
+   * The backend's all-time milk totals for the farm (from the yield list's `summary`):
+   * `{ totalRecords, totalLitres }`, each null when the backend didn't send it.
+   */
+  yieldTotals() {
+    return apiClient.get('/production/yield', { params: { page: 1, per_page: 1 } }).then((response) => {
+      const summary = response.data?.summary ?? {};
+      const numberOrNull = (value) => (value === null || value === undefined || value === '' ? null : Number(value));
+      return {
+        totalRecords: numberOrNull(summary.total_records),
+        totalLitres: numberOrNull(summary.total_volume ?? summary.totalVolume),
+      };
+    });
+  },
   createYield(payload, config = {}) {
     return apiClient.post('/production/yield', buildProductionYieldPayload(payload), config).then((response) => toObject(response.data));
   },
@@ -1387,6 +1401,24 @@ export const herdApi = {
       },
     }).then((response) => toArray(response.data).map(normalizeHerdRecord));
   },
+  /**
+   * The backend's herd counts for the whole farm (not just the first page of the list):
+   * `{ totalCount, milkingCount, dryCount, averageAgeMonths, latestCalved }`, each null when
+   * the backend didn't send it.
+   */
+  summary() {
+    return apiClient.get('/herd', { params: { per_page: 1 } }).then((response) => {
+      const summary = response.data?.summary ?? {};
+      const numberOrNull = (value) => (value === null || value === undefined || value === '' ? null : Number(value));
+      return {
+        totalCount: numberOrNull(summary.total_count),
+        milkingCount: numberOrNull(summary.milking_count),
+        dryCount: numberOrNull(summary.dry_count),
+        averageAgeMonths: numberOrNull(summary.average_age_months),
+        latestCalved: summary.latest_calved ?? null,
+      };
+    });
+  },
   get(id) {
     return apiClient.get(`/herd/${id}`).then((response) => normalizeHerdRecord(toObject(response.data) ?? {}));
   },
@@ -1522,9 +1554,12 @@ export const animalsApi = {
       }
 
       // Backend nests stats under `summary` or exposes them at the top level depending on route version.
+      // All four are computed by the backend over the cow's whole history.
       const stats = firstPage.stats ?? {
         average_yield: firstPage.summary?.average_yield ?? firstPage.average_yield ?? firstPage.average ?? null,
         peak_yield: firstPage.summary?.peak_yield ?? firstPage.peak_yield ?? firstPage.peak ?? null,
+        total_logged: firstPage.summary?.total_logged ?? firstPage.total_logged ?? firstPage.summary?.total ?? null,
+        session_count: firstPage.summary?.session_count ?? firstPage.session_count ?? null,
       };
       // Resolving this route already accepts the ear tag, unlike GET /animals/<id> which needs the internal id.
       return { sessions, stats, animal: firstPage.animal ?? null };
@@ -2067,6 +2102,24 @@ export const healthApi = {
 };
 
 export const reportsApi = {
+  /**
+   * Everything the operations reporting dashboard shows for a date range, as the backend
+   * returns it: `{ ledger, milkInventory, dairyEconomics, buyerPerformance: [one per buyer] }`.
+   */
+  getOperationsDashboard({ startDate, endDate, buyerIds = [], search = '' }) {
+    const params = { start_date: startDate, end_date: endDate, ...(search ? { search } : {}) };
+    return Promise.all([
+      apiClient.get('/finance/ledger', { params }),
+      apiClient.get('/reports/milk-inventory', { params }),
+      apiClient.get('/reports/dairy-unit-economics', { params }),
+      ...buyerIds.map((buyerId) => apiClient.get('/reports/buyer-performance', { params: { ...params, buyer_id: buyerId } })),
+    ]).then(([ledger, milkInventory, dairyEconomics, ...buyers]) => ({
+      ledger: ledger?.data ?? null,
+      milkInventory: milkInventory?.data ?? null,
+      dairyEconomics: dairyEconomics?.data ?? null,
+      buyerPerformance: buyers.map((response) => response?.data ?? null),
+    }));
+  },
   getMilkInventory: (startDate, endDate) => {
     const params = new URLSearchParams();
     if (startDate) {

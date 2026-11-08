@@ -1,10 +1,11 @@
 import React from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { fireEvent, render, screen } from '@testing-library/react';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { cleanup, fireEvent, render, screen } from '@testing-library/react';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import BreedingHub from '../BreedingHub';
 
 globalThis.React = React;
+afterEach(cleanup);
 
 const mocks = vi.hoisted(() => ({
   listHeatObservations: vi.fn(),
@@ -19,6 +20,7 @@ vi.mock('../../../hooks/useTenant', () => ({
 }));
 
 vi.mock('../../../lib/backendApi', () => ({
+  getApiErrorMessage: (_error, fallback) => fallback,
   breedingApi: {
     listHeatObservations: mocks.listHeatObservations,
     listSemenInventory: mocks.listSemenInventory,
@@ -108,6 +110,57 @@ describe('BreedingHub history and pending edits', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Show filters' }));
     fireEvent.click(screen.getByRole('button', { name: 'Unsuccessful' }));
 
-    expect(screen.getByText('Unsuccessful')).toBeTruthy();
+    // The filter chip plus the failed record's own status: the record is listed under it.
+    expect(screen.getAllByText('Unsuccessful').length).toBeGreaterThan(1);
+    expect(screen.getAllByText(/Malaika/).length).toBeGreaterThan(0);
+  });
+});
+describe('BreedingHub shows the backend’s data, and says when it couldn’t load', () => {
+  const serverDown = () => Promise.reject(Object.assign(new Error('HTTP 503'), { response: { status: 503, data: {} } }));
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    localStorage.clear();
+    mocks.listHeatObservations.mockResolvedValue([]);
+    mocks.listHerd.mockResolvedValue([]);
+    mocks.geneticProgress.mockResolvedValue([]);
+    mocks.listLogs.mockResolvedValue([]);
+    mocks.listSemenInventory.mockResolvedValue([]);
+  });
+
+  it('semen inventory: "couldn’t load" with no empty message, and an unknown straw total', async () => {
+    mocks.listSemenInventory.mockImplementation(serverDown);
+    renderHub();
+
+    expect(await screen.findByText('Couldn’t load semen inventory.')).toBeTruthy();
+    expect(screen.queryByText(/No semen inventory records yet/)).toBeNull();
+    expect(screen.getByText(/— Straws in Tank/)).toBeTruthy();
+  });
+
+  it('breeding records: "couldn’t load" instead of "all cows have been checked"', async () => {
+    mocks.listLogs.mockImplementation(serverDown);
+    renderHub();
+
+    expect(await screen.findByText('Couldn’t load breeding records.')).toBeTruthy();
+    expect(screen.queryByText(/All inseminated cows have been checked/)).toBeNull();
+  });
+
+  it('never falls back to breeding logs saved in the old local cache', async () => {
+    localStorage.setItem('breeding_logs_cache:tenant_1:farm_1', JSON.stringify([{ ...baseLog, id: 999, cow_name: 'Old Local Cow' }]));
+    mocks.listLogs.mockImplementation(serverDown);
+    renderHub();
+
+    await screen.findByText('Couldn’t load breeding records.');
+    expect(screen.queryByText(/Old Local Cow/)).toBeNull();
+  });
+
+  it('shows the tank total from the backend’s inventory once it has loaded', async () => {
+    mocks.listSemenInventory.mockResolvedValue([
+      { id: 1, name: 'Bull A', code: 'A1', straws_left: 5 },
+      { id: 2, name: 'Bull B', code: 'B2', straws_left: 3 },
+    ]);
+    renderHub();
+
+    expect(await screen.findByText(/8 Straws in Tank/)).toBeTruthy();
   });
 });

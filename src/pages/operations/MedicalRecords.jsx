@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import toast from 'react-hot-toast';
 import {
@@ -68,6 +68,25 @@ const STATUS_STYLES = {
 
 const cleanUpdatedBy = (value) => String(value ?? '').replace(/^updated by\s+/i, '');
 
+/** "Neema · KE-012" for a record's cow, using the herd list for the name when it has one. */
+function resolveCowLabel(record, herd) {
+  const rawCow = String(record?.cow ?? record?.cowTag ?? record?.cow_tag ?? record?.animalId ?? record?.animal_id ?? '').trim();
+  if (!rawCow) return '';
+  const identity = resolveCowIdentityFromHerd({
+    cowId: rawCow,
+    cowTag: record?.cowTag ?? record?.cow_tag,
+    cowName: record?.cowName ?? record?.cow_name,
+  }, Array.isArray(herd) ? herd : []);
+
+  return formatCowIdentity(identity, rawCow);
+}
+
+const toDisplayRecord = (record, herd) => ({
+  ...record,
+  cow: resolveCowLabel(record, herd),
+  updatedBy: cleanUpdatedBy(record.updatedBy ?? record.updated_by),
+});
+
 export default function VetRecords() {
   const queryClient = useQueryClient();
   const { tenantId, farmId } = useTenant();
@@ -77,7 +96,6 @@ export default function VetRecords() {
   const [query, setQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('All');
   const [severityFilter, setSeverityFilter] = useState('All');
-  const [records, setRecords] = useState([]);
   const [form, setForm] = useState(EMPTY_FORM);
   const [formErrors, setFormErrors] = useState({});
   const [isSaving, setIsSaving] = useState(false);
@@ -115,22 +133,10 @@ export default function VetRecords() {
     enabled: !!tenantId && !!farmId,
   });
 
-  const resolveCowLabel = (record) => {
-    const rawCow = String(record?.cow ?? record?.cowTag ?? record?.cow_tag ?? record?.animalId ?? record?.animal_id ?? '').trim();
-    if (!rawCow) return '';
-    const identity = resolveCowIdentityFromHerd({
-      cowId: rawCow,
-      cowTag: record?.cowTag ?? record?.cow_tag,
-      cowName: record?.cowName ?? record?.cow_name,
-    }, Array.isArray(herdData) ? herdData : []);
-
-    return formatCowIdentity(identity, rawCow);
-  };
-
   const createRecordMutation = useMutation({
     mutationFn: (payload) => medicalApi.createRecord(payload),
     onSuccess: (record) => {
-      const normalizedRecord = record ? { ...record, cow: resolveCowLabel(record), updatedBy: cleanUpdatedBy(record.updatedBy ?? record.updated_by) } : null;
+      const normalizedRecord = record ? toDisplayRecord(record, herdData) : null;
       queryClient.invalidateQueries({ queryKey: ['medical-records', tenantId, farmId] });
       setSelectedRecord(normalizedRecord);
       setShowForm(false);
@@ -151,7 +157,7 @@ export default function VetRecords() {
   const updateRecordMutation = useMutation({
     mutationFn: ({ id, payload }) => medicalApi.updateRecord(id, payload),
     onSuccess: (record) => {
-      const normalizedRecord = record ? { ...record, cow: resolveCowLabel(record), updatedBy: cleanUpdatedBy(record.updatedBy ?? record.updated_by) } : null;
+      const normalizedRecord = record ? toDisplayRecord(record, herdData) : null;
       queryClient.invalidateQueries({ queryKey: ['medical-records', tenantId, farmId] });
       setSelectedRecord(normalizedRecord);
       setShowForm(false);
@@ -170,15 +176,11 @@ export default function VetRecords() {
     },
   });
 
-  useEffect(() => {
-    if (Array.isArray(backendRecords)) {
-      setRecords(backendRecords.map((record) => ({
-        ...record,
-        cow: resolveCowLabel(record),
-        updatedBy: cleanUpdatedBy(record.updatedBy ?? record.updated_by),
-      })));
-    }
-  }, [backendRecords, herdData]);
+  // Rendered straight from the backend's records (no local copy to drift out of date).
+  const records = useMemo(
+    () => (Array.isArray(backendRecords) ? backendRecords.map((record) => toDisplayRecord(record, herdData)) : []),
+    [backendRecords, herdData],
+  );
 
   const stats = useMemo(() => {
     const open = records.filter((record) => record.status !== 'Closed').length;

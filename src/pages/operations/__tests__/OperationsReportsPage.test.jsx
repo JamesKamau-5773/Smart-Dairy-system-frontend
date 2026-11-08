@@ -14,6 +14,8 @@ vi.mock('@/lib/apiClient', () => ({
 
 void React;
 
+vi.mock('@/hooks/useTenant', () => ({ useTenant: () => ({ tenantId: 't1', farmId: 'f1' }) }));
+
 const apiClientMock = vi.mocked(apiClient);
 afterEach(cleanup);
 
@@ -34,6 +36,9 @@ function renderPage(initialEntries = ['/operations/reports?period=custom&start_d
 }
 
 const RANGE = 'start_date=2026-09-01&end_date=2026-09-30';
+// Requests send the range as axios params rather than a hand-built query string.
+const RANGE_PARAMS = { start_date: '2026-09-01', end_date: '2026-09-30' };
+const withRange = (extra = {}) => ({ params: { ...RANGE_PARAMS, ...extra } });
 const CUSTOMERS = [{ id: 7, name: 'Kisii Dairy' }, { id: 9, name: 'Nakuru Fresh' }];
 
 // The menu trigger is labelled with the current selection and the menu closes after each pick.
@@ -87,14 +92,14 @@ describe('OperationsReportsPage', () => {
 
     await waitFor(() => {
       expect(apiClientMock.get).toHaveBeenCalledWith('/finance/customers');
-      expect(apiClientMock.get).toHaveBeenCalledWith(`/finance/ledger?${RANGE}`);
-      expect(apiClientMock.get).toHaveBeenCalledWith(`/reports/milk-inventory?${RANGE}`);
-      expect(apiClientMock.get).toHaveBeenCalledWith(`/reports/dairy-unit-economics?${RANGE}`);
+      expect(apiClientMock.get).toHaveBeenCalledWith('/finance/ledger', withRange());
+      expect(apiClientMock.get).toHaveBeenCalledWith('/reports/milk-inventory', withRange());
+      expect(apiClientMock.get).toHaveBeenCalledWith('/reports/dairy-unit-economics', withRange());
     });
     expect(apiClientMock.get).toHaveBeenCalledTimes(4);
     expect(screen.getByLabelText('Start date').value).toBe('2026-09-01');
     expect(screen.getByLabelText('End date').value).toBe('2026-09-30');
-    expect(screen.getByText('Amount paid')).toBeTruthy();
+    expect(await screen.findByText('Amount paid')).toBeTruthy();
   });
 
   it('uses the selected customer for payment and delivery totals', async () => {
@@ -103,7 +108,7 @@ describe('OperationsReportsPage', () => {
     await pickCustomer(/all customers/i, 'Kisii Dairy');
 
     await waitFor(() => expect(apiClientMock.get).toHaveBeenCalledWith(
-      `/reports/buyer-performance?buyer_id=7&${RANGE}`,
+      '/reports/buyer-performance', withRange({ buyer_id: '7' }),
     ));
     expect(await screen.findByText('Customer report')).toBeTruthy();
     expect(screen.getByRole('button', { name: /kisii dairy/i })).toBeTruthy();
@@ -117,8 +122,8 @@ describe('OperationsReportsPage', () => {
 
     expect(await screen.findByRole('button', { name: /2 selected/i })).toBeTruthy();
     await waitFor(() => {
-      expect(apiClientMock.get).toHaveBeenCalledWith(`/reports/buyer-performance?buyer_id=7&${RANGE}`);
-      expect(apiClientMock.get).toHaveBeenCalledWith(`/reports/buyer-performance?buyer_id=9&${RANGE}`);
+      expect(apiClientMock.get).toHaveBeenCalledWith('/reports/buyer-performance', withRange({ buyer_id: '7' }));
+      expect(apiClientMock.get).toHaveBeenCalledWith('/reports/buyer-performance', withRange({ buyer_id: '9' }));
     });
   });
 
@@ -128,7 +133,7 @@ describe('OperationsReportsPage', () => {
     fireEvent.change(screen.getByLabelText('Start date'), { target: { value: '2026-09-15' } });
 
     await waitFor(() => expect(apiClientMock.get).toHaveBeenCalledWith(
-      '/finance/ledger?start_date=2026-09-15&end_date=2026-09-30',
+      '/finance/ledger', { params: { start_date: '2026-09-15', end_date: '2026-09-30' } },
     ));
   });
 
@@ -175,6 +180,7 @@ describe('OperationsReportsPage', () => {
 
     renderPage([`/operations/reports?period=custom&${RANGE}&buyer_id=7`]);
 
-    expect(await screen.findByText('Unable to load the reporting dashboard.')).toBeTruthy();
+    expect(await screen.findByText('Couldn’t load reports.')).toBeTruthy();
+    expect(screen.getByRole('button', { name: /Try again/ })).toBeTruthy();
   });
 });

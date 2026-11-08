@@ -15,6 +15,8 @@ import { CardSkeletons, ListLoadMessage, SlowLoadingHint, TableSkeletonRows } fr
 import { getListLoadState } from '../../lib/listLoadState';
 import { CartesianGrid, Legend, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 
+// TODO(BR-013): the daily totals for the chart are added up here from the cow's sessions; the
+// backend should return the daily series with the history.
 export function buildMilkYieldTrend(sessions, range = 'all') {
   const dailyTotals = sessions.reduce((totals, entry) => {
     const date = String(entry.date ?? '').slice(0, 10);
@@ -105,38 +107,18 @@ export default function MilkHistory() {
     [filters, safeSessions],
   );
 
-  const totalYield = filteredSessions.reduce((sum, entry) => sum + Number(entry.liters || 0), 0).toFixed(1);
-  const totalSessions = safeSessions.length;
+  // The cow's figures are the backend's, over her whole history (not just the filtered rows).
+  const backendStats = resolvedHistory?.stats ?? {};
+  const litresText = (value, suffix = 'L') => (value === null || value === undefined || !Number.isFinite(Number(value))
+    ? '—'
+    : `${Number(value).toFixed(1)} ${suffix}`);
+  const totalYield = litresText(backendStats.total_logged);
+  const totalSessions = backendStats.session_count ?? '—';
   const [trendRange, setTrendRange] = useState('30');
   const trendData = useMemo(() => buildMilkYieldTrend(safeSessions, trendRange), [safeSessions, trendRange]);
 
-  const { averageYield, peakYield } = useMemo(() => {
-    const backendStats = resolvedHistory?.stats;
-
-    // Prefer backend-computed stats (source of truth).
-    if (backendStats?.average_yield != null && backendStats?.peak_yield != null) {
-      return {
-        averageYield: `${Number(backendStats.average_yield).toFixed(1)} L/day`,
-        peakYield: `${Number(backendStats.peak_yield).toFixed(1)} L/day`,
-      };
-    }
-
-    // Fallback: derive client-side during the backend migration window.
-    if (safeSessions.length === 0) return { averageYield: '0.0 L/day', peakYield: '0.0 L/day' };
-
-    const dailyTotals = safeSessions.reduce((acc, entry) => {
-      const day = entry.date ? String(entry.date).slice(0, 10) : 'unknown';
-      acc[day] = (acc[day] || 0) + Number(entry.liters || 0);
-      return acc;
-    }, {});
-
-    const dailyValues = Object.values(dailyTotals);
-    const totalAllLiters = dailyValues.reduce((s, v) => s + v, 0);
-    const avg = (totalAllLiters / dailyValues.length).toFixed(1);
-    const peak = Math.max(...dailyValues).toFixed(1);
-
-    return { averageYield: `${avg} L/day`, peakYield: `${peak} L/day` };
-  }, [resolvedHistory?.stats, safeSessions]);
+  const averageYield = litresText(backendStats.average_yield, 'L/day');
+  const peakYield = litresText(backendStats.peak_yield, 'L/day');
 
   const clearFilters = () => setFilters({ search: '', date: '', status: 'all', session: 'all' });
 
@@ -191,7 +173,7 @@ export default function MilkHistory() {
         <MetricCard loading={isLoading} label="Cow" value={resolvedHistory?.animal?.name || 'Unknown Cow'} icon={Droplets} />
         <MetricCard loading={isLoading} label="Average Yield" value={averageYield} icon={TrendingUp} />
         <MetricCard loading={isLoading} label="Peak Yield" value={peakYield} icon={Calendar} />
-        <MetricCard loading={isLoading} label="Total Logged" value={`${totalYield} L`} icon={ShieldAlert} tone="accent" />
+        <MetricCard loading={isLoading} label="Total Logged" value={totalYield} icon={ShieldAlert} tone="accent" />
       </div>
 
       <section className="card-machined overflow-hidden bg-surface">
@@ -355,6 +337,7 @@ export default function MilkHistory() {
                     items={filteredSessions}
                     getDate={(entry) => entry.date}
                     colSpan={5}
+                    // TODO(BR-013): per-day totals should come from the backend's daily series.
                     renderGroupMeta={(items) => `${items.length} ${items.length === 1 ? 'session' : 'sessions'} / ${items.reduce((sum, item) => sum + Number(item.liters || 0), 0).toFixed(1)} L`}
                     renderItem={(entry, index) => (
                       <tr key={`${entry.date}-${entry.session}-${index}`} className="transition-colors hover:bg-surface-raised">

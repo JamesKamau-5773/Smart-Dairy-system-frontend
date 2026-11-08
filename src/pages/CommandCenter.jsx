@@ -5,7 +5,7 @@ import { productionApi } from '../lib/backendApi';
 import { Activity, Droplets, TrendingUp, DollarSign, LineChart as ChartIcon, ShoppingCart, Archive } from 'lucide-react';
 import React, { Suspense, lazy, useMemo, useState } from 'react';
 import { subDays } from 'date-fns';
-import { buildTrendData, extractYieldCowId, extractYieldDate, extractYieldAmount, metricFromSummary } from '../lib/dashboardUtils';
+import { buildTrendData, extractYieldDate, metricFromSummary } from '../lib/dashboardUtils';
 
 // Components
 const MilkTrendChart = lazy(() => import('../components/dashboard/MilkTrendChart'));
@@ -15,7 +15,6 @@ import MilestoneBanner from '../components/dashboard/MilestoneBanner';
 import Money from '../components/ui/Money';
 import { swahiliGreeting } from '../lib/welcomeProgress';
 import { Skeleton } from '@/components/ui';
-import { todayLocalIso } from '../lib/localDate';
 
 const SummaryCard = ({ title, value, unit, icon: Icon, trend, loading = false }) => (
   <div className="glass-panel p-6 flex flex-col justify-between min-h-[180px] relative overflow-hidden group">
@@ -69,6 +68,14 @@ export default function CommandCenter() {
     enabled: !!farmId,
   });
 
+  // All-time totals for the welcome checklist and milk milestones, from the backend. Keyed under
+  // the milk rows, so every milk save refreshes it.
+  const yieldTotalsQuery = useQuery({
+    queryKey: [...QUERY_KEYS.YIELD_ROWS(tenantId, farmId), 'totals'],
+    queryFn: () => productionApi.yieldTotals(),
+    enabled: !!farmId,
+  });
+  const yieldTotals = yieldTotalsQuery.data;
   const trend = useMemo(() => buildTrendData(trendQuery.data, dateRange), [trendQuery.data, dateRange]);
 
   const selectTrendRange = (range) => {
@@ -92,21 +99,8 @@ export default function CommandCenter() {
   const hasSummaryError = summaryQuery.isError;
   const isRetryingSummary = summaryQuery.isFetching;
 
-  const derivedTodaySummary = useMemo(() => {
-    const rows = Array.isArray(trendQuery.data) ? trendQuery.data : [];
-    const today = todayLocalIso();
-
-    const todayRows = rows.filter((row) => extractYieldDate(row) === today);
-    const total = todayRows.reduce((acc, row) => acc + extractYieldAmount(row), 0);
-    const uniqueCows = new Set(todayRows.map(extractYieldCowId).filter(Boolean)).size;
-
-    return {
-      totalLitersToday: Number(total.toFixed(1)),
-      cowsMilked: uniqueCows,
-      averagePerCow: uniqueCows > 0 ? Number((total / uniqueCows).toFixed(1)) : 0,
-    };
-  }, [trendQuery.data]);
-
+  // Today's figures are the backend's (GET /production/summary). When it can't be reached they
+  // show "—"; they are never worked out from the rows on this phone.
   const totalLitersToday = metricFromSummary(summary, [
     'production_total_liters',
     'total_liters_today',
@@ -117,7 +111,7 @@ export default function CommandCenter() {
     'totalLiters',
     'total_volume',
     'totalVolume',
-  ]) ?? derivedTodaySummary.totalLitersToday;
+  ]);
 
   const cowsMilked = metricFromSummary(summary, [
     'cows_milked',
@@ -126,7 +120,7 @@ export default function CommandCenter() {
     'todayCowsMilked',
     'milked_cows',
     'milkedCows',
-  ]) ?? derivedTodaySummary.cowsMilked;
+  ]);
 
   const averageYieldPerCow = metricFromSummary(summary, [
     'average_yield_per_cow',
@@ -134,11 +128,10 @@ export default function CommandCenter() {
     'avg_per_cow',
     'avgPerCow',
     'average_per_cow',
-  ]) ?? derivedTodaySummary.averagePerCow;
+  ]);
 
-  const profitPerLiter = useMemo(() => {
-    return summary?.profit_per_liter ?? summary?.profitPerLiter ?? 0;
-  }, [summary]);
+  const profitPerLiter = metricFromSummary(summary, ['profit_per_liter', 'profitPerLiter']);
+  const kesOrDash = (value) => (value === null || value === undefined ? '—' : `KES ${Number(value).toLocaleString()}`);
 
   const handleRetrySummary = async () => {
     await summaryQuery.refetch();
@@ -158,16 +151,16 @@ export default function CommandCenter() {
         key={`welcome:${tenantId}:${farmId}`}
         tenantId={tenantId}
         farmId={farmId}
-        milkRecords={trendQuery.data}
-        milkLoaded={trendQuery.isSuccess}
+        milkRecordCount={yieldTotals?.totalRecords ?? null}
+        milkLoaded={yieldTotalsQuery.isSuccess}
       />
 
       <MilestoneBanner
         key={`milestone:${tenantId}:${farmId}`}
         tenantId={tenantId}
         farmId={farmId}
-        milkRecords={trendQuery.data}
-        milkLoaded={trendQuery.isSuccess}
+        totalLitres={yieldTotals?.totalLitres ?? null}
+        milkLoaded={yieldTotalsQuery.isSuccess}
       />
 
       <section>
@@ -196,7 +189,7 @@ export default function CommandCenter() {
         <div className="card-machined bg-surface p-5 border border-ink/5">
           <p className="text-xs font-bold text-ink-muted uppercase tracking-wider">Transaction Revenue</p>
           <h3 className="mt-2 break-words text-xl font-black text-brand sm:text-2xl">
-            {summaryQuery.isLoading ? 'Loading...' : hasSummaryError ? 'Unavailable' : `KES ${(summary?.revenue_total_kes ?? 0).toLocaleString()}`}
+            {summaryQuery.isLoading ? 'Loading...' : hasSummaryError ? 'Unavailable' : kesOrDash(summary?.revenue_total_kes)}
           </h3>
           {summary?.revenue_breakdown?.report_sales_revenue_kes != null && (
             <p className="mt-2 text-[11px] leading-4 text-ink-muted">
@@ -207,24 +200,24 @@ export default function CommandCenter() {
         <div className="card-machined bg-surface p-5 border border-ink/5">
           <p className="text-xs font-bold text-ink-muted uppercase tracking-wider">Today's Feed Cost</p>
           <h3 className="mt-2 break-words text-xl font-black text-ink sm:text-2xl">
-            {summaryQuery.isLoading ? 'Loading...' : hasSummaryError ? 'Unavailable' : `KES ${(summary?.feed_cost_total_kes ?? 0).toLocaleString()}`}
+            {summaryQuery.isLoading ? 'Loading...' : hasSummaryError ? 'Unavailable' : kesOrDash(summary?.feed_cost_total_kes)}
           </h3>
         </div>
         <div className="card-machined bg-brand/5 p-5 border-2 border-brand/20 ">
           <p className="text-xs font-bold text-brand uppercase tracking-wider">Daily Profit</p>
           <h3 className="mt-2 break-words text-xl font-black text-brand sm:text-2xl">
-            {summaryQuery.isLoading ? 'Loading...' : hasSummaryError ? 'Unavailable' : `KES ${(summary?.net_margin_kes ?? 0).toLocaleString()}`}
+            {summaryQuery.isLoading ? 'Loading...' : hasSummaryError ? 'Unavailable' : kesOrDash(summary?.net_margin_kes)}
           </h3>
         </div>
       </section>
 
       <section className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
-        <SummaryCard title="Total Milk (Today)" value={summaryQuery.isLoading ? '—' : totalLitersToday.toFixed(1)} unit="Liters" icon={Droplets} loading={summaryQuery.isLoading} />
+        <SummaryCard title="Total Milk (Today)" value={totalLitersToday === null ? '—' : totalLitersToday.toFixed(1)} unit="Liters" icon={Droplets} loading={summaryQuery.isLoading} />
         <SummaryCard title="Saleable Milk (Today)" value={summaryQuery.isLoading ? '—' : (summary?.saleable_liters ?? 0).toFixed(1)} unit="Liters" icon={Droplets} loading={summaryQuery.isLoading} />
         <SummaryCard title="Milk Sold (Today)" value={summaryQuery.isLoading ? '—' : (summary?.total_sold_liters ?? 0).toFixed(1)} unit="Liters" icon={ShoppingCart} loading={summaryQuery.isLoading} />
         <SummaryCard title="Milk Remaining" value={summaryQuery.isLoading ? '—' : (summary?.remaining_milk_liters ?? 0).toFixed(1)} unit="Liters" icon={Archive} loading={summaryQuery.isLoading} />
-        <SummaryCard title="Cows Milked" value={hasSummaryError ? '—' : (summary?.cows_milked ?? cowsMilked)} unit="Cows" icon={Activity} loading={summaryQuery.isLoading} />
-        <SummaryCard title="Avg. per Cow" value={hasSummaryError ? '—' : averageYieldPerCow} unit="L/cow" icon={TrendingUp} loading={summaryQuery.isLoading} />
+        <SummaryCard title="Cows Milked" value={cowsMilked ?? '—'} unit="Cows" icon={Activity} loading={summaryQuery.isLoading} />
+        <SummaryCard title="Avg. per Cow" value={averageYieldPerCow ?? '—'} unit="L/cow" icon={TrendingUp} loading={summaryQuery.isLoading} />
         <SummaryCard title="Profit per Liter" value={summaryQuery.isLoading ? '—' : <Money amount={profitPerLiter} currency={summary?.currency ?? 'KES'} />} icon={DollarSign} loading={summaryQuery.isLoading} />
       </section>
 

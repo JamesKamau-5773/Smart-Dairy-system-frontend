@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react';
+import { useMemo, useState, useRef, useEffect } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import toast from 'react-hot-toast';
@@ -29,6 +29,8 @@ import { formatDateTime, getRelativeTime } from '../../lib/audit';
 import { getApiErrorMessage, herdApi } from '../../lib/backendApi';
 import { offlineFailureMessage } from '../../lib/offlinePolicy';
 import { reportError } from '../../lib/telemetry';
+import { getListLoadState, hasRowsToShow } from '../../lib/listLoadState';
+import { ListLoadNotices, StatValue } from '../../components/ui/ListLoadState';
 import CowPhoto from '../../components/ui/CowPhoto';
 import { ANIMAL_PHOTO_ACCEPT, compressAnimalPhoto, formatPhotoSize, getAnimalPhotoSourceError, getAnimalPhotoValidationError } from '../../lib/animalPhoto';
 import { formatCowIdentity } from '../../lib/cowIdentity';
@@ -42,12 +44,9 @@ import {
   getFilteredHerd,
   getHerdSearchSuggestions,
   getHerdSummary,
-  isMilkingStatus,
-  isDryStatus,
   normalizeEarTag,
 } from '../../lib/herdUtils';
 
-const INITIAL_HERD = [];
 const statusOptions = ['Calf', 'Heifer', 'Lactating', 'Dry'];
 
 // ─────────────────────────────────────────────────────────────────────────
@@ -62,7 +61,6 @@ export default function HerdRegistry() {
   const [statusFilter, setStatusFilter] = useState('All'); // This filter is for the table, not the form dropdown
   const [herdSearch, setHerdSearch] = useState('');
   const [controlsOpen, setControlsOpen] = useState(false);
-  const [herdState, setHerdState] = useState(INITIAL_HERD);
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [successMessage, setSuccessMessage] = useState('');
@@ -86,9 +84,6 @@ export default function HerdRegistry() {
     dam_id: '',
     birth_weight_kg: '',
   });
-  const [herdOptions, setHerdOptions] = useState([]);
-  const [loadingHerdOptions, setLoadingHerdOptions] = useState(false);
-  const [herdOptionsFailed, setHerdOptionsFailed] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [isEditSaving, setIsEditSaving] = useState(false);
   const [editPhotoFile, setEditPhotoFile] = useState(null);
@@ -100,40 +95,35 @@ export default function HerdRegistry() {
   const photoInputRef = useRef(null);
   const confirmation = useConfirmation();
 
-  const { data: herdData, isLoading } = useQuery({
+  // The herd is rendered straight from the backend's list (shared cache with other pages);
+  // the dam dropdown uses the same list instead of fetching it again.
+  const herdQuery = useQuery({
     queryKey: ['herd', tenantId, farmId],
     queryFn: () => herdApi.list(),
     enabled: !!tenantId && !!farmId,
   });
+  const herdData = herdQuery.data;
+  const herdLoadState = getListLoadState(herdQuery);
+  const isLoading = herdLoadState === 'loading';
+  const herdState = useMemo(
+    () => (Array.isArray(herdData) ? herdData.map((cow) => normalizeHerdCow(cow)) : []),
+    [herdData],
+  );
+  const herdOptions = useMemo(
+    () => (Array.isArray(herdData) ? herdData.map((cow) => ({ value: cow.id, label: formatCowIdentity(cow) })) : []),
+    [herdData],
+  );
+  const loadingHerdOptions = isLoading;
+  const herdOptionsFailed = herdLoadState === 'error' || herdLoadState === 'offline';
 
-  // Fetch herd data for Dam dropdown
-  useEffect(() => {
-    const fetchHerdForDam = async () => {
-      setLoadingHerdOptions(true);
-      try {
-        // Using herdApi.list() as it's already imported and provides the necessary data
-        const response = await herdApi.list();
-        setHerdOptions(
-          response.map((cow) => ({
-            value: cow.id, // Assuming 'id' is the unique identifier for a cow
-            label: formatCowIdentity(cow),
-          }))
-        );
-      } catch (err) {
-        reportError(err, { where: 'HerdRegistry.damOptions' });
-        setHerdOptionsFailed(true);
-      } finally {
-        setLoadingHerdOptions(false);
-      }
-    };
-    fetchHerdForDam();
-  }, [tenantId, farmId]); // Re-fetch if tenant or farm changes
-
-  useEffect(() => {
-    if (Array.isArray(herdData)) {
-      setHerdState(herdData.map((cow) => normalizeHerdCow(cow)));
-    }
-  }, [herdData]);
+  // Counts for the whole farm, from the backend (the list above is capped at one page).
+  const herdSummaryQuery = useQuery({
+    queryKey: ['herd', tenantId, farmId, 'summary'],
+    queryFn: () => herdApi.summary(),
+    enabled: !!tenantId && !!farmId,
+  });
+  const summaryLoadState = getListLoadState(herdSummaryQuery);
+  const backendSummary = herdSummaryQuery.data;
 
   const [newCow, setNewCow] = useState({
     tagNumber: '',
@@ -156,7 +146,17 @@ export default function HerdRegistry() {
 
   const hasActiveFilters = statusFilter !== 'All' || herdSearch.trim() !== '';
   const activeFilterCount = [herdSearch.trim(), statusFilter !== 'All'].filter(Boolean).length;
-  const herdSummary = getHerdSummary(herdState);
+  const herdSummary = {
+    totalAnimals: backendSummary?.totalCount ?? null,
+    milkingCount: backendSummary?.milkingCount ?? null,
+    dryCount: backendSummary?.dryCount ?? null,
+    averageAgeMonths: backendSummary?.averageAgeMonths == null ? null : Math.round(backendSummary.averageAgeMonths),
+    latestCalved: backendSummary?.latestCalved ?? null,
+    // TODO(BR-011): the backend summary should include the latest update; until then it is
+    // read from the rows on this page.
+    latestUpdatedAt: getHerdSummary(herdState).latestUpdatedAt,
+  };
+  const countText = (value) => (value === null ? '—' : value);
 
   // Keyboard shortcuts
   useEffect(() => {
@@ -555,19 +555,19 @@ export default function HerdRegistry() {
           <div className="card-machined bg-surface/80 p-3">
             <div className="text-[10px] font-bold uppercase tracking-wider text-ink-muted">Total Animals</div>
             <div className="text-2xl font-black text-ink-strong">
-              {isLoading ? <Skeleton className="h-6 w-16" /> : herdSummary.totalAnimals}
+              <StatValue state={summaryLoadState} label="herd counts">{countText(herdSummary.totalAnimals)}</StatValue>
             </div>
           </div>
           <div className="card-machined bg-surface/80 p-3">
             <div className="text-[10px] font-bold uppercase tracking-wider text-ink-muted">Milking</div>
             <div className="text-2xl font-black text-ink-strong">
-              {isLoading ? <Skeleton className="h-6 w-16" /> : herdSummary.milkingCount}
+              <StatValue state={summaryLoadState} label="herd counts">{countText(herdSummary.milkingCount)}</StatValue>
             </div>
           </div>
           <div className="card-machined bg-surface/80 p-3">
             <div className="text-[10px] font-bold uppercase tracking-wider text-ink-muted">Dry</div>
             <div className="text-2xl font-black text-ink-strong">
-              {isLoading ? <Skeleton className="h-6 w-16" /> : herdSummary.dryCount}
+              <StatValue state={summaryLoadState} label="herd counts">{countText(herdSummary.dryCount)}</StatValue>
             </div>
           </div>
         </div>
@@ -615,7 +615,7 @@ export default function HerdRegistry() {
         <div className="mb-6 grid gap-3 border-b border-ink/10 pb-4 sm:grid-cols-2 xl:grid-cols-4">
           <div className="rounded-lg border border-ink/10 bg-surface-raised px-4 py-3">
             <div className="text-[10px] font-bold uppercase tracking-widest text-ink-muted">Registry Summary</div>
-            <div className="mt-1 text-lg font-black text-brand">{herdSummary.totalAnimals} Cows</div>
+            <div className="mt-1 text-lg font-black text-brand">{countText(herdSummary.totalAnimals)} Cows</div>
             <div
               className="text-[9px] text-ink-muted mt-1"
               title={herdSummary.latestUpdatedAt ? formatDateTime(herdSummary.latestUpdatedAt) : 'Not available'}
@@ -630,8 +630,8 @@ export default function HerdRegistry() {
           <div className="rounded-lg border border-ink/10 bg-surface-raised px-4 py-3">
             <div className="text-[10px] font-bold uppercase tracking-widest text-ink-muted">Milking / Dry</div>
             <div className="mt-1 text-lg font-black text-ink-strong">
-              {herdSummary.milkingCount}{' '}
-              <span className="text-sm font-bold text-ink-muted">/ {herdSummary.dryCount}</span>
+              {countText(herdSummary.milkingCount)}{' '}
+              <span className="text-sm font-bold text-ink-muted">/ {countText(herdSummary.dryCount)}</span>
             </div>
           </div>
           <div className="rounded-lg border border-ink/10 bg-surface-raised px-4 py-3">
@@ -700,9 +700,9 @@ export default function HerdRegistry() {
 
               <div className="flex flex-wrap items-center gap-2">
                 {[
-                  { label: 'All', count: herdState.length },
-                  { label: 'Milking', count: herdState.filter((cow) => isMilkingStatus(cow.status)).length },
-                  { label: 'Dry', count: herdState.filter((cow) => isDryStatus(cow.status)).length },
+                  { label: 'All', count: countText(herdSummary.totalAnimals) },
+                  { label: 'Milking', count: countText(herdSummary.milkingCount) },
+                  { label: 'Dry', count: countText(herdSummary.dryCount) },
                 ].map((option) => (
                   <button
                     key={option.label}
@@ -736,6 +736,8 @@ export default function HerdRegistry() {
             </div>
           )}
         </div>
+
+        <ListLoadNotices state={herdLoadState} label="cows" error={herdQuery.error} onRetry={herdQuery.refetch} />
 
         {/* Table */}
         <div className="hidden overflow-x-auto md:block">
@@ -798,7 +800,7 @@ export default function HerdRegistry() {
                     </td>
                   </tr>
                 ))
-                : visibleHerd.length === 0
+                : !hasRowsToShow(herdLoadState) ? null : visibleHerd.length === 0
                   ? (
                     <tr>
                       <td colSpan="8" className="px-4 py-8 text-center">{emptyHerdContent}</td>
@@ -875,6 +877,7 @@ export default function HerdRegistry() {
         </div>
         <div className="space-y-3 p-3 md:hidden">
           {isLoading ? Array.from({ length: 4 }, (_, index) => <Skeleton key={index} className="h-36 w-full" />)
+            : !hasRowsToShow(herdLoadState) ? null
             : visibleHerd.length === 0 ? <div className="p-5 text-center">{emptyHerdContent}</div>
               : visibleHerd.map((cow) => {
                 const routeId = getCowRouteId(cow);
@@ -900,7 +903,7 @@ export default function HerdRegistry() {
         </div>
 
         <div className="mt-4 text-xs text-ink-muted">
-          Showing {visibleHerd.length} of {herdState.length} animals.
+          Showing {visibleHerd.length} of {countText(herdSummary.totalAnimals)} animals.
         </div>
       </div>
 

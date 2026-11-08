@@ -12,7 +12,15 @@ const toList = (value) => (Array.isArray(value) ? value : []);
  * Shares query keys with the herd and buyer pages, so finishing a step there updates it here.
  * Remount with `key` when the farm changes.
  */
-export default function WelcomeChecklist({ tenantId, farmId, milkRecords, milkLoaded }) {
+/**
+ * @param {object} props
+ * @param {number|null} props.milkRecordCount How many milk records the backend has (null while unknown).
+ * @param {boolean} props.milkLoaded True once that count has loaded.
+ *
+ * TODO(BR-008): which steps are done, and whether the list was dismissed, should come from the
+ * backend; today they are worked out from the farm's lists and remembered on this phone only.
+ */
+export default function WelcomeChecklist({ tenantId, farmId, milkRecordCount, milkLoaded }) {
   const storageKey = checklistKey(tenantId, farmId);
   const [stored, setStored] = useState(() => readFlag(storageKey));
   const finished = stored === 'done' || stored === 'dismissed';
@@ -44,7 +52,7 @@ export default function WelcomeChecklist({ tenantId, farmId, milkRecords, milkLo
       description: 'Log the litres from your next milking.',
       to: '/operations/yield',
       icon: Milk,
-      done: toList(milkRecords).length > 0,
+      done: Number(milkRecordCount) > 0,
     },
     {
       id: 'buyer',

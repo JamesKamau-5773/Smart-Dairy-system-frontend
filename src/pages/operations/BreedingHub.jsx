@@ -1,7 +1,7 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import Skeleton from '../../components/ui/Skeleton';
-import { ListLoadMessage, SlowLoadingHint } from '../../components/ui/ListLoadState';
-import { getListLoadState } from '../../lib/listLoadState';
+import { CardSkeletons, ListLoadMessage, ListLoadNotices, SlowLoadingHint } from '../../components/ui/ListLoadState';
+import { getListLoadState, hasRowsToShow } from '../../lib/listLoadState';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import toast from 'react-hot-toast';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
@@ -43,34 +43,6 @@ import {
 } from 'lucide-react';
 import { toLocalIsoDate } from '../../lib/localDate';
 import { reportError } from '../../lib/telemetry';
-
-const bullStock = [];
-
-function getBreedingCacheKey(tenantId, farmId) {
-  return `breeding_logs_cache:${tenantId || 'tenant'}:${farmId || 'farm'}`;
-}
-
-function readCachedBreedingLogs(tenantId, farmId) {
-  if (typeof window === 'undefined') return [];
-
-  try {
-    const raw = window.localStorage.getItem(getBreedingCacheKey(tenantId, farmId));
-    const parsed = raw ? JSON.parse(raw) : [];
-    return Array.isArray(parsed) ? parsed : [];
-  } catch {
-    return [];
-  }
-}
-
-function writeCachedBreedingLogs(tenantId, farmId, logs) {
-  if (typeof window === 'undefined') return;
-
-  try {
-    window.localStorage.setItem(getBreedingCacheKey(tenantId, farmId), JSON.stringify(Array.isArray(logs) ? logs : []));
-  } catch {
-    // Ignore quota or storage errors and keep UI flow unaffected.
-  }
-}
 
 /**
  * NOTE: The following components should be extracted into their own files
@@ -170,7 +142,7 @@ function BreedingHeader({ metrics, onLogService, onRecordHeat }) {
             <Stethoscope size={14} /> {metrics.pendingTotal} Pending Checks ({metrics.pendingDueNow} Due)
           </div>
           <div className="flex items-center gap-2 rounded-md bg-brand/5 px-3 py-1.5 text-xs font-bold text-brand border border-brand/10">
-            <Snowflake size={14} /> {metrics.totalStraws} Straws in Tank
+            <Snowflake size={14} /> {metrics.totalStraws ?? '—'} Straws in Tank
           </div>
         </div>
       </div>
@@ -314,7 +286,7 @@ function VetQueueItem({ log, onOutcome, onEdit, isUpdating }) {
 // ============================================================================
 // COMPONENT 4: Inventory Panel (Responsibility: Semen stock & Reorder logic)
 // ============================================================================
-function SemenInventory({ stock, onAddInventory, onRestockInventory, onDeleteInventory }) {
+function SemenInventory({ stock, loadState, error, onRetry, onAddInventory, onRestockInventory, onDeleteInventory }) {
   return (
     <div className="card-machined bg-surface p-6 h-full border border-ink/5 ">
       <div className="flex items-center justify-between mb-6">
@@ -324,7 +296,13 @@ function SemenInventory({ stock, onAddInventory, onRestockInventory, onDeleteInv
       </div>
 
       <div className="space-y-3">
-        {stock.length === 0 && (
+        {loadState !== 'ready' && (
+          <div className="overflow-hidden rounded-lg border border-ink/10">
+            <ListLoadNotices state={loadState} label="semen inventory" error={error} onRetry={onRetry} />
+            {loadState === 'loading' && <div aria-busy="true"><CardSkeletons rows={2} /></div>}
+          </div>
+        )}
+        {hasRowsToShow(loadState) && stock.length === 0 && (
           <div className="flex flex-col items-start gap-3 rounded-lg border border-dashed border-ink/10 bg-surface-raised p-4 text-sm text-ink-muted">
             <p>No semen inventory records yet. Add straws you have in the tank so services can be logged against them.</p>
             <button type="button" onClick={onAddInventory} className="btn-command">Add semen inventory</button>
@@ -381,7 +359,6 @@ function SemenInventory({ stock, onAddInventory, onRestockInventory, onDeleteInv
 export default function BreedingHub() {
   const { tenantId, farmId } = useTenant();
   const queryClient = useQueryClient();
-  const [inventory, setInventory] = useState(bullStock);
   const [infoMessage, setInfoMessage] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
   const [, setShowError] = useState(false);
@@ -411,16 +388,11 @@ export default function BreedingHub() {
 
   const confirmation = useConfirmation();
 
+  // Same query (and cache) as the Cow Register. A failure leaves cow names unresolved rather
+  // than pretending the herd is empty.
   const { data: herdData = [] } = useQuery({
     queryKey: ['herd', tenantId, farmId],
-    queryFn: async () => {
-      try {
-        return await herdApi.list();
-      } catch (error) {
-        reportError(error, { where: 'BreedingHub.loadHerd' });
-        return [];
-      }
-    },
+    queryFn: () => herdApi.list(),
     enabled: !!tenantId && !!farmId,
   });
 
@@ -438,18 +410,19 @@ export default function BreedingHub() {
       });
   }, [herdData]);
 
-  const { data: semenInventoryData } = useQuery({
-    queryKey: ['breeding', 'semen-inventory', tenantId, farmId],
-    queryFn: async () => {
-      try {
-        return await breedingApi.listSemenInventory();
-      } catch (error) {
-        reportError(error, { where: 'BreedingHub.loadSemenInventory' });
-        return [];
-      }
-    },
+  // The tank's contents as the backend has them; every change refetches this.
+  const semenInventoryKey = ['breeding', 'semen-inventory', tenantId, farmId];
+  const semenQuery = useQuery({
+    queryKey: semenInventoryKey,
+    queryFn: () => breedingApi.listSemenInventory(),
     enabled: !!tenantId && !!farmId,
   });
+  const semenLoadState = getListLoadState(semenQuery);
+  const inventory = useMemo(
+    () => (Array.isArray(semenQuery.data) ? semenQuery.data.map(normalizeSemenInventory) : []),
+    [semenQuery.data],
+  );
+  const refreshSemenInventory = () => queryClient.invalidateQueries({ queryKey: semenInventoryKey });
 
   const {
     data: geneticProgressData,
@@ -468,18 +441,14 @@ export default function BreedingHub() {
     data: geneticProgressData,
   });
 
-  const { data: breedingLogsData } = useQuery({
+  // Saved on this phone by the app's query cache for offline use; there is no separate copy.
+  const breedingLogsQuery = useQuery({
     queryKey: ['breeding', 'logs', tenantId, farmId],
-    queryFn: async () => {
-      try {
-        return await breedingApi.listLogs();
-      } catch (error) {
-        reportError(error, { where: 'BreedingHub.loadLogs' });
-        return readCachedBreedingLogs(tenantId, farmId);
-      }
-    },
+    queryFn: () => breedingApi.listLogs(),
     enabled: !!tenantId && !!farmId,
   });
+  const breedingLogsData = breedingLogsQuery.data;
+  const logsLoadState = getListLoadState(breedingLogsQuery);
 
   const { data: heatObservations = [] } = useQuery({
     queryKey: ['breeding', 'heat-observations', tenantId, farmId],
@@ -525,22 +494,14 @@ export default function BreedingHub() {
           };
         }), [heatObservations, herdOptions]);
 
-  useEffect(() => {
-    if (Array.isArray(semenInventoryData) && inventory.length === 0) {
-      setInventory(semenInventoryData.map(normalizeSemenInventory));
-    }
-  }, [inventory.length, semenInventoryData]);
-
-  useEffect(() => {
-    if (normalizedBreedingLogs) writeCachedBreedingLogs(tenantId, farmId, normalizedBreedingLogs);
-  }, [normalizedBreedingLogs, tenantId, farmId]);
-
   // Derived State for KPI Chips
   const metrics = {
     onHeat: breedingAlerts.length,
     pendingDueNow: vetQueue.filter((log) => log.daysPostAI >= 45).length,
     pendingTotal: vetQueue.length,
-    totalStraws: inventory.reduce((total, bull) => total + bull.strawsLeft, 0)
+    // TODO(BR-009): the backend should return the tank total; until then it is summed here,
+    // and shown as "—" while the inventory is unknown.
+    totalStraws: hasRowsToShow(semenLoadState) ? inventory.reduce((total, bull) => total + bull.strawsLeft, 0) : null,
   };
 
   const handleOutcome = async (logId, outcome) => {
@@ -592,8 +553,8 @@ export default function BreedingHub() {
     notifyInfo(message);
   };
 
-  const handleAddInventorySuccess = (nextInventory, message) => {
-    setInventory((current) => [nextInventory, ...current]);
+  const handleAddInventorySuccess = (_nextInventory, message) => {
+    refreshSemenInventory();
     setIsInventoryOpen(false);
     notifyInfo(message);
   };
@@ -603,8 +564,8 @@ export default function BreedingHub() {
     setIsRestockOpen(true);
   };
 
-  const handleRestockSuccess = (updated, message) => {
-    setInventory((current) => current.map((item) => (item.id === updated.id ? updated : item)));
+  const handleRestockSuccess = (_updated, message) => {
+    refreshSemenInventory();
     setIsRestockOpen(false);
     setSelectedInventoryItem(null);
     notifyInfo(message);
@@ -635,7 +596,7 @@ export default function BreedingHub() {
     try {
       confirmation.setLoading(true);
       await breedingApi.deleteSemenInventory(bull.id);
-      setInventory((current) => current.filter((item) => item.id !== bull.id));
+      await refreshSemenInventory();
 
       notifyInfo(`Deleted ${bull.name} from semen inventory.`);
     } catch (error) {
@@ -679,6 +640,12 @@ export default function BreedingHub() {
             </div>
 
             <div className="space-y-3">
+              {logsLoadState !== 'ready' && (
+                <div className="overflow-hidden rounded-lg border border-ink/10">
+                  <ListLoadNotices state={logsLoadState} label="breeding records" error={breedingLogsQuery.error} onRetry={breedingLogsQuery.refetch} />
+                  {logsLoadState === 'loading' && <div aria-busy="true"><CardSkeletons rows={2} /></div>}
+                </div>
+              )}
               {vetQueue.map((log) => (
                 <VetQueueItem
                   key={log.id}
@@ -688,7 +655,7 @@ export default function BreedingHub() {
                   isUpdating={!!statusUpdatingById[log.id]}
                 />
               ))}
-              {vetQueue.length === 0 && (
+              {hasRowsToShow(logsLoadState) && vetQueue.length === 0 && (
                 <div className="py-8 text-center text-sm font-medium text-ink-muted">
                   All inseminated cows have been checked by the vet.
                 </div>
@@ -746,6 +713,9 @@ export default function BreedingHub() {
         <div className="h-full">
             <SemenInventory
               stock={inventory}
+              loadState={semenLoadState}
+              error={semenQuery.error}
+              onRetry={semenQuery.refetch}
               onAddInventory={() => setIsInventoryOpen(true)}
               onRestockInventory={handleOpenRestock}
               onDeleteInventory={handleDeleteInventory}

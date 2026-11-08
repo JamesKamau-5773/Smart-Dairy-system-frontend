@@ -1,30 +1,31 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Trophy, X } from 'lucide-react';
-import { extractYieldAmount } from '../../lib/dashboardUtils';
 import { milestoneKey, milestoneStatus, readFlag, writeFlag } from '../../lib/welcomeProgress';
 
 /**
  * Congratulates the farm once each time its recorded milk crosses a milestone
  * (100 L, 1,000 L, ...). Remount with `key` when the farm changes.
+ *
+ * @param {object} props
+ * @param {number|null} props.totalLitres The farm's all-time milk total from the backend; while
+ *   unknown (null) nothing is shown or acknowledged.
+ * @param {boolean} props.milkLoaded True once that total has loaded.
  */
-export default function MilestoneBanner({ tenantId, farmId, milkRecords, milkLoaded }) {
+export default function MilestoneBanner({ tenantId, farmId, totalLitres, milkLoaded }) {
   const storageKey = milestoneKey(tenantId, farmId);
   const [acknowledged, setAcknowledged] = useState(() => readFlag(storageKey));
 
-  const totalLitres = useMemo(
-    () => (Array.isArray(milkRecords) ? milkRecords.reduce((sum, row) => sum + extractYieldAmount(row), 0) : 0),
-    [milkRecords],
-  );
-  const status = milestoneStatus(acknowledged, totalLitres);
+  const known = milkLoaded && Number.isFinite(totalLitres);
+  const status = milestoneStatus(acknowledged, known ? totalLitres : 0);
 
   // Adjust state during render (no extra effect pass); the effect below only persists it.
-  if (milkLoaded && status.acknowledgeSilently) setAcknowledged(String(status.reached));
+  if (known && status.acknowledgeSilently) setAcknowledged(String(status.reached));
 
   useEffect(() => {
     if (acknowledged != null) writeFlag(storageKey, acknowledged);
   }, [acknowledged, storageKey]);
 
-  if (!milkLoaded || !status.celebrate) return null;
+  if (!known || !status.celebrate) return null;
 
   const acknowledge = () => setAcknowledged(String(status.reached));
 

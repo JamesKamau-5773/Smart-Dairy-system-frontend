@@ -212,3 +212,94 @@ Requested contract:
 If customers should be archived rather than deleted (like inventory items), say so and the
 frontend will switch the action to **Archive**. Frontend follow-up: point
 `financeApi.deleteCustomer` at the agreed path and map the two 409 codes.
+
+---
+
+## BR-008 — Farm setup progress (welcome checklist)
+
+**Status:** Open · **Raised:** 2026-11-09 (UX audit Phase 4) · **Frontend:** `WelcomeChecklist.jsx`, `welcomeProgress.js` (`TODO(BR-008)`)
+
+The dashboard's welcome checklist (add a cow, record a milking, add a buyer) works out which
+steps are done from the farm's lists and remembers "dismissed / done" in the phone's
+localStorage, so another phone shows it again and the backend has no idea a farm is set up.
+
+`GET /api/farms/current/setup-progress`
+
+```json
+{
+  "steps": [
+    { "id": "cow", "done": true },
+    { "id": "milk", "done": false },
+    { "id": "buyer", "done": false }
+  ],
+  "status": "active",
+  "milestones": { "acknowledged_litres": 1000 }
+}
+```
+
+`status`: `active` | `done` | `dismissed`.
+`PATCH /api/farms/current/setup-progress` with `{ "status": "dismissed" }` or
+`{ "milestones": { "acknowledged_litres": 10000 } }` → the updated object. `403` for staff
+without the dashboard. Frontend follow-up: read and write this instead of localStorage.
+
+---
+
+## BR-009 — Semen tank total
+
+**Status:** Open · **Raised:** 2026-11-09 (UX audit Phase 4) · **Frontend:** `BreedingHub.jsx` (`TODO(BR-009)`)
+
+The Breeding page shows "N Straws in Tank", summed in the browser from the inventory list.
+`GET /api/operations/semen-inventory` should return `{ "items": [ … ], "summary": { "total_straws": 42, "low_stock_count": 1 } }`
+(keeping the bare-array response working for older clients, or versioned).
+
+---
+
+## BR-010 — Deleting a unit helper (conversion)
+
+**Status:** Open · **Raised:** 2026-11-09 (UX audit Phase 4) · **Frontend:** `UnitConversions.jsx`
+
+The Unit Helpers page had a remove button that only removed the row on the phone (it came back
+on reload). There is no `DELETE` route for conversions, so the button is hidden until there is.
+
+`DELETE /api/units/conversions/<id>` → `200 { "id": 5, "deleted": true }`; `404` unknown id.
+
+Also: the barn-floor screens (Farm Task View) convert feed amounts using conversions stored on
+the phone under a key nothing writes any more, so saved unit helpers are not applied there.
+Frontend follow-up (no backend change needed): read them from `GET /api/units/conversions`.
+
+---
+
+## BR-011 — Herd summary: last update time
+
+**Status:** Open · **Raised:** 2026-11-09 (UX audit Phase 4) · **Frontend:** `HerdRegistry.jsx` (`TODO(BR-011)`)
+
+The herd counts now come from the `summary` that `GET /api/herd` already returns. "Last updated"
+is still read from the rows on the page; add `"latest_updated_at": "2026-11-08T07:10:00Z"` to
+that `summary`.
+
+---
+
+## BR-012 — Buyer performance for several buyers at once
+
+**Status:** Open · **Raised:** 2026-11-09 (UX audit Phase 4) · **Frontend:** `OperationsReportsPage.jsx` (`TODO(BR-012)`)
+
+With several buyers selected, the reporting dashboard calls
+`GET /api/reports/buyer-performance` once per buyer and adds the litres, revenue, payments and
+balances together in the browser. Accept `buyer_id=1,2,3` (or repeated `buyer_id`) and return the
+combined `summary` and `daily_records`.
+
+---
+
+## BR-013 — Daily milk series for one cow
+
+**Status:** Open · **Raised:** 2026-11-09 (UX audit Phase 4) · **Frontend:** `MilkHistory.jsx` (`TODO(BR-013)`)
+
+A cow's milk history now shows the backend's average, peak, total and session count. The trend
+chart and the per-day group totals are still added up from her sessions in the browser.
+Add to `GET /api/animals/<id>/milk-history`:
+
+```json
+{ "daily": [ { "date": "2026-11-07", "liters": "14.5", "sessions": 2 } ] }
+```
+
+(honouring `start_date` / `end_date`).

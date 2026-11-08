@@ -1,20 +1,12 @@
-import React, { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Scale, Info, Plus, Trash2, ArrowRight } from 'lucide-react';
-import { nutritionApi } from '../../lib/backendApi';
+import { Scale, Plus, Trash2, ArrowRight } from 'lucide-react';
+import { getApiErrorMessage, nutritionApi } from '../../lib/backendApi';
+import { offlineFailureMessage } from '../../lib/offlinePolicy';
+import { reportError } from '../../lib/telemetry';
+import { getListLoadState, hasRowsToShow } from '../../lib/listLoadState';
+import { CardSkeletons, ListLoadNotices } from '../../components/ui/ListLoadState';
 import { useTenant } from '../../hooks/useTenant';
-
-/**
- * SRP: Renders the informative banner explaining how the data is stored.
- */
-const StorageInfoBanner = () => (
-  <div className="bg-brand/5 border border-brand/15 rounded-xl p-4 flex gap-3  mb-6 animate-reveal">
-    <Info className="w-5 h-5 text-brand shrink-0 mt-0.5" />
-    <p className="text-sm text-ink-muted leading-relaxed">
-      <strong className="text-ink font-bold">Local Storage Notice:</strong> Saved conversions are currently stored locally on this device. They will be applied automatically when showing feed quantities on barn-floor screens.
-    </p>
-  </div>
-);
 
 /**
  * SRP: Handles ONLY the empty state for the conversions list.
@@ -30,6 +22,7 @@ const EmptyConversionsState = () => (
 /**
  * SRP: Handles the display and deletion interaction of a single conversion row.
  */
+// `onRemove` is optional: the backend can't delete a conversion yet (BACKEND_REQUESTS.md, BR-010).
 const ConversionRow = ({ conversion, onRemove }) => {
   if (!conversion) return null;
 
@@ -43,14 +36,16 @@ const ConversionRow = ({ conversion, onRemove }) => {
           1 {localUnit} = {ratio} {baseUnit}
         </p>
       </div>
-      <button
-        type="button"
-        onClick={() => onRemove(id)}
-        aria-label={`Remove ${localUnit} conversion`}
-        className="p-2 text-ink-muted/50 hover:text-danger hover:bg-danger/10 rounded-lg transition-all"
-      >
-        <Trash2 className="w-4 h-4" />
-      </button>
+      {onRemove && (
+        <button
+          type="button"
+          onClick={() => onRemove(id)}
+          aria-label={`Remove ${localUnit} conversion`}
+          className="p-2 text-ink-muted/50 hover:text-danger hover:bg-danger/10 rounded-lg transition-all"
+        >
+          <Trash2 className="w-4 h-4" />
+        </button>
+      )}
     </div>
   );
 };
@@ -66,48 +61,38 @@ export default function UnitConversions() {
   const [baseUnit, setBaseUnit] = useState('kg');
   const [ratio, setRatio] = useState('');
 
-  // List State (Loaded from localStorage on mount)
-  const [conversions, setConversions] = useState(() => {
-    try {
-      const saved = localStorage.getItem('jivu_unit_conversions');
-      return saved ? JSON.parse(saved) : [];
-    } catch {
-      return [];
-    }
-  });
+  const [saveError, setSaveError] = useState('');
 
-  const { data: backendConversions } = useQuery({
-    queryKey: ['unit-conversions', tenantId, farmId],
+  // The farm's unit helpers as the backend has them; saving refetches this list.
+  const conversionsKey = ['unit-conversions', tenantId, farmId];
+  const conversionsQuery = useQuery({
+    queryKey: conversionsKey,
     queryFn: () => nutritionApi.listConversions(),
     enabled: !!tenantId && !!farmId,
   });
-
-  useEffect(() => {
-    if (Array.isArray(backendConversions) && backendConversions.length > 0) {
-      setConversions(backendConversions);
-    }
-  }, [backendConversions]);
+  const loadState = getListLoadState(conversionsQuery);
+  const conversions = Array.isArray(conversionsQuery.data) ? conversionsQuery.data : [];
 
   const saveConversion = useMutation({
     mutationFn: (payload) => nutritionApi.saveConversion(payload),
-    onSuccess: (savedConversion) => {
-      setConversions((current) => [...current, savedConversion]);
-      queryClient.invalidateQueries({ queryKey: ['unit-conversions', tenantId, farmId] });
+    onMutate: () => setSaveError(''),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: conversionsKey });
       setMaterial('');
       setLocalUnit('');
       setRatio('');
     },
+    onError: (error) => {
+      reportError(error, { where: 'UnitConversions.save' });
+      setSaveError(offlineFailureMessage(error, 'The unit helper wasn’t saved.')
+        ?? getApiErrorMessage(error, 'Couldn’t save this unit helper. Your entry is still here. Try again.'));
+    },
   });
-
-  // Persist to localStorage whenever conversions change
-  useEffect(() => {
-    localStorage.setItem('jivu_unit_conversions', JSON.stringify(conversions));
-  }, [conversions]);
 
   const handleSave = (e) => {
     e.preventDefault();
     
-    // Defensive check
+    if (saveConversion.isPending) return;
     if (!material.trim() || !localUnit.trim() || !ratio || parseFloat(ratio) <= 0) {
       return;
     }
@@ -118,10 +103,6 @@ export default function UnitConversions() {
       baseUnit,
       ratio: parseFloat(ratio),
     });
-  };
-
-  const handleRemove = (idToRemove) => {
-    setConversions((prev) => prev.filter((item) => item?.id !== idToRemove));
   };
 
   const isFormValid = material.trim() && localUnit.trim() && ratio && parseFloat(ratio) > 0;
@@ -138,8 +119,6 @@ export default function UnitConversions() {
             Define local farm measurements (e.g., Kasuku, Wheelbarrow) and translate them into standard SI units.
           </p>
         </div>
-
-        <StorageInfoBanner />
 
         {/* Card 1: Add New Conversion Form */}
         <div className="bg-surface rounded-2xl  border border-ink/10 p-6 md:p-8">
@@ -218,13 +197,14 @@ export default function UnitConversions() {
               </div>
             </div>
 
+            {saveError && <p role="alert" className="text-sm font-semibold text-danger">{saveError}</p>}
             <div className="flex justify-end pt-2">
               <button
                 type="submit"
-                disabled={!isFormValid}
+                disabled={!isFormValid || saveConversion.isPending}
                 className="btn-command min-w-[160px] px-8 py-3.5 rounded-xl flex items-center justify-center gap-2 group disabled:opacity-60 transition-all bg-brand text-white hover:bg-brand/90 font-bold"
               >
-                Save Conversion
+                {saveConversion.isPending ? 'Saving…' : 'Save Conversion'}
                 <ArrowRight size={18} className="group-hover:translate-x-1 transition-transform" />
               </button>
             </div>
@@ -238,22 +218,22 @@ export default function UnitConversions() {
               Saved Unit Helpers
             </h3>
             <span className="bg-brand/10 text-brand text-xs font-bold px-2.5 py-1 rounded-md">
-              {conversions.length} Saved
+              {hasRowsToShow(loadState) ? conversions.length : '—'} Saved
             </span>
           </div>
 
           <div className="space-y-3">
-            {conversions.length === 0 ? (
+            {loadState !== 'ready' && (
+              <div className="overflow-hidden rounded-xl border border-ink/10">
+                <ListLoadNotices state={loadState} label="unit helpers" error={conversionsQuery.error} onRetry={conversionsQuery.refetch} />
+                {loadState === 'loading' && <div aria-busy="true"><CardSkeletons rows={2} /></div>}
+              </div>
+            )}
+            {hasRowsToShow(loadState) && (conversions.length === 0 ? (
               <EmptyConversionsState />
             ) : (
-              conversions.map((conv) => (
-                <ConversionRow 
-                  key={conv.id} 
-                  conversion={conv} 
-                  onRemove={handleRemove} 
-                />
-              ))
-            )}
+              conversions.map((conv) => <ConversionRow key={conv.id} conversion={conv} />)
+            ))}
           </div>
         </div>
 

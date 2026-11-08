@@ -4,6 +4,23 @@ What changed for farmers and staff using Maziwa Smart. Newest first.
 
 ## Unreleased
 
+### Phase 4 — Figures from the farm's records, not the phone (UX audit)
+
+- **Counts and totals come from the server.** Today's milk, cows milked and average per cow on
+  the dashboard; the herd's total, milking and dry counts (now for the whole herd, not just the
+  first 200 cows); a cow's average, peak and total milk; and the litres behind milk milestones.
+  If the server can't be reached they show "—" instead of a number worked out on the phone.
+- **Lists stay in step with the server.** The Cow Register, medical records, the breeding page's
+  semen tank and the unit helpers now always show what the server has. Adding, restocking or
+  removing semen straws refreshes the list from the server.
+- **No more "empty" when it failed.** The Cow Register, semen inventory and pending vet checks
+  say "Couldn't load …" with **Try again** instead of "Your herd is empty" or "All inseminated
+  cows have been checked".
+- **Unit helpers are saved to your farm, not this phone.** The page no longer keeps its own copy
+  on the phone. Removing a unit helper isn't possible yet (it only looked removed before).
+- **Reports load like the rest of the app**: kept for offline use, retried on a weak connection,
+  with **Try again** when they can't load.
+
 ### Phase 3 — Safer deletes, a real "page not found", clearer errors (UX audit)
 
 - **Type to confirm.** Deleting a cow, a customer or a stock item now asks you to type its tag
