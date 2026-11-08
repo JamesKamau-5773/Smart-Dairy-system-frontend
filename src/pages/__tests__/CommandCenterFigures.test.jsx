@@ -8,7 +8,7 @@ import CommandCenter from '../CommandCenter';
 import { todayLocalIso } from '../../lib/localDate';
 
 const api = vi.hoisted(() => ({
-  production: { summary: vi.fn(), listYield: vi.fn(), yieldTotals: vi.fn() },
+  production: { summary: vi.fn(), listYield: vi.fn(), yieldTotals: vi.fn(), getGroupTotals: vi.fn() },
 }));
 
 vi.mock('../../lib/backendApi', async (importOriginal) => {
@@ -38,6 +38,7 @@ beforeEach(() => {
   // Milk rows for today are on the phone; the old fallback would have summed these (12.5 L, 1 cow).
   api.production.listYield.mockResolvedValue([{ id: 1, cow_id: 57, amount: 12.5, milking_date: todayLocalIso() }]);
   api.production.yieldTotals.mockResolvedValue({ totalRecords: 1, totalLitres: 12.5 });
+  api.production.getGroupTotals.mockResolvedValue({ groups: [] });
 });
 afterEach(cleanup);
 
@@ -59,5 +60,15 @@ describe('Dashboard: today’s figures', () => {
     expect(cardValue('Total Milk (Today)')).not.toContain('12.5');
     expect(cardValue('Cows Milked')).toContain('—');
     expect(cardValue('Avg. per Cow')).toContain('—');
+  });
+
+  it('draws the chart from the backend’s daily totals, without downloading every milk record', async () => {
+    api.production.summary.mockResolvedValue({ production_total_liters: 1 });
+    renderDashboard();
+
+    await waitFor(() => expect(api.production.getGroupTotals).toHaveBeenCalledWith(
+      expect.objectContaining({ levels: 'day', date_from: expect.any(String), date_to: todayLocalIso() }),
+    ));
+    expect(api.production.listYield).not.toHaveBeenCalled();
   });
 });

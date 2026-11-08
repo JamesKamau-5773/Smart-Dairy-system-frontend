@@ -183,4 +183,18 @@ describe('OperationsReportsPage', () => {
     expect(await screen.findByText('Couldn’t load reports.')).toBeTruthy();
     expect(screen.getByRole('button', { name: /Try again/ })).toBeTruthy();
   });
+
+  it('shows "—" for figures the backend didn’t send, never 0', async () => {
+    apiClientMock.get.mockImplementation((url) => {
+      if (url === '/finance/customers') return Promise.resolve({ data: { items: CUSTOMERS } });
+      // Milk figures arrive, money figures don't.
+      return Promise.resolve({ data: { summary: { total_produced: 500 } } });
+    });
+    renderPage();
+
+    expect(await screen.findByText('500 L')).toBeTruthy();
+    expect(screen.queryAllByText(/^(KES|Ksh)\s?0$/)).toHaveLength(0);
+    expect(screen.queryByText('0 L')).toBeNull();
+    expect(screen.getAllByText('—').length).toBeGreaterThan(0);
+  });
 });

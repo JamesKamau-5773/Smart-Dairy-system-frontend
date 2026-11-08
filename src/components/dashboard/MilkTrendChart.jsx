@@ -18,7 +18,8 @@ export default function MilkTrendChart({ data }) {
         <XAxis dataKey="date" tick={{ fontSize: 12 }} />
         <YAxis tick={{ fontSize: 12 }} unit=" L" />
         <Tooltip
-          formatter={(value) => [`${Number(value).toFixed(1)} L`, 'Daily production']}
+          // A day with no milk recorded is a gap (null), not 0 L.
+          formatter={(value) => [value === null || value === undefined ? 'No milk recorded' : `${Number(value).toFixed(1)} L`, 'Daily production']}
           contentStyle={{
             backgroundColor: 'rgba(255, 255, 255, 0.8)',
             backdropFilter: 'blur(4px)',

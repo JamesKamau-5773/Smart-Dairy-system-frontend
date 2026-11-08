@@ -1,60 +1,18 @@
-import { format, addDays } from 'date-fns';
-import { toLocalIsoDate } from './localDate';
+import { todayLocalIso } from './localDate';
 
-function parseAmount(value) {
-  const parsed = Number.parseFloat(value);
-  return Number.isFinite(parsed) ? parsed : 0;
-}
+const ISO_DAY = /^\d{4}-\d{2}-\d{2}$/;
 
-export function extractYieldAmount(row) {
-  return parseAmount(
-    row?.amount
-      ?? row?.volume
-      ?? row?.liters
-      ?? row?.milk_volume
-      ?? row?.milkVolume
-      ?? row?.yield_amount
-      ?? row?.yieldAmount
-      ?? row?.volume_liters
-      ?? row?.volumeLiters
-      ?? row?.quantity
-      ?? row?.qty
-      ?? 0
-  );
-}
-
-export function extractYieldDate(row) {
-  const raw = row?.date
-    ?? row?.milkingDate
-    ?? row?.milking_date
-    ?? row?.created_at
-    ?? row?.createdAt
-    ?? row?.recorded_at
-    ?? row?.recordedAt
-    ?? row?.logged_at
-    ?? row?.loggedAt
-    ?? row?.entry_date
-    ?? row?.entryDate
-    ?? row?.timestamp;
-  if (!raw) {
-    return null;
+// Calendar days from `from` to `to` (inclusive), as YYYY-MM-DD; no time-zone maths.
+function eachDay(from, to) {
+  const days = [];
+  const [y, m, d] = from.split('-').map(Number);
+  for (let date = new Date(Date.UTC(y, m - 1, d)); ; date.setUTCDate(date.getUTCDate() + 1)) {
+    const pad = (value) => String(value).padStart(2, '0');
+    const key = `${date.getUTCFullYear()}-${pad(date.getUTCMonth() + 1)}-${pad(date.getUTCDate())}`;
+    if (key > to) break;
+    days.push(key);
   }
-
-  return toLocalIsoDate(raw);
-}
-
-export function extractYieldCowId(row) {
-  return String(
-    row?.cow_id
-      ?? row?.cowId
-      ?? row?.animal_id
-      ?? row?.animalId
-      ?? row?.cow_tag
-      ?? row?.cowTag
-      ?? row?.tag_number
-      ?? row?.tagNumber
-      ?? ''
-  ).trim();
+  return days;
 }
 
 export function metricFromSummary(summary, keys) {
@@ -74,53 +32,28 @@ export function metricFromSummary(summary, keys) {
   return null;
 }
 
-export function buildTrendData(rows, dateRange) {
-  if (!Array.isArray(rows) || rows.length === 0) {
-    return [];
-  }
+/**
+ * Daily milk for the dashboard chart, from the backend's production group totals
+ * (GET /production/group-totals?levels=day); nothing is added up on the phone.
+ * Every day of the range is listed; a day with no milk recorded has `value: null` (a gap in
+ * the line) rather than a zero the farm never recorded. Empty when no day has any milk.
+ *
+ * @param {{ groups?: Array<{ level: string, key: string, litres?: string|number|null }> }} groupTotals
+ * @param {{ from: string, to: string }|null} range YYYY-MM-DD days; null = from the first
+ *   recorded day to today.
+ * @returns {Array<{ date: string, value: number|null }>}
+ */
+export function buildDailyTrend(groupTotals, range = null) {
+  const litresByDay = new Map(
+    (Array.isArray(groupTotals?.groups) ? groupTotals.groups : [])
+      .filter((group) => group?.level === 'day' && ISO_DAY.test(group.key ?? ''))
+      .map((group) => [group.key, group.litres === null || group.litres === undefined ? null : Number(group.litres)]),
+  );
+  const recordedDays = [...litresByDay.keys()].sort();
+  const from = range?.from ?? recordedDays[0];
+  const to = range?.to ?? todayLocalIso();
+  if (!from || !to || !ISO_DAY.test(from) || !ISO_DAY.test(to) || from > to) return [];
 
-  const totalsByDate = new Map();
-
-  rows.forEach((row) => {
-    const date = extractYieldDate(row);
-    if (!date) {
-      return;
-    }
-
-    const current = totalsByDate.get(date) ?? 0;
-    totalsByDate.set(date, current + extractYieldAmount(row));
-  });
-
-  const sortedEntries = Array.from(totalsByDate.entries()).sort(([a], [b]) => a.localeCompare(b));
-
-  // If no dateRange is provided, default to the last 14 days from the available data
-  if (!dateRange?.from || !dateRange?.to) {
-    return sortedEntries.slice(-14).map(([date, value]) => ({
-      date,
-      value: Number(value.toFixed(1)),
-    }));
-  }
-
-  const fromStr = format(dateRange.from, 'yyyy-MM-dd');
-  const toStr = format(dateRange.to, 'yyyy-MM-dd');
-
-  // Filter entries within the selected date range
-  const filteredEntries = sortedEntries.filter(([date]) => date >= fromStr && date <= toStr);
-  const dataMap = new Map(filteredEntries);
-
-  const filledData = [];
-  let currentDate = new Date(dateRange.from);
-  const endDate = new Date(dateRange.to);
-
-  // Fill in all dates within the range, even if no data exists for them
-  while (currentDate <= endDate) {
-    const dateStr = format(currentDate, 'yyyy-MM-dd');
-    filledData.push({
-      date: dateStr,
-      value: Number((dataMap.get(dateStr) || 0).toFixed(1)), // Use 0 if no data for the date
-    });
-    currentDate = addDays(currentDate, 1); // Increment date by one day
-  }
-
-  return filledData;
+  const points = eachDay(from, to).map((date) => ({ date, value: litresByDay.get(date) ?? null }));
+  return points.some((point) => Number.isFinite(point.value)) ? points : [];
 }

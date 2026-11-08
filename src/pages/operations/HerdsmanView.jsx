@@ -8,6 +8,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { Activity, AlertTriangle, ArrowRight, Clock, CheckCircle2, Wheat, Loader2, ClipboardList } from 'lucide-react';
 import { convertKgToLocal } from '../../lib/units';
 import { useRoutinePlans } from '../../hooks/useRoutinePlans';
+import { useUnitConversions } from '../../hooks/useUnitConversions';
 import { getListLoadState, hasRowsToShow } from '../../lib/listLoadState';
 import { CardSkeletons, ListLoadNotices } from '../../components/ui/ListLoadState';
 import AlertBanner from '../../components/ui/AlertBanner';
@@ -23,6 +24,8 @@ export default function HerdsmanView() {
   const routineQuery = useRoutinePlans();
   const routineLoadState = getListLoadState(routineQuery);
   const readOnlySchedule = routineQuery.data ?? [];
+  // The farm's unit helpers (Unit Helpers page), to show feed in local measures.
+  const unitConversions = useUnitConversions().data ?? [];
 
   const getContextForFeed = (feed) => {
     const id = (feed.inventory_item_id || '').toString().toLowerCase();
@@ -33,7 +36,7 @@ export default function HerdsmanView() {
 
   const getFeedInstructionLabel = (feed) => {
     const context = getContextForFeed(feed);
-    const conv = convertKgToLocal(context, feed.numeric_quantity);
+    const conv = convertKgToLocal(unitConversions, feed.inventory_item_id, feed.numeric_quantity);
     if (conv.wasConverted) {
       return `Give ${conv.value} ${conv.unit} of ${context}`;
     }
@@ -258,8 +261,7 @@ export default function HerdsmanView() {
 
             <div className="grid grid-cols-1 gap-5 md:grid-cols-2 auto-rows-max">
               {feedInstructions.map((feed) => {
-                const context = getContextForFeed(feed);
-                const conv = convertKgToLocal(context, feed.numeric_quantity);
+                const conv = convertKgToLocal(unitConversions, feed.inventory_item_id, feed.numeric_quantity);
                 return (
                   <div key={feed.cow} className="rounded-xl border border-ink/5 bg-surface-warm p-5  hover: transition-shadow">
                     <div className="flex justify-between items-start mb-4 gap-3">

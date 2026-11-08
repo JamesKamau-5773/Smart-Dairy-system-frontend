@@ -25,10 +25,11 @@ function getCacheNamespace(user) {
 
 // Centralized Query Keys mapping
 export const QUERY_KEYS = {
-  COWS: (tenantId, farmId) => [tenantId, farmId, 'cows'],
+  // The herd list (herdApi.list). One key for every screen, so the offline prefetch fills the
+  // same cache entry the Cow Register, milk form and reports read.
+  COWS: (tenantId, farmId) => ['herd', tenantId, farmId],
   DASHBOARD_SUMMARY: (tenantId, farmId) => [tenantId, farmId, 'dashboard_summary'],
   YIELD_SUMMARY: (tenantId, farmId) => [tenantId, farmId, 'yield_summary'],
-  YIELD_TREND: (tenantId, farmId) => [tenantId, farmId, 'yield_trend'],
   MILK_DISPOSITIONS: (tenantId, farmId) => [tenantId, farmId, 'milk_dispositions'],
   UNIT_COST: (tenantId, farmId) => [tenantId, farmId, 'unit_cost'],
   HARDLOCKS: (tenantId, farmId) => [tenantId, farmId, 'hardlocks'],

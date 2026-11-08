@@ -4,6 +4,18 @@ What changed for farmers and staff using Maziwa Smart. Newest first.
 
 ## Unreleased
 
+### Phase 4 follow-ups
+
+- **Unit helpers work.** Saving a unit helper never reached the server: the page sent a free-text
+  material name, but the server needs the stock item it applies to. You now choose the feed or
+  stock item, name the unit (e.g. Kasuku) and say how many kilograms it holds. The Farm Task View
+  uses these saved unit helpers to show feed amounts.
+- **The dashboard chart loads faster.** It now asks the server for daily milk totals for the range
+  you pick, instead of downloading every milk record ever logged. A day with no milk recorded shows
+  as a gap ("No milk recorded") rather than 0 L, and the chart says when it couldn't load.
+- **Reports show "—" for missing figures** instead of 0 (milk, money and buyer totals).
+- The cow list is downloaded once and shared by every screen (it was downloaded twice).
+
 ### Phase 4 — Figures from the farm's records, not the phone (UX audit)
 
 - **Counts and totals come from the server.** Today's milk, cows milked and average per cow on
@@ -16,8 +28,9 @@ What changed for farmers and staff using Maziwa Smart. Newest first.
 - **No more "empty" when it failed.** The Cow Register, semen inventory and pending vet checks
   say "Couldn't load …" with **Try again** instead of "Your herd is empty" or "All inseminated
   cows have been checked".
-- **Unit helpers are saved to your farm, not this phone.** The page no longer keeps its own copy
-  on the phone. Removing a unit helper isn't possible yet (it only looked removed before).
+- **Unit helpers no longer keep a copy on the phone.** Removing a unit helper isn't possible
+  yet (it only looked removed before). *(Correction: saving them still didn't work against the
+  server; fixed in "Phase 4 follow-ups" above.)*
 - **Reports load like the rest of the app**: kept for offline use, retried on a weak connection,
   with **Try again** when they can't load.
 

@@ -744,25 +744,13 @@ const normalizeRecipePayload = (payload = {}) => ({
   ingredients: Array.isArray(payload.ingredients) ? payload.ingredients : [],
 });
 
-const normalizeConversionPayload = (payload = {}) => {
-  const context = payload.context ?? payload.material ?? '';
-  const unitName = payload.unitName ?? payload.localUnit ?? payload.unit_name ?? '';
-  const factor = Number(payload.factor ?? payload.ratio ?? 0);
-  const baseUnit = payload.baseUnit ?? payload.base_unit ?? 'kg';
-
-  return {
-    ...payload,
-    context,
-    material: payload.material ?? context,
-    unitName,
-    unit_name: payload.unit_name ?? unitName,
-    localUnit: payload.localUnit ?? unitName,
-    factor,
-    ratio: payload.ratio ?? factor,
-    baseUnit,
-    base_unit: payload.base_unit ?? baseUnit,
-  };
-};
+/** One farm unit helper as the backend stores it: a local unit for a stock item, in kg. */
+export const normalizeUnitConversion = (row = {}) => ({
+  id: row.id,
+  itemId: row.item_id ?? row.itemId ?? null,
+  unitName: row.unit_name ?? row.unitName ?? '',
+  kgEquivalent: row.kg_equivalent === null || row.kg_equivalent === undefined ? null : Number(row.kg_equivalent),
+});
 
 // Utility function to extract an array of breeding logs from various API response structures
 export const extractBreedingLogsArray = (data) => {
@@ -2057,10 +2045,12 @@ export const nutritionApi = {
     return apiClient.post('/feed/formulate', payload).then((response) => toObject(response.data));
   },
   listConversions() {
-    return apiClient.get('/units/conversions').then((response) => toArray(response.data));
+    return apiClient.get('/units/conversions').then((response) => toArray(response.data).map(normalizeUnitConversion));
   },
-  saveConversion(payload) {
-    return apiClient.post('/units/conversions', normalizeConversionPayload(payload)).then((response) => toObject(response.data));
+  /** Saves a unit helper: `{ itemId, unitName, kgEquivalent }` → POST { item_id, unit_name, kg_equivalent }. */
+  saveConversion({ itemId, unitName, kgEquivalent }) {
+    return apiClient.post('/units/conversions', { item_id: itemId, unit_name: unitName, kg_equivalent: kgEquivalent })
+      .then((response) => normalizeUnitConversion(toObject(response.data)));
   },
   feedCosting() {
     return apiClient.get('/feed/costing').then((response) => toObject(response.data));

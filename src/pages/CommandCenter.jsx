@@ -5,7 +5,10 @@ import { productionApi } from '../lib/backendApi';
 import { Activity, Droplets, TrendingUp, DollarSign, LineChart as ChartIcon, ShoppingCart, Archive } from 'lucide-react';
 import React, { Suspense, lazy, useMemo, useState } from 'react';
 import { subDays } from 'date-fns';
-import { buildTrendData, extractYieldDate, metricFromSummary } from '../lib/dashboardUtils';
+import { buildDailyTrend, metricFromSummary } from '../lib/dashboardUtils';
+import { toLocalIsoDate } from '../lib/localDate';
+import { getListLoadState, hasRowsToShow } from '../lib/listLoadState';
+import { ListLoadNotices } from '../components/ui/ListLoadState';
 
 // Components
 const MilkTrendChart = lazy(() => import('../components/dashboard/MilkTrendChart'));
@@ -62,11 +65,20 @@ export default function CommandCenter() {
     enabled: !!farmId,
   });
 
+  // The chart's daily litres come from the backend's daily totals for the chosen range (not
+  // every milk record downloaded and added up). "All" asks for every recorded day.
+  const trendRange = selectedRange === 'all'
+    ? null
+    : { from: toLocalIsoDate(dateRange.from), to: toLocalIsoDate(dateRange.to) };
+  const trendParams = trendRange
+    ? { levels: 'day', date_from: trendRange.from, date_to: trendRange.to }
+    : { levels: 'day' };
   const trendQuery = useQuery({
-    queryKey: QUERY_KEYS.YIELD_TREND(tenantId, farmId),
-    queryFn: () => productionApi.listYield(),
+    queryKey: [...QUERY_KEYS.PRODUCTION_GROUP_TOTALS(tenantId, farmId), 'dashboard-trend', trendParams],
+    queryFn: () => productionApi.getGroupTotals(trendParams),
     enabled: !!farmId,
   });
+  const trendState = getListLoadState(trendQuery);
 
   // All-time totals for the welcome checklist and milk milestones, from the backend. Keyed under
   // the milk rows, so every milk save refreshes it.
@@ -76,22 +88,17 @@ export default function CommandCenter() {
     enabled: !!farmId,
   });
   const yieldTotals = yieldTotalsQuery.data;
-  const trend = useMemo(() => buildTrendData(trendQuery.data, dateRange), [trendQuery.data, dateRange]);
+  const trend = useMemo(
+    () => buildDailyTrend(trendQuery.data, trendRange),
+    // trendRange is rebuilt every render; its two strings are what matter.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [trendQuery.data, trendRange?.from, trendRange?.to],
+  );
 
   const selectTrendRange = (range) => {
     setSelectedRange(range);
     const today = new Date();
-    if (range === 'all') {
-      const dates = (Array.isArray(trendQuery.data) ? trendQuery.data : [])
-        .map(extractYieldDate)
-        .filter(Boolean)
-        .sort();
-      setDateRange({
-        from: dates.length > 0 ? new Date(`${dates[0]}T00:00:00`) : subDays(today, 29),
-        to: today,
-      });
-      return;
-    }
+    if (range === 'all') return;
     setDateRange({ from: subDays(today, Number(range) - 1), to: today });
   };
 
@@ -235,9 +242,15 @@ export default function CommandCenter() {
           </div>
         </div>
         <div className="h-80 w-full bg-surface-warm/30 rounded-xl">
-          <Suspense fallback={<Skeleton className="h-full w-full" />}>
-            <MilkTrendChart data={trend} />
-          </Suspense>
+          {trendState !== 'ready' && (
+            <ListLoadNotices state={trendState} label="daily milk totals" error={trendQuery.error} onRetry={trendQuery.refetch} />
+          )}
+          {trendState === 'loading' && <Skeleton className="h-full w-full" />}
+          {hasRowsToShow(trendState) && (
+            <Suspense fallback={<Skeleton className="h-full w-full" />}>
+              <MilkTrendChart data={trend} />
+            </Suspense>
+          )}
         </div>
       </div>
     </div>

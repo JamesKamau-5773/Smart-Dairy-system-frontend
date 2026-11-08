@@ -1,86 +1,72 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Scale, Plus, Trash2, ArrowRight } from 'lucide-react';
-import { getApiErrorMessage, nutritionApi } from '../../lib/backendApi';
+import { Scale, Plus, ArrowRight } from 'lucide-react';
+import { getApiErrorMessage, inventoryApi, nutritionApi } from '../../lib/backendApi';
 import { offlineFailureMessage } from '../../lib/offlinePolicy';
 import { reportError } from '../../lib/telemetry';
 import { getListLoadState, hasRowsToShow } from '../../lib/listLoadState';
 import { CardSkeletons, ListLoadNotices } from '../../components/ui/ListLoadState';
 import { useTenant } from '../../hooks/useTenant';
+import { unitConversionsKey, useUnitConversions } from '../../hooks/useUnitConversions';
 
-/**
- * SRP: Handles ONLY the empty state for the conversions list.
- */
+const FIELD = 'w-full bg-surface-raised border border-ink/20 text-ink font-bold rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-brand/50 focus:border-brand transition-all placeholder:font-medium placeholder:text-ink-muted/50';
+const LABEL = 'block text-[11px] font-black uppercase tracking-widest text-ink-muted mb-2';
+
 const EmptyConversionsState = () => (
   <div className="border border-dashed border-ink/15 bg-surface-warm/30 rounded-xl p-8 flex flex-col items-center justify-center text-center animate-reveal">
-    <Scale className="w-8 h-8 text-ink-muted/40 mb-3" />
-    <h4 className="text-ink font-bold text-sm mb-1">No local units defined</h4>
-    <p className="text-xs text-ink-muted">Add your first custom farm measurement using the form above.</p>
+    <Scale className="w-8 h-8 text-ink-muted/40 mb-3" aria-hidden="true" />
+    <h4 className="text-ink font-bold text-sm mb-1">No unit helpers yet</h4>
+    <p className="text-xs text-ink-muted">Add your first farm measurement using the form above.</p>
+  </div>
+);
+
+// No remove button: the backend can't delete a unit helper yet (BACKEND_REQUESTS.md, BR-010).
+const ConversionRow = ({ conversion, itemName }) => (
+  <div className="flex items-center justify-between p-4 bg-surface-raised border border-ink/5 rounded-xl">
+    <div>
+      <p className="text-sm font-bold text-ink mb-0.5">{itemName ?? 'Unknown item'}</p>
+      <p className="text-xs font-medium text-ink-muted">
+        1 {conversion.unitName} = {conversion.kgEquivalent ?? '—'} kg
+      </p>
+    </div>
   </div>
 );
 
 /**
- * SRP: Handles the display and deletion interaction of a single conversion row.
- */
-// `onRemove` is optional: the backend can't delete a conversion yet (BACKEND_REQUESTS.md, BR-010).
-const ConversionRow = ({ conversion, onRemove }) => {
-  if (!conversion) return null;
-
-  const { id, material, localUnit, baseUnit, ratio } = conversion;
-
-  return (
-    <div className="flex items-center justify-between p-4 bg-surface-raised border border-ink/5 rounded-xl  hover:border-ink/15 transition-colors group">
-      <div>
-        <p className="text-sm font-bold text-ink mb-0.5">{material}</p>
-        <p className="text-xs font-medium text-ink-muted">
-          1 {localUnit} = {ratio} {baseUnit}
-        </p>
-      </div>
-      {onRemove && (
-        <button
-          type="button"
-          onClick={() => onRemove(id)}
-          aria-label={`Remove ${localUnit} conversion`}
-          className="p-2 text-ink-muted/50 hover:text-danger hover:bg-danger/10 rounded-lg transition-all"
-        >
-          <Trash2 className="w-4 h-4" />
-        </button>
-      )}
-    </div>
-  );
-};
-
-/**
- * Main Page Component
+ * Unit Helpers: the farm's local measurements (a kasuku, a wheelbarrow) for a stock item, in
+ * kilograms. Saved to the backend and used to show feed amounts on barn-floor screens.
  */
 export default function UnitConversions() {
   const queryClient = useQueryClient();
   const { tenantId, farmId } = useTenant();
-  const [material, setMaterial] = useState('');
-  const [localUnit, setLocalUnit] = useState('');
-  const [baseUnit, setBaseUnit] = useState('kg');
-  const [ratio, setRatio] = useState('');
-
+  const [itemId, setItemId] = useState('');
+  const [unitName, setUnitName] = useState('');
+  const [kgEquivalent, setKgEquivalent] = useState('');
   const [saveError, setSaveError] = useState('');
 
-  // The farm's unit helpers as the backend has them; saving refetches this list.
-  const conversionsKey = ['unit-conversions', tenantId, farmId];
-  const conversionsQuery = useQuery({
-    queryKey: conversionsKey,
-    queryFn: () => nutritionApi.listConversions(),
-    enabled: !!tenantId && !!farmId,
-  });
+  const conversionsQuery = useUnitConversions();
   const loadState = getListLoadState(conversionsQuery);
   const conversions = Array.isArray(conversionsQuery.data) ? conversionsQuery.data : [];
+
+  // The farm's stock items (same query and cache as the Stock page).
+  const itemsQuery = useQuery({
+    queryKey: ['inventory-items', tenantId, farmId, { includeArchived: false }],
+    queryFn: () => inventoryApi.listItems({ includeArchived: false }),
+    enabled: !!tenantId && !!farmId,
+  });
+  const itemsState = getListLoadState(itemsQuery);
+  const items = useMemo(() => (Array.isArray(itemsQuery.data) ? itemsQuery.data : []), [itemsQuery.data]);
+  const itemNameById = useMemo(() => new Map(items.map((item) => [String(item.id), item.name])), [items]);
 
   const saveConversion = useMutation({
     mutationFn: (payload) => nutritionApi.saveConversion(payload),
     onMutate: () => setSaveError(''),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: conversionsKey });
-      setMaterial('');
-      setLocalUnit('');
-      setRatio('');
+      queryClient.invalidateQueries({ queryKey: unitConversionsKey(tenantId, farmId) });
+      setItemId('');
+      setUnitName('');
+      setKgEquivalent('');
     },
     onError: (error) => {
       reportError(error, { where: 'UnitConversions.save' });
@@ -89,114 +75,91 @@ export default function UnitConversions() {
     },
   });
 
-  const handleSave = (e) => {
-    e.preventDefault();
-    
-    if (saveConversion.isPending) return;
-    if (!material.trim() || !localUnit.trim() || !ratio || parseFloat(ratio) <= 0) {
-      return;
-    }
+  const kg = parseFloat(kgEquivalent);
+  const isFormValid = Boolean(itemId) && unitName.trim() !== '' && Number.isFinite(kg) && kg > 0;
 
-    saveConversion.mutate({
-      material: material.trim(),
-      localUnit: localUnit.trim(),
-      baseUnit,
-      ratio: parseFloat(ratio),
-    });
+  const handleSave = (event) => {
+    event.preventDefault();
+    if (saveConversion.isPending || !isFormValid) return;
+    saveConversion.mutate({ itemId: Number(itemId), unitName: unitName.trim(), kgEquivalent: kg });
   };
-
-  const isFormValid = material.trim() && localUnit.trim() && ratio && parseFloat(ratio) > 0;
 
   return (
     <div className="min-h-[80vh] flex flex-col relative pb-12 animate-reveal">
-      {/* Main Content Constrained Container */}
       <div className="relative z-10 max-w-4xl mx-auto w-full px-4 sm:px-6 space-y-8 pt-6">
-        
-        {/* Page Header */}
         <div className="border-b border-ink/10 pb-4">
           <h1 className="font-black text-3xl text-ink m-0">Unit Helpers</h1>
           <p className="text-sm text-ink-muted mt-2">
-            Define local farm measurements (e.g., Kasuku, Wheelbarrow) and translate them into standard SI units.
+            Say how many kilograms your farm’s own measures hold (a kasuku, a wheelbarrow), so feed amounts can be shown in them.
           </p>
         </div>
 
-        {/* Card 1: Add New Conversion Form */}
-        <div className="bg-surface rounded-2xl  border border-ink/10 p-6 md:p-8">
+        <div className="bg-surface rounded-2xl border border-ink/10 p-6 md:p-8">
           <div className="flex items-center gap-2 mb-6 text-ink">
-            <Plus className="w-5 h-5 text-brand" />
+            <Plus className="w-5 h-5 text-brand" aria-hidden="true" />
             <h2 className="text-sm font-bold uppercase tracking-widest">Add New Unit Helper</h2>
           </div>
 
           <form onSubmit={handleSave} className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              
-              {/* Row 1 */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               <div>
-                <label className="block text-[11px] font-black uppercase tracking-widest text-ink-muted mb-2">
-                  Material or Feed Type
-                </label>
-                <input
-                  type="text"
-                  value={material}
-                  onChange={(e) => setMaterial(e.target.value)}
-                  placeholder="e.g., Dairy Meal"
-                  className="w-full bg-surface-raised border border-ink/20 text-ink font-bold rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-brand/50 focus:border-brand transition-all placeholder:font-medium placeholder:text-ink-muted/50"
-                  required
-                />
-              </div>
-
-              <div>
-                <label className="block text-[11px] font-black uppercase tracking-widest text-ink-muted mb-2">
-                  Local Unit Name
-                </label>
-                <input
-                  type="text"
-                  value={localUnit}
-                  onChange={(e) => setLocalUnit(e.target.value)}
-                  placeholder="e.g., Kasuku"
-                  className="w-full bg-surface-raised border border-ink/20 text-ink font-bold rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-brand/50 focus:border-brand transition-all placeholder:font-medium placeholder:text-ink-muted/50"
-                  required
-                />
-              </div>
-
-              {/* Row 2 */}
-              <div>
-                <label className="block text-[11px] font-black uppercase tracking-widest text-ink-muted mb-2">
-                  Base Unit
-                </label>
+                <label htmlFor="unit-item" className={LABEL}>Feed or stock item</label>
                 <select
-                  value={baseUnit}
-                  onChange={(e) => setBaseUnit(e.target.value)}
-                  className="w-full bg-surface-raised border border-ink/20 text-ink font-bold rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-brand/50 focus:border-brand transition-all cursor-pointer appearance-none"
+                  id="unit-item"
+                  value={itemId}
+                  onChange={(event) => setItemId(event.target.value)}
+                  disabled={!hasRowsToShow(itemsState) || items.length === 0}
+                  className={`${FIELD} cursor-pointer appearance-none disabled:opacity-60`}
+                  required
                 >
-                  <option value="kg">Kilograms (kg)</option>
-                  <option value="L">Liters (L)</option>
-                  <option value="g">Grams (g)</option>
+                  <option value="">{itemsState === 'loading' ? 'Loading items…' : 'Choose an item'}</option>
+                  {items.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}
                 </select>
+                {hasRowsToShow(itemsState) && items.length === 0 && (
+                  <p className="mt-2 text-xs text-ink-muted">
+                    Add the item in <Link to="/operations/inventory" className="font-semibold text-brand underline">Stock</Link> first.
+                  </p>
+                )}
               </div>
 
               <div>
-                <label className="block text-[11px] font-black uppercase tracking-widest text-ink-muted mb-2">
-                  Conversion (1 Local = ? Base)
-                </label>
+                <label htmlFor="unit-name" className={LABEL}>Local unit name</label>
+                <input
+                  id="unit-name"
+                  type="text"
+                  value={unitName}
+                  onChange={(event) => setUnitName(event.target.value)}
+                  placeholder="e.g., Kasuku"
+                  className={FIELD}
+                  required
+                />
+              </div>
+
+              <div>
+                <label htmlFor="unit-kg" className={LABEL}>1 {unitName.trim() || 'unit'} holds (kg)</label>
                 <div className="relative">
                   <input
+                    id="unit-kg"
                     type="number"
+                    inputMode="decimal"
                     step="0.01"
                     min="0.01"
-                    value={ratio}
-                    onChange={(e) => setRatio(e.target.value)}
+                    value={kgEquivalent}
+                    onChange={(event) => setKgEquivalent(event.target.value)}
                     placeholder="e.g., 2.0"
-                    className="w-full bg-surface-raised border border-ink/20 text-ink font-bold rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-brand/50 focus:border-brand transition-all placeholder:font-medium placeholder:text-ink-muted/50"
+                    className={FIELD}
                     required
                   />
-                  <div className="absolute right-4 top-1/2 -translate-y-1/2 text-sm font-bold text-ink-muted pointer-events-none">
-                    {baseUnit}
-                  </div>
+                  <div className="absolute right-4 top-1/2 -translate-y-1/2 text-sm font-bold text-ink-muted pointer-events-none">kg</div>
                 </div>
               </div>
             </div>
 
+            {itemsState !== 'ready' && itemsState !== 'loading' && (
+              <div className="overflow-hidden rounded-xl border border-ink/10">
+                <ListLoadNotices state={itemsState} label="stock items" error={itemsQuery.error} onRetry={itemsQuery.refetch} />
+              </div>
+            )}
             {saveError && <p role="alert" className="text-sm font-semibold text-danger">{saveError}</p>}
             <div className="flex justify-end pt-2">
               <button
@@ -204,19 +167,16 @@ export default function UnitConversions() {
                 disabled={!isFormValid || saveConversion.isPending}
                 className="btn-command min-w-[160px] px-8 py-3.5 rounded-xl flex items-center justify-center gap-2 group disabled:opacity-60 transition-all bg-brand text-white hover:bg-brand/90 font-bold"
               >
-                {saveConversion.isPending ? 'Saving…' : 'Save Conversion'}
-                <ArrowRight size={18} className="group-hover:translate-x-1 transition-transform" />
+                {saveConversion.isPending ? 'Saving…' : 'Save Unit Helper'}
+                <ArrowRight size={18} className="group-hover:translate-x-1 transition-transform" aria-hidden="true" />
               </button>
             </div>
           </form>
         </div>
 
-        {/* Card 2: Existing Conversions List */}
-        <div className="bg-surface rounded-2xl  border border-ink/10 p-6 md:p-8">
+        <div className="bg-surface rounded-2xl border border-ink/10 p-6 md:p-8">
           <div className="flex items-center justify-between mb-6">
-            <h3 className="text-sm font-bold text-ink uppercase tracking-widest">
-              Saved Unit Helpers
-            </h3>
+            <h3 className="text-sm font-bold text-ink uppercase tracking-widest">Saved Unit Helpers</h3>
             <span className="bg-brand/10 text-brand text-xs font-bold px-2.5 py-1 rounded-md">
               {hasRowsToShow(loadState) ? conversions.length : '—'} Saved
             </span>
@@ -232,11 +192,12 @@ export default function UnitConversions() {
             {hasRowsToShow(loadState) && (conversions.length === 0 ? (
               <EmptyConversionsState />
             ) : (
-              conversions.map((conv) => <ConversionRow key={conv.id} conversion={conv} />)
+              conversions.map((conversion) => (
+                <ConversionRow key={conversion.id} conversion={conversion} itemName={itemNameById.get(String(conversion.itemId))} />
+              ))
             ))}
           </div>
         </div>
-
       </div>
     </div>
   );

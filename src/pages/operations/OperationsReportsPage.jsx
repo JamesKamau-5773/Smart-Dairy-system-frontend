@@ -22,36 +22,49 @@ const numberFormatter = new Intl.NumberFormat('en-KE', {
   maximumFractionDigits: 1,
 });
 
+// A figure the backend didn't send is unknown: "—", never 0.
+const toFigure = (value) => (value === null || value === undefined || value === '' || !Number.isFinite(Number(value)) ? null : Number(value));
+
 function formatCurrency(value) {
-  const amount = Number(value ?? 0);
-  return currencyFormatter.format(Number.isFinite(amount) ? amount : 0);
+  const amount = toFigure(value);
+  return amount === null ? '—' : currencyFormatter.format(amount);
 }
 
 function formatNumber(value) {
-  const amount = Number(value ?? 0);
-  return numberFormatter.format(Number.isFinite(amount) ? amount : 0);
+  const amount = toFigure(value);
+  return amount === null ? '—' : numberFormatter.format(amount);
 }
+
+/** "1,234.5 L"; just "—" when unknown (no unit after a dash). */
+const formatLitresFigure = (value) => (toFigure(value) === null ? '—' : `${formatNumber(value)} L`);
+
+/** Adds figures from several buyers; unknown if any of them is unknown. */
+const sumFigures = (left, right) => {
+  const a = toFigure(left);
+  const b = toFigure(right);
+  return a === null || b === null ? null : a + b;
+};
 
 function normalizeSummary(payload = {}) {
   const summary = payload?.summary ?? payload ?? {};
 
   return {
-    total_amount_paid: Number(summary.total_amount_paid ?? 0),
-    recognized_sales: Number(summary.recognized_sales ?? 0),
-    posted_costs: Number(summary.posted_costs ?? 0),
-    net_profit: Number(summary.net_profit ?? 0),
-    outstanding_receivables: Number(summary.outstanding_receivables ?? 0),
-    customer_credit: Number(summary.customer_credit ?? 0),
-    total_income: Number(summary.total_income ?? 0),
-    total_costs: Number(summary.total_costs ?? 0),
-    total_profit: Number(summary.total_profit ?? 0),
-    total_produced: Number(summary.total_produced ?? 0),
-    total_sold: Number(summary.total_sold ?? 0),
-    total_unsold: Number(summary.total_unsold ?? 0),
-    milk_delivered_liters: Number(summary.milk_delivered_liters ?? 0),
-    revenue_kes: Number(summary.revenue_kes ?? 0),
-    amount_paid_kes: Number(summary.amount_paid_kes ?? 0),
-    outstanding_balance_kes: Number(summary.outstanding_balance_kes ?? 0),
+    total_amount_paid: toFigure(summary.total_amount_paid),
+    recognized_sales: toFigure(summary.recognized_sales),
+    posted_costs: toFigure(summary.posted_costs),
+    net_profit: toFigure(summary.net_profit),
+    outstanding_receivables: toFigure(summary.outstanding_receivables),
+    customer_credit: toFigure(summary.customer_credit),
+    total_income: toFigure(summary.total_income),
+    total_costs: toFigure(summary.total_costs),
+    total_profit: toFigure(summary.total_profit),
+    total_produced: toFigure(summary.total_produced),
+    total_sold: toFigure(summary.total_sold),
+    total_unsold: toFigure(summary.total_unsold),
+    milk_delivered_liters: toFigure(summary.milk_delivered_liters),
+    revenue_kes: toFigure(summary.revenue_kes),
+    amount_paid_kes: toFigure(summary.amount_paid_kes),
+    outstanding_balance_kes: toFigure(summary.outstanding_balance_kes),
   };
 }
 
@@ -70,13 +83,16 @@ function combineDashboardData({
     ? buyerPerformanceData.reduce((summary, buyerSummary) => ({
         buyer: buyerSummary?.buyer ?? summary.buyer,
         summary: {
-          milk_delivered_liters: Number(summary.summary?.milk_delivered_liters ?? 0) + Number(buyerSummary?.summary?.milk_delivered_liters ?? 0),
-          revenue_kes: Number(summary.summary?.revenue_kes ?? 0) + Number(buyerSummary?.summary?.revenue_kes ?? 0),
-          amount_paid_kes: Number(summary.summary?.amount_paid_kes ?? 0) + Number(buyerSummary?.summary?.amount_paid_kes ?? 0),
-          outstanding_balance_kes: Number(summary.summary?.outstanding_balance_kes ?? 0) + Number(buyerSummary?.summary?.outstanding_balance_kes ?? 0),
+          milk_delivered_liters: sumFigures(summary.summary?.milk_delivered_liters, buyerSummary?.summary?.milk_delivered_liters),
+          revenue_kes: sumFigures(summary.summary?.revenue_kes, buyerSummary?.summary?.revenue_kes),
+          amount_paid_kes: sumFigures(summary.summary?.amount_paid_kes, buyerSummary?.summary?.amount_paid_kes),
+          outstanding_balance_kes: sumFigures(summary.summary?.outstanding_balance_kes, buyerSummary?.summary?.outstanding_balance_kes),
         },
         daily_records: [...(summary.daily_records ?? []), ...(buyerSummary?.daily_records ?? [])],
-      }), { summary: {}, daily_records: [] })
+      }), {
+        summary: { milk_delivered_liters: 0, revenue_kes: 0, amount_paid_kes: 0, outstanding_balance_kes: 0 },
+        daily_records: [],
+      })
     : null;
 
   // Combine raw summaries before normalizing to prevent overwriting with zeroes
@@ -252,9 +268,9 @@ export default function OperationsReportsPage() {
     { label: 'Expenses', value: formatCurrency(summary.total_costs), icon: Wallet, accentClass: 'text-rose-600' },
     { label: 'Amount paid', value: formatCurrency(summary.total_amount_paid), icon: TrendingUp, accentClass: 'text-cyan-600' },
     { label: 'Balance', value: formatCurrency(summary.outstanding_receivables), icon: ChartColumn, accentClass: 'text-amber-600' },
-    { label: 'Milk produced', value: `${formatNumber(summary.total_produced)} L`, icon: Droplets, accentClass: 'text-sky-600' },
-    { label: 'Milk sold', value: `${formatNumber(summary.total_sold)} L`, icon: Layers3, accentClass: 'text-emerald-600' },
-    { label: 'Unsold milk', value: `${formatNumber(summary.total_unsold)} L`, icon: Layers3, accentClass: 'text-rose-600' },
+    { label: 'Milk produced', value: formatLitresFigure(summary.total_produced), icon: Droplets, accentClass: 'text-sky-600' },
+    { label: 'Milk sold', value: formatLitresFigure(summary.total_sold), icon: Layers3, accentClass: 'text-emerald-600' },
+    { label: 'Unsold milk', value: formatLitresFigure(summary.total_unsold), icon: Layers3, accentClass: 'text-rose-600' },
     { label: 'Net profit', value: formatCurrency(summary.net_profit), icon: TrendingUp, accentClass: 'text-violet-600' },
   ];
 
@@ -489,7 +505,7 @@ export default function OperationsReportsPage() {
                     {dashboardData.buyerPerformance.daily_records.map((record) => (
                       <tr key={record.date} className="hover:bg-slate-50/50 transition-colors">
                         <td className="px-5 py-3 text-sm font-medium text-slate-900">{format(new Date(`${record.date}T00:00:00`), 'MMM d, yyyy')}</td>
-                        <td className="px-5 py-3 text-sm text-slate-600 tabular-nums">{formatNumber(record.milk_delivered_liters)} L</td>
+                        <td className="px-5 py-3 text-sm text-slate-600 tabular-nums">{formatLitresFigure(record.milk_delivered_liters)}</td>
                         <td className="px-5 py-3 text-sm font-semibold text-slate-900 tabular-nums">{formatCurrency(record.revenue_kes)}</td>
                         <td className="px-5 py-3 text-sm font-semibold text-slate-900 tabular-nums">{formatCurrency(record.amount_paid_kes)}</td>
                       </tr>
@@ -501,7 +517,7 @@ export default function OperationsReportsPage() {
                 {dashboardData.buyerPerformance.daily_records.map((record) => (
                   <article key={record.date} className="grid grid-cols-2 gap-3 p-4 text-sm">
                     <div className="col-span-2 font-semibold text-slate-900">{format(new Date(`${record.date}T00:00:00`), 'MMM d, yyyy')}</div>
-                    <div><p className="text-xs text-slate-500">Delivered</p><p className="mt-1 font-semibold tabular-nums text-brand">{formatNumber(record.milk_delivered_liters)} L</p></div>
+                    <div><p className="text-xs text-slate-500">Delivered</p><p className="mt-1 font-semibold tabular-nums text-brand">{formatLitresFigure(record.milk_delivered_liters)}</p></div>
                     <div><p className="text-xs text-slate-500">Revenue</p><p className="mt-1 font-semibold tabular-nums text-slate-900">{formatCurrency(record.revenue_kes)}</p></div>
                     <div className="col-span-2"><p className="text-xs text-slate-500">Amount paid</p><p className="mt-1 font-semibold tabular-nums text-slate-900">{formatCurrency(record.amount_paid_kes)}</p></div>
                   </article>

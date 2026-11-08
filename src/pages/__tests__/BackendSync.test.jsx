@@ -10,6 +10,7 @@ import UnitConversions from '../nutrition/UnitConversions';
 const api = vi.hoisted(() => ({
   herd: { list: vi.fn(), summary: vi.fn() },
   nutrition: { listConversions: vi.fn(), saveConversion: vi.fn() },
+  inventory: { listItems: vi.fn() },
 }));
 
 vi.mock('../../lib/backendApi', async (importOriginal) => {
@@ -18,6 +19,7 @@ vi.mock('../../lib/backendApi', async (importOriginal) => {
     ...actual,
     herdApi: { ...actual.herdApi, ...api.herd },
     nutritionApi: { ...actual.nutritionApi, ...api.nutrition },
+    inventoryApi: { ...actual.inventoryApi, ...api.inventory },
   };
 });
 vi.mock('../../hooks/useTenant', () => ({ useTenant: () => ({ tenantId: 't1', farmId: 'f1' }) }));
@@ -85,40 +87,61 @@ describe('Cow Register', () => {
 });
 
 describe('Unit Helpers', () => {
-  it('shows the backend’s list and ignores the old copy kept on the phone', async () => {
-    localStorage.setItem('jivu_unit_conversions', JSON.stringify([{ id: 'x', material: 'Phone-only Debe', localUnit: 'debe', baseUnit: 'kg', ratio: 9 }]));
-    api.nutrition.listConversions.mockResolvedValue([{ id: 1, material: 'Dairy Meal', localUnit: 'kasuku', baseUnit: 'kg', ratio: 2 }]);
-    renderPage(UnitConversions);
+  const dairyMeal = { id: 34, name: 'Dairy Meal', category: 'Concentrates', is_active: true };
 
-    expect(await screen.findByText('Dairy Meal')).toBeTruthy();
-    expect(screen.queryByText('Phone-only Debe')).toBeNull();
-    expect(screen.queryByText(/Local Storage Notice/)).toBeNull();
-    // The backend can't delete a conversion yet, so there is no button that only pretends to.
-    expect(screen.queryByRole('button', { name: /Remove kasuku conversion/ })).toBeNull();
+  beforeEach(() => {
+    api.inventory.listItems.mockResolvedValue([dairyMeal]);
   });
 
-  it('says it couldn’t load instead of "no units defined"', async () => {
+  it('shows the backend’s unit helpers by stock item, and ignores the old copy on the phone', async () => {
+    localStorage.setItem('jivu_unit_conversions', JSON.stringify([{ id: 'x', material: 'Phone-only Debe', localUnit: 'debe', ratio: 9 }]));
+    api.nutrition.listConversions.mockResolvedValue([{ id: 1, itemId: 34, unitName: 'kasuku', kgEquivalent: 2 }]);
+    renderPage(UnitConversions);
+
+    expect(await screen.findByText('1 kasuku = 2 kg')).toBeTruthy();
+    expect((await screen.findAllByText('Dairy Meal')).length).toBeGreaterThan(0);
+    expect(screen.queryByText('Phone-only Debe')).toBeNull();
+    expect(screen.queryByText(/Local Storage Notice/)).toBeNull();
+    // The backend can't delete a unit helper yet, so there is no button that only pretends to.
+    expect(screen.queryByRole('button', { name: /Remove/ })).toBeNull();
+  });
+
+  it('saves the stock item, unit name and kilograms the backend asks for', async () => {
+    api.nutrition.listConversions.mockResolvedValue([]);
+    api.nutrition.saveConversion.mockResolvedValue({ id: 2, itemId: 34, unitName: 'Kasuku', kgEquivalent: 2 });
+    renderPage(UnitConversions);
+    await screen.findByText(/No unit helpers yet/);
+    await screen.findByRole('option', { name: 'Dairy Meal' });
+
+    fireEvent.change(screen.getByLabelText('Feed or stock item'), { target: { value: '34' } });
+    fireEvent.change(screen.getByLabelText('Local unit name'), { target: { value: ' Kasuku ' } });
+    fireEvent.change(screen.getByLabelText(/holds \(kg\)/), { target: { value: '2' } });
+    fireEvent.click(screen.getByRole('button', { name: /Save Unit Helper/ }));
+
+    await waitFor(() => expect(api.nutrition.saveConversion).toHaveBeenCalledWith({ itemId: 34, unitName: 'Kasuku', kgEquivalent: 2 }));
+  });
+
+  it('says it couldn’t load instead of "no unit helpers"', async () => {
     api.nutrition.listConversions.mockImplementation(serverDown);
     renderPage(UnitConversions);
 
     expect(await screen.findByText('Couldn’t load unit helpers.')).toBeTruthy();
-    expect(screen.queryByText(/No local units defined/)).toBeNull();
+    expect(screen.queryByText(/No unit helpers yet/)).toBeNull();
   });
 
   it('keeps what was typed and says so when saving fails offline', async () => {
     api.nutrition.listConversions.mockResolvedValue([]);
     api.nutrition.saveConversion.mockRejectedValue(Object.assign(new Error('Network Error'), { code: 'ERR_NETWORK' }));
     renderPage(UnitConversions);
-    await screen.findByText(/No local units defined/);
+    await screen.findByRole('option', { name: 'Dairy Meal' });
 
-    const inputs = screen.getAllByRole('textbox');
-    fireEvent.change(inputs[0], { target: { value: 'Dairy Meal' } });
-    fireEvent.change(inputs[1], { target: { value: 'kasuku' } });
-    fireEvent.change(screen.getByRole('spinbutton'), { target: { value: '2' } });
-    fireEvent.click(screen.getByRole('button', { name: /Save Conversion/ }));
+    fireEvent.change(screen.getByLabelText('Feed or stock item'), { target: { value: '34' } });
+    fireEvent.change(screen.getByLabelText('Local unit name'), { target: { value: 'kasuku' } });
+    fireEvent.change(screen.getByLabelText(/holds \(kg\)/), { target: { value: '2' } });
+    fireEvent.click(screen.getByRole('button', { name: /Save Unit Helper/ }));
 
     const alert = await screen.findByRole('alert');
     expect(within(alert).getByText(/No internet connection. The unit helper wasn’t saved/)).toBeTruthy();
-    await waitFor(() => expect(inputs[0].value).toBe('Dairy Meal'));
+    expect(screen.getByLabelText('Local unit name').value).toBe('kasuku');
   });
 });

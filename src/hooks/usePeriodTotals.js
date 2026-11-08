@@ -157,6 +157,5 @@ export function useInvalidateProduction() {
     queryClient.invalidateQueries({ queryKey: QUERY_KEYS.PRODUCTION_PERIOD_SUMMARY(tenantId, farmId) }),
     queryClient.invalidateQueries({ queryKey: QUERY_KEYS.PRODUCTION_GROUP_TOTALS(tenantId, farmId) }),
     queryClient.invalidateQueries({ queryKey: QUERY_KEYS.YIELD_SUMMARY(tenantId, farmId) }),
-    queryClient.invalidateQueries({ queryKey: QUERY_KEYS.YIELD_TREND(tenantId, farmId) }),
   ]), [queryClient, tenantId, farmId]);
 }

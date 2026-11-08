@@ -263,9 +263,10 @@ on reload). There is no `DELETE` route for conversions, so the button is hidden 
 
 `DELETE /api/units/conversions/<id>` → `200 { "id": 5, "deleted": true }`; `404` unknown id.
 
-Also: the barn-floor screens (Farm Task View) convert feed amounts using conversions stored on
-the phone under a key nothing writes any more, so saved unit helpers are not applied there.
-Frontend follow-up (no backend change needed): read them from `GET /api/units/conversions`.
+Done on the frontend (Phase 4 follow-ups): the Unit Helpers page now sends what
+`POST /api/units/conversions` requires (`item_id`, `unit_name`, `kg_equivalent`; it used to send
+a free-text material, so every save was rejected), and the Farm Task View reads conversions from
+`GET /api/units/conversions` instead of the phone.
 
 ---
 
