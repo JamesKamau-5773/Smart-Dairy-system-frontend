@@ -196,7 +196,8 @@ and exposes it read-only to farm owners:
 
 The Customers page offers **Delete** (now with type-to-confirm and the balance shown), and
 `financeApi.deleteCustomer` sends `DELETE /api/customers/<id>`, but the backend has no DELETE
-route for customers (only GET/PATCH), so every delete fails today.
+route for customers (only GET/PATCH), so every delete fails today. Delete is now hidden behind
+the `customerDelete` flag (off); set `VITE_FEATURE_CUSTOMER_DELETE=true` when this ships.
 
 Requested contract:
 

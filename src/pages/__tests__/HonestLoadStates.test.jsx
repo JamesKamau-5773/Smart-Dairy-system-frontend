@@ -176,3 +176,18 @@ describe('Cow profitability', () => {
     expect(await screen.findByText('Couldn’t load animals.')).toBeTruthy();
   });
 });
+
+describe('Buyer statements on WhatsApp', () => {
+  it('are sent under the Maziwa Smart name', async () => {
+    const open = vi.spyOn(window, 'open').mockImplementation(() => null);
+    api.finance.listCustomers.mockResolvedValue([{ id: 7, name: 'Wanjiku Kiosk', phone_number: '254712345678', account_balance: 500 }]);
+    renderPage(BuyersList);
+    await screen.findAllByText('Wanjiku Kiosk');
+    fireEvent.click(screen.getAllByRole('button', { name: /WhatsApp/ }).at(-1));
+
+    const text = decodeURIComponent(new URL(open.mock.calls[0][0]).searchParams.get('text'));
+    expect(text).toMatch(/^Maziwa Smart - Customer Statement/);
+    expect(text).not.toMatch(/Jivu/);
+    open.mockRestore();
+  });
+});

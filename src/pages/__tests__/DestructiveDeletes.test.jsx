@@ -25,6 +25,9 @@ vi.mock('../../lib/backendApi', async (importOriginal) => {
 vi.mock('../../hooks/useTenant', () => ({ useTenant: () => ({ tenantId: 't1', farmId: 'f1' }) }));
 vi.mock('../../contexts/AuthContext', () => ({ useAuth: () => ({ currentUser: { id: 1, role: 'FARMER' } }) }));
 vi.mock('react-hot-toast', () => ({ default: toast, toast }));
+// Customer delete is behind a flag until the backend route exists (BR-007); these tests cover it switched on.
+const flags = vi.hoisted(() => ({ customerDelete: true }));
+vi.mock('../../lib/featureFlags', () => ({ isFeatureEnabled: (name) => Boolean(flags[name]) }));
 
 const offline = () => Object.assign(new Error('Network Error'), { code: 'ERR_NETWORK', isAxiosError: true });
 
@@ -76,6 +79,17 @@ describe('Deleting a cow', () => {
 });
 
 describe('Deleting a customer', () => {
+  afterEach(() => { flags.customerDelete = true; });
+
+  it('offers no Delete while the flag is off (the backend can’t delete customers yet, BR-007)', async () => {
+    flags.customerDelete = false;
+    api.finance.listCustomers.mockResolvedValue([{ id: 7, name: 'Wanjiku Kiosk', account_balance: 0 }]);
+    renderPage(Customers);
+    await screen.findAllByText('Wanjiku Kiosk');
+    expect(screen.queryAllByRole('button', { name: 'Delete' })).toHaveLength(0);
+    expect(screen.getAllByRole('button', { name: 'Edit' }).length).toBeGreaterThan(0);
+  });
+
   const openDialog = async (customer) => {
     api.finance.listCustomers.mockResolvedValue([customer]);
     renderPage(Customers);

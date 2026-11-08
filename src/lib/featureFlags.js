@@ -6,9 +6,11 @@
  * | Flag              | Env variable                    | Default | What it controls |
  * |-------------------|---------------------------------|---------|------------------|
  * | planIndicators    | VITE_FEATURE_PLAN_INDICATORS    | on      | Demo banner, locked-feature cards |
+ * | customerDelete    | VITE_FEATURE_CUSTOMER_DELETE    | off     | Delete on the Customers page; turn on once the backend route exists (BR-007) |
  */
 const FLAGS = {
   planIndicators: { env: 'VITE_FEATURE_PLAN_INDICATORS', default: true },
+  customerDelete: { env: 'VITE_FEATURE_CUSTOMER_DELETE', default: false },
 };
 
 /**

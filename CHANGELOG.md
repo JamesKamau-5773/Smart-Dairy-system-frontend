@@ -4,6 +4,15 @@ What changed for farmers and staff using Maziwa Smart. Newest first.
 
 ## Unreleased
 
+### Small fixes
+
+- **Delete is hidden on the Customers page** until the server can delete customers (it always
+  failed before). Turned back on with `VITE_FEATURE_CUSTOMER_DELETE=true` once that is ready.
+- **Statements shared on WhatsApp say "Maziwa Smart"**, not the old "Jivu Smart Dairy" name.
+- **Fits on small phones:** the "Add to Feedstore" button no longer runs off the card, and the
+  milk form puts the date and the Morning / Midday / Evening choice on their own rows so neither
+  is cut off.
+
 ### Plan locks by area
 
 - **Areas outside the farm's plan explain themselves.** When the server says a plan doesn't

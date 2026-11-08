@@ -19,6 +19,7 @@ import { formatMoneyText } from '../../components/ui/Money';
 import { ListLoadNotices, StatValue } from '../../components/ui/ListLoadState';
 import { getListLoadState, hasRowsToShow } from '../../lib/listLoadState';
 import { formatCount } from '../../lib/numberFormat';
+import { SITE } from '../../landing/content';
 
 // "KES 1,250.00"; "—" when the backend sent no figure (unknown is never shown as zero).
 const formatKes = formatMoneyText;
@@ -162,19 +163,19 @@ export default function BuyersList() {
       const balance = balanceOf(customer);
       return `${customer?.name || 'Unnamed Buyer'} (ID ${customer?.id || '--'}): ${formatKes(balance)}`;
     });
-    const message = ['Jivu Smart Dairy - Customer Statements', '', ...lines, '', 'Open Jivu Smart Dairy to review the full statement.'].join('\n');
+    const message = [`${SITE.name} - Customer Statements`, '', ...lines, '', `Open ${SITE.name} to review the full statement.`].join('\n');
     window.open(`https://wa.me/?text=${encodeURIComponent(message)}`, '_blank', 'noopener,noreferrer');
   };
 
   const shareCustomerStatement = (customer) => {
     const balance = balanceOf(customer);
     const message = [
-      'Jivu Smart Dairy - Customer Statement',
+      `${SITE.name} - Customer Statement`,
       `Buyer: ${customer?.name || 'Unnamed Buyer'}`,
       `Account ID: ${customer?.id || '--'}`,
       `Current balance: ${formatKes(balance)}`,
       '',
-      'Open Jivu Smart Dairy to review the full statement.',
+      `Open ${SITE.name} to review the full statement.`,
     ].join('\n');
     const phone = String(customer?.phone_number || customer?.contact || '').replace(/\D/g, '').replace(/^0/, '254');
     window.open(`https://wa.me/${phone}?text=${encodeURIComponent(message)}`, '_blank', 'noopener,noreferrer');

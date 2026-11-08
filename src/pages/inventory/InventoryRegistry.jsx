@@ -334,8 +334,8 @@ export default function InventoryRegistry() {
       )}
 
       {/* HEADER SECTION */}
-      <div className="flex justify-between items-center mb-8 rounded-card border border-brand-100 bg-brand-50 p-5">
-        <div className="flex items-center gap-4">
+      <div className="mb-8 flex flex-col gap-4 rounded-card border border-brand-100 bg-brand-50 p-5 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex min-w-0 items-center gap-4">
           <div className="p-3 bg-white text-brand-700 rounded-lg border border-brand-100"><Package size={20} /></div>
           <div>
             <h2 className="font-sans font-bold text-2xl tracking-tight text-brand-900 m-0">Stock Registry</h2>
@@ -344,7 +344,8 @@ export default function InventoryRegistry() {
         </div>
         <button
           onClick={() => setIsRegisterModalOpen(true)}
-          className="flex items-center gap-2 rounded-button bg-brand-800 px-5 py-2.5 text-sm font-semibold text-white  transition-colors hover:bg-brand-900"
+          type="button"
+          className="flex w-full shrink-0 items-center justify-center gap-2 whitespace-nowrap rounded-button bg-brand-800 px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-brand-900 sm:w-auto"
         >
           <Plus size={16} /> Add to Feedstore
         </button>

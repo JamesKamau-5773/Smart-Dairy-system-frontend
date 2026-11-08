@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { Droplets, Calendar, Receipt, ShieldCheck, Download, CheckCircle2 } from 'lucide-react';
 import { financeApi } from '../../lib/backendApi';
 import { Skeleton } from '../../components/ui';
+import { SITE } from '../../landing/content';
 
 export default function CustomerPortal() {
   const { token } = useParams();
@@ -14,7 +15,7 @@ export default function CustomerPortal() {
 
       return {
         customerName: statement?.buyer?.name || statement?.customer_name || 'Customer',
-        farmOrigin: statement?.farm_origin || statement?.farmOrigin || 'Jivu Smart Dairy',
+        farmOrigin: statement?.farm_origin || statement?.farmOrigin || SITE.name,
         billingCycle: statement?.billing_cycle || statement?.billingCycle || 'Current cycle',
         paymentTerms: statement?.payment_terms || statement?.paymentTerms || 'Monthly (Net 30)',
         totalAmountDue: Number(statement?.summary?.outstanding_balance ?? statement?.totalAmountDue ?? 0),

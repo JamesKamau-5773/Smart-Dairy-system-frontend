@@ -16,6 +16,7 @@ import { formatMoneyText } from '../../components/ui/Money';
 import { useTenant } from '../../hooks/useTenant';
 import { QUERY_KEYS } from '../../providers/QueryProvider';
 import { getListLoadState, hasRowsToShow } from '../../lib/listLoadState';
+import { isFeatureEnabled } from '../../lib/featureFlags';
 
 const TABLE_COLUMNS = 4;
 
@@ -33,6 +34,8 @@ function describeBalanceForDelete(name, rawBalance) {
 }
 
 export default function CustomersPage() {
+  // The backend has no customer DELETE route yet (BR-007), so offering Delete would always fail.
+  const canDeleteCustomers = isFeatureEnabled('customerDelete');
   const queryClient = useQueryClient();
   const location = useLocation();
   const { tenantId, farmId } = useTenant();
@@ -240,7 +243,7 @@ export default function CustomersPage() {
                       </PopoverTrigger>
                       <PopoverContent align="end" className="w-40 p-1.5">
                         <button type="button" onClick={() => handleEdit(customer)} className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm text-ink-900 hover:bg-brand-50"><Pencil size={14} /> Edit</button>
-                        <button type="button" onClick={() => handleDelete(customer)} className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm text-danger hover:bg-danger/10"><Trash2 size={14} /> Delete</button>
+                        {canDeleteCustomers && <button type="button" onClick={() => handleDelete(customer)} className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm text-danger hover:bg-danger/10"><Trash2 size={14} /> Delete</button>}
                       </PopoverContent>
                     </Popover>
                   </td>
@@ -266,7 +269,7 @@ export default function CustomersPage() {
               </dl>
               <div className="flex justify-end gap-2 border-t border-ink/10 pt-3">
                 <button type="button" onClick={() => handleEdit(customer)} className="rounded-button border border-brand/20 px-3 py-2 text-xs font-semibold text-brand">Edit</button>
-                <button type="button" onClick={() => handleDelete(customer)} className="rounded-button border border-brand/20 px-3 py-2 text-xs font-semibold text-brand-dark">Delete</button>
+                {canDeleteCustomers && <button type="button" onClick={() => handleDelete(customer)} className="rounded-button border border-brand/20 px-3 py-2 text-xs font-semibold text-brand-dark">Delete</button>}
               </div>
             </article>
           ))}

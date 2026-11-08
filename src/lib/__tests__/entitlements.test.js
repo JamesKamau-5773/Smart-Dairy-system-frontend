@@ -65,6 +65,9 @@ describe('isFeatureEnabled', () => {
     expect(isFeatureEnabled('planIndicators', { VITE_FEATURE_PLAN_INDICATORS: '0' })).toBe(false);
     expect(isFeatureEnabled('planIndicators', { VITE_FEATURE_PLAN_INDICATORS: 'true' })).toBe(true);
     expect(isFeatureEnabled('notAFlag', {})).toBe(false);
+    // Off until the backend can delete customers (BR-007).
+    expect(isFeatureEnabled('customerDelete', {})).toBe(false);
+    expect(isFeatureEnabled('customerDelete', { VITE_FEATURE_CUSTOMER_DELETE: 'true' })).toBe(true);
   });
 });
 

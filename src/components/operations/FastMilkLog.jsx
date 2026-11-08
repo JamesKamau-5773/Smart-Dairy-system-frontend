@@ -178,10 +178,12 @@ const FastMilkUI = ({
           )}
         </div>
 
-        <div className="grid grid-cols-2 gap-4">
-          <div className="space-y-2">
-            <label className="text-[11px] font-black text-ink-muted uppercase tracking-widest block">Date</label>
+        {/* One column on phones: side by side, the date and three sessions don’t fit at 360px. */}
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <div className="min-w-0 space-y-2">
+            <label htmlFor="fast-milk-date" className="text-[11px] font-black text-ink-muted uppercase tracking-widest block">Date</label>
             <input
+              id="fast-milk-date"
               type="date"
               value={formData.date}
               max={todayIso()}
@@ -190,15 +192,16 @@ const FastMilkUI = ({
               required
             />
           </div>
-          <div className="space-y-2">
-            <label className="text-[11px] font-black text-ink-muted uppercase tracking-widest block">Session</label>
-            <div className="grid grid-cols-3 gap-1 rounded-xl border-2 border-ink/10 bg-white p-1 ">
+          <div className="min-w-0 space-y-2">
+            <span id="fast-milk-session" className="text-[11px] font-black text-ink-muted uppercase tracking-widest block">Session</span>
+            <div role="group" aria-labelledby="fast-milk-session" className="grid grid-cols-3 gap-1 rounded-xl border-2 border-ink/10 bg-white p-1">
               {SESSION_OPTIONS.map((s) => (
                 <button
                   key={s}
                   type="button"
+                  aria-pressed={formData.session === s}
                   onClick={() => setFormData({ ...formData, session: s })}
-                  className={`rounded-lg px-2 py-2.5 text-[11px] font-bold uppercase tracking-wide transition-colors ${
+                  className={`min-w-0 truncate rounded-lg px-1 py-2.5 text-[11px] font-bold uppercase tracking-wide transition-colors ${
                     formData.session === s ? 'bg-brand text-surface' : 'text-ink-muted hover:bg-ink/5 hover:text-ink'
                   }`}
                 >
