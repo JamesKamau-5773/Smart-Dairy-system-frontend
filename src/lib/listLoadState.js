@@ -11,3 +11,10 @@ export function getListLoadState({ status, fetchStatus, data }) {
   if (status === 'error') return data === undefined ? 'error' : 'stale';
   return 'ready';
 }
+
+/**
+ * True when the backend's rows are available to show: freshly loaded (`ready`) or saved on
+ * this phone after a failed refresh (`stale`). An empty state may only show when this is
+ * true and the list is empty; loading and errors are never "empty".
+ */
+export const hasRowsToShow = (state) => state === 'ready' || state === 'stale';

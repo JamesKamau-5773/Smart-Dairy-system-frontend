@@ -1775,12 +1775,50 @@ export const safetyApi = {
   },
 };
 
+// "06:00:00" → "06:00"; null when the backend sent no time.
+const toClockTime = (value) => (typeof value === 'string' && /^\d{2}:\d{2}/.test(value) ? value.slice(0, 5) : null);
+const checklistLines = (text) => String(text ?? '').split('\n').map((line) => line.trim()).filter(Boolean);
+
+/**
+ * One time block of the farm's daily routine, as the pages use it. The checklist is the
+ * manager's text, one action per line (the backend's `notes`, or its `checklist_items`).
+ */
+export const normalizeRoutinePlan = (plan = {}) => {
+  const start = toClockTime(plan.start_time);
+  const end = toClockTime(plan.end_time);
+  const items = Array.isArray(plan.checklist_items) ? plan.checklist_items : [];
+  return {
+    id: plan.id,
+    title: plan.task_title ?? plan.title ?? '',
+    description: plan.task_description ?? '',
+    time: start && end ? `${start}–${end}` : (start ?? ''),
+    startTime: plan.start_time ?? null,
+    endTime: plan.end_time ?? null,
+    checklist: plan.notes ?? items.join('\n'),
+    displayOrder: plan.display_order ?? null,
+    isActive: plan.is_active !== false,
+  };
+};
+
+/** Normalized plans back into the body POST /routine/plans expects (it replaces the whole plan). */
+export const buildRoutinePlansPayload = (plans = []) => plans.map((plan, index) => ({
+  task_title: plan.title,
+  task_description: plan.description || plan.title,
+  start_time: plan.startTime,
+  end_time: plan.endTime,
+  notes: plan.checklist,
+  checklist_items: checklistLines(plan.checklist),
+  display_order: plan.displayOrder ?? index,
+  is_active: plan.isActive,
+}));
+
 export const routineApi = {
   listPlans() {
-    return apiClient.get('/routine/plans').then((response) => toArray(response.data));
+    return apiClient.get('/routine/plans').then((response) => toArray(response.data).map(normalizeRoutinePlan));
   },
-  savePlans(payload) {
-    return apiClient.post('/routine/plans', payload).then((response) => toObject(response.data));
+  /** Saves the whole plan (the backend replaces it). Takes normalized plans. */
+  savePlans(plans) {
+    return apiClient.post('/routine/plans', buildRoutinePlansPayload(plans)).then((response) => toObject(response.data));
   },
 };
 

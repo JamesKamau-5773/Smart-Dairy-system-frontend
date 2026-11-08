@@ -91,6 +91,35 @@ export function StatValue({ state, label, className, children }) {
   return <p className={className}>{children}</p>;
 }
 
+/**
+ * The notice a list shows for its load state, so every list says the same thing the same way.
+ * Pair it with skeletons while loading and with the rows (or the empty state) when
+ * `hasRowsToShow(state)` is true.
+ *
+ * - loading: a "still loading" hint, only once loading drags on
+ * - stale: rows saved on this phone are shown, with "Couldn't refresh" and Try again
+ * - offline / error: a full-area message (with Try again on error)
+ * - ready: nothing
+ *
+ * @param {object} props
+ * @param {'loading'|'offline'|'error'|'stale'|'ready'} props.state From `getListLoadState(query)`.
+ * @param {string} props.label Plural noun for the rows, e.g. "stock items".
+ * @param {unknown} [props.error] The query error, for a readable reason.
+ * @param {() => void} props.onRetry Usually `query.refetch`.
+ *
+ * @example
+ * const state = getListLoadState(itemsQuery);
+ * <ListLoadNotices state={state} label="stock items" error={itemsQuery.error} onRetry={itemsQuery.refetch} />
+ */
+export function ListLoadNotices({ state, label, error, onRetry }) {
+  if (state === 'loading') return <SlowLoadingHint label={label} />;
+  if (state === 'stale') return <StaleDataNotice label={label} error={error} onRetry={onRetry} />;
+  if (state === 'offline' || state === 'error') {
+    return <ListLoadMessage state={state} label={label} error={error} onRetry={onRetry} />;
+  }
+  return null;
+}
+
 /** Appears only when loading drags on, so a slow connection isn't mistaken for a frozen app. */
 export function SlowLoadingHint({ label, after = 4000 }) {
   const [visible, setVisible] = useState(false);

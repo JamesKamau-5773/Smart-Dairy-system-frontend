@@ -5,6 +5,10 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import DairyUnitEconomicsReport from '../DairyUnitEconomicsReport';
 import { reportsApi } from '../../../lib/backendApi';
 
+vi.mock('../../../hooks/useTenant', () => ({
+  useTenant: () => ({ tenantId: 't1', farmId: 'f1' }),
+}));
+
 vi.mock('../../../lib/backendApi', () => ({
   reportsApi: {
     getDairyUnitEconomics: vi.fn(),

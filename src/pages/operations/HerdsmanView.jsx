@@ -5,11 +5,12 @@ import { useTenant } from '../../hooks/useTenant';
 import { QUERY_KEYS } from '../../providers/QueryProvider';
 import { inventoryApi } from '../../lib/backendApi';
 import { useAuth } from '../../contexts/AuthContext';
-import { Activity, AlertTriangle, ArrowRight, Clock, CheckCircle2, Droplets, Flame, Wheat, Baby, Loader2, ClipboardList } from 'lucide-react';
+import { Activity, AlertTriangle, ArrowRight, Clock, CheckCircle2, Wheat, Loader2, ClipboardList } from 'lucide-react';
 import { convertKgToLocal } from '../../lib/units';
-import { loadScheduleTasks } from '../../lib/schedule';
+import { useRoutinePlans } from '../../hooks/useRoutinePlans';
+import { getListLoadState, hasRowsToShow } from '../../lib/listLoadState';
+import { CardSkeletons, ListLoadNotices } from '../../components/ui/ListLoadState';
 import AlertBanner from '../../components/ui/AlertBanner';
-import Modal from '../../components/ui/Modal';
 
 export default function HerdsmanView() {
   // Calf form moved to Herd Registry to keep barn-floor UI focused.
@@ -17,7 +18,10 @@ export default function HerdsmanView() {
   const [errorMessage, setErrorMessage] = useState('');
   const queryClient = useQueryClient();
 
-  const readOnlySchedule = loadScheduleTasks();
+  // The routine the manager saved in the Daily Routine Planner, from the backend.
+  const routineQuery = useRoutinePlans();
+  const routineLoadState = getListLoadState(routineQuery);
+  const readOnlySchedule = routineQuery.data ?? [];
 
   const getContextForFeed = (feed) => {
     const id = (feed.inventory_item_id || '').toString().toLowerCase();
@@ -113,13 +117,6 @@ export default function HerdsmanView() {
     },
   });
 
-  const handleFeedTaskComplete = (feedTask) => {
-    if (feedTaskMutation.isPending) {
-      return;
-    }
-    feedTaskMutation.mutate(feedTask);
-  };
-
   return (
     <div className="animate-reveal space-y-8 max-w-6xl mx-auto">
       {successMessage && (
@@ -208,9 +205,15 @@ export default function HerdsmanView() {
               Shift instructions from the manager. Review these objectives before starting and complete tasks in chronological order.
             </p>
             <div className="space-y-4 max-h-[600px] overflow-y-auto pr-2">
-              {readOnlySchedule.length === 0 && (
+              {routineLoadState !== 'ready' && (
+                <div className="overflow-hidden rounded-lg border border-ink/10">
+                  <ListLoadNotices state={routineLoadState} label="routine tasks" error={routineQuery.error} onRetry={routineQuery.refetch} />
+                  {routineLoadState === 'loading' && <div aria-busy="true"><CardSkeletons rows={2} /></div>}
+                </div>
+              )}
+              {hasRowsToShow(routineLoadState) && readOnlySchedule.length === 0 && (
                 <div className="rounded-lg border border-dashed border-ink/10 bg-surface-warm p-4 text-sm text-ink-muted">
-                  No routine tasks are saved yet.
+                  No routine has been set yet. Your manager sets it in the Daily Routine Planner.
                 </div>
               )}
               {readOnlySchedule.map((task) => (
@@ -219,14 +222,16 @@ export default function HerdsmanView() {
                     <div>
                       <div className="text-[10px] uppercase font-black tracking-wider text-ink-muted">{task.time}</div>
                       <div className="font-bold text-ink text-base mt-1">{task.title}</div>
-                      <p className="text-sm text-ink-muted mt-3 leading-relaxed">{task.goal}</p>
+                      {task.description && task.description !== task.title && (
+                        <p className="text-sm text-ink-muted mt-3 leading-relaxed">{task.description}</p>
+                      )}
                     </div>
                   </div>
                   <ul className="mt-4 space-y-2 text-sm text-ink leading-relaxed">
-                    {task.checklist.split('\n').map((step, index) => (
+                    {task.checklist.split('\n').map((step) => step.trim()).filter(Boolean).map((step, index) => (
                       <li key={`${task.id}-${index}`} className="flex items-start gap-2">
                         <span className="mt-1.5 h-2 w-2 rounded-full bg-brand shrink-0" />
-                        <span className="font-medium">{step.trim()}</span>
+                        <span className="font-medium">{step}</span>
                       </li>
                     ))}
                   </ul>

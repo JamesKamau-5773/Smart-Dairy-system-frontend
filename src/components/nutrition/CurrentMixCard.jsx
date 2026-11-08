@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { AlertCircle, Beaker, Clock, Loader2, Plus, RefreshCw, Tractor, Utensils } from 'lucide-react';
+import { AlertCircle, Beaker, Clock, Plus, RefreshCw, Tractor, Utensils } from 'lucide-react';
+import Skeleton from '../ui/Skeleton';
 import { FEEDING_GROUPS } from '../../lib/feedingGroups';
 import { feedCopy } from '../../i18n/feed.en';
 import { tone } from '../ui/tones';
@@ -156,18 +157,28 @@ function RecordFeedingForm({ mix, isRecording, onRecordConsumption }) {
  * lasts, and recording what was fed. Shows an empty state with the next step
  * when no batch of this type is in store.
  */
+/**
+ * @param {object} props
+ * @param {'loading'|'offline'|'error'|'stale'|'ready'} [props.status] The load state of what's
+ *   in store (`getListLoadState`). `stale` shows the batch saved on this phone, like `ready`.
+ */
 export default function CurrentMixCard({ recipeType = 'dairy_meal', mix, status = 'ready', onRetry, onRecordConsumption, isRecording = false, onMixBatch }) {
   const typeLabel = copy.types[recipeType];
 
   // Until the backend has answered, "nothing in store" would be a guess.
-  if (status !== 'ready') {
+  if (status !== 'ready' && status !== 'stale') {
     return (
       <section className="card-machined flex flex-col gap-4 p-5 sm:p-6" aria-label={typeLabel} aria-busy={status === 'loading' || undefined}>
         <CardHeader recipeType={recipeType} title={typeLabel} />
         {status === 'loading' ? (
-          <p role="status" className="flex items-center gap-2 text-sm text-ink-muted">
-            <Loader2 size={16} className="animate-spin" aria-hidden="true" /> {copy.loading}
-          </p>
+          <div role="status" className="space-y-3">
+            <span className="sr-only">{copy.loading}</span>
+            <Skeleton className="h-5 w-2/3" />
+            <Skeleton className="h-4 w-1/2" />
+            <Skeleton className="h-10 w-full" />
+          </div>
+        ) : status === 'offline' ? (
+          <p role="status" className="text-sm text-ink">{copy.loadOffline}</p>
         ) : (
           <>
             <p role="alert" className="text-sm text-ink">{copy.loadFailed}</p>

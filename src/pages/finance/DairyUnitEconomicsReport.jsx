@@ -13,8 +13,7 @@ import {
   ArrowUpRight,
   ShieldCheck,
   AlertTriangle,
-  CheckCircle2,
-  RefreshCw
+  CheckCircle2
 } from 'lucide-react';
 import { reportsApi } from '@/lib/backendApi';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
@@ -23,6 +22,29 @@ import { Calendar } from '@/components/ui/calendar';
 import MetricLabel from '@/components/finance/MetricLabel';
 import { cn } from '@/lib/utils';
 import toast from 'react-hot-toast';
+import { useTenant } from '@/hooks/useTenant';
+import { getListLoadState, hasRowsToShow } from '@/lib/listLoadState';
+import { formatCount, formatLitres } from '@/lib/numberFormat';
+import { ListLoadNotices } from '@/components/ui/ListLoadState';
+import Skeleton from '@/components/ui/Skeleton';
+
+const KPI_CARDS = 4;
+
+// Figures the backend didn't send are shown as "—", never as zero.
+const isUnknown = (value) => value === null || value === undefined || value === '' || !Number.isFinite(Number(value));
+const formatAmount = (value) => (isUnknown(value) ? '—' : Number(value).toLocaleString(undefined, { maximumFractionDigits: 2 }));
+const formatKesAmount = (value) => (isUnknown(value) ? '—' : `KES ${formatAmount(value)}`);
+const formatKesFixed = (value) => (isUnknown(value) ? '—' : `KES ${Number(value).toFixed(2)}`);
+const formatRatio = (value) => (isUnknown(value) ? '—' : `${Number(value).toFixed(2)}x`);
+
+function ReportSkeleton({ label }) {
+  return (
+    <div role="status" className="grid grid-cols-1 gap-4 md:grid-cols-4">
+      <span className="sr-only">{label}</span>
+      {Array.from({ length: KPI_CARDS }, (_, index) => <Skeleton key={index} className="h-28 w-full" aria-hidden="true" />)}
+    </div>
+  );
+}
 
 function getStatusBadge(status) {
   switch (status) {
@@ -69,7 +91,8 @@ function getStatusBadge(status) {
 }
 
 function CustomerSummary({ customerCount }) {
-  const count = Number(customerCount ?? 0);
+  const known = !isUnknown(customerCount);
+  const count = Number(customerCount);
   const customerWord = count === 1 ? 'customer' : 'customers';
 
   return (
@@ -80,7 +103,9 @@ function CustomerSummary({ customerCount }) {
       <div>
         <p className="text-xs font-bold uppercase text-brand">This period at a glance</p>
         <p className="mt-1 text-base font-bold sm:text-lg">
-          You gained <span className="font-mono tabular-nums text-brand">{count}</span> new {customerWord} this period!
+          {known
+            ? <>You gained <span className="font-mono tabular-nums text-brand">{formatCount(count)}</span> new {customerWord} this period!</>
+            : <>New customers for this period aren’t recorded yet.</>}
         </p>
       </div>
       <p className="text-sm font-medium text-ink-muted">Use the figures below to see what each customer costs and earns.</p>
@@ -123,6 +148,7 @@ function normalizeDairyUnitEconomics(response) {
 }
 
 export default function DairyUnitEconomicsReport() {
+  const { tenantId, farmId } = useTenant();
   const [activeTab, setActiveTab] = React.useState('tenant'); // 'tenant' | 'by-farm' | 'calculator'
 
   // Date filter state
@@ -157,25 +183,15 @@ export default function DairyUnitEconomicsReport() {
   };
 
   // 1. Tenant Report Query
-  const {
-    data: tenantData,
-    isLoading: isTenantLoading,
-    isError: isTenantError,
-    refetch: refetchTenant,
-  } = useQuery({
-    queryKey: ['dairyUnitEconomics', queryParams],
+  const tenantQuery = useQuery({
+    queryKey: ['dairyUnitEconomics', tenantId, farmId, queryParams],
     queryFn: () => reportsApi.getDairyUnitEconomics(queryParams),
     enabled: activeTab === 'tenant',
   });
 
   // 2. By Farm Report Query
-  const {
-    data: byFarmData,
-    isLoading: isByFarmLoading,
-    isError: isByFarmError,
-    refetch: refetchByFarm,
-  } = useQuery({
-    queryKey: ['dairyUnitEconomicsByFarm', queryParams],
+  const byFarmQuery = useQuery({
+    queryKey: ['dairyUnitEconomicsByFarm', tenantId, farmId, queryParams],
     queryFn: () => reportsApi.getDairyUnitEconomicsByFarm(queryParams),
     enabled: activeTab === 'by-farm',
   });
@@ -205,7 +221,10 @@ export default function DairyUnitEconomicsReport() {
     calcMutation.mutate(payload);
   };
 
-  const activeData = normalizeDairyUnitEconomics(tenantData);
+  const tenantState = getListLoadState(tenantQuery);
+  const byFarmState = getListLoadState(byFarmQuery);
+  const byFarmData = byFarmQuery.data;
+  const activeData = normalizeDairyUnitEconomics(tenantQuery.data);
 
   return (
     <div className="animate-reveal space-y-6 max-w-7xl mx-auto">
@@ -255,7 +274,7 @@ export default function DairyUnitEconomicsReport() {
         </div>
       </div>
 
-      {activeTab === 'tenant' && !isTenantLoading && !isTenantError && (
+      {activeTab === 'tenant' && hasRowsToShow(tenantState) && (
         <CustomerSummary customerCount={activeData.new_customers_acquired} />
       )}
 
@@ -350,21 +369,13 @@ export default function DairyUnitEconomicsReport() {
       {/* TAB 1: TENANT OVERVIEW */}
       {activeTab === 'tenant' && (
         <div className="space-y-6">
-          {isTenantLoading ? (
-            <div className="card-machined p-8 text-center text-ink-muted animate-pulse">
-              Calculating customer value and profit…
+          {tenantState !== 'ready' && (
+            <div className="card-machined overflow-hidden !p-0">
+              <ListLoadNotices state={tenantState} label="customer value and profit figures" error={tenantQuery.error} onRetry={tenantQuery.refetch} />
             </div>
-          ) : isTenantError ? (
-            <div className="card-machined p-6 bg-rose-50 border-rose-200 text-rose-700">
-              <p className="font-bold">Failed to load customer value and profit data.</p>
-              <button
-                onClick={() => refetchTenant()}
-                className="mt-2 text-xs text-rose-800 underline font-semibold flex items-center gap-1"
-              >
-                <RefreshCw size={12} /> Try again
-              </button>
-            </div>
-          ) : (
+          )}
+          {tenantState === 'loading' && <ReportSkeleton label="Calculating customer value and profit…" />}
+          {!hasRowsToShow(tenantState) ? null : (
             <>
               {/* Primary KPI Cards */}
               <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
@@ -408,7 +419,7 @@ export default function DairyUnitEconomicsReport() {
                         ? 'text-emerald-700'
                         : Number(activeData.realized_ltv_kes ?? 0) < 0 ? 'text-rose-700' : 'text-ink-muted'
                     )}>
-                      KES {(activeData.realized_ltv_kes ?? 0).toLocaleString(undefined, { maximumFractionDigits: 2 })}
+                      {formatKesAmount(activeData.realized_ltv_kes)}
                     </div>
                     <p className="text-[11px] text-ink-muted mt-1">
                       Recorded profit from each current customer
@@ -465,7 +476,7 @@ export default function DairyUnitEconomicsReport() {
                   </div>
                   <div>
                     <div className="text-2xl font-black text-ink font-mono tabular-nums">
-                      {activeData.active_accounts ?? 0}
+                      {formatCount(activeData.active_accounts)}
                     </div>
                     <p className="text-[11px] text-ink-muted mt-1">
                       {activeData.liters_per_month_per_account != null
@@ -514,21 +525,19 @@ export default function DairyUnitEconomicsReport() {
                     <div className="py-2.5 flex justify-between">
                       <dt className="text-ink-muted">New Customers Acquired</dt>
                       <dd className="font-bold text-ink">
-                        {activeData.new_customers_acquired ?? 0}
+                        {formatCount(activeData.new_customers_acquired)}
                       </dd>
                     </div>
                     <div className="py-2.5 flex justify-between">
                       <dt className="text-ink-muted">Total Liters Sold</dt>
                       <dd className="font-bold text-ink">
-                        {(activeData.total_liters_sold ?? 0).toLocaleString()} L
+                        {formatLitres(activeData.total_liters_sold)}
                       </dd>
                     </div>
                     <div className="py-2.5 flex justify-between">
                       <dt className="text-ink-muted">Liters Purchased / Month / Customer</dt>
                       <dd className="font-bold text-ink">
-                        {activeData.liters_purchased_per_month != null
-                          ? Number(activeData.liters_purchased_per_month).toFixed(2)
-                          : '0.00'} L
+                        {isUnknown(activeData.liters_purchased_per_month) ? '—' : `${Number(activeData.liters_purchased_per_month).toFixed(2)} L`}
                       </dd>
                     </div>
                   </dl>
@@ -547,15 +556,13 @@ export default function DairyUnitEconomicsReport() {
                           ? 'text-emerald-700'
                           : Number(activeData.gross_margin_per_liter_kes ?? 0) < 0 ? 'text-rose-700' : 'text-amber-700'
                       )}>
-                        KES {activeData.gross_margin_per_liter_kes != null
-                          ? Number(activeData.gross_margin_per_liter_kes).toFixed(2)
-                          : '0.00'}
+                        {formatKesFixed(activeData.gross_margin_per_liter_kes)}
                       </dd>
                     </div>
                     <div className="py-2.5 flex justify-between">
                       <dt className="text-ink-muted">Assumed Customer Lifespan</dt>
                       <dd className="font-bold text-ink">
-                        {activeData.customer_lifespan_months ?? 12} Months
+                        {isUnknown(activeData.customer_lifespan_months) ? '—' : `${activeData.customer_lifespan_months} months`}
                       </dd>
                     </div>
                     <div className="py-2.5 flex justify-between">
@@ -626,21 +633,13 @@ export default function DairyUnitEconomicsReport() {
             </div>
           </div>
 
-          {isByFarmLoading ? (
-            <div className="card-machined p-8 text-center text-ink-muted animate-pulse">
-              Loading customer value and profit by farm…
+          {byFarmState !== 'ready' && (
+            <div className="card-machined overflow-hidden !p-0">
+              <ListLoadNotices state={byFarmState} label="farm figures" error={byFarmQuery.error} onRetry={byFarmQuery.refetch} />
             </div>
-          ) : isByFarmError ? (
-            <div className="card-machined p-6 bg-rose-50 border-rose-200 text-rose-700">
-              <p className="font-bold">Failed to load farm-level data.</p>
-              <button
-                onClick={() => refetchByFarm()}
-                className="mt-2 text-xs text-rose-800 underline font-semibold"
-              >
-                Try again
-              </button>
-            </div>
-          ) : (
+          )}
+          {byFarmState === 'loading' && <ReportSkeleton label="Loading customer value and profit by farm…" />}
+          {!hasRowsToShow(byFarmState) ? null : (
             <div className="card-machined min-w-0 p-3 sm:p-6">
               <table className="hidden w-full text-left text-sm border-collapse md:table">
                 <thead>
@@ -669,7 +668,7 @@ export default function DairyUnitEconomicsReport() {
                             'py-3 px-4 font-mono tabular-nums',
                             Number(farm.cac_kes ?? farm.cac ?? 0) > 0 ? 'text-ink' : 'text-amber-700'
                           )}>
-                            {(farm.cac_kes ?? farm.cac ?? 0).toLocaleString(undefined, { maximumFractionDigits: 2 })}
+                            {formatAmount(farm.cac_kes ?? farm.cac)}
                           </td>
                           <td className={cn(
                             'py-3 px-4 font-mono tabular-nums',
@@ -677,12 +676,10 @@ export default function DairyUnitEconomicsReport() {
                               ? 'text-emerald-700'
                               : Number(farm.ltv_kes ?? farm.ltv ?? 0) < 0 ? 'text-rose-700' : 'text-amber-700'
                           )}>
-                            {(farm.ltv_kes ?? farm.ltv ?? 0).toLocaleString(undefined, { maximumFractionDigits: 2 })}
+                            {formatAmount(farm.ltv_kes ?? farm.ltv)}
                           </td>
                           <td className="py-3 px-4 font-bold text-brand font-mono tabular-nums">
-                            {farm.ltv_to_cac_ratio != null
-                              ? Number(farm.ltv_to_cac_ratio).toFixed(2)
-                              : '0.00'}x
+                            {formatRatio(farm.ltv_to_cac_ratio)}
                           </td>
                           <td className="py-3 px-4">
                             <span className={cn('inline-flex items-center gap-1 px-2 py-0.5 rounded-full border text-xs', badge.color)}>
@@ -695,7 +692,7 @@ export default function DairyUnitEconomicsReport() {
                               ? 'text-emerald-700'
                               : Number(farm.gross_margin_per_liter_kes ?? 0) < 0 ? 'text-rose-700' : 'text-amber-700'
                           )}>
-                            KES {farm.gross_margin_per_liter_kes != null ? Number(farm.gross_margin_per_liter_kes).toFixed(2) : '0.00'}
+                            {formatKesFixed(farm.gross_margin_per_liter_kes)}
                           </td>
                         </tr>
                       );
@@ -718,10 +715,10 @@ export default function DairyUnitEconomicsReport() {
                     return <article key={farm.farm_id || farm.id || i} className="min-w-0 rounded-xl border border-ink/10 bg-surface p-4">
                       <div className="flex items-start justify-between gap-3"><h3 className="min-w-0 break-words text-sm font-bold text-ink">{farm.farm_name || farm.name || 'Primary Farm'}</h3><span className={cn('inline-flex shrink-0 items-center gap-1 rounded-full border px-2 py-1 text-[10px]', badge.color)}><Icon size={12} />{badge.label}</span></div>
                       <div className="mt-3 grid grid-cols-2 gap-3 rounded-lg bg-surface-raised p-3 text-xs">
-                        <div><p className="text-ink-muted">Customer cost</p><p className="mt-1 font-semibold tabular-nums text-ink">KES {Number(farm.cac_kes ?? farm.cac ?? 0).toLocaleString(undefined, { maximumFractionDigits: 2 })}</p></div>
-                        <div><p className="text-ink-muted">Profit per customer</p><p className="mt-1 font-semibold tabular-nums text-brand">KES {Number(farm.ltv_kes ?? farm.ltv ?? 0).toLocaleString(undefined, { maximumFractionDigits: 2 })}</p></div>
-                        <div><p className="text-ink-muted">Profit vs. cost</p><p className="mt-1 font-semibold tabular-nums text-ink">{farm.ltv_to_cac_ratio != null ? Number(farm.ltv_to_cac_ratio).toFixed(2) : '0.00'}x</p></div>
-                        <div><p className="text-ink-muted">Profit / L</p><p className="mt-1 font-semibold tabular-nums text-brand">KES {farm.gross_margin_per_liter_kes != null ? Number(farm.gross_margin_per_liter_kes).toFixed(2) : '0.00'}</p></div>
+                        <div><p className="text-ink-muted">Customer cost</p><p className="mt-1 font-semibold tabular-nums text-ink">{formatKesAmount(farm.cac_kes ?? farm.cac)}</p></div>
+                        <div><p className="text-ink-muted">Profit per customer</p><p className="mt-1 font-semibold tabular-nums text-brand">{formatKesAmount(farm.ltv_kes ?? farm.ltv)}</p></div>
+                        <div><p className="text-ink-muted">Profit vs. cost</p><p className="mt-1 font-semibold tabular-nums text-ink">{formatRatio(farm.ltv_to_cac_ratio)}</p></div>
+                        <div><p className="text-ink-muted">Profit / L</p><p className="mt-1 font-semibold tabular-nums text-brand">{formatKesFixed(farm.gross_margin_per_liter_kes)}</p></div>
                       </div>
                     </article>;
                   })
@@ -857,7 +854,7 @@ export default function DairyUnitEconomicsReport() {
                         'text-2xl font-black font-mono tabular-nums mt-1 block',
                         Number(calcResult.cac_kes ?? calcResult.cac ?? 0) > 0 ? 'text-ink' : 'text-amber-700'
                       )}>
-                        KES {(calcResult.cac_kes ?? calcResult.cac ?? 0).toLocaleString(undefined, { maximumFractionDigits: 2 })}
+                        {formatKesAmount(calcResult.cac_kes ?? calcResult.cac)}
                       </span>
                     </div>
 
@@ -869,7 +866,7 @@ export default function DairyUnitEconomicsReport() {
                           ? 'text-emerald-700'
                           : Number(calcResult.ltv_kes ?? calcResult.ltv ?? 0) < 0 ? 'text-rose-700' : 'text-amber-700'
                       )}>
-                        KES {(calcResult.ltv_kes ?? calcResult.ltv ?? 0).toLocaleString(undefined, { maximumFractionDigits: 2 })}
+                        {formatKesAmount(calcResult.ltv_kes ?? calcResult.ltv)}
                       </span>
                     </div>
                   </div>
@@ -882,9 +879,7 @@ export default function DairyUnitEconomicsReport() {
                         ? 'text-emerald-700'
                         : calcResult.ltv_to_cac_ratio != null ? 'text-amber-700' : 'text-ink-muted'
                     )}>
-                      {calcResult.ltv_to_cac_ratio != null
-                        ? Number(calcResult.ltv_to_cac_ratio).toFixed(2)
-                        : '0.00'}x
+                      {formatRatio(calcResult.ltv_to_cac_ratio)}
                     </div>
                     <div>
                       {(() => {

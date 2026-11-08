@@ -25,8 +25,27 @@ import { useTenant } from '../../hooks/useTenant';
 import { useInventoryItemActions } from '../../hooks/useInventoryItemActions';
 import { feedCopy } from '../../i18n/feed.en';
 import { tone } from '../../components/ui/tones';
+import { CardSkeletons, ListLoadNotices, TableSkeletonRows } from '../../components/ui/ListLoadState';
+import { getListLoadState, hasRowsToShow } from '../../lib/listLoadState';
 
 const { item: itemCopy, restock: restockCopy, stockOut: stockOutCopy, stockCount: stockCountCopy } = feedCopy;
+
+const TABLE_COLUMNS = 5;
+
+/** "220 kg"; "—" when the backend sent no stock figure (never shown as 0). */
+const isKnown = (value) => value !== null && value !== undefined && value !== '';
+
+const formatStock = (stock) => (isKnown(stock?.value) ? `${stock.value} ${stock.unit || 'units'}` : '—');
+
+/**
+ * 'LOW' | 'OK' from the backend's flag; null (no chip) when the status can't be known.
+ * TODO(BR-003): the item list should carry `is_low_stock`; drop the comparison then.
+ */
+const getItemStatus = (item) => {
+  if (typeof item.is_low_stock === 'boolean') return item.is_low_stock ? 'LOW' : 'OK';
+  if (!isKnown(item.stock?.value) || !isKnown(item.reorderLevel)) return null;
+  return Number(item.stock.value) <= Number(item.reorderLevel) ? 'LOW' : 'OK';
+};
 
 const STOCK_STATUS = {
   LOW: { label: 'Low – reorder', tone: 'attention' },
@@ -34,6 +53,7 @@ const STOCK_STATUS = {
 };
 
 function StockStatusChip({ status }) {
+  if (!status) return null;
   const { label, tone: toneName } = STOCK_STATUS[status];
   return <span className={`inline-flex shrink-0 rounded-badge px-2 py-0.5 text-xs font-semibold ${tone(toneName).chip}`}>{label}</span>;
 }
@@ -68,11 +88,13 @@ export default function InventoryRegistry() {
 
   // The archived flag is part of the key, so both lists are cached and the
   // shared ['inventory-items', tenant, farm] prefix still invalidates them together.
-  const { data: backendInventory } = useQuery({
+  const inventoryQuery = useQuery({
     queryKey: ['inventory-items', tenantId, farmId, { includeArchived: showArchived }],
     queryFn: () => inventoryApi.listItems({ includeArchived: showArchived }),
     enabled: !!tenantId && !!farmId,
   });
+  const backendInventory = inventoryQuery.data;
+  const inventoryLoadState = getListLoadState(inventoryQuery);
 
   const showFailure = (error, fallback) => {
     setErrorMessage(getFeedErrorMessage(error, fallback));
@@ -207,13 +229,6 @@ export default function InventoryRegistry() {
     // Keep the filter from the address selectable even before an item of that category exists.
     return ['All', ...new Set([...allCategories, ...(categoryFilter === 'All' ? [] : [categoryFilter])])];
   }, [backendInventory, categoryFilter]);
-
-  // Dynamically determine item status based on stock and reorder levels
-  // The backend's low-stock flag when it sends one; until then, its stock against its reorder level.
-  const getItemStatus = (item) => {
-    const isLow = item.is_low_stock ?? ((item.stock?.value ?? 0) <= (item.reorderLevel ?? 0));
-    return isLow ? 'LOW' : 'OK';
-  };
 
   const handleRestock = (item) => {
     setSelectedItem(item);
@@ -363,7 +378,14 @@ export default function InventoryRegistry() {
 
       {/* STOCK TABLE */}
       <div className="min-w-0 overflow-hidden rounded-xl border border-ink/10 bg-white">
-        {filteredInventoryData.length === 0 ? (
+        <ListLoadNotices state={inventoryLoadState} label="stock items" error={inventoryQuery.error} onRetry={inventoryQuery.refetch} />
+        {inventoryLoadState === 'loading' && (
+          <div aria-busy="true">
+            <table className="hidden w-full border-collapse md:table"><tbody><TableSkeletonRows columns={TABLE_COLUMNS} /></tbody></table>
+            <div className="divide-y divide-ink/10 md:hidden"><CardSkeletons /></div>
+          </div>
+        )}
+        {!hasRowsToShow(inventoryLoadState) ? null : filteredInventoryData.length === 0 ? (
           <div className="flex flex-col items-center gap-3 p-8 text-center text-sm text-ink-muted">
             {(backendInventory || []).length === 0 ? (
               <>
@@ -399,7 +421,7 @@ export default function InventoryRegistry() {
                 </td>
                 <td className="px-6 py-4 text-xs font-semibold text-ink-muted">{item.category}</td>
                 <td className="px-6 py-4 text-xs font-black text-ink font-mono">
-                  {item.stock?.value ?? 0} <span className="text-ink-muted">{item.stock?.unit || 'units'}</span>
+                  {formatStock(item.stock)}
                 </td>
                 <td className="px-6 py-4">
                   <StockStatusChip status={getItemStatus(item)} />
@@ -433,7 +455,7 @@ export default function InventoryRegistry() {
                 </div>
                 <dl className="grid grid-cols-2 gap-3 border-t border-ink/10 pt-3 text-xs">
                   <div className="min-w-0"><dt className="text-ink-muted">Category</dt><dd className="mt-1 break-words font-semibold text-ink">{item.category}</dd></div>
-                  <div className="min-w-0"><dt className="text-ink-muted">Current stock</dt><dd className="mt-1 break-words font-mono font-bold tabular-nums text-brand">{item.stock?.value ?? 0} {item.stock?.unit || 'units'}</dd></div>
+                  <div className="min-w-0"><dt className="text-ink-muted">Current stock</dt><dd className="mt-1 break-words font-mono font-bold tabular-nums text-brand">{formatStock(item.stock)}</dd></div>
                 </dl>
                 <div className="flex flex-wrap justify-end gap-2 border-t border-ink/10 pt-3">
                   {getRowActions(item).map(({ key, label, onClick, danger }) => (

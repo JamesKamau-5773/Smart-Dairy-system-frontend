@@ -15,16 +15,27 @@ import { Skeleton } from '../../components/ui';
 import SlidePanel from '../../components/ui/SlidePanel';
 import { Popover, PopoverContent, PopoverTrigger } from '../../components/ui/popover';
 import CustomerForm from '../../components/finance/CustomerForm';
+import { formatMoneyText } from '../../components/ui/Money';
+import { ListLoadNotices, StatValue } from '../../components/ui/ListLoadState';
+import { getListLoadState, hasRowsToShow } from '../../lib/listLoadState';
+import { formatCount } from '../../lib/numberFormat';
 
-const formatKes = (value) => `KES ${Number(value || 0).toLocaleString(undefined, {
-  minimumFractionDigits: 2,
-  maximumFractionDigits: 2,
-})}`;
+// "KES 1,250.00"; "—" when the backend sent no figure (unknown is never shown as zero).
+const formatKes = formatMoneyText;
+
+const toAmount = (value) => {
+  if (value === null || value === undefined || value === '') return null;
+  const number = Number(value);
+  return Number.isFinite(number) ? number : null;
+};
+const balanceOf = (customer) => toAmount(customer?.account_balance ?? customer?.balance);
+const rateOf = (customer) => toAmount(customer?.agreed_rate_per_liter ?? customer?.rate_per_liter);
+const balanceStatus = (balance) => (balance === null ? 'Balance unknown' : balance > 0 ? 'Outstanding' : 'Settled');
 
 /**
  * SRP: Renders a single Financial KPI Widget.
  */
-const KPIWidget = ({ title, value, subtitle, icon: Icon, valueColor = "text-brand" }) => (
+const KPIWidget = ({ title, value, subtitle, icon: Icon, valueColor = "text-brand", state = 'ready' }) => (
   <div className="group relative overflow-hidden rounded-card border border-slate-200 border-t-[4px] border-t-brand-400 bg-white/90 p-6 backdrop-blur">
     <div className="flex justify-between items-start mb-4">
       <h3 className="text-[11px] font-black uppercase tracking-widest text-slate-600">
@@ -34,9 +45,9 @@ const KPIWidget = ({ title, value, subtitle, icon: Icon, valueColor = "text-bran
         <Icon size={18} strokeWidth={2.5} />
       </div>
     </div>
-    <div className={`mb-1 break-words font-mono text-2xl font-bold tabular-nums sm:text-3xl ${valueColor}`}>
+    <StatValue state={state} label="buyers" className={`mb-1 break-words font-mono text-2xl font-bold tabular-nums sm:text-3xl ${valueColor}`}>
       {value}
-    </div>
+    </StatValue>
     <p className="text-xs font-medium text-slate-600">{subtitle}</p>
   </div>
 );
@@ -54,11 +65,14 @@ export default function BuyersList() {
 
   // Data Fetching
   // UNIFIED: We now fetch from the 'customers' endpoint to have a single source of truth.
-  const { data: customers, isLoading } = useQuery({
+  const customersQuery = useQuery({
     queryKey: ['customers', tenantId, farmId],
     queryFn: () => financeApi.listCustomers().then(res => res?.items || res?.data || res || []),
     enabled: !!farmId,
   });
+  const customers = customersQuery.data;
+  const loadState = getListLoadState(customersQuery);
+  const showBuyers = hasRowsToShow(loadState);
 
   // --- Mutations for CUD (Create, Update, Delete) ---
   // We only need 'create' on this page. The full management is on Customers.jsx
@@ -85,10 +99,10 @@ export default function BuyersList() {
   const filteredCustomers = useMemo(() => {
     const term = searchTerm.trim().toLowerCase();
     return safeCustomers.filter((customer) => {
-      const balance = Number(customer?.account_balance || customer?.balance || 0);
+      const balance = balanceOf(customer);
       const matchesStatus = statusFilter === 'all'
-        || (statusFilter === 'outstanding' && balance > 0)
-        || (statusFilter === 'settled' && balance <= 0);
+        || (statusFilter === 'outstanding' && balance !== null && balance > 0)
+        || (statusFilter === 'settled' && balance !== null && balance <= 0);
       const matchesTerm = !term || matchesSearch([
         customer?.name,
         customer?.id,
@@ -118,11 +132,12 @@ export default function BuyersList() {
   // Derived State (KPIs)
   // Credits/overpayments are shown on the individual account but must not reduce
   // the amount other buyers still owe.
-  const totalOutstanding = safeCustomers.reduce((sum, customer) => {
-    const balance = Number(customer?.account_balance || customer?.balance || 0);
-    return sum + Math.max(balance, 0);
-  }, 0);
-  const settledBuyersCount = safeCustomers.filter((customer) => Number(customer?.account_balance || customer?.balance || 0) <= 0).length;
+  // TODO(BR-002): the backend should return these totals with the list; until then they are
+  // only shown when every balance is known, so a missing balance never reads as zero.
+  const balances = safeCustomers.map(balanceOf);
+  const allBalancesKnown = balances.every((balance) => balance !== null);
+  const totalOutstanding = allBalancesKnown ? balances.reduce((sum, balance) => sum + Math.max(balance, 0), 0) : null;
+  const settledBuyersCount = allBalancesKnown ? balances.filter((balance) => balance <= 0).length : null;
 
   const visibleCustomerIds = filteredCustomers.map((customer) => String(customer?.id));
   const allVisibleSelected = visibleCustomerIds.length > 0
@@ -144,7 +159,7 @@ export default function BuyersList() {
   const shareSelectedStatements = () => {
     const selectedCustomers = safeCustomers.filter((customer) => selectedCustomerIds.includes(String(customer?.id)));
     const lines = selectedCustomers.map((customer) => {
-      const balance = Number(customer?.account_balance || customer?.balance || 0);
+      const balance = balanceOf(customer);
       return `${customer?.name || 'Unnamed Buyer'} (ID ${customer?.id || '--'}): ${formatKes(balance)}`;
     });
     const message = ['Jivu Smart Dairy - Customer Statements', '', ...lines, '', 'Open Jivu Smart Dairy to review the full statement.'].join('\n');
@@ -152,7 +167,7 @@ export default function BuyersList() {
   };
 
   const shareCustomerStatement = (customer) => {
-    const balance = Number(customer?.account_balance || customer?.balance || 0);
+    const balance = balanceOf(customer);
     const message = [
       'Jivu Smart Dairy - Customer Statement',
       `Buyer: ${customer?.name || 'Unnamed Buyer'}`,
@@ -199,14 +214,14 @@ export default function BuyersList() {
         )}
       </div>
 
-      {/* IMPROVEMENT: Wrap KPIs in a conditional check */}
-      {safeCustomers.length > 0 && (
+      {showBuyers && safeCustomers.length > 0 && (
         <div className="mb-8 grid grid-cols-2 gap-3 animate-in slide-in-from-bottom-4 md:grid-cols-3 md:gap-6">
           <KPIWidget 
             title="Total Buyers" 
             value={safeCustomers.length} 
             subtitle="Active customers in your registry."
             icon={Users} 
+            state={loadState}
           />
           <KPIWidget 
             title="Total Outstanding" 
@@ -214,13 +229,15 @@ export default function BuyersList() {
             subtitle="Unpaid balances across all buyers."
             icon={TrendingDown}
             valueColor="text-brand-dark"
+            state={loadState}
           />
           <KPIWidget 
             title="Settled Accounts" 
-            value={settledBuyersCount} 
+            value={formatCount(settledBuyersCount)} 
             subtitle="Buyers with zero balance."
             icon={CheckCircle2}
             valueColor="text-brand" 
+            state={loadState}
           />
         </div>
       )}
@@ -297,8 +314,8 @@ export default function BuyersList() {
                     {filteredCustomers.map((buyer) => {
                       const id = buyer?.id || 'Unknown ID';
                       const contact = buyer?.phone_number || buyer?.contact || 'No contact';
-                      const balance = Number(buyer?.account_balance || buyer?.balance || 0);
-                      const rate = Number(buyer?.agreed_rate_per_liter || buyer?.rate_per_liter || 0);
+                      const balance = balanceOf(buyer);
+                      const rate = rateOf(buyer);
                       const isSelected = selectedCustomerIds.includes(String(id));
 
                       return (
@@ -326,7 +343,7 @@ export default function BuyersList() {
                           </td>
                           <td className="px-3 py-2.5">
                             <span className="inline-flex items-center rounded-badge border border-brand/20 bg-brand-50 px-2 py-1 text-[11px] font-bold text-brand-dark">
-                              {balance > 0 ? 'Outstanding' : 'Settled'}
+                              {balanceStatus(balance)}
                             </span>
                           </td>
                           <td className="px-4 py-2.5 text-right">
@@ -377,8 +394,8 @@ export default function BuyersList() {
                 {filteredCustomers.map((buyer) => {
                   const id = buyer?.id || 'Unknown ID';
                   const contact = buyer?.phone_number || buyer?.contact || 'No contact';
-                  const balance = Number(buyer?.account_balance || buyer?.balance || 0);
-                  const rate = Number(buyer?.agreed_rate_per_liter || buyer?.rate_per_liter || 0);
+                  const balance = balanceOf(buyer);
+                  const rate = rateOf(buyer);
                   const isSelected = selectedCustomerIds.includes(String(id));
                   return (
                     <article key={id} className={`min-w-0 space-y-3 p-4 ${isSelected ? 'bg-brand-50' : ''}`}>
@@ -390,7 +407,7 @@ export default function BuyersList() {
                             <p className="mt-0.5 text-xs text-ink-muted">{buyer?.type || 'Standard'} · ID {id}</p>
                           </div>
                         </div>
-                        <span className="shrink-0 rounded-badge border border-brand/20 bg-brand-50 px-2 py-1 text-[10px] font-bold text-brand-dark">{balance > 0 ? 'Outstanding' : 'Settled'}</span>
+                        <span className="shrink-0 rounded-badge border border-brand/20 bg-brand-50 px-2 py-1 text-[10px] font-bold text-brand-dark">{balanceStatus(balance)}</span>
                       </div>
                       <dl className="grid grid-cols-2 gap-x-3 gap-y-2 border-t border-ink/10 pt-3 text-xs">
                         <div className="min-w-0"><dt className="text-ink-muted">Agreed rate</dt><dd className="mt-1 break-words font-mono font-semibold text-ink">{formatKes(rate)}/L</dd></div>
@@ -412,8 +429,8 @@ export default function BuyersList() {
           </div>
         )}
 
-        {/* Loading State */}
-        {isLoading && (
+        <ListLoadNotices state={loadState} label="buyers" error={customersQuery.error} onRetry={customersQuery.refetch} />
+        {loadState === 'loading' && (
           <div className="space-y-3">
             {[1, 2, 3].map((i) => (
               <div key={i} className="rounded-card border border-slate-200 border-t-[4px] border-t-brand-400 bg-white/90 p-5 backdrop-blur">
@@ -424,8 +441,8 @@ export default function BuyersList() {
           </div>
         )}
 
-        {/* IMPROVEMENT: Supercharged "Cold Start" Absolute Empty State */}
-        {!isLoading && safeCustomers.length === 0 && (
+        {/* First-time empty state: only once the backend has answered with no buyers. */}
+        {showBuyers && safeCustomers.length === 0 && (
           <div className="mx-auto mt-12 flex max-w-3xl animate-fade-in flex-col items-center justify-center rounded-card border border-slate-200 bg-white/90 p-12 text-center backdrop-blur">
             <div className="mb-6 rounded-full border border-brand-400/30 bg-brand-400/10 p-4">
               <Users size={40} className="text-brand-400" />

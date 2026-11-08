@@ -2,6 +2,20 @@ import React, { useState } from 'react';
 import { Trophy, ChevronDown, ChevronUp, ArrowRight, Info } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { formatCostPerLitre, readFeedCostPerLitre } from '../../lib/feedCost';
+import { formatLitres } from '../../lib/numberFormat';
+import { hasRowsToShow } from '../../lib/listLoadState';
+import { CardSkeletons, ListLoadNotices } from '../../components/ui/ListLoadState';
+
+// Values the backend didn't send show as "—", never as 0.
+const yieldOf = (recipe) => recipe?.performance?.avgDailyYieldLiters ?? recipe?.performance?.avg_daily_yield_liters ?? recipe?.yieldAvg ?? null;
+const shareOf = (ingredient) => {
+  const value = ingredient?.percentage ?? ingredient?.inclusion_percentage ?? ingredient?.inclusionPercentage;
+  return value === null || value === undefined || value === '' ? '—' : `${Number(value)}%`;
+};
+const proteinOf = (recipe) => {
+  const value = recipe?.target_protein_percentage ?? recipe?.protein;
+  return value === null || value === undefined || value === '' ? '—' : `${value}%`;
+};
 
 /**
  * SRP: Handles ONLY the friendly empty state for the farmer.
@@ -27,7 +41,7 @@ const FeedMixRow = ({ recipe, index, isExpanded, onToggle, onLoadToLab }) => {
   const name = recipe?.name || 'Unnamed Mix';
   // Backend now returns a `performance` object; fall back to legacy flat fields.
   const perf = recipe?.performance ?? {};
-  const yieldAvg = Number(perf.avgDailyYieldLiters ?? perf.avg_daily_yield_liters ?? recipe?.yieldAvg ?? 0);
+  const yieldAvg = yieldOf(recipe);
   const costPerLiter = readFeedCostPerLitre(perf) ?? readFeedCostPerLitre(recipe);
   // Safely check for either 'ingredients' or 'formula' depending on the payload shape
   const ingredientsList = Array.isArray(recipe?.ingredients) 
@@ -35,7 +49,7 @@ const FeedMixRow = ({ recipe, index, isExpanded, onToggle, onLoadToLab }) => {
     : (Array.isArray(recipe?.formula) ? recipe.formula : []);
     
   // The recipes API returns `target_protein_percentage`; fall back to `protein`.
-  const protein = recipe?.target_protein_percentage ?? recipe?.protein ?? '--';
+  const protein = proteinOf(recipe);
   const lastUsed = perf.lastFedOn ?? perf.last_fed_on ?? recipe?.lastUsed ?? 'Not recorded';
 
   return (
@@ -53,7 +67,7 @@ const FeedMixRow = ({ recipe, index, isExpanded, onToggle, onLoadToLab }) => {
             {isExpanded ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
           </button>
         </td>
-        <td className="min-w-[180px] px-4 py-3 font-mono text-sm font-bold tabular-nums tracking-tight text-ink">{yieldAvg.toFixed(1)} L</td>
+        <td className="min-w-[180px] px-4 py-3 font-mono text-sm font-bold tabular-nums tracking-tight text-ink">{formatLitres(yieldAvg)}</td>
         <td className="min-w-[180px] px-4 py-3 font-mono text-sm font-bold tabular-nums tracking-tight text-ink">{formatCostPerLitre(costPerLiter)}</td>
       </tr>
       {isExpanded && (
@@ -70,12 +84,11 @@ const FeedMixRow = ({ recipe, index, isExpanded, onToggle, onLoadToLab }) => {
                 {ingredientsList.length > 0 ? (
                   ingredientsList.map((ing, idx) => {
                     const ingName = ing?.name ?? ing?.ingredient_name ?? ing?.ingredientName ?? 'Unknown Ingredient';
-                    const ingPct = Number(ing?.percentage ?? ing?.inclusion_percentage ?? ing?.inclusionPercentage ?? 0);
                     return (
                       <div key={idx} className="flex items-center text-sm">
                         <span className="flex-1 text-ink">{ingName}</span>
                         <div className="mx-3 flex-1 border-b border-dotted border-ink/20"></div>
-                        <span className="font-mono font-bold tabular-nums tracking-tight text-ink">{ingPct}%</span>
+                        <span className="font-mono font-bold tabular-nums tracking-tight text-ink">{shareOf(ing)}</span>
                       </div>
                     );
                   })
@@ -90,7 +103,7 @@ const FeedMixRow = ({ recipe, index, isExpanded, onToggle, onLoadToLab }) => {
               <div className="flex gap-6 mb-4 sm:mb-0">
                 <div>
                   <p className="mb-1 text-xs font-bold uppercase tracking-wider text-ink-muted">Protein</p>
-                  <p className="font-mono text-sm font-bold tabular-nums tracking-tight text-ink">{protein}%</p>
+                  <p className="font-mono text-sm font-bold tabular-nums tracking-tight text-ink">{protein}</p>
                 </div>
                 <div>
                   <p className="mb-1 text-xs font-bold uppercase tracking-wider text-ink-muted">Last Fed</p>
@@ -141,6 +154,7 @@ const getRecency = (recipe) => {
 const getYield = (r) => Number(r?.performance?.avgDailyYieldLiters ?? r?.performance?.avg_daily_yield_liters ?? r?.yieldAvg ?? 0);
 const getCost = (r) => readFeedCostPerLitre(r?.performance) ?? readFeedCostPerLitre(r) ?? Infinity;
 
+// TODO(BR-004): ranking "best" mixes is the backend's call; replace this with its ranked list.
 function selectTopMixes(recipes) {
   const bestByFormula = new Map();
   for (const recipe of recipes) {
@@ -169,7 +183,15 @@ function selectTopMixes(recipes) {
     .slice(0, MAX_MIXES_SHOWN);
 }
 
-export default function TopRecipesList({ recipes }) {
+/**
+ * @param {object} props
+ * @param {Array<object>} props.recipes The backend's saved recipes.
+ * @param {'loading'|'offline'|'error'|'stale'|'ready'} [props.state] Load state of the recipes
+ *   (`getListLoadState`); the empty state only shows once they have loaded.
+ * @param {unknown} [props.error]
+ * @param {() => void} [props.onRetry]
+ */
+export default function TopRecipesList({ recipes, state = 'ready', error, onRetry }) {
   const [expandedId, setExpandedId] = useState(null);
   const navigate = useNavigate();
 
@@ -207,7 +229,9 @@ export default function TopRecipesList({ recipes }) {
       </p>
 
       <div className="border border-ink/10">
-        {safeRecipes.length === 0 ? (
+        <ListLoadNotices state={state} label="feed mixes" error={error} onRetry={onRetry} />
+        {state === 'loading' && <div className="divide-y divide-ink/10" aria-busy="true"><CardSkeletons rows={3} /></div>}
+        {!hasRowsToShow(state) ? null : safeRecipes.length === 0 ? (
           <EmptyMixState />
         ) : (
           <table className="hidden min-w-[760px] w-full border-collapse text-left md:table">
@@ -234,11 +258,11 @@ export default function TopRecipesList({ recipes }) {
           </table>
         )}
       </div>
-      {safeRecipes.length > 0 && <div className="space-y-3 md:hidden">
+      {hasRowsToShow(state) && safeRecipes.length > 0 && <div className="space-y-3 md:hidden">
         {safeRecipes.map((recipe, index) => {
           const recipeId = recipe?.id;
           const perf = recipe?.performance ?? {};
-          const yieldAvg = Number(perf.avgDailyYieldLiters ?? perf.avg_daily_yield_liters ?? recipe?.yieldAvg ?? 0);
+          const yieldAvg = yieldOf(recipe);
           const costPerLiter = readFeedCostPerLitre(perf) ?? readFeedCostPerLitre(recipe);
           const ingredients = Array.isArray(recipe?.ingredients) ? recipe.ingredients : Array.isArray(recipe?.formula) ? recipe.formula : [];
           const expanded = expandedId === recipeId;
@@ -248,13 +272,13 @@ export default function TopRecipesList({ recipes }) {
               {expanded ? <ChevronUp className="shrink-0 text-brand" size={18} /> : <ChevronDown className="shrink-0 text-brand" size={18} />}
             </button>
             <div className="mt-3 grid grid-cols-2 gap-3 rounded-lg bg-surface-raised p-3 text-xs">
-              <div><p className="text-ink-muted">Daily milk average</p><p className="mt-1 font-mono font-bold tabular-nums text-ink">{yieldAvg.toFixed(1)} L</p></div>
+              <div><p className="text-ink-muted">Daily milk average</p><p className="mt-1 font-mono font-bold tabular-nums text-ink">{formatLitres(yieldAvg)}</p></div>
               <div><p className="text-ink-muted">Cost per liter</p><p className="mt-1 font-mono font-bold tabular-nums text-ink">{formatCostPerLitre(costPerLiter)}</p></div>
             </div>
             {expanded && <div className="mt-3 space-y-3 border-t border-ink/10 pt-3">
               <p className="text-[10px] font-bold uppercase tracking-wider text-ink-muted">Formula breakdown</p>
-              {ingredients.length ? ingredients.map((ingredient, ingredientIndex) => <div key={ingredientIndex} className="flex justify-between gap-3 text-xs"><span className="min-w-0 break-words text-ink">{ingredient?.name ?? ingredient?.ingredient_name ?? ingredient?.ingredientName ?? 'Unknown ingredient'}</span><span className="shrink-0 font-mono font-semibold text-ink">{Number(ingredient?.percentage ?? ingredient?.inclusion_percentage ?? ingredient?.inclusionPercentage ?? 0)}%</span></div>) : <p className="text-xs text-ink-muted">No formula data available.</p>}
-              <p className="text-xs text-ink-muted">Protein: {recipe?.target_protein_percentage ?? recipe?.protein ?? '--'}% · Last fed: {perf.lastFedOn ?? perf.last_fed_on ?? recipe?.lastUsed ?? 'Not recorded'}</p>
+              {ingredients.length ? ingredients.map((ingredient, ingredientIndex) => <div key={ingredientIndex} className="flex justify-between gap-3 text-xs"><span className="min-w-0 break-words text-ink">{ingredient?.name ?? ingredient?.ingredient_name ?? ingredient?.ingredientName ?? 'Unknown ingredient'}</span><span className="shrink-0 font-mono font-semibold text-ink">{shareOf(ingredient)}</span></div>) : <p className="text-xs text-ink-muted">No formula data available.</p>}
+              <p className="text-xs text-ink-muted">Protein: {proteinOf(recipe)} · Last fed: {perf.lastFedOn ?? perf.last_fed_on ?? recipe?.lastUsed ?? 'Not recorded'}</p>
               <button type="button" onClick={(event) => handleLoadRecipe(event, recipe)} className="w-full rounded-lg bg-brand px-3 py-2 text-xs font-semibold text-white">Load into Lab</button>
             </div>}
           </article>;

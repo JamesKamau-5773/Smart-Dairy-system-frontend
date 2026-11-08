@@ -5,9 +5,21 @@ import { FileWarning, Filter, Stethoscope, Wheat, ThermometerSun, Settings, X, C
 import toast from 'react-hot-toast';
 import { getApiErrorMessage, productionApi } from '../../lib/backendApi';
 import { formatCowIdentity } from '../../lib/cowIdentity';
-import { normalizeMilkDropReport } from '../../lib/milkDropReport';
+import { formatAlertDate, normalizeMilkDropReport } from '../../lib/milkDropReport';
 import { useTenant } from '../../hooks/useTenant';
 import GroupedDateRows from '../../components/ui/GroupedDateRows';
+import { CardSkeletons, ListLoadNotices, TableSkeletonRows } from '../../components/ui/ListLoadState';
+import { getListLoadState, hasRowsToShow } from '../../lib/listLoadState';
+import { formatLitres } from '../../lib/numberFormat';
+
+const TABLE_COLUMNS = 4;
+const EMPTY_MESSAGE = 'No milk drop alerts. They appear here automatically when a cow gives much less milk than usual, so you can check her health and feed.';
+
+/** "−4.5 L" for the milk a cow is short; "—" when the backend sent no figure. */
+const formatMissingMilk = (litres) => {
+  const text = formatLitres(litres);
+  return text === '—' ? text : `−${text}`;
+};
 
 const DIAGNOSTIC_CATEGORIES = [
   { id: 'clinical', label: 'Cow Health & Sickness', icon: Stethoscope, options: ['Signs of Mastitis (clots, swelling)', 'Lame or sore hooves', 'Metabolic sickness (Milk fever, etc.)', 'Not eating / Looks weak'] },
@@ -24,14 +36,16 @@ export default function MilkDropReports() {
   const [selectedReasons, setSelectedReasons] = useState([]);
   const [managerNotes, setManagerNotes] = useState('');
   const [formError, setFormError] = useState('');
-  const { data: reportsData } = useQuery({
+  const reportsQuery = useQuery({
     queryKey: ['milk-drop-reports', tenantId, farmId],
     queryFn: () => productionApi.listMilkDropAlerts(),
     enabled: !!tenantId && !!farmId,
   });
+  const loadState = getListLoadState(reportsQuery);
+  const showReports = hasRowsToShow(loadState);
 
-  const reports = Array.isArray(reportsData)
-    ? reportsData.map(normalizeMilkDropReport)
+  const reports = Array.isArray(reportsQuery.data)
+    ? reportsQuery.data.map(normalizeMilkDropReport)
     : [];
 
   const saveInvestigation = useMutation({
@@ -94,6 +108,14 @@ export default function MilkDropReports() {
       </div>
 
       <div className="overflow-hidden rounded-lg border border-ink/10 bg-surface shadow-sm">
+        <ListLoadNotices state={loadState} label="milk drop alerts" error={reportsQuery.error} onRetry={reportsQuery.refetch} />
+        {loadState === 'loading' && (
+          <div aria-busy="true">
+            <table className="hidden w-full md:table"><tbody><TableSkeletonRows columns={TABLE_COLUMNS} /></tbody></table>
+            <div className="divide-y divide-ink/10 md:hidden"><CardSkeletons /></div>
+          </div>
+        )}
+        {showReports && (<>
         <div className="hidden overflow-x-auto md:block">
         <table className="w-full min-w-[640px] text-left text-sm">
           <thead>
@@ -108,13 +130,13 @@ export default function MilkDropReports() {
             <GroupedDateRows
               items={reports}
               getDate={(report) => report.date_time}
-              colSpan={4}
+              colSpan={TABLE_COLUMNS}
               renderGroupMeta={(items) => `${items.length} ${items.length === 1 ? 'alert' : 'alerts'}`}
               renderItem={(report) => (
               <tr key={report.id} className="hover:bg-brand/5">
-                <td className="px-6 py-4">{new Date(report.date_time).toLocaleDateString()}</td>
+                <td className="px-6 py-4">{formatAlertDate(report.date_time)}</td>
                 <td className="px-6 py-4 font-bold">{formatCowIdentity(report)}</td>
-                <td className="px-6 py-4 font-bold text-brand-dark">-{Number(report.missing_milk).toFixed(1)} L</td>
+                <td className="px-6 py-4 font-bold text-brand-dark">{formatMissingMilk(report.missing_milk)}</td>
                 <td className="px-6 py-4">
                   {report.status === 'OPEN' ? (
                     <button onClick={() => openInvestigateModal(report)} className="text-brand font-bold">Check Cow</button>
@@ -128,9 +150,7 @@ export default function MilkDropReports() {
               )}
               empty={reports.length === 0 && (
               <tr>
-                <td className="px-6 py-6 text-center text-ink/50" colSpan={4}>
-                  No milk drop alerts. They appear here automatically when a cow gives much less milk than usual, so you can check her health and feed.
-                </td>
+                <td className="px-6 py-6 text-center text-ink/50" colSpan={TABLE_COLUMNS}>{EMPTY_MESSAGE}</td>
               </tr>
               )}
             />
@@ -142,20 +162,21 @@ export default function MilkDropReports() {
             <article key={report.id} className="min-w-0 space-y-3 p-4">
               <div className="flex min-w-0 items-start justify-between gap-3">
                 <div className="min-w-0">
-                  <time className="text-xs text-ink-muted">{new Date(report.date_time).toLocaleDateString()}</time>
+                  <time className="text-xs text-ink-muted">{formatAlertDate(report.date_time)}</time>
                   <h3 className="mt-1 break-words font-semibold text-ink">{formatCowIdentity(report)}</h3>
                 </div>
                 <span className="shrink-0 rounded-full border border-brand/20 bg-brand-50 px-2 py-1 text-[10px] font-bold text-brand-dark">{report.status}</span>
               </div>
               <div className="flex items-center justify-between gap-3 border-t border-ink/10 pt-3 text-sm">
                 <span className="text-ink-muted">Missing milk</span>
-                <span className="font-mono font-bold tabular-nums text-brand-dark">-{Number(report.missing_milk).toFixed(1)} L</span>
+                <span className="font-mono font-bold tabular-nums text-brand-dark">{formatMissingMilk(report.missing_milk)}</span>
               </div>
               {report.status !== 'RESOLVED' && <button type="button" onClick={() => openInvestigateModal(report)} className="w-full rounded-button bg-brand px-3 py-2 text-sm font-semibold text-white">{report.status === 'OPEN' ? 'Check cow' : 'Continue investigation'}</button>}
             </article>
           ))}
-          {reports.length === 0 && <p className="p-6 text-center text-sm text-ink-muted">No milk drop alerts. They appear here automatically when a cow gives much less milk than usual, so you can check her health and feed.</p>}
+          {reports.length === 0 && <p className="p-6 text-center text-sm text-ink-muted">{EMPTY_MESSAGE}</p>}
         </div>
+        </>)}
       </div>
 
       {investigateModal.isOpen && createPortal((

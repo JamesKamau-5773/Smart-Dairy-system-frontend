@@ -1,13 +1,26 @@
 import { TrendingDown } from 'lucide-react';
 import { formatCostPerLitre } from '../../lib/feedCost';
+import { hasRowsToShow } from '../../lib/listLoadState';
+import { ListLoadNotices } from '../ui/ListLoadState';
+import Skeleton from '../ui/Skeleton';
 
 const TITLE = 'Feed cost per litre of milk';
 const SUBTITLE = 'How much of your milk money goes to buying feed. Lower is better.';
 
 /** Bar height as a share of the most expensive week; unknown weeks draw no bar. */
 const barPercent = (cost, max) => (cost === null || !(max > 0) ? 0 : Math.max(4, Math.round((cost / max) * 100)));
+const SKELETON_BARS = ['h-1/3', 'h-1/2', 'h-2/3', 'h-2/5', 'h-3/4'];
 
-export default function ProfitabilityChart({ trends }) {
+/**
+ * Weekly feed cost per litre, as the backend computed it.
+ * @param {object} props
+ * @param {Array<{ week: string, cost: number|null, isCurrent: boolean }>} props.trends
+ * @param {'loading'|'offline'|'error'|'stale'|'ready'} [props.state] Load state of the trend
+ *   (`getListLoadState`); "no data yet" only shows once it has loaded.
+ * @param {unknown} [props.error]
+ * @param {() => void} [props.onRetry]
+ */
+export default function ProfitabilityChart({ trends, state = 'ready', error, onRetry }) {
   const points = Array.isArray(trends) ? trends : [];
   const max = Math.max(0, ...points.map((point) => point.cost ?? 0));
 
@@ -17,7 +30,17 @@ export default function ProfitabilityChart({ trends }) {
         <TrendingDown size={16} aria-hidden="true" /> {TITLE}
       </h3>
 
-      {points.length === 0 ? (
+      {state !== 'ready' && (
+        <div className="-mx-5 mt-3 sm:-mx-6">
+          <ListLoadNotices state={state} label="weekly feed costs" error={error} onRetry={onRetry} />
+        </div>
+      )}
+      {state === 'loading' && (
+        <div className="mt-4 flex h-28 items-end justify-between gap-2" aria-hidden="true">
+          {SKELETON_BARS.map((height) => <Skeleton key={height} className={`w-full max-w-[40px] ${height}`} />)}
+        </div>
+      )}
+      {!hasRowsToShow(state) ? null : points.length === 0 ? (
         <p className="mt-2 text-sm text-ink-muted">No weekly cost data yet. It appears once batches are fed and milk is recorded.</p>
       ) : (
         <>

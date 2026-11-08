@@ -56,3 +56,103 @@ the same way POST does it, and returned in `status`.
 Frontend follow-up when done: allow choosing the cow in edit mode (`FastMilkLog.jsx`, the
 read-only "Cow" field) and map `409 DUPLICATE_MILK_ENTRY` on edit to the same message as on
 create (already handled by code).
+
+---
+
+## BR-002 — Customer list totals from the backend
+
+**Status:** Open · **Raised:** 2026-11-08 (UX audit Phase 2) · **Frontend:** `BuyersList.jsx` (`TODO(BR-002)`)
+
+The Buyers list shows **Total Outstanding** and **Settled Accounts**, which the frontend sums
+from the customer rows. Since Phase 2 these show "—" whenever any balance is missing, but the
+totals (and the rule that credits don't reduce what others owe) belong to the backend.
+
+`GET /api/finance/customers`: add a `summary` next to `items` and `meta`:
+
+```json
+{
+  "items": [ … ],
+  "meta": { … },
+  "summary": {
+    "customer_count": 12,
+    "total_outstanding_kes": "18450.00",
+    "settled_count": 7,
+    "unknown_balance_count": 0
+  }
+}
+```
+
+`total_outstanding_kes` is the sum of positive balances only (credits are not subtracted);
+`null` if it can't be computed. Frontend follow-up: read `summary` and delete the sum.
+
+---
+
+## BR-003 — Low-stock flag on the inventory item list
+
+**Status:** Open · **Raised:** 2026-11-08 (UX audit Phase 2) · **Frontend:** `InventoryRegistry.jsx` (`TODO(BR-003)`)
+
+The item list (`GET /api/inventory/items`) has no low-stock flag; the backend only reports
+`reorder_alert` / `lowStock` after a stock movement. The frontend compares stock with the
+reorder level itself (and since Phase 2 shows no status when either is missing).
+
+Add to each item in `GET /api/inventory/items`:
+
+```json
+{ "is_low_stock": true }
+```
+
+`true`/`false` as the backend decides it (same rule as `reorder_alert`), or `null` when it
+can't tell (no stock figure or no reorder level). Frontend follow-up: drop the comparison.
+
+---
+
+## BR-004 — Ranked "best performing" feed mixes
+
+**Status:** Open · **Raised:** 2026-11-08 (UX audit Phase 2) · **Frontend:** `TopRecipesList.jsx` (`TODO(BR-004)`)
+
+The Feed dashboard's "Best Performing Feed Mixes" de-duplicates saved recipes and ranks them
+by average daily yield, then cost per litre, in the browser.
+
+`GET /api/v1/nutrition/recipes/top?limit=5`:
+
+```json
+{
+  "items": [
+    {
+      "rank": 1,
+      "recipe_id": 31,
+      "name": "Dairy Meal Mix",
+      "recipe_type": "dairy_meal",
+      "avg_daily_yield_liters": "14.2",
+      "feed_cost_per_liter_kes": "18.40",
+      "last_fed_on": "2026-11-06",
+      "target_protein_percentage": "16.0",
+      "ingredients": [{ "name": "Maize germ", "inclusion_percentage": "40.0" }]
+    }
+  ],
+  "ranked_by": "avg_daily_yield_liters desc, feed_cost_per_liter_kes asc"
+}
+```
+
+Figures are `null` when unknown. Errors: `401`, `403` as elsewhere. Frontend follow-up:
+render the list as returned and remove `selectTopMixes`.
+
+---
+
+## BR-005 — Safe concurrent saves of the daily routine
+
+**Status:** Open · **Raised:** 2026-11-08 (UX audit Phase 2) · **Frontend:** `useRoutinePlans.js`, `offlinePolicy.js`
+
+`POST /api/routine/plans` deletes and re-creates the whole routine. A save made from an old
+copy (another phone, or a queued offline save) silently overwrites newer changes, so since
+Phase 2 the frontend only saves the routine while online.
+
+Request: version the routine.
+
+- `GET /api/routine/plans` returns `{ "version": 7, "items": [ … ] }` (or an `ETag` header).
+- `POST /api/routine/plans` accepts `If-Match: 7` (or `"version": 7` in the body) and returns
+  `409 { "code": "ROUTINE_CHANGED", "error": "The routine was changed on another phone. Reload it and try again." }`
+  when the stored version is newer; `201 { "version": 8 }` on success.
+
+Frontend follow-up: send the version, show the 409 message with a "Reload" action, and then
+the save can be queued offline again.

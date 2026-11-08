@@ -7,6 +7,7 @@ import { getPageKeyForPath } from './lib/pageRoutes';
 
 // Import the StaffProvider to fix the useStaff context error
 import { StaffProvider } from './providers/StaffProvider';
+import PageSkeleton from './components/ui/PageSkeleton';
 
 // Layouts
 import DashboardLayout from './layouts/DashboardLayout';
@@ -67,15 +68,7 @@ const Payroll = lazy(() => import('./pages/hr/Payroll.jsx'));
 export const ProtectedRoute = ({ children }) => {
   const { currentUser, isLoading } = useAuth();
 
-  if (isLoading) {
-    return (
-      <div className="min-h-screen bg-surface-warm flex items-center justify-center">
-        <div className="glass-panel font-sans font-medium text-ink animate-pulse p-6">
-          Verifying access…
-        </div>
-      </div>
-    );
-  }
+  if (isLoading) return <PublicRouteFallback label="Verifying access…" />;
 
   if (!currentUser) return <Navigate to="/login" replace />;
   const gateRoute = getGateRoute(currentUser);
@@ -84,14 +77,21 @@ export const ProtectedRoute = ({ children }) => {
   return children;
 };
 
-const RouteLoadingFallback = ({ label = 'Loading route…' }) => (
-  <div className="min-h-screen bg-surface-warm flex items-center justify-center">
-    <div className="font-sans text-sm text-ink-muted animate-pulse">{label}</div>
-  </div>
-);
+// Inside the app shell: a page-shaped skeleton in the content area.
+const RouteLoadingFallback = ({ label = 'Loading page…' }) => <PageSkeleton label={label} />;
+// Outside the shell (sign-in, verification, shared statements): a full-screen form card.
+function PublicRouteFallback({ label = 'Loading…' }) {
+  return <PageSkeleton variant="card" label={label} />;
+}
 
 const renderLazyPage = (Page, label) => (
   <Suspense fallback={<RouteLoadingFallback label={label} />}>
+    <Page />
+  </Suspense>
+);
+
+const renderPublicPage = (Page, label) => (
+  <Suspense fallback={<PublicRouteFallback label={label} />}>
     <Page />
   </Suspense>
 );
@@ -103,7 +103,7 @@ const getDefaultRoute = (user) => {
 export const RequiredPasswordResetRoute = ({ children }) => {
   const { currentUser, isLoading } = useAuth();
 
-  if (isLoading) return <RouteLoadingFallback label="Checking password status…" />;
+  if (isLoading) return <PublicRouteFallback label="Checking password status…" />;
   if (!currentUser) return <Navigate to="/login" replace />;
   if (getAuthState(currentUser) !== AUTH_STATES.PASSWORD_RESET_REQUIRED) return <Navigate to={getDefaultRoute(currentUser)} replace />;
 
@@ -116,7 +116,7 @@ export const RequiredPasswordResetRoute = ({ children }) => {
 export const PhoneVerificationRoute = ({ children }) => {
   const { currentUser, isLoading } = useAuth();
 
-  if (isLoading) return <RouteLoadingFallback label="Checking your account…" />;
+  if (isLoading) return <PublicRouteFallback label="Checking your account…" />;
   if (!currentUser) return <Navigate to="/login" replace />;
   if (getAuthState(currentUser) === AUTH_STATES.PASSWORD_RESET_REQUIRED) return <Navigate to="/reset-required-password" replace />;
 
@@ -194,18 +194,18 @@ export default function App() {
       */}
       <StaffProvider>
         <Routes>
-          <Route path="/register" element={renderLazyPage(RegisterPage, 'Loading registration…')} />
-          <Route path="/login" element={renderLazyPage(LoginPage, 'Loading login…')} />
-          <Route path="/claim-account" element={renderLazyPage(ClaimAccountPage, 'Loading claim account…')} />
-          <Route path="/forgot-password" element={renderLazyPage(ForgotPasswordPage, 'Loading password reset…')} />
-          <Route path="/reset-password" element={renderLazyPage(ResetPasswordPage, 'Loading password reset…')} />
-          <Route path="/verify-email" element={renderLazyPage(VerifyEmailPage, 'Loading email verification…')} />
-          <Route path="/auth/google/complete" element={renderLazyPage(GoogleCompletePage, 'Signing you in…')} />
+          <Route path="/register" element={renderPublicPage(RegisterPage, 'Loading registration…')} />
+          <Route path="/login" element={renderPublicPage(LoginPage, 'Loading login…')} />
+          <Route path="/claim-account" element={renderPublicPage(ClaimAccountPage, 'Loading claim account…')} />
+          <Route path="/forgot-password" element={renderPublicPage(ForgotPasswordPage, 'Loading password reset…')} />
+          <Route path="/reset-password" element={renderPublicPage(ResetPasswordPage, 'Loading password reset…')} />
+          <Route path="/verify-email" element={renderPublicPage(VerifyEmailPage, 'Loading email verification…')} />
+          <Route path="/auth/google/complete" element={renderPublicPage(GoogleCompletePage, 'Signing you in…')} />
           <Route
             path="/verify-phone"
             element={(
               <PhoneVerificationRoute>
-                {renderLazyPage(VerifyPhonePage, 'Loading phone verification…')}
+                {renderPublicPage(VerifyPhonePage, 'Loading phone verification…')}
               </PhoneVerificationRoute>
             )}
           />
@@ -213,11 +213,11 @@ export default function App() {
             path="/reset-required-password"
             element={(
               <RequiredPasswordResetRoute>
-                {renderLazyPage(RequiredPasswordResetPage, 'Loading password setup…')}
+                {renderPublicPage(RequiredPasswordResetPage, 'Loading password setup…')}
               </RequiredPasswordResetRoute>
             )}
           />
-          <Route path="/shared/statement/:token" element={renderLazyPage(CustomerPortal, 'Loading statement…')} />
+          <Route path="/shared/statement/:token" element={renderPublicPage(CustomerPortal, 'Loading statement…')} />
           <Route path="/" element={
             <ProtectedRoute>
               <DashboardLayout />

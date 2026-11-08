@@ -12,25 +12,27 @@ import { todayLocalIso } from '../../lib/localDate';
 import LABELS from '../../lib/labels';
 import { readFeedCostPerLitre } from '../../lib/feedCost';
 import { MIX_TYPES, buildDraftFromBatch, selectActiveMixByType } from '../../lib/activeMixes';
+import { getListLoadState } from '../../lib/listLoadState';
+import { ListLoadNotices } from '../../components/ui/ListLoadState';
 
 export default function NutritionDashboard() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { tenantId, farmId } = useTenant();
 
-  const { data: feedCostEfficiency } = useQuery({
+  const costQuery = useQuery({
     queryKey: ['nutrition-feed-cost-efficiency', tenantId, farmId],
     queryFn: () => nutritionApi.feedCostEfficiency(),
     enabled: !!tenantId && !!farmId,
   });
 
-  const { data: recipesData } = useQuery({
+  const recipesQuery = useQuery({
     queryKey: ['nutrition-recipes', tenantId, farmId],
     queryFn: () => nutritionApi.listRecipes(),
     enabled: !!tenantId && !!farmId,
   });
 
-  const { data: roiTrend } = useQuery({
+  const roiTrendQuery = useQuery({
     queryKey: ['nutrition-active-batch-roi-trend-weekly', tenantId, farmId],
     queryFn: () => nutritionApi.activeBatchRoiTrendWeekly(),
     enabled: !!tenantId && !!farmId,
@@ -43,7 +45,13 @@ export default function NutritionDashboard() {
     queryFn: () => nutritionApi.feedingToday(),
     enabled: !!tenantId && !!farmId,
   });
-  const storeStatus = feedingTodayQuery.isError ? 'error' : feedingTodayQuery.isSuccess ? 'ready' : 'loading';
+  const feedCostEfficiency = costQuery.data;
+  const recipesData = recipesQuery.data;
+  const roiTrend = roiTrendQuery.data;
+  const storeStatus = getListLoadState(feedingTodayQuery);
+  // Costs on the mix cards come from this query; until it answers they show "—", and a
+  // failure says so above the cards rather than leaving the dashes unexplained.
+  const costState = getListLoadState(costQuery);
 
   const activeMixes = useMemo(
     () => selectActiveMixByType(feedingTodayQuery.data, feedCostEfficiency?.rows),
@@ -118,6 +126,11 @@ export default function NutritionDashboard() {
       </div>
 
       {/* ── WHAT'S BEING FED: one card per mix type ── */}
+      {costState !== 'loading' && costState !== 'ready' && (
+        <div className="overflow-hidden rounded-card border border-ink/10 bg-surface">
+          <ListLoadNotices state={costState} label="feed costs" error={costQuery.error} onRetry={costQuery.refetch} />
+        </div>
+      )}
       <div className="grid gap-6 lg:grid-cols-2">
         {MIX_TYPES.map((recipeType) => {
           const mix = activeMixes[recipeType];
@@ -140,10 +153,10 @@ export default function NutritionDashboard() {
         })}
       </div>
 
-      <ProfitabilityChart trends={trends} />
+      <ProfitabilityChart trends={trends} state={getListLoadState(roiTrendQuery)} error={roiTrendQuery.error} onRetry={roiTrendQuery.refetch} />
 
       {/* ── BOTTOM SECTION: HISTORICAL PLAYBOOK ── */}
-      <TopRecipesList recipes={recipes} />
+      <TopRecipesList recipes={recipes} state={getListLoadState(recipesQuery)} error={recipesQuery.error} onRetry={recipesQuery.refetch} />
     </div>
   );
 }

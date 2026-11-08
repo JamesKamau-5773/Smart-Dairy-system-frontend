@@ -183,6 +183,7 @@ export const feedCopy = {
     emptyHint: 'A saved mix is a recipe only. Mix a batch from it to track what is in store and being fed.',
     emptyAction: (type) => `Mix ${type.toLowerCase()}`,
     loading: 'Loading what’s in store…',
+    loadOffline: 'You’re offline, and what’s in store hasn’t been saved on this phone yet. It will load when you’re back online.',
     loadFailed: 'Couldn’t load what’s in store, so this can’t show what’s being fed.',
     retry: 'Try again',
     unknown: '—',

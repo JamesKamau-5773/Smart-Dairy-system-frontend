@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { financeApi, getApiErrorMessage } from '../../lib/backendApi';
@@ -10,19 +10,37 @@ import CustomerForm from '../../components/finance/CustomerForm.jsx';
 import Confirmation, { useConfirmation } from '../../components/ui/Confirmation';
 import SlidePanel from '../../components/ui/SlidePanel.jsx';
 import { Popover, PopoverContent, PopoverTrigger } from '../../components/ui/popover';
+import { CardSkeletons, ListLoadNotices, TableSkeletonRows } from '../../components/ui/ListLoadState';
+import { formatMoneyText } from '../../components/ui/Money';
+import { useTenant } from '../../hooks/useTenant';
+import { QUERY_KEYS } from '../../providers/QueryProvider';
+import { getListLoadState, hasRowsToShow } from '../../lib/listLoadState';
+
+const TABLE_COLUMNS = 4;
+
+// The first balance/rate field the backend sent; null (shown as "—") when none, never 0.
+const balanceOf = (customer) => customer.account_balance ?? customer.existing_balance ?? customer.balance ?? null;
+const rateOf = (customer) => customer.agreed_rate_per_liter ?? customer.agreed_rate ?? null;
 
 export default function CustomersPage() {
   const queryClient = useQueryClient();
   const location = useLocation();
+  const { tenantId, farmId } = useTenant();
+  // "Edit" from a customer's profile opens this page with that customer in the panel.
   const [isPanelOpen, setIsPanelOpen] = useState(!!location.state?.editCustomer);
-  const [selectedCustomer, setSelectedCustomer] = useState(null);
+  const [selectedCustomer, setSelectedCustomer] = useState(() => location.state?.editCustomer ?? null);
   const [searchTerm, setSearchTerm] = useState('');
   const confirmation = useConfirmation();
+  const customersKey = QUERY_KEYS.CUSTOMERS(tenantId, farmId);
 
-  const { data: customers = [], isLoading, isError, refetch } = useQuery({
-    queryKey: ['customers'],
+  const customersQuery = useQuery({
+    queryKey: customersKey,
     queryFn: () => financeApi.listCustomers().then(res => res.items || res.data || res || []),
+    enabled: !!farmId,
   });
+  const customers = customersQuery.data;
+  const loadState = getListLoadState(customersQuery);
+  const showCustomers = hasRowsToShow(loadState);
 
   const { mutate: saveCustomer, isPending: isSaving } = useMutation({
     mutationFn: (customerData) => {
@@ -37,7 +55,7 @@ export default function CustomersPage() {
       } else {
         toast.success(`Customer ${variables.id ? 'updated' : 'created'} successfully!`);
       }
-      queryClient.invalidateQueries({ queryKey: ['customers'] });
+      queryClient.invalidateQueries({ queryKey: customersKey });
       setIsPanelOpen(false);
       setSelectedCustomer(null);
     },
@@ -50,7 +68,7 @@ export default function CustomersPage() {
     mutationFn: (customerId) => financeApi.deleteCustomer(customerId),
     onSuccess: () => {
       toast.success('Customer deleted successfully!');
-      queryClient.invalidateQueries({ queryKey: ['customers'] });
+      queryClient.invalidateQueries({ queryKey: customersKey });
     },
     onError: (error) => {
       toast.error(getApiErrorMessage(error, 'Could not delete this customer. Please try again.'));
@@ -82,13 +100,6 @@ export default function CustomersPage() {
       deleteCustomer(customer.id);
     }
   };
-
-  // Effect to handle incoming state from other pages (e.g., "Edit" from profile)
-  useEffect(() => {
-    if (location.state?.editCustomer) {
-      handleEdit(location.state.editCustomer);
-    }
-  }, [location.state]);
 
   const filteredCustomers = useMemo(() => {
     if (!customers) return [];
@@ -153,6 +164,22 @@ export default function CustomersPage() {
       <Confirmation {...confirmation} />
 
       <div className="card-machined overflow-hidden !p-0">
+        <ListLoadNotices state={loadState} label="customers" error={customersQuery.error} onRetry={customersQuery.refetch} />
+        {showCustomers && filteredCustomers.length === 0 && (
+          <div className="flex flex-col items-center gap-3 p-8 text-center text-sm text-ink-muted">
+            {searchTerm ? (
+              <>
+                <p>No customers match “{searchTerm}”.</p>
+                <button type="button" onClick={() => setSearchTerm('')} className="text-xs font-bold text-brand hover:underline">Clear search</button>
+              </>
+            ) : (
+              <>
+                <p>No customers yet. Add the people and businesses you sell milk to.</p>
+                <button type="button" onClick={handleAdd} className="btn-command">Add your first customer</button>
+              </>
+            )}
+          </div>
+        )}
         <div className="hidden overflow-x-auto md:block">
           <table className="w-full text-left border-collapse">
             <thead className="bg-brand-800">
@@ -164,18 +191,7 @@ export default function CustomersPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-ink/5">
-              {isLoading && (
-                <tr><td colSpan="4" className="p-6 text-center text-ink-muted">Loading customers...</td></tr>
-              )}
-              {isError && (
-                <tr><td colSpan="4" className="p-6 text-center text-danger">
-                  <p>Could not load customers. Check your connection and try again.</p>
-                  <button type="button" onClick={() => refetch()} className="mt-2 font-semibold underline">Retry</button>
-                </td></tr>
-              )}
-              {!isLoading && filteredCustomers.length === 0 && (
-                <tr><td className="p-6 text-center text-ink-muted" colSpan="4">No customers found.</td></tr>
-              )}
+              {loadState === 'loading' && <TableSkeletonRows columns={TABLE_COLUMNS} />}
               {filteredCustomers.map((customer) => (
                 <tr key={customer.id} className="group hover:bg-surface-raised transition-colors">
                   <td className="p-4 text-left">
@@ -190,10 +206,10 @@ export default function CustomersPage() {
                   <td className="p-4 text-right">
                     <div className="text-sm">
                       <span className="text-slate-400">Bal: </span>
-                      <span className="font-bold text-slate-800 font-mono">{Number(customer.account_balance ?? customer.existing_balance ?? customer.balance ?? 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                      <span className="font-bold text-slate-800 font-mono">{formatMoneyText(balanceOf(customer))}</span>
                     </div>
                     <div className="text-xs text-slate-400 mt-0.5">
-                      Rate: <span className="font-mono">{Number(customer.agreed_rate_per_liter ?? customer.agreed_rate ?? 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} / L</span>
+                      Rate: <span className="font-mono">{formatMoneyText(rateOf(customer))} / L</span>
                     </div>
                     {Number(customer.daily_contract_liters) > 0 && (
                       <div className="text-xs text-slate-400 mt-0.5">
@@ -218,16 +234,17 @@ export default function CustomersPage() {
           </table>
         </div>
         <div className="divide-y divide-ink/10 md:hidden">
-          {isLoading ? <p className="p-6 text-center text-sm text-ink-muted">Loading customers...</p> : isError ? <div className="p-6 text-center text-sm text-brand-dark"><p>Could not load customers. Check your connection and try again.</p><button type="button" onClick={() => refetch()} className="mt-2 font-semibold underline">Retry</button></div> : filteredCustomers.map((customer) => (
+          {loadState === 'loading' && <CardSkeletons />}
+          {filteredCustomers.map((customer) => (
             <article key={customer.id} className="min-w-0 space-y-3 p-4">
               <div className="flex min-w-0 items-start justify-between gap-3">
                 <div className="min-w-0"><h3 className="break-words font-semibold text-ink">{customer.name}</h3><p className="mt-1 text-xs capitalize text-ink-muted">{customer.customer_type || 'Unknown'}</p></div>
-                <span className="shrink-0 font-mono text-sm font-bold text-brand">KES {Number(customer.account_balance ?? customer.existing_balance ?? customer.balance ?? 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                <span className="shrink-0 font-mono text-sm font-bold text-brand">{formatMoneyText(balanceOf(customer))}</span>
               </div>
               <dl className="grid grid-cols-2 gap-3 border-t border-ink/10 pt-3 text-xs">
                 <div className="min-w-0"><dt className="text-ink-muted">Contact person</dt><dd className="mt-1 break-words text-ink">{customer.contact_person || 'N/A'}</dd></div>
                 <div className="min-w-0"><dt className="text-ink-muted">Phone</dt><dd className="mt-1 break-all font-mono text-ink">{customer.phone_number || 'N/A'}</dd></div>
-                <div className="min-w-0"><dt className="text-ink-muted">Rate</dt><dd className="mt-1 break-words font-mono text-ink">KES {Number(customer.agreed_rate_per_liter ?? customer.agreed_rate ?? 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}/L</dd></div>
+                <div className="min-w-0"><dt className="text-ink-muted">Rate</dt><dd className="mt-1 break-words font-mono text-ink">{formatMoneyText(rateOf(customer))}/L</dd></div>
                 {Number(customer.daily_contract_liters) > 0 && <div className="min-w-0"><dt className="text-ink-muted">Daily contract</dt><dd className="mt-1 font-mono text-ink">{Number(customer.daily_contract_liters).toLocaleString(undefined, { maximumFractionDigits: 2 })} L</dd></div>}
                 {customer.email && <div className="col-span-2 min-w-0"><dt className="text-ink-muted">Email</dt><dd className="mt-1 break-all text-ink">{customer.email}</dd></div>}
               </dl>
@@ -237,7 +254,6 @@ export default function CustomersPage() {
               </div>
             </article>
           ))}
-          {!isLoading && !isError && filteredCustomers.length === 0 && <p className="p-6 text-center text-sm text-ink-muted">No customers found.</p>}
         </div>
       </div>
     </div>

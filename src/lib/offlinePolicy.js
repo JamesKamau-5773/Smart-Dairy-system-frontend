@@ -25,6 +25,9 @@ const ONLINE_ONLY_PATHS = [
   /^\/safety\/(?:holds|milk-tests)$/,
   // Money owed by staff and leaving the farm change balances the server checks now.
   /^\/hr\/staff\/[^/]+\/(?:advances|advance-repayments|offboard)$/,
+  // Saving the daily routine replaces the whole plan; replayed later from a stale phone it
+  // would overwrite a newer plan saved from another phone.
+  /^\/routine\/plans$/,
 ];
 
 export const QUEUED_OFFLINE_MESSAGE = 'Saved on this phone. It will be sent when you’re back online.';
