@@ -11,6 +11,7 @@ import { useRoutinePlans } from '../../hooks/useRoutinePlans';
 import { getListLoadState, hasRowsToShow } from '../../lib/listLoadState';
 import { CardSkeletons, ListLoadNotices } from '../../components/ui/ListLoadState';
 import AlertBanner from '../../components/ui/AlertBanner';
+import { reportError } from '../../lib/telemetry';
 
 export default function HerdsmanView() {
   // Calf form moved to Herd Registry to keep barn-floor UI focused.
@@ -71,7 +72,7 @@ export default function HerdsmanView() {
       {
         onError: (error) => {
           setPriorityAlerts((prev) => [alert, ...prev]);
-          console.error('Failed to persist alert completion', error);
+          reportError(error, { where: 'HerdsmanView.dismissAlert' });
           setErrorMessage('Could not persist action. The item was restored.');
         },
       }
@@ -112,7 +113,7 @@ export default function HerdsmanView() {
       }
     },
     onError: (error) => {
-      console.error('Failed to log feeding', error);
+      reportError(error, { where: 'HerdsmanView.logFeeding' });
         setErrorMessage('The feeding task was not recorded, and stock was not deducted. Check the connection and ask your manager to review the stock before trying again.');
     },
   });

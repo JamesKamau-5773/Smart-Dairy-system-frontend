@@ -25,8 +25,10 @@ import AlertBanner from '../../components/ui/AlertBanner';
 import Confirmation, { useConfirmation } from '../../components/ui/Confirmation';
 import { Popover, PopoverContent, PopoverTrigger } from '../../components/ui/popover';
 import { validateForm, ValidationRules, getFirstErrorMessage } from '../../lib/validation';
-import { formatDateTime, getRelativeTime, createAuditEntry, logToAuditTrail } from '../../lib/audit';
-import { getApiErrorMessage, herdApi } from '../../lib/backendApi'; 
+import { formatDateTime, getRelativeTime } from '../../lib/audit';
+import { getApiErrorMessage, herdApi } from '../../lib/backendApi';
+import { offlineFailureMessage } from '../../lib/offlinePolicy';
+import { reportError } from '../../lib/telemetry';
 import CowPhoto from '../../components/ui/CowPhoto';
 import { ANIMAL_PHOTO_ACCEPT, compressAnimalPhoto, formatPhotoSize, getAnimalPhotoSourceError, getAnimalPhotoValidationError } from '../../lib/animalPhoto';
 import { formatCowIdentity } from '../../lib/cowIdentity';
@@ -86,6 +88,7 @@ export default function HerdRegistry() {
   });
   const [herdOptions, setHerdOptions] = useState([]);
   const [loadingHerdOptions, setLoadingHerdOptions] = useState(false);
+  const [herdOptionsFailed, setHerdOptionsFailed] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [isEditSaving, setIsEditSaving] = useState(false);
   const [editPhotoFile, setEditPhotoFile] = useState(null);
@@ -117,8 +120,8 @@ export default function HerdRegistry() {
           }))
         );
       } catch (err) {
-        console.error('Failed to fetch herd for Dam dropdown:', err);
-        // Optionally set an error state here if you want to display it in the UI
+        reportError(err, { where: 'HerdRegistry.damOptions' });
+        setHerdOptionsFailed(true);
       } finally {
         setLoadingHerdOptions(false);
       }
@@ -242,22 +245,10 @@ export default function HerdRegistry() {
 
       await refreshHerdViews(savedCow.recordId);
 
-      // Log audit entry
-      logToAuditTrail(
-        createAuditEntry({
-          action: 'create',
-          recordType: 'cow',
-          recordId: savedCow.id,
-          userName: 'You',
-          changes: { name: { before: '', after: savedCow.name } },
-          notes: `Added new animal: ${savedCow.name} (${savedCow.id})`,
-        })
-      );
-
       notifySuccess(`Successfully added ${formatCowIdentity({ name: savedCow.name, earTag: savedCow.id })}`);
       handleCloseModal();
     } catch (error) {
-      console.error('Error adding cow:', error);
+      reportError(error, { where: 'HerdRegistry.add' });
       setErrorMessage(getApiErrorMessage(error, 'Failed to add animal. Please try again.'));
       setShowError(true);
     } finally {
@@ -266,12 +257,15 @@ export default function HerdRegistry() {
   };
 
   const handleDeleteCow = async (cowId, cowName, cowDisplayId = cowId) => {
+    const cowLabel = formatCowIdentity({ name: cowName, earTag: cowDisplayId });
     const confirmed = await confirmation.confirm({
-      title: 'Delete Animal?',
-      message: `Are you sure you want to remove ${cowName} (${cowDisplayId}) from your herd? This action cannot be undone.`,
+      title: `Delete ${cowName || cowDisplayId}?`,
+      message: `${cowLabel} will be removed from your herd. You can’t undo this.`,
       type: 'danger',
       confirmText: 'Delete',
       cancelText: 'Keep',
+      // A cow carries milk, breeding and health records: make the farmer type her tag.
+      requireText: String(cowDisplayId),
     });
 
     if (!confirmed) return;
@@ -283,21 +277,11 @@ export default function HerdRegistry() {
 
       await refreshHerdViews(cowId);
 
-      // Log audit entry
-      logToAuditTrail(
-        createAuditEntry({
-          action: 'delete',
-          recordType: 'cow',
-          recordId: cowDisplayId,
-          userName: 'You',
-          notes: `Deleted animal: ${cowName} (${cowDisplayId})`,
-        })
-      );
-
       notifySuccess(`Removed ${cowName} from your herd`);
     } catch (error) {
-      console.error('Error deleting cow:', error);
-      notifyError('Failed to delete animal. Please try again.');
+      reportError(error, { where: 'HerdRegistry.delete' });
+      notifyError(offlineFailureMessage(error, `${cowName || cowDisplayId} wasn’t deleted.`)
+        ?? getApiErrorMessage(error, `Couldn’t delete ${cowName || cowDisplayId}. Try again.`));
     } finally {
       confirmation.setLoading(false);
       confirmation.close();
@@ -337,7 +321,7 @@ export default function HerdRegistry() {
       setShowError(false);
       setIsEditOpen(true);
     } catch (error) {
-      console.error('Failed to load animal for editing:', error);
+      reportError(error, { where: 'HerdRegistry.loadForEdit' });
       notifyError(getApiErrorMessage(error, 'Failed to load the latest animal details. Please retry.'));
     }
   };
@@ -408,7 +392,7 @@ export default function HerdRegistry() {
       await refreshHerdViews(routeId);
       notifySuccess(`Updated photo for ${savedCow.name}`);
     } catch (error) {
-      console.error('Error uploading animal photo:', error);
+      reportError(error, { where: 'HerdRegistry.uploadPhoto' });
       notifyError(getApiErrorMessage(error, 'Failed to upload animal photo. Please try again.'));
     } finally {
       setIsPhotoSaving(false);
@@ -443,7 +427,7 @@ export default function HerdRegistry() {
       await refreshHerdViews(routeId);
       notifySuccess(`Removed photo for ${savedCow.name}`);
     } catch (error) {
-      console.error('Error removing animal photo:', error);
+      reportError(error, { where: 'HerdRegistry.removePhoto' });
       notifyError(getApiErrorMessage(error, 'Failed to remove animal photo. Please try again.'));
     } finally {
       setIsPhotoSaving(false);
@@ -492,20 +476,10 @@ export default function HerdRegistry() {
 
       await refreshHerdViews(routeId);
 
-      logToAuditTrail(
-        createAuditEntry({
-          action: 'update',
-          recordType: 'cow',
-          recordId: normalizedUpdatedCow.id,
-          userName: 'You',
-          notes: `Updated animal: ${normalizedUpdatedCow.name} (${normalizedUpdatedCow.id})`,
-        })
-      );
-
       notifySuccess(`Updated ${formatCowIdentity({ name: normalizedUpdatedCow.name, earTag: normalizedUpdatedCow.id })}`);
       handleCloseEditModal();
     } catch (error) {
-      console.error('Error editing cow:', error);
+      reportError(error, { where: 'HerdRegistry.edit' });
       notifyError(getApiErrorMessage(error, 'Failed to update animal. Please try again.'));
     } finally {
       setIsEditSaving(false);
@@ -1046,6 +1020,7 @@ export default function HerdRegistry() {
           {/* NEW FIELD: Dam (Mother) */}
           <div>
             <label className="block text-xs font-bold uppercase text-ink-muted mb-1">Dam (Mother)</label>
+            {herdOptionsFailed && <p role="status" className="mb-1 text-xs text-ink-muted">Couldn’t load your cows for this list. You can still save without choosing a dam.</p>}
             {loadingHerdOptions ? (
               <p className="text-sm text-ink-muted">Loading herd options...</p>
             ) : (
@@ -1075,7 +1050,6 @@ export default function HerdRegistry() {
               // />
             */}
           </div>
-
 
           {/* Checkbox */}
           <div className="flex items-center gap-3">
@@ -1297,6 +1271,7 @@ export default function HerdRegistry() {
           {/* NEW FIELD: Dam (Mother) */}
           <div>
             <label className="block text-xs font-bold uppercase text-ink-muted mb-1">Dam (Mother)</label>
+            {herdOptionsFailed && <p role="status" className="mb-1 text-xs text-ink-muted">Couldn’t load your cows for this list. You can still save without choosing a dam.</p>}
             {loadingHerdOptions ? (
               <p className="text-sm text-ink-muted">Loading herd options...</p>
             ) : (
@@ -1349,17 +1324,7 @@ export default function HerdRegistry() {
       </Modal>
 
       {/* ── CONFIRMATION DIALOG ── */}
-      <Confirmation
-        isOpen={confirmation.isOpen}
-        title={confirmation.title}
-        message={confirmation.message}
-        type={confirmation.type}
-        confirmText={confirmation.confirmText}
-        cancelText={confirmation.cancelText}
-        isLoading={confirmation.isLoading}
-        onConfirm={confirmation.onConfirm}
-        onCancel={confirmation.onCancel}
-      />
+      <Confirmation {...confirmation} />
     </div>
   );
 }

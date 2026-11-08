@@ -21,7 +21,6 @@ import {
   normalizeHerdOption,
   normalizeSemenInventory,
 } from '../../lib/breedingUtils';
-import { createAuditEntry, logToAuditTrail } from '../../lib/audit';
 import { breedingApi, getApiErrorMessage, herdApi } from '../../lib/backendApi';
 import { formatCowIdentity, resolveCowIdentityFromHerd } from '../../lib/cowIdentity';
 import { useTenant } from '../../hooks/useTenant';
@@ -43,6 +42,7 @@ import {
   Pencil,
 } from 'lucide-react';
 import { toLocalIsoDate } from '../../lib/localDate';
+import { reportError } from '../../lib/telemetry';
 
 const bullStock = [];
 
@@ -417,7 +417,7 @@ export default function BreedingHub() {
       try {
         return await herdApi.list();
       } catch (error) {
-        console.error('Failed to load herd list:', error);
+        reportError(error, { where: 'BreedingHub.loadHerd' });
         return [];
       }
     },
@@ -444,7 +444,7 @@ export default function BreedingHub() {
       try {
         return await breedingApi.listSemenInventory();
       } catch (error) {
-        console.error('Failed to load semen inventory:', error);
+        reportError(error, { where: 'BreedingHub.loadSemenInventory' });
         return [];
       }
     },
@@ -474,7 +474,7 @@ export default function BreedingHub() {
       try {
         return await breedingApi.listLogs();
       } catch (error) {
-        console.error('Failed to load breeding logs:', error);
+        reportError(error, { where: 'BreedingHub.loadLogs' });
         return readCachedBreedingLogs(tenantId, farmId);
       }
     },
@@ -554,7 +554,7 @@ export default function BreedingHub() {
       notifyInfo(`Cow marked as ${outcome}. Records updated.`);
       await queryClient.invalidateQueries({ queryKey: ['breeding', 'logs', tenantId, farmId] });
     } catch (error) {
-      console.error('Failed to update breeding log status:', error);
+      reportError(error, { where: 'BreedingHub.updateLogStatus' });
       setErrorMessage(getApiErrorMessage(error, 'Could not save the vet outcome. Check the connection and retry.'));
       setShowError(true);
     } finally {
@@ -637,19 +637,9 @@ export default function BreedingHub() {
       await breedingApi.deleteSemenInventory(bull.id);
       setInventory((current) => current.filter((item) => item.id !== bull.id));
 
-      logToAuditTrail(
-        createAuditEntry({
-          action: 'delete',
-          recordType: 'semen_inventory',
-          recordId: bull.id,
-          userName: 'You',
-          notes: `Deleted ${bull.name} (${bull.code || 'NO-CODE'}) from semen inventory`,
-        })
-      );
-
       notifyInfo(`Deleted ${bull.name} from semen inventory.`);
     } catch (error) {
-      console.error('Error deleting inventory:', error);
+      reportError(error, { where: 'BreedingHub.deleteSemen' });
       notifyError(getApiErrorMessage(error, 'Could not remove this semen inventory item. Please try again.'));
     } finally {
       confirmation.setLoading(false);
@@ -1009,17 +999,7 @@ export default function BreedingHub() {
         </div>
       </Modal>
 
-      <Confirmation
-        isOpen={confirmation.isOpen}
-        title={confirmation.title}
-        message={confirmation.message}
-        type={confirmation.type}
-        confirmText={confirmation.confirmText}
-        cancelText={confirmation.cancelText}
-        isLoading={confirmation.isLoading}
-        onConfirm={confirmation.onConfirm}
-        onCancel={confirmation.onCancel}
-      />
+      <Confirmation {...confirmation} />
     </div>
   );
 }

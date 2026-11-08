@@ -8,6 +8,8 @@ import { getPageKeyForPath } from './lib/pageRoutes';
 // Import the StaffProvider to fix the useStaff context error
 import { StaffProvider } from './providers/StaffProvider';
 import PageSkeleton from './components/ui/PageSkeleton';
+import ErrorBoundary from './components/errors/ErrorBoundary';
+import NotFound from './pages/NotFound';
 
 // Layouts
 import DashboardLayout from './layouts/DashboardLayout';
@@ -90,10 +92,19 @@ const renderLazyPage = (Page, label) => (
   </Suspense>
 );
 
+// Screens outside the app shell get their own error boundary (the shell has one for its
+// pages), reset when the address changes, so a crash on sign-in can be retried in place.
+function PublicPageBoundary({ children }) {
+  const { pathname } = useLocation();
+  return <ErrorBoundary resetKey={pathname}>{children}</ErrorBoundary>;
+}
+
 const renderPublicPage = (Page, label) => (
-  <Suspense fallback={<PublicRouteFallback label={label} />}>
-    <Page />
-  </Suspense>
+  <PublicPageBoundary>
+    <Suspense fallback={<PublicRouteFallback label={label} />}>
+      <Page />
+    </Suspense>
+  </PublicPageBoundary>
 );
 
 const getDefaultRoute = (user) => {
@@ -181,9 +192,21 @@ export const RoleLandingRedirect = () => {
   return <Navigate to={getDefaultRoute(currentUser)} replace />;
 };
 
-const UnknownRouteRedirect = () => {
-  const { currentUser } = useAuth();
-  return <Navigate to={getDefaultRoute(currentUser)} replace />;
+/**
+ * An address the app doesn't have: say so. Signed in, inside the app shell with a way back to
+ * the user's dashboard; signed out, a public page with a way to log in.
+ */
+export const NotFoundRoute = () => {
+  const { currentUser, isLoading } = useAuth();
+  if (isLoading) return <PublicRouteFallback label="Loading…" />;
+  if (!currentUser) {
+    return <PublicPageBoundary><NotFound variant="public" /></PublicPageBoundary>;
+  }
+  return (
+    <ProtectedRoute>
+      <DashboardLayout><NotFound homePath={getDefaultRoute(currentUser)} /></DashboardLayout>
+    </ProtectedRoute>
+  );
 };
 
 export default function App() {
@@ -218,7 +241,9 @@ export default function App() {
             )}
           />
           <Route path="/shared/statement/:token" element={renderPublicPage(CustomerPortal, 'Loading statement…')} />
-          <Route path="/" element={
+          {/* The app shell is a pathless layout, so an unknown address falls through to the
+              top-level not-found route below instead of being silently redirected. */}
+          <Route element={
             <ProtectedRoute>
               <DashboardLayout />
             </ProtectedRoute>
@@ -422,8 +447,8 @@ export default function App() {
               )}
             />
 
-            <Route path="*" element={<UnknownRouteRedirect />} />
           </Route>
+          <Route path="*" element={<NotFoundRoute />} />
         </Routes>
       </StaffProvider>
     </BrowserRouter>

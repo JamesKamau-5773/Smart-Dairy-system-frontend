@@ -2,7 +2,8 @@ import { useState, useMemo } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { financeApi, getApiErrorMessage } from '../../lib/backendApi';
-import { QUEUED_OFFLINE_MESSAGE, isQueuedOffline } from '../../lib/offlinePolicy';
+import { QUEUED_OFFLINE_MESSAGE, isQueuedOffline, offlineFailureMessage } from '../../lib/offlinePolicy';
+import { reportError } from '../../lib/telemetry';
 import { Plus, Pencil, Trash2, Search, Users, MoreVertical } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 
@@ -21,6 +22,15 @@ const TABLE_COLUMNS = 4;
 // The first balance/rate field the backend sent; null (shown as "—") when none, never 0.
 const balanceOf = (customer) => customer.account_balance ?? customer.existing_balance ?? customer.balance ?? null;
 const rateOf = (customer) => customer.agreed_rate_per_liter ?? customer.agreed_rate ?? null;
+
+/** What the delete dialog says about the customer's account, from the backend's balance. */
+function describeBalanceForDelete(name, rawBalance) {
+  const balance = rawBalance === null || rawBalance === undefined || rawBalance === '' ? null : Number(rawBalance);
+  if (balance === null || !Number.isFinite(balance)) return `${name}’s balance couldn’t be checked.`;
+  if (balance > 0) return `${name} still owes ${formatMoneyText(balance)}.`;
+  if (balance < 0) return `${name} has ${formatMoneyText(-balance)} in credit.`;
+  return `${name}’s account is settled.`;
+}
 
 export default function CustomersPage() {
   const queryClient = useQueryClient();
@@ -70,8 +80,11 @@ export default function CustomersPage() {
       toast.success('Customer deleted successfully!');
       queryClient.invalidateQueries({ queryKey: customersKey });
     },
-    onError: (error) => {
-      toast.error(getApiErrorMessage(error, 'Could not delete this customer. Please try again.'));
+    onError: (error, customerId) => {
+      reportError(error, { where: 'Customers.delete' });
+      const name = customers?.find((customer) => customer.id === customerId)?.name ?? 'The customer';
+      toast.error(offlineFailureMessage(error, `${name} wasn’t deleted.`)
+        ?? getApiErrorMessage(error, `Couldn’t delete ${name}. Try again.`));
     },
     onSettled: () => {
       confirmation.setLoading(false);
@@ -89,11 +102,14 @@ export default function CustomersPage() {
   };
 
   const handleDelete = async (customer) => {
+    const name = customer.name || 'This customer';
     const confirmed = await confirmation.confirm({
-      title: 'Delete Customer',
-      message: `Are you sure you want to delete "${customer.name}"? This action cannot be undone.`,
+      title: `Delete ${name}?`,
+      message: `${describeBalanceForDelete(name, balanceOf(customer))} Deleting removes them from your customer list. You can’t undo this.`,
       confirmText: 'Delete',
+      cancelText: 'Keep',
       type: 'danger',
+      requireText: customer.name || 'DELETE',
     });
     if (confirmed) {
       confirmation.setLoading(true);

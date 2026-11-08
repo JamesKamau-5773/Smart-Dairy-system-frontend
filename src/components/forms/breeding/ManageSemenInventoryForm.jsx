@@ -2,8 +2,8 @@ import React, { useState } from 'react';
 import toast from 'react-hot-toast';
 import { validateForm, ValidationRules, getFirstErrorMessage } from '../../../lib/validation';
 import { normalizeSemenInventory } from '../../../lib/breedingUtils';
-import { createAuditEntry, logToAuditTrail } from '../../../lib/audit';
 import { breedingApi, getApiErrorMessage } from '../../../lib/backendApi';
+import { reportError } from '../../../lib/telemetry';
 
 /**
  * ManageSemenInventoryForm
@@ -77,16 +77,6 @@ export default function ManageSemenInventoryForm({
           ?? inventoryPayload.improves,
       });
 
-      logToAuditTrail(
-        createAuditEntry({
-          action: 'create',
-          recordType: 'semen_inventory',
-          recordId: nextInventory.id,
-          userName: 'You',
-          notes: `Added ${nextInventory.name} (${nextInventory.code}) - ${nextInventory.strawsLeft} straws`,
-        })
-      );
-
       const successMsg = `Added ${nextInventory.name} to inventory.`;
       onSuccess?.(nextInventory, successMsg);
       toast.success(successMsg);
@@ -99,7 +89,7 @@ export default function ManageSemenInventoryForm({
         improves: '',
       });
     } catch (error) {
-      console.error('Error adding inventory:', error);
+      reportError(error, { where: 'ManageSemenInventoryForm.save' });
       const errorMsg = getApiErrorMessage(error, 'Could not add this semen inventory item. Check the details and try again.');
       onError?.(errorMsg);
       toast.error(errorMsg);

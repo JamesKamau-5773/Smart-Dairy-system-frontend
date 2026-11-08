@@ -3,7 +3,7 @@ import { useTenant } from "../../hooks/useTenant";
 import { useAuth } from "../../contexts/AuthContext";
 import { canViewAdminControls } from "../../lib/roles";
 import { QUERY_KEYS } from "../../providers/QueryProvider";
-import { productionApi, safetyApi } from "../../lib/backendApi";
+import { getApiErrorMessage, productionApi, safetyApi } from "../../lib/backendApi";
 import { Plus, AlertTriangle, ShieldCheck, SlidersHorizontal, Pencil, Trash2, Baby } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
@@ -34,6 +34,7 @@ import { formatDate } from "../../lib/herdUtils";
 import { formatCowIdentity } from "../../lib/cowIdentity";
 import { Link } from "react-router-dom";
 import { todayLocalIso, toLocalIsoDate } from '../../lib/localDate';
+import { reportError } from '../../lib/telemetry';
 
 const AMOUNT_FIELD_CANDIDATES = [
   'amount',
@@ -343,8 +344,8 @@ export default function YieldLog() {
       handleFastLogSaved(row.animalRefId);
       toast.success('Milk record deleted.');
     } catch (error) {
-      console.error('[productionLog] delete milk record failed', { rowId: row.id, cowId: row.cowId, error });
-      toast.error('Failed to delete milk record. Please try again.');
+      reportError(error, { where: 'productionLog.delete' });
+      toast.error(getApiErrorMessage(error, 'Couldn’t delete this milk record. Try again.'));
     }
   };
 
@@ -353,8 +354,8 @@ export default function YieldLog() {
       await productionApi.verifyYield(row.id);
       handleFastLogSaved(row.animalRefId);
     } catch (error) {
-      console.error('Failed to verify milk record', error);
-      toast.error('Could not verify this milk record. Please try again.');
+      reportError(error, { where: 'productionLog.verify' });
+      toast.error(getApiErrorMessage(error, 'Couldn’t verify this milk record. Try again.'));
     }
   };
 

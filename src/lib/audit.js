@@ -1,5 +1,6 @@
 /**
- * Audit & timestamp utilities for tracking changes and record modifications
+ * Timestamp and change-description helpers for display. There is no client-side audit
+ * log: who changed what is recorded by the backend (BACKEND_REQUESTS.md, BR-006).
  */
 
 /**
@@ -54,46 +55,6 @@ export function getRelativeTime(date) {
   if (diffDays < 7) return `${diffDays} day${diffDays > 1 ? 's' : ''} ago`;
 
   return formatDateTime(date, false);
-}
-
-/**
- * Create an audit entry for a record change
- * @param {Object} options - Audit entry options
- * @returns {Object} Audit entry object
- */
-export function createAuditEntry({
-  action, // 'create', 'update', 'delete', etc.
-  recordType, // 'cow', 'breeding', 'health', etc.
-  recordId,
-  userId = 'current-user', // Would come from auth context
-  userName = 'You',
-  changes = {}, // { field: { before, after } }
-  notes = '',
-}) {
-  return {
-    id: `audit_${Date.now()}`,
-    timestamp: new Date().toISOString(),
-    action,
-    recordType,
-    recordId,
-    userId,
-    userName,
-    changes,
-    notes,
-    timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
-  };
-}
-
-/**
- * Format an audit entry for display
- * @param {Object} entry - Audit entry object
- * @returns {string} Formatted audit message
- */
-export function formatAuditEntry(entry) {
-  const timeStr = formatDateTime(entry.timestamp);
-  const actionStr = entry.action.charAt(0).toUpperCase() + entry.action.slice(1);
-
-  return `${actionStr} by ${entry.userName} on ${timeStr}`;
 }
 
 /**
@@ -180,33 +141,4 @@ export function getChangedFields(before, after) {
   });
 
   return changes;
-}
-
-/**
- * Log action to audit trail using session storage for local recovery
- * @param {Object} auditEntry - Audit entry to log
- */
-export function logToAuditTrail(auditEntry) {
-  console.info('[AUDIT]', auditEntry);
-
-  const auditLog = sessionStorage.getItem('auditLog');
-  const log = auditLog ? JSON.parse(auditLog) : [];
-  log.push(auditEntry);
-  sessionStorage.setItem('auditLog', JSON.stringify(log));
-}
-
-/**
- * Get audit trail from session
- * @returns {Array} Audit log entries
- */
-export function getAuditTrail() {
-  const auditLog = sessionStorage.getItem('auditLog');
-  return auditLog ? JSON.parse(auditLog) : [];
-}
-
-/**
- * Clear audit trail (for testing)
- */
-export function clearAuditTrail() {
-  sessionStorage.removeItem('auditLog');
 }

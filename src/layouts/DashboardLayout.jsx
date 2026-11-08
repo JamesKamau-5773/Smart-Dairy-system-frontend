@@ -28,7 +28,11 @@ function PageAccessGate({ children }) {
 const isDevelopment = import.meta.env.DEV
   || globalThis.process?.env?.NODE_ENV === 'development';
 
-export default function DashboardLayout() {
+/**
+ * The signed-in app shell. Renders the matched route's page (`<Outlet />`), or `children`
+ * when given (the not-found page, which has no route of its own).
+ */
+export default function DashboardLayout({ children = null }) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const { pathname } = useLocation();
   const shellRef = useRef(null);
@@ -92,7 +96,7 @@ export default function DashboardLayout() {
         {/* Page Content Injection - responsive padding */}
         <div ref={pageContentRef} className="min-h-0 min-w-0 flex-1 overflow-x-hidden overflow-y-auto overscroll-contain p-4 sm:p-6 md:p-8">
           <ErrorBoundary variant="page" resetKey={pathname}>
-            <PageAccessGate><Outlet /></PageAccessGate>
+            <PageAccessGate>{children ?? <Outlet />}</PageAccessGate>
           </ErrorBoundary>
         </div>
       </main>

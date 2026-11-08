@@ -4,6 +4,24 @@ What changed for farmers and staff using Maziwa Smart. Newest first.
 
 ## Unreleased
 
+### Phase 3 — Safer deletes, a real "page not found", clearer errors (UX audit)
+
+- **Type to confirm.** Deleting a cow, a customer or a stock item now asks you to type its tag
+  or name first, so a slip of the thumb can't remove it. Pressing Escape closes the dialog.
+- **See what's at stake.** Deleting a customer shows whether they still owe money, have
+  credit, or have a settled account.
+- **Deletes need a connection.** Deleting a cow, customer or stock item now only happens while
+  you're online, and if there's no connection you're told nothing was deleted. Edits made
+  offline are still saved on the phone as before.
+- **"We couldn't find that page."** A mistyped or old link now says so, with **Go to your
+  dashboard** and **Go back**, instead of silently jumping to another page. Signed out, it offers
+  **Go to log in**.
+- **Errors you can see.** Failures that used to be silent now tell you: switching farms
+  ("You're still on the same farm"), loading the dam list when adding a cow, downloading an
+  animal's record, deleting or verifying milk records.
+- The sign-in screens recover from an unexpected error with **Try again** instead of a blank
+  page.
+
 ### Phase 2 — Honest loading, error and empty states (UX audit)
 
 - **"Nothing here" now only means nothing here.** Stock, milk drop alerts, customers, buyers,

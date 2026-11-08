@@ -16,7 +16,7 @@ function getWorkspaceOptions(activeFarm, availableFarms) {
 }
 
 export default function FarmSwitcher() {
-  const { activeFarm, availableFarms, switchFarm, isSwitching, isCooperative } = useTenant();
+  const { activeFarm, availableFarms, switchFarm, isSwitching, isCooperative, switchError } = useTenant();
 
   if (!activeFarm || !isCooperative) return null;
   const options = getWorkspaceOptions(activeFarm, availableFarms);
@@ -41,6 +41,10 @@ export default function FarmSwitcher() {
           </option>
         ))}
       </select>
+
+      {switchError && !isSwitching && (
+        <p role="alert" className="mt-2 text-xs font-medium text-danger">{switchError}</p>
+      )}
 
       {isSwitching && (
         <div className="text-xs font-sans mt-2 animate-pulse text-brand font-medium">

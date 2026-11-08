@@ -6,6 +6,7 @@ import { tenantRef } from '../lib/tenantRef';
 import { describeAuthError, getAuthErrorMessage } from '../lib/authErrorMessages';
 import { SESSION_EXPIRED_EVENT } from '../lib/sessionEvents';
 import { setFarmTimeZone } from '../lib/localDate';
+import { reportError } from '../lib/telemetry';
 
 const AuthContext = createContext();
 
@@ -179,8 +180,9 @@ export function AuthProvider({ children }) {
   const logout = async () => {
     try {
       await authApi.logout();
-    } catch {
-      console.error('Logout request failed, clearing local state anyway.');
+    } catch (error) {
+      // Signing out on this phone must not depend on the server; just note the failure.
+      reportError(error, { where: 'AuthContext.logout' });
     } finally {
       setCurrentUser(null);
       setSessionExpired(false);

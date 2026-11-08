@@ -30,6 +30,16 @@ const ONLINE_ONLY_PATHS = [
   /^\/routine\/plans$/,
 ];
 
+// Deleting a cow, a customer or a stock item is final, and the farmer confirms it by typing
+// its name: it has to happen (or fail) while they watch. Queued, the app would say "removed"
+// while the record stayed, and the delete would run later from a stale phone, after others
+// may have recorded milk, deliveries or stock against it. Edits to these records still queue.
+const ONLINE_ONLY_DELETES = [
+  /^\/herd\/[^/]+$/,
+  /^\/(?:finance\/)?customers\/[^/]+$/,
+  /^\/inventory\/items\/[^/]+$/,
+];
+
 export const QUEUED_OFFLINE_MESSAGE = 'Saved on this phone. It will be sent when you’re back online.';
 
 export function isReplayableMutation(config) {
@@ -38,7 +48,9 @@ export function isReplayableMutation(config) {
 
   const method = (config.method || 'get').toLowerCase();
   if (!['post', 'put', 'patch', 'delete'].includes(method)) return false;
-  return !ONLINE_ONLY_PATHS.some((pattern) => pattern.test(config.url || ''));
+  const url = config.url || '';
+  if (method === 'delete' && ONLINE_ONLY_DELETES.some((pattern) => pattern.test(url))) return false;
+  return !ONLINE_ONLY_PATHS.some((pattern) => pattern.test(url));
 }
 
 // apiClient answers a replayable write made without a connection with a stand-in

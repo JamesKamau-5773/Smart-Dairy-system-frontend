@@ -11,6 +11,7 @@ const { batch: batchCopy } = feedCopy;
 const SUGGESTION_DAYS = [3, 7, 14];
 import { useTenant } from '../../hooks/useTenant';
 import toast from 'react-hot-toast';
+import { reportError } from '../../lib/telemetry';
 
 export default function CreateBatchModal({
   isOpen,
@@ -122,14 +123,7 @@ export default function CreateBatchModal({
     onError: (error) => {
       // Surface the backend's real validation message (e.g. which ingredient is
       // short and by how much) instead of a generic "check the console" alert.
-      console.error('[CreateBatchModal] createBatch failed', {
-        message: getApiErrorMessage(error, ''),
-        status: error?.response?.status,
-        data: error?.response?.data,
-        recipeType,
-        tenantId,
-        farmId,
-      });
+      reportError(error, { where: 'CreateBatchModal.createBatch' });
       toast.error(getApiErrorMessage(error, 'Failed to record batch. Please try again.'));
     }
   });

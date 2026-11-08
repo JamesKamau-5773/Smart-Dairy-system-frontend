@@ -84,8 +84,11 @@ describe('InventoryRegistry', () => {
     }));
     renderRegistry();
     fireEvent.click(within(await card('Sunflower Cake')).getByRole('button', { name: 'Delete' }));
-    const confirmDelete = await screen.findByRole('dialog', { name: 'Delete Inventory Item' });
-    fireEvent.click(within(confirmDelete).getByRole('button', { name: 'Delete' }));
+    const confirmDelete = await screen.findByRole('dialog', { name: 'Delete Sunflower Cake?' });
+    const deleteButton = within(confirmDelete).getByRole('button', { name: 'Delete' });
+    expect(deleteButton.disabled).toBe(true);
+    fireEvent.change(within(confirmDelete).getByLabelText(/to confirm/), { target: { value: 'sunflower cake' } });
+    fireEvent.click(deleteButton);
 
     const inUse = await screen.findByRole('dialog', { name: 'This item is in use' });
     fireEvent.click(within(inUse).getByRole('button', { name: 'Archive instead' }));

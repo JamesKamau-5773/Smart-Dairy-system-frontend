@@ -1,6 +1,7 @@
 import React from 'react';
 import { AlertTriangle, RefreshCw } from 'lucide-react';
 import { SITE } from '../../landing/content';
+import { reportError } from '../../lib/telemetry';
 
 /**
  * Error Boundary Component
@@ -28,8 +29,7 @@ export default class ErrorBoundary extends React.Component {
       errorCount: prevState.errorCount + 1,
     }));
 
-    // Log to external service in production
-    console.error('[Error Boundary]', error, errorInfo);
+    reportError(error, { where: 'ErrorBoundary' });
   }
 
   componentDidUpdate(prevProps) {

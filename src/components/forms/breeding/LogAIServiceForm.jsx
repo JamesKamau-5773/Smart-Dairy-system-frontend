@@ -10,11 +10,11 @@ import {
   normalizeBreedingLog,
 } from '../../../lib/breedingUtils';
 import { getApiErrorMessage } from '../../../lib/backendApi';
-import { createAuditEntry, logToAuditTrail } from '../../../lib/audit';
 import { formatCowIdentity } from '../../../lib/cowIdentity';
 import { breedingApi } from '../../../lib/backendApi';
 import { useTenant } from '../../../hooks/useTenant';
 import { todayLocalIso } from '../../../lib/localDate';
+import { reportError } from '../../../lib/telemetry';
 
 /**
  * LogAIServiceForm
@@ -166,7 +166,7 @@ export default function LogAIServiceForm({
           savedLog = normalizeBreedingLog({ ...savedLog, ...certificateResponse });
           certificateUploaded = true;
         } catch (certificateError) {
-          console.error('AI certificate upload failed:', certificateError);
+          reportError(certificateError, { where: 'LogAIServiceForm.uploadCertificate' });
           toast.error('AI record was saved, but the certificate could not be uploaded. Please retry the attachment.');
         }
       }
@@ -174,16 +174,6 @@ export default function LogAIServiceForm({
       if (!savedLog.semenSource) {
         savedLog.semenSource = logForm.semenSource;
       }
-
-      logToAuditTrail(
-        createAuditEntry({
-          action: editingLogId ? 'update' : 'create',
-          recordType: 'ai_service',
-          recordId: savedLog.id,
-          userName: 'You',
-          notes: `${editingLogId ? 'Updated' : 'Logged'} AI service for ${savedLog.cowId} with sire ${savedLog.sireCode}`,
-        })
-      );
 
       // Invalidate cache and notify success
       await queryClient.invalidateQueries({ queryKey: ['breeding', 'logs', tenantId, farmId] });
@@ -219,7 +209,7 @@ export default function LogAIServiceForm({
       setCertificateFile(null);
       setIsCowPickerOpen(false);
     } catch (error) {
-      console.error('Error logging service:', error);
+      reportError(error, { where: 'LogAIServiceForm.save' });
       const errorMsg = getApiErrorMessage(error, 'Could not save this AI service. Check the details and try again.');
       onError?.(errorMsg);
       toast.error(errorMsg);

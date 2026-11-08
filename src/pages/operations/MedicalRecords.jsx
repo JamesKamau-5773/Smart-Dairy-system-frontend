@@ -22,7 +22,7 @@ import {
 import LABELS from '../../lib/labels';
 import AlertBanner from '../../components/ui/AlertBanner';
 import Modal from '../../components/ui/Modal';
-import { createAuditEntry, getRelativeTime, logToAuditTrail } from '../../lib/audit';
+import { getRelativeTime } from '../../lib/audit';
 import { getFirstErrorMessage, ValidationRules, validateForm } from '../../lib/validation';
 import { herdApi, medicalApi } from '../../lib/backendApi';
 import { findCowIdentityMatch, formatCowIdentity, resolveCowIdentityFromHerd } from '../../lib/cowIdentity';
@@ -307,34 +307,11 @@ export default function VetRecords() {
     };
 
     if (editingRecordId) {
-      updateRecordMutation.mutate(
-        { id: editingRecordId, payload: nextRecord },
-        {
-          onSuccess: (savedRecord) => {
-            logToAuditTrail(createAuditEntry({
-              action: 'update',
-              recordType: 'medical-record',
-              recordId: savedRecord?.id ?? editingRecordId,
-              userName: form.vet || 'You',
-              notes: `Updated vet visit: ${form.diagnosis}`,
-            }));
-          },
-        }
-      );
+      updateRecordMutation.mutate({ id: editingRecordId, payload: nextRecord });
       return;
     }
 
-    createRecordMutation.mutate(nextRecord, {
-      onSuccess: (savedRecord) => {
-        logToAuditTrail(createAuditEntry({
-          action: 'create',
-          recordType: 'medical-record',
-          recordId: savedRecord?.id ?? null,
-          userName: form.vet || 'You',
-          notes: `Logged vet visit: ${form.diagnosis}`,
-        }));
-      },
-    });
+    createRecordMutation.mutate(nextRecord);
   };
 
   const handleEditRecord = (record) => {

@@ -156,3 +156,59 @@ Request: version the routine.
 
 Frontend follow-up: send the version, show the 409 message with a "Reload" action, and then
 the save can be queued offline again.
+
+---
+
+## BR-006 — Audit trail recorded by the backend
+
+**Status:** Open · **Raised:** 2026-11-08 (UX audit Phase 3) · **Frontend:** none (client log removed)
+
+The frontend used to write an "audit log" to the browser's sessionStorage (`logToAuditTrail`).
+It was lost when the tab closed, could be edited by anyone with the phone, and was never sent
+anywhere, so it has been removed. Who changed what must be recorded where the change happens.
+
+Request: the backend records an audit event for every create, update and delete of cows,
+milk records, medical records, breeding logs, calving events, semen inventory, customers,
+inventory items and ledger entries:
+
+```json
+{
+  "id": 9812,
+  "occurred_at": "2026-11-08T06:12:44Z",
+  "tenant_id": 3, "farm_id": 4,
+  "actor_id": 17, "actor_name": "Jane Wanjiru",
+  "action": "delete",
+  "record_type": "cow", "record_id": "57",
+  "summary": "Deleted Neema (KE-012)",
+  "changes": { "name": { "before": "Neema", "after": null } }
+}
+```
+
+and exposes it read-only to farm owners:
+`GET /api/audit-events?record_type=cow&record_id=57&page=1&per_page=50` →
+`{ "items": [ … ], "meta": { "page", "per_page", "total", "pages" } }`; `403` for other roles.
+
+---
+
+## BR-007 — Deleting a customer
+
+**Status:** Open · **Raised:** 2026-11-08 (UX audit Phase 3) · **Frontend:** `Customers.jsx`, `financeApi.deleteCustomer`
+
+The Customers page offers **Delete** (now with type-to-confirm and the balance shown), and
+`financeApi.deleteCustomer` sends `DELETE /api/customers/<id>`, but the backend has no DELETE
+route for customers (only GET/PATCH), so every delete fails today.
+
+Requested contract:
+
+`DELETE /api/finance/customers/<customer_id>`
+
+| Status | Body | When |
+|---|---|---|
+| 200 | `{ "id": 7, "deleted": true }` | Deleted (no deliveries, payments or ledger entries). |
+| 404 | `{ "error": "Customer not found." }` | Unknown id for this tenant. |
+| 409 | `{ "code": "CUSTOMER_HAS_HISTORY", "error": "Wanjiku Kiosk has deliveries and payments recorded. Archive them instead.", "can_archive": true }` | The customer has history; deleting would orphan it. |
+| 409 | `{ "code": "CUSTOMER_HAS_BALANCE", "error": "Wanjiku Kiosk still owes KES 3,700.00. Settle or write off the balance first." }` | Non-zero balance. |
+
+If customers should be archived rather than deleted (like inventory items), say so and the
+frontend will switch the action to **Archive**. Frontend follow-up: point
+`financeApi.deleteCustomer` at the agreed path and map the two 409 codes.

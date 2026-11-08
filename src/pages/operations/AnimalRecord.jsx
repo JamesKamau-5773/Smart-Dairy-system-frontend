@@ -11,7 +11,7 @@ import AlertBanner from '../../components/ui/AlertBanner';
 import Modal from '../../components/ui/Modal';
 import Confirmation, { useConfirmation } from '../../components/ui/Confirmation';
 import { validateForm, getFirstErrorMessage } from '../../lib/validation';
-import { formatDateTime, getRelativeTime, createAuditEntry, logToAuditTrail } from '../../lib/audit';
+import { formatDateTime, getRelativeTime } from '../../lib/audit';
 import {
   normalizeAnimal,
   normalizeTimelineResponse,
@@ -33,6 +33,7 @@ import cowAvatar from '../../assets/cow-avatar.svg';
 import AnimalSummaryCards from '../../components/operations/animalRecord/AnimalSummaryCards';
 import AnimalTimelineSection from '../../components/operations/animalRecord/AnimalTimelineSection';
 import AnimalNutritionPlanner from '../../components/operations/animalRecord/AnimalNutritionPlanner';
+import { reportError } from '../../lib/telemetry';
 
 export default function AnimalPassport() {
   const queryClient = useQueryClient();
@@ -159,7 +160,7 @@ export default function AnimalPassport() {
       setCertificatePreviewUrl(url);
       notifySuccess(`Certified Biological Record is ready to preview for ${animalDisplayName}.`);
     } catch (error) {
-      console.error('Failed to generate PDF', error);
+      reportError(error, { where: 'AnimalRecord.generateCertificate' });
       notifyError(getApiErrorMessage(error, `Could not generate the record for ${animalDisplayName}. Please try again.`));
     } finally {
       setIsGeneratingCertificate(false);
@@ -178,8 +179,8 @@ export default function AnimalPassport() {
       anchor.remove();
       notifySuccess(`Certified Biological Record downloaded for ${animalDisplayName}.`);
     } catch (error) {
-      console.error('Failed to download PDF', error);
-      notifyError(`Could not download the Certified Biological Record for ${animalDisplayName}.`);
+      reportError(error, { where: 'AnimalRecord.downloadCertificate' });
+      notifyError(getApiErrorMessage(error, `Couldn’t download the Certified Biological Record for ${animalDisplayName}. Try again.`));
     }
   };
 
@@ -213,20 +214,12 @@ export default function AnimalPassport() {
       // timeline itself, so there's no separate client-side mirror call here.
       if (actionType === 'Health') {
         const payload = buildHealthLogPayload(newEvent, resolvedAnimal.id);
-        const savedRecord = await medicalApi.createRecord(payload);
+        await medicalApi.createRecord(payload);
 
         await Promise.all([
           queryClient.invalidateQueries({ queryKey: ['medical-records', tenantId, farmId] }),
           queryClient.invalidateQueries({ queryKey: ['animal-passport-events', tenantId, farmId, id] }),
         ]);
-
-        logToAuditTrail(createAuditEntry({
-          action: 'create',
-          recordType: 'medical-record',
-          recordId: savedRecord?.id ?? null,
-          userName: payload.vet || 'You',
-          notes: `Logged vet visit: ${payload.diagnosis}`,
-        }));
 
         notifySuccess(`Medical record saved for ${resolvedAnimal.id} — also visible on Medical Records.`);
       } else if (actionType === 'Breeding') {
@@ -243,7 +236,7 @@ export default function AnimalPassport() {
             await breedingApi.uploadCertificate(savedLogId, breedingCertificateFile);
             certificateUploaded = true;
           } catch (certificateError) {
-            console.error('AI certificate upload failed:', certificateError);
+            reportError(certificateError, { where: 'AnimalRecord.uploadCertificate' });
             toast.error('AI service was saved, but the certificate could not be uploaded. Please retry the attachment.');
           }
         }
@@ -253,18 +246,10 @@ export default function AnimalPassport() {
           queryClient.invalidateQueries({ queryKey: ['animal-passport-events', tenantId, farmId, id] }),
         ]);
 
-        logToAuditTrail(createAuditEntry({
-          action: 'create',
-          recordType: 'breeding-log',
-          recordId: savedLog?.id ?? null,
-          userName: 'You',
-          notes: `Logged AI service: ${payload.semen_id}`,
-        }));
-
         notifySuccess(`Breeding log saved for ${resolvedAnimal.id}${certificateUploaded ? ' with certificate attached' : ''} — also visible on Breeding & Genetics.`);
       } else if (actionType === 'Calving') {
         const payload = buildCalvingEventPayload(newEvent);
-        const savedEvent = await animalsApi.recordCalving(id, payload);
+        await animalsApi.recordCalving(id, payload);
 
         await Promise.all([
           queryClient.invalidateQueries({ queryKey: ['animal-passport', tenantId, farmId, id] }),
@@ -277,27 +262,11 @@ export default function AnimalPassport() {
           queryClient.invalidateQueries({ queryKey: ['milk-lab-target-overview', tenantId, farmId] }),
         ]);
 
-        logToAuditTrail(createAuditEntry({
-          action: 'create',
-          recordType: 'calving-event',
-          recordId: savedEvent?.id ?? null,
-          userName: 'You',
-          notes: `Recorded calving for ${resolvedAnimal.id}`,
-        }));
-
         notifySuccess(`Birth recorded for ${resolvedAnimal.id}. The animal record is up to date.`);
       } else {
         const eventData = buildGeneralEventPayload(newEvent);
         const createdEvent = await createEventMutation.mutateAsync(eventData);
         const normalizedCreatedEvent = normalizeTimelineEvent(createdEvent, id);
-
-        logToAuditTrail(createAuditEntry({
-          action: 'create',
-          recordType: 'timeline_event',
-          recordId: normalizedCreatedEvent.id,
-          userName: 'You',
-          notes: `Added ${normalizedCreatedEvent.type} event: ${normalizedCreatedEvent.title}`,
-        }));
 
         notifySuccess(`Logged ${normalizedCreatedEvent.type.toLowerCase()} event for ${resolvedAnimal.id}.`);
       }
@@ -307,7 +276,7 @@ export default function AnimalPassport() {
       setBreedingCertificateFile(null);
       setIsEventOpen(false);
     } catch (error) {
-      console.error('Error adding event:', error);
+      reportError(error, { where: 'AnimalRecord.addEvent' });
       notifyError(getApiErrorMessage(error, 'Could not save this event. Check the details and try again.'));
     } finally {
       setIsSaving(false);

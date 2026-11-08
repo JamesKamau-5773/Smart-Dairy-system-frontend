@@ -24,11 +24,6 @@ vi.mock('../../../lib/backendApi', () => ({
   },
 }));
 
-vi.mock('../../../lib/audit', () => ({
-  createAuditEntry: vi.fn((entry) => entry),
-  logToAuditTrail: vi.fn(),
-}));
-
 vi.mock('react-hot-toast', () => ({ default: { error: vi.fn(), success: vi.fn() } }));
 
 afterEach(() => {

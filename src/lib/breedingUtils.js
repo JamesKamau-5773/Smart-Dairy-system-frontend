@@ -4,6 +4,7 @@ import {
   resolveCowIdentityFromHerd,
 } from './cowIdentity';
 import { toLocalIsoDate } from './localDate';
+import { reportError } from './telemetry';
 
 /**
  * Takes a raw form data object for a breeding log entry and transforms it
@@ -15,7 +16,7 @@ import { toLocalIsoDate } from './localDate';
  */
 export function normalizeBreedingLogPayload(formData) {
   if (!formData) {
-    console.error('normalizeBreedingLogPayload received null or undefined formData');
+    reportError(new Error('normalizeBreedingLogPayload received no form data'), { where: 'breedingUtils.normalize' });
     return null;
   }
 
@@ -44,7 +45,7 @@ export function normalizeBreedingLogPayload(formData) {
   };
 
   if (!payload.cow_id || !payload.insemination_date) {
-    console.error('Breeding log payload is missing required fields (cow_id, insemination_date).', payload);
+    reportError(new Error('Breeding log payload is missing cow_id or insemination_date'), { where: 'breedingUtils.normalize' });
     return null;
   }
 

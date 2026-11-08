@@ -376,17 +376,7 @@ export default function CustomerProfile() {
         isSaving={isSavingDelivery}
       />
 
-      <Confirmation
-        isOpen={confirmation.isOpen}
-        title={confirmation.title}
-        message={confirmation.message}
-        type={confirmation.type}
-        confirmText={confirmation.confirmText}
-        cancelText={confirmation.cancelText}
-        isLoading={confirmation.isLoading}
-        onConfirm={confirmation.onConfirm}
-        onCancel={confirmation.onCancel}
-      />
+      <Confirmation {...confirmation} />
     </div>
   );
 }

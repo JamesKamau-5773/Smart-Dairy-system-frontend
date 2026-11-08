@@ -18,7 +18,8 @@ import { getFeedErrorMessage } from '../../lib/feedErrors';
 import { getDataWarnings, isArchived } from '../../lib/inventoryItemRules';
 import { buildRestockMovement } from '../../lib/restockForm';
 import { buildStockOutMovement, isWriteOff } from '../../lib/stockChangeForm';
-import { isQueuedOffline, QUEUED_OFFLINE_MESSAGE } from '../../lib/offlinePolicy';
+import { isQueuedOffline, offlineFailureMessage, QUEUED_OFFLINE_MESSAGE } from '../../lib/offlinePolicy';
+import { reportError } from '../../lib/telemetry';
 import { canManageInventoryItems } from '../../lib/permissions';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTenant } from '../../hooks/useTenant';
@@ -190,17 +191,26 @@ export default function InventoryRegistry() {
         if (archiveInstead) itemActions.archive.mutate({ item });
         return;
       }
-      showFailure(error, 'Failed to delete inventory item.');
+      reportError(error, { where: 'InventoryRegistry.delete' });
+      const offline = offlineFailureMessage(error, `${item.name} wasn’t deleted.`);
+      if (offline) {
+        setErrorMessage(offline);
+        setShowError(true);
+        return;
+      }
+      showFailure(error, `Couldn’t delete ${item.name}. Try again.`);
     },
   });
 
   const handleDelete = async (item) => {
-    const identifier = item.sku || item.id;
+    const identifier = item.sku ? ` (${item.sku})` : '';
     const confirmed = await confirmation.confirm({
-      title: 'Delete Inventory Item',
-      message: `Are you sure you want to delete item ${item.name} (${identifier})? This action cannot be undone.`,
+      title: `Delete ${item.name}?`,
+      message: `${item.name}${identifier} will be removed from your stock list. You can’t undo this. Items with stock history can be archived instead.`,
       confirmText: 'Delete',
+      cancelText: 'Keep',
       type: 'danger',
+      requireText: item.name,
     });
     if (confirmed) {
       deleteItemMutation.mutate({ item });

@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 import toast from 'react-hot-toast';
 import { normalizeSemenInventory } from '../../../lib/breedingUtils';
-import { createAuditEntry, logToAuditTrail } from '../../../lib/audit';
 import { breedingApi, getApiErrorMessage } from '../../../lib/backendApi';
+import { reportError } from '../../../lib/telemetry';
 
 /**
  * RestockSemenInventoryForm
@@ -59,16 +59,6 @@ export default function RestockSemenInventoryForm({
         strawsLeft: nextStrawCount,
       });
 
-      logToAuditTrail(
-        createAuditEntry({
-          action: 'update',
-          recordType: 'semen_inventory',
-          recordId: updated.id,
-          userName: 'You',
-          notes: `Restocked ${updated.name} (${updated.code}) by ${amount} straws`,
-        })
-      );
-
       const successMsg = `Restocked ${updated.name} by ${amount} straws.`;
       onSuccess?.(updated, successMsg);
       toast.success(successMsg);
@@ -76,7 +66,7 @@ export default function RestockSemenInventoryForm({
       // Reset form
       setRestockForm({ amount: '' });
     } catch (error) {
-      console.error('Error restocking inventory:', error);
+      reportError(error, { where: 'RestockSemenInventoryForm.save' });
       const errorMsg = getApiErrorMessage(error, 'Could not restock this semen inventory. Check the quantity and try again.');
       onError?.(errorMsg);
       toast.error(errorMsg);

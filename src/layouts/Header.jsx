@@ -126,16 +126,7 @@ export default function Header({ onMenuClick = () => {} }) {
         </div>
       </div>
       <OfflineQueueInspector isOpen={syncOpen} onClose={() => setSyncOpen(false)} />
-      <Confirmation
-        isOpen={signOutConfirmation.isOpen}
-        title={signOutConfirmation.title}
-        message={signOutConfirmation.message}
-        type={signOutConfirmation.type}
-        confirmText={signOutConfirmation.confirmText}
-        cancelText={signOutConfirmation.cancelText}
-        onConfirm={signOutConfirmation.onConfirm}
-        onCancel={signOutConfirmation.onCancel}
-      />
+      <Confirmation {...signOutConfirmation} />
     </header>
   );
 }
