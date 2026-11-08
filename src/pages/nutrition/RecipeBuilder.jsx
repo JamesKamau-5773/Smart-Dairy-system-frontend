@@ -1,6 +1,9 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { Calculator, AlertTriangle } from 'lucide-react';
 import { calculateRecipeMetrics, validateRecipe } from '../../services/NutritionalCalculator';
+import DataWarningList from '../../components/inventory/DataWarningList';
+import { getShareTotal, sharesAddUp } from '../../lib/mixPlannerRules';
+import { feedCopy } from '../../i18n/feed.en';
 
 const RECIPE_CONFIG = {
   dairy_meal: {
@@ -74,13 +77,14 @@ function ProteinMeter({ averageProtein, targetProtein }) {
   );
 }
 
-function IngredientAllocationRow({ item, onPercentageChange }) {
+function IngredientAllocationRow({ item, warnings, onPercentageChange, onApplyFix, pendingFixCode }) {
   const availableStock = Number(item.availableStock ?? 0);
   const showStock = Number.isFinite(availableStock) && availableStock > 0;
 
   return (
-    <div className="grid grid-cols-12 gap-2 items-center bg-white p-3 rounded-md border border-ink/10 hover:border-brand/30 transition-colors focus-within:border-brand focus-within:ring-1 focus-within:ring-brand ">
-      <div className="col-span-5 pr-2">
+    <div className="rounded-md border border-ink/10 bg-white p-3 transition-colors hover:border-brand/30 focus-within:border-brand focus-within:ring-1 focus-within:ring-brand">
+    <div className="grid grid-cols-12 items-center gap-2">
+      <div className="col-span-4 min-w-0 pr-2">
         <div className="text-sm font-bold text-ink-strong truncate">{item.name}</div>
         {showStock && (
           <div className="text-[10px] font-bold uppercase tracking-wide text-ink-muted">
@@ -88,10 +92,14 @@ function IngredientAllocationRow({ item, onPercentageChange }) {
           </div>
         )}
       </div>
-      <div className="col-span-3 flex items-center justify-end gap-2">
+      <div className="col-span-4 flex items-center justify-end gap-2">
         <input
           type="number"
-          className="w-16 bg-transparent text-right font-black text-brand text-lg focus:outline-none"
+          inputMode="decimal"
+          min="0"
+          max="100"
+          step="any"
+          className="w-24 rounded-md border border-ink/15 bg-surface-raised px-2 py-1 text-right text-lg font-black text-brand focus:outline-none"
           value={item.percentage}
           onChange={(e) => onPercentageChange(item.id, e.target.value)}
           aria-label={`${item.name} percentage`}
@@ -104,6 +112,16 @@ function IngredientAllocationRow({ item, onPercentageChange }) {
           KES {item.cost.toFixed(0)}
         </div>
       </div>
+    </div>
+      {warnings?.length > 0 && (
+        <div className="mt-2">
+          <DataWarningList
+            warnings={warnings}
+            onApplyFix={onApplyFix ? (code) => onApplyFix(item, code) : undefined}
+            pendingCode={pendingFixCode}
+          />
+        </div>
+      )}
     </div>
   );
 }
@@ -130,6 +148,9 @@ export default function RecipeBuilder({
   onBatchSizeChange,
   targetProtein,
   isLoading = false,
+  ingredientWarnings = {},
+  onApplyFix,
+  pendingFix = null,
 }) {
   const config = getRecipeConfig(recipeType);
   const resolvedTargetProtein = Number.isFinite(Number(targetProtein)) && Number(targetProtein) > 0
@@ -174,6 +195,8 @@ export default function RecipeBuilder({
   const metrics = useMemo(() => 
     calculateRecipeMetrics(activeIngredients, batchSize), [activeIngredients, batchSize]
   );
+
+  const shareTotal = getShareTotal(activeIngredients);
 
   const alerts = useMemo(() => 
     validateRecipe(metrics, batchSize, resolvedTargetProtein), [metrics, batchSize, resolvedTargetProtein]
@@ -222,8 +245,8 @@ export default function RecipeBuilder({
       {/* Ingredient Inputs */}
       <div className="space-y-2 mb-8">
         <div className="grid grid-cols-12 gap-2 px-3 pb-2 text-[10px] font-black uppercase text-ink-muted border-b border-ink/5">
-          <div className="col-span-5">Feed Item</div>
-          <div className="col-span-3 text-right">Share</div>
+          <div className="col-span-4">Feed Item</div>
+          <div className="col-span-4 text-right">Share</div>
           <div className="col-span-4 text-right">Mix Amount</div>
         </div>
 
@@ -234,7 +257,10 @@ export default function RecipeBuilder({
             <IngredientAllocationRow
               key={item.id}
               item={item}
+              warnings={ingredientWarnings[item.ingredientId ?? item.id]}
               onPercentageChange={updatePercentage}
+              onApplyFix={onApplyFix}
+              pendingFixCode={pendingFix?.ingredientId === (item.ingredientId ?? item.id) ? pendingFix.code : null}
             />
           ))
         ) : (
@@ -242,6 +268,12 @@ export default function RecipeBuilder({
         )}
       </div>
       
+      {metrics.ingredients.length > 0 && (
+        <p role="status" className={`mb-4 text-right text-xs font-bold ${sharesAddUp(shareTotal) ? 'text-ink-muted' : 'text-danger'}`}>
+          {feedCopy.planner.shareTotal(shareTotal)}
+        </p>
+      )}
+
       <MetricsFooter metrics={metrics} />
     </div>
   );

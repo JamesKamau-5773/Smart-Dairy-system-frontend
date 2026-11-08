@@ -13,8 +13,9 @@ import { useFormDraft } from '../../hooks/useFormDraft';
 import DraftRestoredNotice from '../ui/DraftRestoredNotice';
 import { formatCowIdentity, resolveCowIdentityFromHerd } from '../../lib/cowIdentity';
 import { ArrowLeft, Droplets, CheckCircle2, AlertOctagon, CloudOff, Trash2, X } from 'lucide-react';
+import { todayLocalIso } from '../../lib/localDate';
 
-const todayIso = () => new Date().toISOString().slice(0, 10);
+const todayIso = () => todayLocalIso();
 
 const SESSION_OPTIONS = ['morning', 'midday', 'evening'];
 
@@ -282,7 +283,7 @@ export default function FastMilkLog({ onClose, onSaveSuccess, onDeleteSuccess, m
   // Mutation with idempotency and robust error handling
   const mutation = useMutation({
     mutationFn: async (payload) => {
-      const date = payload.milking_date || payload.milkingDate || new Date().toISOString().slice(0, 10);
+      const date = payload.milking_date || payload.milkingDate || todayLocalIso();
       const requestPayload = {
         cow_id: payload.cowId,
         amount: Number(payload.volume ?? payload.amount ?? 0),

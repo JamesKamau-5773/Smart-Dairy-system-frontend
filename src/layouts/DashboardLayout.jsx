@@ -1,4 +1,4 @@
-import { Navigate, Outlet, useLocation } from 'react-router-dom';
+import { Outlet, useLocation } from 'react-router-dom';
 import Sidebar from './Sidebar';
 import Header from './Header';
 import MobileBottomNav from './MobileBottomNav';
@@ -11,24 +11,16 @@ import { usePrefetchOfflineEssentials } from '../hooks/usePrefetchOfflineEssenti
 import { useLayoutEffect, useRef, useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { hasPageAccess } from '../lib/roles';
-
-const routeAccess = [
-  ['/dashboard', 'dashboard'], ['/operations/yield', 'production'], ['/operations/milk-usage', 'production'],
-  ['/operations/routine', 'tasks'], ['/tasks', 'tasks'], ['/operations/herd', 'herd'],
-  ['/operations/breeding', 'breeding'], ['/operations/records', 'medical'], ['/operations/milk-drop-reports', 'medical'],
-  ['/feed-nutrition', 'feed'], ['/operations/lab', 'feed'], ['/settings/unit-conversions', 'feed'],
-  ['/operations/customers', 'customers'], ['/finance/buyers', 'customers'], ['/finance/ledger', 'finance'],
-  ['/operations/inventory', 'inventory'], ['/operations/reports', 'reports'], ['/finance/reports', 'reports'],
-  ['/operations/safety', 'safety'], ['/hr/staff', 'staff'], ['/hr/payroll', 'payroll'], ['/cooperative-admin/members', 'member_admin'],
-];
+import { getFirstAllowedPath, getPageKeyForPath } from '../lib/pageRoutes';
+import NoPageAccess from '../components/ui/NoPageAccess';
 
 function PageAccessGate({ children }) {
   const { currentUser } = useAuth();
   const { pathname } = useLocation();
-  const access = routeAccess.find(([path]) => pathname === path || pathname.startsWith(`${path}/`))?.[1];
+  const access = getPageKeyForPath(pathname);
   if (access && !hasPageAccess(currentUser, access)) {
-    const allowedPath = routeAccess.find(([, pageKey]) => hasPageAccess(currentUser, pageKey))?.[0] ?? '/login';
-    return <Navigate to={allowedPath} replace />;
+    // Say why, rather than silently landing the person somewhere else.
+    return <NoPageAccess allowedPath={getFirstAllowedPath(currentUser)} />;
   }
   return children;
 }

@@ -4,6 +4,7 @@ import { useOfflineQueue } from '../../hooks/useOfflineQueue';
 import { useTenant } from '../../hooks/useTenant';
 import { QUERY_KEYS } from '../../providers/QueryProvider';
 import { herdApi } from '../../lib/backendApi';
+import { formatLitres } from '../../lib/numberFormat';
 import { formatCowIdentity } from '../../lib/cowIdentity';
 import { formatDate } from '../../lib/herdUtils';
 import { toNormalizedSessionLabel } from '../../lib/milkUtils';
@@ -31,7 +32,7 @@ export default function QueuedMilkEntries() {
     : flushing ? 'Sending now…' : 'They will be sent automatically in a moment.';
 
   return (
-    <section aria-labelledby="queued-milk-title" className="card-machined !p-0">
+    <section aria-labelledby="queued-milk-title" className="min-w-0 rounded-card border border-ink/10 bg-card">
       <div className="border-b border-ink/10 px-4 py-3 sm:px-6">
         <h2 id="queued-milk-title" className="flex items-center gap-2 text-sm font-bold text-ink">
           <Clock3 size={16} className="text-brand" aria-hidden="true" />
@@ -48,7 +49,7 @@ export default function QueuedMilkEntries() {
               {row.needsAttention && row.error && <p className="mt-1 text-xs text-danger-900">{row.error}</p>}
             </div>
             <div className="flex shrink-0 items-center gap-3">
-              <span className="font-mono text-lg font-bold tabular-nums text-brand">{row.amount} L</span>
+              <span className="font-mono text-sm font-semibold tabular-nums text-ink">{formatLitres(row.amount)}</span>
               {row.needsAttention ? (
                 <span className="inline-flex items-center gap-1 rounded-badge border border-danger-500/30 bg-danger-50 px-2 py-1 text-[10px] font-semibold text-danger-900">
                   <AlertTriangle size={11} aria-hidden="true" /> Needs attention

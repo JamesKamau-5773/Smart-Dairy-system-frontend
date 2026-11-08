@@ -55,6 +55,7 @@ export default function EmployeeDrawer({
     monthlyDeduction: staff.monthlyDeduction ?? 0,
     advanceAmount: 0,
     loanBalance: staff.loanBalance ?? 0,
+    statutoryDeductionsEnabled: staff.statutoryDeductionsEnabled,
   });
   const [medicalData, setMedicalData] = useState({
     certificationsText: Array.isArray(staff.medicalCertifications) ? staff.medicalCertifications.join(', ') : '',
@@ -99,6 +100,7 @@ export default function EmployeeDrawer({
       monthlyDeduction: toNumber(financialData.monthlyDeduction),
       advanceAmount: toNumber(financialData.advanceAmount),
       loanBalance: toNumber(financialData.loanBalance),
+      statutoryDeductionsEnabled: financialData.statutoryDeductionsEnabled,
     });
   };
 

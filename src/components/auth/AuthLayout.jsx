@@ -28,8 +28,8 @@ export default function AuthLayout({ headerAction, offline = false, children }) 
       {/* One centred card: the form, plus a brand panel beside it on large screens. */}
       <main className="mx-auto flex min-h-[calc(100vh-4rem)] max-w-4xl flex-col px-4 pb-12 pt-2 lg:justify-center lg:pb-16">
         {offline && (
-          <p role="status" className="mx-auto mb-4 flex w-full max-w-md items-start gap-3 rounded-card border border-warning/30 bg-warning/10 p-4 text-sm text-ink-900 lg:max-w-none">
-            <WifiOff size={18} className="mt-0.5 shrink-0 text-warning-700" aria-hidden="true" />
+          <p role="status" className="mx-auto mb-4 flex w-full max-w-md items-start gap-3 rounded-card border border-brand/40 bg-brand-50 p-4 text-sm text-ink-900 lg:max-w-none">
+            <WifiOff size={18} className="mt-0.5 shrink-0 text-brand-dark" aria-hidden="true" />
             <span>{copy.offline}</span>
           </p>
         )}

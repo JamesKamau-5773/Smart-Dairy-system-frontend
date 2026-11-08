@@ -462,7 +462,7 @@ export default function MilkLab() {
                   onClick={handleExportToFeedFormulation}
                   className="btn-command px-4 py-2.5 text-sm font-bold"
                 >
-                  Export To Feed Mixing Planner
+                  Export To {LABELS.FEED_FORMULATION}
                 </button>
               </div>
             </>

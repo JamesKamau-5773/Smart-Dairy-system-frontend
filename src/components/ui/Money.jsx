@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components */
 import { useState } from 'react';
 
 /* ─── Currency metadata ─────────────────────────────────────────────────── */
@@ -36,6 +37,13 @@ function formatValue(amount, currency) {
   }).format(amount);
 }
 
+/** Plain-text money for aria-labels and titles, e.g. "−KES 800.00". */
+export function formatMoneyText(amount, currency = 'KES') {
+  if (amount == null || isNaN(amount)) return '—';
+  const meta = CURRENCY_META[currency] ?? { ...DEFAULT_META, symbol: currency };
+  return `${amount < 0 ? '−' : ''}${meta.symbol || currency} ${formatValue(Math.abs(amount), currency)}`;
+}
+
 /* ─── Component ──────────────────────────────────────────────────────────── */
 /**
  * Money
@@ -44,7 +52,9 @@ function formatValue(amount, currency) {
  *  amount        number | null | undefined  — value to display
  *  currency      string                     — ISO-4217 code (default 'KES')
  *  showSign      boolean                    — always show +/- sign
- *  colored       boolean                    — green/red for positive/negative
+ *  tone          'net'                      — signed figure: money-positive / money-negative
+ *                                              token, true minus (U+2212), no plus sign
+ *  colored       boolean                    — legacy alias of tone="net"
  *  animate       boolean                    — bounce animation on value change
  *  compact       boolean                    — abbreviate large numbers (1.2M, 45K)
  *  blurred       boolean                    — privacy mask (toggle with click)
@@ -56,6 +66,7 @@ export default function Money({
   currency  = 'KES',
   showSign  = false,
   colored   = false,
+  tone      = null,
   animate   = false,
   compact   = false,
   blurred   = false,
@@ -96,21 +107,24 @@ export default function Money({
   const sz = sizes[size] ?? sizes.md;
 
   /* ── Color classes ──────────────────────────────────────────────────── */
-  const colorClass = !colored || !isValid
+  // The sign is always shown with the colour, so colour is never the only signal.
+  const isNet = tone === 'net' || colored;
+  const colorClass = !isNet || !isValid
     ? ''
-    : isNeg ? 'text-brand-dark'
-    : isPos ? 'text-brand'
-    : 'text-inherit';
+    : isNeg ? 'text-money-negative'
+    : isPos ? 'text-money-positive'
+    : '';
 
   /* ── Sign prefix ────────────────────────────────────────────────────── */
-  const sign = !isValid ? '' : isNeg ? '−' : showSign ? '+' : '';
+  // A true minus (U+2212) directly before the currency; a net figure never gets a plus.
+  const sign = !isValid ? '' : isNeg ? '−' : showSign && !isNet ? '+' : '';
 
   /* ── Blur / privacy mask ────────────────────────────────────────────── */
   const privacyClass = hidden ? 'blur-sm select-none pointer-events-none' : '';
 
   return (
     <span
-      title={hidden ? 'Click to reveal' : `${currency} ${amount}`}
+      title={hidden ? 'Click to reveal' : formatMoneyText(amount, currency)}
       onClick={blurred ? () => setHidden(h => !h) : undefined}
       className={[
         'inline-flex items-baseline gap-0.5 font-mono tabular-nums',
@@ -124,8 +138,9 @@ export default function Money({
     >
       {/* Sign */}
       {sign && (
-        <span className={`${sz.symbol} font-semibold leading-none self-center`} aria-hidden="true">
-          {sign}
+        <span className={`${sz.symbol} -mr-0.5 font-semibold leading-none self-center`}>
+          <span aria-hidden="true">{sign}</span>
+          <span className="sr-only">{isNeg ? 'minus ' : 'plus '}</span>
         </span>
       )}
 

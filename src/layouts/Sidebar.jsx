@@ -3,12 +3,14 @@ import { NavLink, useLocation } from 'react-router-dom';
 import {
   LayoutDashboard, Beaker, Pill, Package, Wallet, X,
   Users, Dna, Landmark, ShieldCheck, BookHeart, BookOpen, Activity,
-  Wheat, ChevronRight, ChevronDown, FileWarning, ClipboardList, TrendingUp, Droplets
+  Wheat, ChevronRight, ChevronDown, FileWarning, ClipboardList, TrendingUp, Droplets, Utensils
 } from 'lucide-react';
 import LABELS from '../lib/labels';
 import { useAuth } from '../contexts/AuthContext';
 import FarmSwitcher from './FarmSwitcher';
 import { canAccessCommandCenter, canViewAdminControls, isCooperativeAdmin, isSuperAdmin, hasRole, hasPageAccess } from '../lib/roles';
+import { isNavItemActive, navItemHref } from '../lib/navigation';
+import { FEED_CATEGORY } from '../lib/inventoryItemRules';
 
 export default function Sidebar({ mobileOpen = false, setMobileOpen = () => {} }) {
   const { currentUser } = useAuth();
@@ -86,10 +88,13 @@ export default function Sidebar({ mobileOpen = false, setMobileOpen = () => {} }
       ],
     },
     {
-      title: LABELS.FEED_NUTRITION || 'Feed Planning',
+      title: LABELS.FEEDING_AREA,
       items: [
-        { label: LABELS.FEED_DASHBOARD || LABELS.NUTRITION_PLANNER, to: '/feed-nutrition', icon: Wheat, visible: canViewFeedNutrition && hasPageAccess(currentUser, 'feed'), exact: true },
+        { label: LABELS.TODAY_FEEDING, to: '/feeding', icon: Utensils, visible: Boolean(currentUser) && hasPageAccess(currentUser, 'feeding') },
+        { label: LABELS.FEED_DASHBOARD, to: '/feed-nutrition', icon: Wheat, visible: canViewFeedNutrition && hasPageAccess(currentUser, 'feed'), exact: true },
         { label: LABELS.FEED_FORMULATION, to: '/feed-nutrition/mix', icon: Dna, visible: canViewFeedNutrition && hasPageAccess(currentUser, 'feed') },
+        // Inventory filtered to feed: one page, two ways in (Feeding and Finance & Supply).
+        { label: LABELS.FEED_INGREDIENTS, to: '/operations/inventory', query: { category: FEED_CATEGORY }, icon: Package, visible: showAdminControls && hasPageAccess(currentUser, 'inventory') },
         { label: LABELS.MILK_LAB, to: '/operations/lab', icon: Pill, visible: canViewFeedNutrition && hasPageAccess(currentUser, 'feed') },
         { label: 'Unit Helpers', to: '/settings/unit-conversions', icon: BookOpen, visible: canViewFeedNutrition && hasPageAccess(currentUser, 'feed') },
       ],
@@ -133,13 +138,10 @@ export default function Sidebar({ mobileOpen = false, setMobileOpen = () => {} }
       items: group.items.filter((item) => item.visible),
     }))
     .filter((group) => group.items.length > 0);
+  const allNavItems = visibleGroups.flatMap((group) => group.items);
 
   const activeGroupTitle = visibleGroups.find((group) =>
-    group.items.some((item) => {
-      return item.exact
-        ? location.pathname === item.to
-        : location.pathname === item.to || location.pathname.startsWith(`${item.to}/`);
-    })
+    group.items.some((item) => isNavItemActive(item, location, allNavItems))
   )?.title || null;
 
   const isGroupCollapsed = (groupTitle) =>
@@ -207,20 +209,20 @@ export default function Sidebar({ mobileOpen = false, setMobileOpen = () => {} }
               {group.items.map((item) => {
                 const Icon = item.icon;
 
-                const itemIsActive = item.exact
-                  ? location.pathname === item.to
-                  : location.pathname === item.to || location.pathname.startsWith(`${item.to}/`);
+                const itemIsActive = isNavItemActive(item, location, allNavItems);
 
                 return (
                   <NavLink
-                    key={item.to}
-                    to={item.to}
+                    key={navItemHref(item)}
+                    to={navItemHref(item)}
                     end={item.exact}
                     onClick={() => setMobileOpen(false)}
-                    className={({ isActive }) => `flex items-center px-4 py-3 min-h-[44px] font-sans font-semibold text-sm transition-colors duration-100 border-l-2 rounded-md relative ${
-                      isActive
+                    aria-current={itemIsActive ? 'page' : undefined}
+                    // Active state comes from isNavItemActive, which also reads the query.
+                    className={`flex items-center px-4 py-3 min-h-[44px] font-sans font-semibold text-sm transition-colors duration-100 border-l-2 rounded-md relative ${
+                      itemIsActive
                         ? 'border-brand-400 bg-ink-900 pl-4 text-white'
-                        : `border-transparent text-ink-600 hover:border-brand-400/50 hover:bg-brand-50 hover:text-ink-900 ${itemIsActive ? 'border-brand-400 bg-ink-900 text-white' : ''}`
+                        : 'border-transparent text-ink-600 hover:border-brand-400/50 hover:bg-brand-50 hover:text-ink-900'
                     }`}
                   >
                     <Icon size={18} className={`mr-3 shrink-0 ${itemIsActive ? 'text-brand-400' : 'text-ink-600'}`} /> {item.label}

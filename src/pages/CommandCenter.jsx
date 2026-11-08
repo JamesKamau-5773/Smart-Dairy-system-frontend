@@ -15,6 +15,7 @@ import MilestoneBanner from '../components/dashboard/MilestoneBanner';
 import Money from '../components/ui/Money';
 import { swahiliGreeting } from '../lib/welcomeProgress';
 import { Skeleton } from '@/components/ui';
+import { todayLocalIso } from '../lib/localDate';
 
 const SummaryCard = ({ title, value, unit, icon: Icon, trend, loading = false }) => (
   <div className="glass-panel p-6 flex flex-col justify-between min-h-[180px] relative overflow-hidden group">
@@ -93,7 +94,7 @@ export default function CommandCenter() {
 
   const derivedTodaySummary = useMemo(() => {
     const rows = Array.isArray(trendQuery.data) ? trendQuery.data : [];
-    const today = new Date().toISOString().slice(0, 10);
+    const today = todayLocalIso();
 
     const todayRows = rows.filter((row) => extractYieldDate(row) === today);
     const total = todayRows.reduce((acc, row) => acc + extractYieldAmount(row), 0);

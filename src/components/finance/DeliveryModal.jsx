@@ -1,9 +1,10 @@
 import { useState, useEffect, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import { X, Save, Droplets } from 'lucide-react';
+import { todayLocalIso } from '../../lib/localDate';
 
 const INITIAL_STATE = {
-  date: new Date().toISOString().slice(0, 10),
+  date: todayLocalIso(),
   liters_delivered: '',
   personal_consumption_liters: '0',
   notes: '',

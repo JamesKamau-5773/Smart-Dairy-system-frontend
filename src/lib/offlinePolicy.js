@@ -6,10 +6,25 @@ const ONLINE_ONLY_PATHS = [
   // Payroll runs move money and must not be replayed later from a stale device.
   /^\/hr\/payroll/,
   /\/void-and-replace$/,
+  /^\/finance\/transactions\/[^/]+\/(?:corrections|attachments)$/,
   /\/switch-farm$/,
   /\/formulate(?:\/|$)/,
   /\/calculate-(?:nutrition|schedule)(?:\/|$)/,
   /\/calculator(?:\/|$)/,
+  // Owner corrections to an item: the farmer needs to see them take effect (or fail)
+  // now. Queued, they would report success while nothing changed.
+  /^\/inventory\/items\/[^/]+\/(?:archive|restore|data-fixes)$/,
+  // A count is compared with the server's balance when it arrives; replayed later it
+  // would be compared with a newer balance and record the wrong correction.
+  /^\/inventory\/items\/[^/]+\/audit$/,
+  // Releasing or holding milk is a food-safety decision; replayed later from a stale
+  // phone it could release milk that has since been put back on hold.
+  /^\/(?:clinical\/)?(?:cows|livestock)\/[^/]+\/hardlock$/,
+  // A hold or failed test must be on the board now, where everyone looks before milking;
+  // a queued one would look placed while the milk was still going into the tank.
+  /^\/safety\/(?:holds|milk-tests)$/,
+  // Money owed by staff and leaving the farm change balances the server checks now.
+  /^\/hr\/staff\/[^/]+\/(?:advances|advance-repayments|offboard)$/,
 ];
 
 export const QUEUED_OFFLINE_MESSAGE = 'Saved on this phone. It will be sent when you’re back online.';

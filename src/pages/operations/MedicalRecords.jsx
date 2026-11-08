@@ -35,10 +35,11 @@ import { useFormDraft } from '../../hooks/useFormDraft';
 import { getSearchSuggestions, matchesSearch } from '../../lib/fuzzySearch';
 import SearchSuggestions from '../../components/ui/SearchSuggestions';
 import DraftRestoredNotice from '../../components/ui/DraftRestoredNotice';
+import { todayLocalIso } from '../../lib/localDate';
 
 const EMPTY_FORM = {
   cowTag: '',
-  date: new Date().toISOString().split('T')[0],
+  date: todayLocalIso(),
   symptoms: '',
   diagnosis: '',
   medications: '',
@@ -182,7 +183,7 @@ export default function VetRecords() {
   const stats = useMemo(() => {
     const open = records.filter((record) => record.status !== 'Closed').length;
     const critical = records.filter((record) => record.severity === 'High').length;
-    const dueToday = records.filter((record) => record.followUp === new Date().toISOString().split('T')[0]).length;
+    const dueToday = records.filter((record) => record.followUp === todayLocalIso()).length;
     const resolved = records.filter((record) => record.status === 'Closed').length;
 
     return {
@@ -339,7 +340,7 @@ export default function VetRecords() {
   const handleEditRecord = (record) => {
     setForm({
       cowTag: record.cow ?? '',
-      date: record.date ?? new Date().toISOString().split('T')[0],
+      date: record.date ?? todayLocalIso(),
       symptoms: record.reason ?? '',
       diagnosis: record.diagnosis ?? '',
       medications: record.meds ?? '',

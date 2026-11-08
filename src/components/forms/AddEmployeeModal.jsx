@@ -12,13 +12,17 @@ import {
   validateEmployeeFields,
   validateProvisioningFields,
 } from '../../lib/staffAccessForm';
+import { todayLocalIso } from '../../lib/localDate';
+import StatutoryDeductionsToggle from './StatutoryDeductionsToggle';
 
 const INITIAL_STATE = {
   name: '',
   role: 'FARM_HAND',
   phoneNumber: '',
   baseSalary: '',
-  hireDate: new Date().toISOString().slice(0, 10),
+  hireDate: todayLocalIso(),
+  // The backend's default; the owner switches it off for staff it doesn't apply to.
+  statutoryDeductionsEnabled: true,
 };
 
 export default function AddEmployeeModal({ isOpen, onClose, onSave }) {
@@ -146,6 +150,11 @@ export default function AddEmployeeModal({ isOpen, onClose, onSave }) {
                   <span className="mb-2 flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-slate-500"><CalendarDays size={13} /> Hire date <span className="text-danger">*</span></span>
                   <input required name="hireDate" type="date" value={formData.hireDate} onChange={handleChange} className="input-machined w-full" />
                 </label>
+                <StatutoryDeductionsToggle
+                  className="sm:col-span-2"
+                  checked={formData.statutoryDeductionsEnabled}
+                  onChange={(statutoryDeductionsEnabled) => setFormData((prev) => ({ ...prev, statutoryDeductionsEnabled }))}
+                />
               </div>
             </section>
 

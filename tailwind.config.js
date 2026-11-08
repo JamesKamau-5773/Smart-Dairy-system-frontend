@@ -158,6 +158,12 @@ export default {
           DEFAULT: '#7F1D1D',
           surface: '#FEF2F2',
           'on-surface': '#450A0A'
+        },
+        // Signed money (net, change). Always paired with a sign or arrow, never colour alone.
+        // positive: green-800, 7.1:1 on white (approved 2026-11-06). negative: danger-900.
+        money: {
+          positive: '#166534',
+          negative: '#7F1D1D',
         }
       },
       keyframes: {

@@ -1,20 +1,22 @@
-import React, { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { createPortal } from 'react-dom';
-import { X, ClipboardList, Search, Minus, Plus, CheckCircle2, PackageCheck } from 'lucide-react';
+import { X, ClipboardList, Minus, Plus, CheckCircle2, PackageCheck } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
-import { getApiErrorMessage, inventoryApi } from '../../lib/backendApi';
+import { inventoryApi } from '../../lib/backendApi';
+import { getFeedErrorMessage } from '../../lib/feedErrors';
+import { EMPTY_RESTOCK, validateRestock } from '../../lib/restockForm';
+import { feedCopy } from '../../i18n/feed.en';
+
+const { restock: copy } = feedCopy;
+const fieldClass = 'w-full rounded-lg border border-slate-200 bg-white p-3 text-sm font-bold text-slate-800 outline-none focus:ring-2 focus:ring-brand/20';
 
 export default function StandardDeliveryModal({ isOpen, onClose, item, onRestock, tenantId, farmId }) {
-  const [amount, setAmount] = useState(0);
-  const [stagedItem, setStagedItem] = useState(null);
+  const [form, setForm] = useState(EMPTY_RESTOCK);
+  const [errors, setErrors] = useState({});
+  // The parent mounts this dialog fresh for each opening, so state starts clean.
+  const [stagedItem, setStagedItem] = useState(item ?? null);
   const [submitError, setSubmitError] = useState('');
-
-  // Update selected product when the modal opens with a specific item
-  useEffect(() => {
-    setStagedItem(item || null);
-    setAmount(0); // Reset amount on open
-    setSubmitError('');
-  }, [item, isOpen]);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Fetch critical items directly from the new backend endpoint
   const { data: quickSelectOptions = [], isLoading } = useQuery({
@@ -27,8 +29,6 @@ export default function StandardDeliveryModal({ isOpen, onClose, item, onRestock
 
   if (!isOpen) return null;
 
-  // `stagedItem` is synchronized in an effect, so render directly from the
-  // caller's item during the first open render.
   const selectedItem = item ?? stagedItem;
   const selectedStock = selectedItem?.stock ?? {};
 
@@ -36,21 +36,33 @@ export default function StandardDeliveryModal({ isOpen, onClose, item, onRestock
     setStagedItem(option);
   };
 
-  const handleConfirm = async () => {
-    if (!onRestock || !selectedItem || amount <= 0) {
-      return;
-    }
+  const setField = (name, value) => {
+    setForm((current) => ({ ...current, [name]: value }));
+    setErrors((current) => ({ ...current, [name]: undefined }));
+  };
 
+  const handleConfirm = async () => {
+    if (!onRestock || !selectedItem) return;
+    const nextErrors = validateRestock(form);
+    setErrors(nextErrors);
+    if (Object.keys(nextErrors).length) return;
+
+    setIsSubmitting(true);
     try {
-      await onRestock(selectedItem, amount);
+      await onRestock(selectedItem, form);
       onClose();
     } catch (error) {
-      setSubmitError(getApiErrorMessage(error, 'Could not record this delivery. Check the quantity and try again.'));
+      setSubmitError(getFeedErrorMessage(error, 'Could not record this delivery. Check the quantity and try again.'));
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
-  const increaseAmount = (val) => setAmount((prev) => prev + val);
-  const decreaseAmount = () => setAmount((prev) => Math.max(0, prev - 1));
+  // The stepper and bag buttons still work on whole amounts; the field takes any decimal.
+  const quantity = Number(form.quantity) || 0;
+  const increaseAmount = (val) => setField('quantity', String(Math.round((quantity + val) * 1000) / 1000));
+  const decreaseAmount = () => setField('quantity', String(Math.max(0, Math.round((quantity - 1) * 1000) / 1000)));
+  const unitLabel = selectedStock.unit ?? selectedItem?.unit ?? 'units';
 
   return createPortal(
     <div className="fixed inset-0 z-[100] flex items-start justify-center overflow-y-auto overscroll-contain bg-slate-900/50 p-3 backdrop-blur-sm touch-pan-y sm:items-center sm:p-4">
@@ -83,7 +95,7 @@ export default function StandardDeliveryModal({ isOpen, onClose, item, onRestock
                     <span className="font-black text-brand text-lg">{selectedItem?.name ?? 'Selected resource'}</span>
                   </div>
                   <div className="text-[11px] font-bold text-slate-500 uppercase tracking-wider ml-6">
-                    SKU: {selectedItem?.sku ?? 'Not assigned'}
+                    SKU: {selectedItem?.sku || 'Not assigned'}
                   </div>
                 </div>
                 <div className="text-right">
@@ -146,11 +158,20 @@ export default function StandardDeliveryModal({ isOpen, onClose, item, onRestock
                 <Minus size={20} />
               </button>
               
-              <div className="flex items-baseline gap-2 min-w-[100px] justify-center">
-                <span className="text-3xl font-black text-slate-800 tabular-nums tracking-tighter">
-                  {amount}
-                </span>
-                <span className="text-xl font-bold text-slate-400">{selectedStock.unit ?? selectedItem?.unit ?? 'units'}</span>
+              <div className="flex min-w-[100px] items-baseline justify-center gap-2">
+                <input
+                  aria-label={`${copy.quantityLabel} (${unitLabel})`}
+                  type="number"
+                  inputMode="decimal"
+                  min="0"
+                  step="any"
+                  value={form.quantity}
+                  onChange={(event) => setField('quantity', event.target.value)}
+                  placeholder="0"
+                  aria-invalid={errors.quantity ? true : undefined}
+                  className="w-28 bg-transparent text-center text-3xl font-black tabular-nums tracking-tighter text-slate-800 outline-none"
+                />
+                <span className="text-xl font-bold text-slate-400" aria-hidden="true">{unitLabel}</span>
               </div>
 
               <button 
@@ -178,7 +199,50 @@ export default function StandardDeliveryModal({ isOpen, onClose, item, onRestock
                 + 70kg Bag
               </button>
             </div>
-            {submitError && <p className="mt-4 text-xs font-semibold text-danger">{submitError}</p>}
+            {errors.quantity && <p className="mt-4 text-xs font-semibold text-danger">{errors.quantity}</p>}
+          </div>
+
+          {/* SECTION 3: PRICE, SUPPLIER AND LEDGER */}
+          <div className="mt-6 space-y-4">
+            <div className="grid gap-4 sm:grid-cols-2">
+              <label className="block">
+                <span className="mb-1.5 block text-[10px] font-black uppercase tracking-widest text-slate-500">{copy.unitCost}</span>
+                <input
+                  type="number"
+                  inputMode="decimal"
+                  min="0"
+                  step="any"
+                  value={form.unitCost}
+                  onChange={(event) => setField('unitCost', event.target.value)}
+                  aria-invalid={errors.unitCost ? true : undefined}
+                  className={fieldClass}
+                />
+                <span className="mt-1.5 block text-[10px] font-semibold text-slate-400">{copy.unitCostHint}</span>
+                {errors.unitCost && <span className="mt-1 block text-xs font-semibold text-danger">{errors.unitCost}</span>}
+              </label>
+              <label className="block">
+                <span className="mb-1.5 block text-[10px] font-black uppercase tracking-widest text-slate-500">{copy.supplier}</span>
+                <input
+                  value={form.supplierName}
+                  onChange={(event) => setField('supplierName', event.target.value)}
+                  placeholder={copy.supplierPlaceholder}
+                  className={fieldClass}
+                />
+              </label>
+            </div>
+            <label className="flex items-start gap-3 rounded-lg border border-slate-200 p-3 text-sm text-slate-700">
+              <input
+                type="checkbox"
+                checked={form.recordExpense}
+                onChange={(event) => setField('recordExpense', event.target.checked)}
+                className="mt-1 h-4 w-4 shrink-0 accent-brand"
+              />
+              <span>
+                <span className="block font-semibold">{copy.recordExpense}</span>
+                <span className="block text-xs text-slate-500">{copy.recordExpenseWarning}</span>
+              </span>
+            </label>
+            {submitError && <p role="alert" className="text-xs font-semibold text-danger">{submitError}</p>}
           </div>
         </div>
 
@@ -194,7 +258,7 @@ export default function StandardDeliveryModal({ isOpen, onClose, item, onRestock
           <button 
             type="button"
             onClick={handleConfirm}
-            disabled={amount === 0 || !selectedItem}
+            disabled={quantity <= 0 || !selectedItem || isSubmitting}
             className="flex items-center gap-2 px-6 py-3 rounded-xl font-black text-xs uppercase transition-all  bg-brand text-white hover:bg-brand-dark disabled:bg-slate-200 disabled:text-slate-400 disabled:cursor-not-allowed"
           >
             <CheckCircle2 size={16} />

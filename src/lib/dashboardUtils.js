@@ -1,4 +1,5 @@
 import { format, addDays } from 'date-fns';
+import { toLocalIsoDate } from './localDate';
 
 function parseAmount(value) {
   const parsed = Number.parseFloat(value);
@@ -39,12 +40,7 @@ export function extractYieldDate(row) {
     return null;
   }
 
-  const parsed = new Date(raw);
-  if (Number.isNaN(parsed.getTime())) {
-    return null;
-  }
-
-  return parsed.toISOString().slice(0, 10);
+  return toLocalIsoDate(raw);
 }
 
 export function extractYieldCowId(row) {

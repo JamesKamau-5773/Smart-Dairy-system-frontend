@@ -6,9 +6,10 @@ const { password: copy } = authCopy;
 
 const BAR_STYLES = {
   empty: { filled: 0, className: 'bg-ink/10' },
-  weak: { filled: 1, className: 'bg-danger' },
-  fair: { filled: 2, className: 'bg-warning' },
-  strong: { filled: 3, className: 'bg-brand' },
+  // Strength is the strength of the app's blue, with the label in words.
+  weak: { filled: 1, className: 'bg-brand-200' },
+  fair: { filled: 2, className: 'bg-brand-400' },
+  strong: { filled: 3, className: 'bg-brand-dark' },
 };
 
 /**

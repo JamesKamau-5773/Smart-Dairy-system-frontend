@@ -1,41 +1,45 @@
 import { TrendingDown } from 'lucide-react';
+import { formatCostPerLitre } from '../../lib/feedCost';
+
+const TITLE = 'Feed cost per litre of milk';
+const SUBTITLE = 'How much of your milk money goes to buying feed. Lower is better.';
+
+/** Bar height as a share of the most expensive week; unknown weeks draw no bar. */
+const barPercent = (cost, max) => (cost === null || !(max > 0) ? 0 : Math.max(4, Math.round((cost / max) * 100)));
 
 export default function ProfitabilityChart({ trends }) {
-  if (!Array.isArray(trends) || trends.length === 0) {
-    return (
-      <div className="flex flex-col border border-slate-300 bg-white p-6">
-        <h3 className="mb-2 flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-slate-500">
-          <TrendingDown size={16} /> Feed Cost Per Liter of Milk
-        </h3>
-        <p className="text-xs font-medium text-slate-600">
-          No profitability trend data is available yet.
-        </p>
-      </div>
-    );
-  }
+  const points = Array.isArray(trends) ? trends : [];
+  const max = Math.max(0, ...points.map((point) => point.cost ?? 0));
 
   return (
-    <div className="flex flex-col border border-slate-300 bg-white p-6">
-      <h3 className="mb-2 flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-slate-500">
-        <TrendingDown size={16} /> Feed Cost Per Liter of Milk
+    <section className="card-machined flex flex-col p-5 sm:p-6" aria-label={TITLE}>
+      <h3 className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-wider text-ink-muted">
+        <TrendingDown size={16} aria-hidden="true" /> {TITLE}
       </h3>
-      <p className="mb-8 border-b border-slate-300 pb-4 text-xs font-medium text-slate-600">
-        How much of your milk money goes to buying feed. Lower numbers mean you keep more profit.
-      </p>
 
-      <div className="flex-1 flex items-end justify-between gap-2 mt-auto pt-4 min-h-[160px]">
-        {trends.map((data, index) => (
-          <div key={index} className="flex flex-col items-center flex-1 group">
-            <span className={`mb-2 font-mono text-[10px] font-bold tabular-nums tracking-tight transition-colors ${data.isCurrent ? 'text-slate-900' : 'text-slate-600 group-hover:text-slate-900'}`}>
-              KES {data.cost.toFixed(2)}
-            </span>
-            <div className={`w-full max-w-[40px] rounded-t-sm transition-all duration-500 ${data.isCurrent ? 'bg-brand' : 'bg-brand/15 group-hover:bg-brand/30'} ${data.height}`} />
-            <span className={`mt-3 text-[10px] font-bold uppercase tracking-wider ${data.isCurrent ? 'text-slate-900' : 'text-slate-600'}`}>
-              {data.week}
-            </span>
-          </div>
-        ))}
-      </div>
-    </div>
+      {points.length === 0 ? (
+        <p className="mt-2 text-sm text-ink-muted">No weekly cost data yet. It appears once batches are fed and milk is recorded.</p>
+      ) : (
+        <>
+          <p className="mt-1 border-b border-ink/10 pb-4 text-xs text-ink-muted">{SUBTITLE}</p>
+          <ol className="mt-4 flex min-h-[180px] items-end justify-between gap-2">
+            {points.map((point) => (
+              <li key={point.week} className="flex h-full min-w-0 flex-1 flex-col items-center justify-end">
+                <span className={`mb-1.5 font-mono text-[11px] font-semibold tabular-nums ${point.isCurrent ? 'text-ink' : 'text-ink-muted'}`}>
+                  {formatCostPerLitre(point.cost, { suffix: '' })}
+                </span>
+                <div className="flex h-28 w-full max-w-[40px] items-end">
+                  <div
+                    className={`w-full rounded-t-sm ${point.isCurrent ? 'bg-brand' : 'bg-brand-100'}`}
+                    style={{ height: `${barPercent(point.cost, max)}%` }}
+                  />
+                </div>
+                <span className={`mt-2 truncate text-[11px] font-semibold ${point.isCurrent ? 'text-ink' : 'text-ink-muted'}`}>{point.week}</span>
+              </li>
+            ))}
+          </ol>
+        </>
+      )}
+    </section>
   );
 }

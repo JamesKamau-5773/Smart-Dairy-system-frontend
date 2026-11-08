@@ -1,4 +1,5 @@
 import { authCopy } from '../i18n/auth.en';
+import { getApiErrorCode } from './apiErrors';
 
 // Turns auth API failures into farmer-friendly text. Contract endpoints send a
 // machine-readable `code` (AUTH_API_CONTRACT §1.2); older ones only send a
@@ -42,10 +43,8 @@ function getFieldErrorSummary(data) {
   return messages.length ? messages.join(' ') : null;
 }
 
-export function getAuthErrorCode(error) {
-  const code = error?.response?.data?.code;
-  return typeof code === 'string' ? code : null;
-}
+// Auth flows read the same envelope `code` as every other API call.
+export const getAuthErrorCode = getApiErrorCode;
 
 /** Seconds from the `Retry-After` header on a 429, or null. */
 export function getRetryAfterSeconds(error) {

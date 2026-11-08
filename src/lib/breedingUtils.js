@@ -3,6 +3,7 @@ import {
   normalizeCowIdentity,
   resolveCowIdentityFromHerd,
 } from './cowIdentity';
+import { toLocalIsoDate } from './localDate';
 
 /**
  * Takes a raw form data object for a breeding log entry and transforms it
@@ -195,9 +196,7 @@ export function normalizeDateForApi(rawDate = '') {
     return input;
   }
 
-  const parsed = new Date(input);
-  if (Number.isNaN(parsed.getTime())) return '';
-  return parsed.toISOString().slice(0, 10);
+  return toLocalIsoDate(input) ?? '';
 }
 
 export function normalizeSemenCode(rawCode = '') {

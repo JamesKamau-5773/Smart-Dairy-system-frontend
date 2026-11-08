@@ -42,6 +42,7 @@ import {
   Search,
   Pencil,
 } from 'lucide-react';
+import { toLocalIsoDate } from '../../lib/localDate';
 
 const bullStock = [];
 
@@ -784,7 +785,7 @@ export default function BreedingHub() {
             cowId: formatCowIdentity(selectedBreedingLog, selectedBreedingLog.cowId),
           } : selectedHeatObservation ? {
             cowId: selectedHeatObservation.cowId,
-            aiDate: new Date(selectedHeatObservation.observedAt).toISOString().slice(0, 10),
+            aiDate: toLocalIsoDate(selectedHeatObservation.observedAt),
             heatObservationId: selectedHeatObservation.id,
           } : {}}
         />

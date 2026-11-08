@@ -30,6 +30,8 @@ vi.mock('../../../lib/backendApi', async (importOriginal) => {
     productionApi: {
       listYield: api.listYield,
       summary: vi.fn().mockResolvedValue({}),
+      getPeriodSummary: vi.fn().mockResolvedValue({}),
+      getGroupTotals: vi.fn().mockResolvedValue({ groups: [] }),
       listMilkDispositions: resolvesEmpty(),
       createYield: resolvesEmpty(),
       deleteYield: resolvesEmpty(),
@@ -57,8 +59,10 @@ const screens = [
     name: 'milk log',
     Page: YieldLog,
     load: api.listYield,
-    queryKey: ['production-yield-rows', 'tenant_1', 'farm_1'],
+    queryKey: ['production-yield-rows', 'tenant_1', 'farm_1', {}],
     label: 'milk records',
+    // The milk log's figures come from the period totals endpoint, not from the list.
+    hasListStats: false,
     noResults: /No milk log entries match/i,
     firstTimeEmpty: /No milk recorded yet/i,
     firstTimeAction: /Record the first milking/i,
@@ -71,6 +75,7 @@ const screens = [
     load: api.listRecords,
     queryKey: ['medical-records', 'tenant_1', 'farm_1'],
     label: 'medical records',
+    hasListStats: true,
     noResults: /No medical records match/i,
     firstTimeEmpty: /No medical records yet/i,
     firstTimeAction: /Log New Visit/i,
@@ -79,7 +84,7 @@ const screens = [
   },
 ];
 
-describe.each(screens)('$name list states', ({ Page, load, queryKey, label, noResults, firstTimeEmpty, firstTimeAction, cachedRow, cachedText }) => {
+describe.each(screens)('$name list states', ({ Page, load, queryKey, label, hasListStats, noResults, firstTimeEmpty, firstTimeAction, cachedRow, cachedText }) => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
@@ -101,7 +106,7 @@ describe.each(screens)('$name list states', ({ Page, load, queryKey, label, noRe
     expect(screen.getByText(/couldn’t reach the server/i)).toBeTruthy();
     expect(screen.queryByText(noResults)).toBeNull();
     expect(screen.queryByText('0.0 L')).toBeNull();
-    expect(screen.getAllByText(`Not available until ${label} load`).length).toBeGreaterThan(0);
+    if (hasListStats) expect(screen.getAllByText(`Not available until ${label} load`).length).toBeGreaterThan(0);
 
     fireEvent.click(screen.getByRole('button', { name: /try again/i }));
     expect((await screen.findAllByText(cachedText)).length).toBeGreaterThan(0);

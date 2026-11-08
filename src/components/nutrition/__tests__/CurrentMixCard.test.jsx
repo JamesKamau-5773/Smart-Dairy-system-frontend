@@ -15,9 +15,9 @@ const activeMix = {
 
 describe('CurrentMixCard', () => {
   it('distinguishes a saved recipe from an active feed batch', () => {
-    render(React.createElement(CurrentMixCard, { mix: null }));
+    render(React.createElement(CurrentMixCard, { recipeType: 'main_meal', mix: null }));
 
-    expect(screen.getByText('No feed batch is active yet.')).toBeTruthy();
+    expect(screen.getByText('No main feed batch in store')).toBeTruthy();
     expect(screen.getByText(/A saved mix is a recipe only/i)).toBeTruthy();
   });
 

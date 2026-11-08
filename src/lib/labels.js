@@ -41,9 +41,13 @@ LABELS.DAILY_ROUTINE = 'Daily Routine';
 LABELS.HERDSMAN_VIEW = 'Herdsman View';
 LABELS.MY_TASKS = 'My Tasks';
 LABELS.CUSTOMER_BILLING = 'Customer Billing';
+// One "Feeding" area, named the same in the menu and on each page heading.
+LABELS.FEEDING_AREA = 'Feeding';
+LABELS.TODAY_FEEDING = 'Today’s Feeding';
 LABELS.MILK_LAB = 'Milk Feeding Planner';
-LABELS.FEED_FORMULATION = 'Feed Mixing Planner';
-LABELS.FEED_DASHBOARD = 'Feed Planner';
-LABELS.NUTRITION_PLANNER = 'Feed Planning';
+LABELS.FEED_FORMULATION = 'Feed Mixes';
+LABELS.FEED_DASHBOARD = 'Feed Stock & Costs';
+LABELS.FEED_INGREDIENTS = 'Ingredients';
+LABELS.NUTRITION_PLANNER = 'Feeding';
 
 export default LABELS;

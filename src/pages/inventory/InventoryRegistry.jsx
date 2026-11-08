@@ -1,14 +1,42 @@
 import { useMemo, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Search, Plus, Filter, Edit2, Package, Trash2, ChevronDown, MoreVertical } from 'lucide-react';
+import toast from 'react-hot-toast';
+import { Search, Plus, Filter, Edit2, Package, Trash2, ChevronDown, MoreVertical, Archive, ArchiveRestore, MinusCircle, ClipboardCheck } from 'lucide-react';
 import AlertBanner from '../../components/ui/AlertBanner';
 import Confirmation, { useConfirmation } from '../../components/ui/Confirmation';
 import RegisterResourceModal from '../../components/inventory/RegisterResourceModal';
 import StandardDeliveryModal from '../../components/inventory/StandardDeliveryModal';
 import EditResourceModal from '../../components/inventory/EditResourceModal';
+import StockOutModal from '../../components/inventory/StockOutModal';
+import StockCountModal from '../../components/inventory/StockCountModal';
 import { Popover, PopoverContent, PopoverTrigger } from '../../components/ui/popover';
-import { getApiErrorMessage, inventoryApi } from '../../lib/backendApi';
+import DataWarningList from '../../components/inventory/DataWarningList';
+import { inventoryApi } from '../../lib/backendApi';
+import { getApiErrorBody, getApiErrorCode } from '../../lib/apiErrors';
+import { getFeedErrorMessage } from '../../lib/feedErrors';
+import { getDataWarnings, isArchived } from '../../lib/inventoryItemRules';
+import { buildRestockMovement } from '../../lib/restockForm';
+import { buildStockOutMovement, isWriteOff } from '../../lib/stockChangeForm';
+import { isQueuedOffline, QUEUED_OFFLINE_MESSAGE } from '../../lib/offlinePolicy';
+import { canManageInventoryItems } from '../../lib/permissions';
+import { useAuth } from '../../contexts/AuthContext';
 import { useTenant } from '../../hooks/useTenant';
+import { useInventoryItemActions } from '../../hooks/useInventoryItemActions';
+import { feedCopy } from '../../i18n/feed.en';
+import { tone } from '../../components/ui/tones';
+
+const { item: itemCopy, restock: restockCopy, stockOut: stockOutCopy, stockCount: stockCountCopy } = feedCopy;
+
+const STOCK_STATUS = {
+  LOW: { label: 'Low – reorder', tone: 'attention' },
+  OK: { label: 'In stock', tone: 'neutral' },
+};
+
+function StockStatusChip({ status }) {
+  const { label, tone: toneName } = STOCK_STATUS[status];
+  return <span className={`inline-flex shrink-0 rounded-badge px-2 py-0.5 text-xs font-semibold ${tone(toneName).chip}`}>{label}</span>;
+}
 
 export default function InventoryRegistry() {
   const queryClient = useQueryClient();
@@ -18,98 +46,129 @@ export default function InventoryRegistry() {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [selectedItem, setSelectedItem] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
-  const [categoryFilter, setCategoryFilter] = useState('All');
+  // The category filter lives in the address, so Feeding → Ingredients can open it
+  // pre-filtered and the back button, reloads and shared links keep it.
+  const [searchParams, setSearchParams] = useSearchParams();
+  const categoryFilter = searchParams.get('category') || 'All';
+  const setCategoryFilter = (category) => setSearchParams((current) => {
+    const next = new URLSearchParams(current);
+    if (category === 'All') next.delete('category');
+    else next.set('category', category);
+    return next;
+  }, { replace: true });
   const [showError, setShowError] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
+  const [showArchived, setShowArchived] = useState(false);
+  // { kind: 'out' | 'count', item } while a stock change dialog is open.
+  const [stockDialog, setStockDialog] = useState(null);
   const confirmation = useConfirmation();
+  const { currentUser } = useAuth();
+  const canManageItems = canManageInventoryItems(currentUser);
+  const itemActions = useInventoryItemActions();
 
+  // The archived flag is part of the key, so both lists are cached and the
+  // shared ['inventory-items', tenant, farm] prefix still invalidates them together.
   const { data: backendInventory } = useQuery({
-    queryKey: ['inventory-items', tenantId, farmId],
-    queryFn: () => inventoryApi.listItems(),
+    queryKey: ['inventory-items', tenantId, farmId, { includeArchived: showArchived }],
+    queryFn: () => inventoryApi.listItems({ includeArchived: showArchived }),
     enabled: !!tenantId && !!farmId,
   });
 
+  const showFailure = (error, fallback) => {
+    setErrorMessage(getFeedErrorMessage(error, fallback));
+    setShowError(true);
+  };
+
+  // Every change goes through the server and then a refetch; the list is small,
+  // and it keeps archived/warning state exactly as the backend computed it.
+  const refreshInventory = () => Promise.all([
+    queryClient.invalidateQueries({ queryKey: ['inventory-items', tenantId, farmId] }),
+    queryClient.invalidateQueries({ queryKey: ['inventory-stock', tenantId, farmId] }),
+    queryClient.invalidateQueries({ queryKey: ['inventory-movements', tenantId, farmId] }),
+  ]);
+
   const createItemMutation = useMutation({
     mutationFn: (payload) => inventoryApi.createItem(payload),
-    onSuccess: (item) => {
-      // Optimistically update the cache for immediate feedback
-      queryClient.setQueryData(['inventory-items', tenantId, farmId], (oldData) => {
-        const nextItem = { ...item, stock: item.stock || { value: 0, unit: 'units' } };
-        return oldData ? [nextItem, ...oldData] : [nextItem];
-      });
-      // Invalidate to ensure eventual consistency with the backend
-      queryClient.invalidateQueries({ queryKey: ['inventory-items', tenantId, farmId] });
-      queryClient.invalidateQueries({ queryKey: ['inventory-stock', tenantId, farmId] });
+    onSuccess: async (item) => {
+      await refreshInventory();
+      toast.success(`${item?.name || 'Item'} added.`);
     },
-    onError: (error) => {
-      setErrorMessage(getApiErrorMessage(error, 'Failed to add inventory item. Please try again.'));
-      setShowError(true);
-    },
+    onError: (error) => showFailure(error, 'Failed to add inventory item. Please try again.'),
   });
 
   const updateItemMutation = useMutation({
     mutationFn: ({ itemId, payload }) => inventoryApi.updateItem(itemId, payload),
-    onSuccess: (item) => {
-      // Optimistically update the cache for immediate feedback
-      queryClient.setQueryData(['inventory-items', tenantId, farmId], (oldData) => {
-        const nextItem = { ...item, stock: item.stock || { value: 0, unit: 'units' } };
-        return oldData?.map((entry) =>
-          entry.id === nextItem.id ? { ...entry, ...nextItem } : entry
-        ) || [];
-      });
-      // Invalidate to ensure eventual consistency with the backend
-      queryClient.invalidateQueries({ queryKey: ['inventory-items', tenantId, farmId] });
-      queryClient.invalidateQueries({ queryKey: ['inventory-stock', tenantId, farmId] });
+    onSuccess: async (item) => {
+      await refreshInventory();
+      toast.success(`${item?.name || 'Item'} saved.`);
     },
-    onError: (error) => {
-      setErrorMessage(getApiErrorMessage(error, 'Failed to save inventory item. Please try again.'));
-      setShowError(true);
+    onError: (error) => showFailure(error, 'Failed to save inventory item. Please try again.'),
+  });
+
+  // Errors are shown inside the restock dialog, which stays open so nothing is retyped.
+  const restockMutation = useMutation({
+    mutationFn: ({ item, form }) => inventoryApi.createMovement(buildRestockMovement(item, form)),
+    onSuccess: async (result) => {
+      await refreshInventory();
+      if (isQueuedOffline(result)) toast(QUEUED_OFFLINE_MESSAGE);
+      else toast.success(result?.ledgerEntryId ? restockCopy.recordedWithExpense : restockCopy.recorded);
     },
   });
 
-  const restockMutation = useMutation({
-    mutationFn: ({ item, amount }) => inventoryApi.createMovement({
-      item_id: item.id || item.sku,
-      quantity: amount,
-      transaction_type: 'IN',
-      movement_type: 'restock',
-      reference_note: `Restock for ${item.sku}`,
-    }),
-    onSuccess: (data, variables) => {
-      // Optimistically update the cache for immediate feedback
-      queryClient.setQueryData(['inventory-items', tenantId, farmId], (oldData) => {
-        return oldData?.map((entry) => {
-          if (entry.id === variables.item.id) {
-            return {
-              ...entry,
-              stock: {
-                ...entry.stock,
-                value: Number(entry.stock?.value || 0) + Number(variables.amount || 0),
-              },
-            };
-          }
-          return entry;
-        }) || [];
-      });
-      queryClient.invalidateQueries({ queryKey: ['inventory-items', tenantId, farmId] });
-      queryClient.invalidateQueries({ queryKey: ['inventory-movements', tenantId, farmId] });
-      queryClient.invalidateQueries({ queryKey: ['inventory-stock', tenantId, farmId] });
+  // Use / write-off: queued offline like a restock. Dialog shows errors.
+  const stockOutMutation = useMutation({
+    mutationFn: ({ item, form }) => inventoryApi.createMovement(buildStockOutMovement(item, form)),
+    onSuccess: async (result, { item, form }) => {
+      await refreshInventory();
+      const unit = item.stock?.unit ?? item.unit ?? '';
+      if (isQueuedOffline(result)) toast(QUEUED_OFFLINE_MESSAGE);
+      else if (isWriteOff(form.reason)) toast.success(stockOutCopy.recordedWriteOff(Number(form.quantity), unit, item.name));
+      else toast.success(stockOutCopy.recorded(Number(form.quantity), unit, item.name));
     },
   });
+
+  // Stock count: online only (offlinePolicy); the server records the difference.
+  const stockCountMutation = useMutation({
+    mutationFn: ({ item, counted }) => inventoryApi.countStock(item.id, counted),
+    onSuccess: async (result, { item }) => {
+      await refreshInventory();
+      const unit = item.stock?.unit ?? item.unit ?? '';
+      toast.success(result?.status === 'matched'
+        ? stockCountCopy.matched(item.name)
+        : stockCountCopy.reconciled(item.name, result?.new_balance ?? '', unit));
+    },
+  });
+
+  const archiveItem = async (item) => {
+    const confirmed = await confirmation.confirm({
+      title: itemCopy.archiveTitle,
+      message: itemCopy.archiveMessage(item.name),
+      confirmText: itemCopy.archive,
+      type: 'warning',
+    });
+    if (confirmed) itemActions.archive.mutate({ item });
+  };
 
   const deleteItemMutation = useMutation({
-    mutationFn: (itemId) => inventoryApi.deleteItem(itemId),
-    onSuccess: (data, itemId) => {
-      // Optimistically update the cache for immediate feedback
-      queryClient.setQueryData(['inventory-items', tenantId, farmId], (oldData) =>
-        oldData?.filter((item) => item.id !== itemId && item.sku !== itemId)
-      );
-      // Invalidate to ensure eventual consistency with the backend
-      queryClient.invalidateQueries({ queryKey: ['inventory-items', tenantId, farmId] });
+    mutationFn: ({ item }) => inventoryApi.deleteItem(item.id || item.sku),
+    onSuccess: async (data, { item }) => {
+      await refreshInventory();
+      toast.success(`${item.name} deleted.`);
     },
-    onError: (error) => {
-      setErrorMessage(getApiErrorMessage(error, 'Failed to delete inventory item.'));
-      setShowError(true);
+    onError: async (error, { item }) => {
+      // Items with history can't be deleted; archiving keeps the history and hides the item.
+      // The backend may leave out `can_archive`; only an explicit false rules archiving out.
+      if (getApiErrorCode(error) === 'ITEM_IN_USE' && getApiErrorBody(error).can_archive !== false && canManageItems) {
+        const archiveInstead = await confirmation.confirm({
+          title: itemCopy.inUseTitle,
+          message: feedCopy.errors.codes.ITEM_IN_USE,
+          confirmText: itemCopy.archiveInstead,
+          type: 'warning',
+        });
+        if (archiveInstead) itemActions.archive.mutate({ item });
+        return;
+      }
+      showFailure(error, 'Failed to delete inventory item.');
     },
   });
 
@@ -122,34 +181,19 @@ export default function InventoryRegistry() {
       type: 'danger',
     });
     if (confirmed) {
-      deleteItemMutation.mutate(identifier);
+      deleteItemMutation.mutate({ item });
     }
   };
 
-  const areNutritionAndCostAllZero = (item) => {
-    const protein = Number(item.proteinGramsPerKg ?? item.protein_grams_per_kg ?? 0);
-    const energy = Number(item.energyMjPerKg ?? item.energy_mj_per_kg ?? 0);
-    const fiber = Number(item.fiberGramsPerKg ?? item.fiber_grams_per_kg ?? 0);
-    const cost = Number(item.costPerKg ?? item.cost_per_kg ?? 0);
-    return protein === 0 && energy === 0 && fiber === 0 && cost === 0;
-  };
-
-  // Add new resource to the inventory list
+  // The modal has already validated the form (inventoryItemRules).
   const handleRegisterResource = (newResourceData) => {
-    const isFeedCategory = String(newResourceData.category || '').toLowerCase() === 'bulk feed';
-    if (isFeedCategory && areNutritionAndCostAllZero(newResourceData)) {
-      setErrorMessage('Enter a value for at least one of these fields before saving: protein, energy, fiber, or cost per kilogram.');
-      setShowError(true);
-      return;
-    }
-
     createItemMutation.mutate({
       name: newResourceData.name,
       sku: newResourceData.sku,
       category: newResourceData.category,
       unit: newResourceData.unit,
-      currentStock: parseInt(newResourceData.currentStock, 10) || 0,
-      reorderLevel: parseInt(newResourceData.reorderLevel, 10) || 0,
+      currentStock: Number.parseFloat(newResourceData.currentStock) || 0,
+      reorderLevel: Number.parseFloat(newResourceData.reorderLevel) || 0,
       protein_grams_per_kg: Number(newResourceData.proteinGramsPerKg ?? 0),
       energy_mj_per_kg: Number(newResourceData.energyMjPerKg ?? 0),
       fiber_grams_per_kg: Number(newResourceData.fiberGramsPerKg ?? 0),
@@ -160,13 +204,15 @@ export default function InventoryRegistry() {
   const categories = useMemo(() => {
     const allCategories = backendInventory?.map(item => item.category) || [];
     // Return a unique list of categories, with "All" at the beginning
-    return ['All', ...new Set(allCategories)];
-  }, [backendInventory]);
+    // Keep the filter from the address selectable even before an item of that category exists.
+    return ['All', ...new Set([...allCategories, ...(categoryFilter === 'All' ? [] : [categoryFilter])])];
+  }, [backendInventory, categoryFilter]);
 
   // Dynamically determine item status based on stock and reorder levels
+  // The backend's low-stock flag when it sends one; until then, its stock against its reorder level.
   const getItemStatus = (item) => {
-    if ((item.stock?.value ?? 0) <= (item.reorderLevel ?? 0)) return 'CRITICAL';
-    return 'HEALTHY';
+    const isLow = item.is_low_stock ?? ((item.stock?.value ?? 0) <= (item.reorderLevel ?? 0));
+    return isLow ? 'LOW' : 'OK';
   };
 
   const handleRestock = (item) => {
@@ -179,15 +225,8 @@ export default function InventoryRegistry() {
     setIsEditModalOpen(true);
   };
 
-  // Edit function to save updated data back to state
+  // The modal has already validated the form; stock is never part of an update.
   const handleSaveEdit = (updatedItem) => {
-    const isFeedCategory = String(updatedItem.category || '').toLowerCase() === 'bulk feed';
-    if (isFeedCategory && areNutritionAndCostAllZero(updatedItem)) {
-      setErrorMessage('Enter a value for at least one of these fields before saving: protein, energy, fiber, or cost per kilogram.');
-      setShowError(true);
-      return;
-    }
-
     updateItemMutation.mutate({
       itemId: updatedItem.id || updatedItem.sku,
       payload: updatedItem,
@@ -195,9 +234,49 @@ export default function InventoryRegistry() {
   };
 
   // Restock function to update stock quantity in state
-  const handleConfirmRestock = (itemToRestock, amount) => {
-    return restockMutation.mutateAsync({ item: itemToRestock, amount });
+  const handleConfirmRestock = (itemToRestock, form) => {
+    return restockMutation.mutateAsync({ item: itemToRestock, form });
   };
+
+  // One action list for the desktop menu and the phone buttons.
+  const getRowActions = (item) => {
+    if (isArchived(item)) {
+      return canManageItems ? [{ key: 'restore', label: itemCopy.restore, Icon: ArchiveRestore, onClick: () => itemActions.restore.mutate({ item }) }] : [];
+    }
+    return [
+      { key: 'restock', label: 'Restock', Icon: Plus, onClick: () => handleRestock(item) },
+      { key: 'stock-out', label: stockOutCopy.action, Icon: MinusCircle, onClick: () => setStockDialog({ kind: 'out', item }) },
+      ...(canManageItems ? [{ key: 'stock-count', label: stockCountCopy.action, Icon: ClipboardCheck, onClick: () => setStockDialog({ kind: 'count', item }) }] : []),
+      { key: 'edit', label: 'Edit', Icon: Edit2, onClick: () => handleEdit(item) },
+      ...(canManageItems ? [{ key: 'archive', label: itemCopy.archive, Icon: Archive, onClick: () => archiveItem(item) }] : []),
+      { key: 'delete', label: 'Delete', Icon: Trash2, onClick: () => handleDelete(item), danger: true },
+    ];
+  };
+
+  const pendingFixFor = (item) => (
+    itemActions.applyDataFix.isPending && itemActions.applyDataFix.variables?.item?.id === item.id
+      ? itemActions.applyDataFix.variables.code
+      : null
+  );
+
+  const renderItemDetails = (item) => (
+    <>
+      {isArchived(item) && (
+        <span className="mt-1 inline-flex rounded border border-ink/15 bg-ink/5 px-2 py-0.5 text-[10px] font-bold text-ink-muted">{itemCopy.archived}</span>
+      )}
+      {getDataWarnings(item).length > 0 && (
+        <div className="mt-2">
+          <DataWarningList
+            warnings={getDataWarnings(item)}
+            onApplyFix={canManageItems ? (code) => itemActions.applyDataFix.mutate({ item, code }) : undefined}
+            pendingCode={pendingFixFor(item)}
+          />
+        </div>
+      )}
+    </>
+  );
+
+  const itemsWithWarnings = (backendInventory ?? []).filter((item) => !isArchived(item) && getDataWarnings(item).length > 0).length;
 
   // Filter data based on search term
   const filteredInventoryData = useMemo(() => {
@@ -206,7 +285,7 @@ export default function InventoryRegistry() {
     return (backendInventory || []).filter(item => {
       const matchesSearch = term ?
         item.name.toLowerCase().includes(term) ||
-        item.sku.toLowerCase().includes(term) :
+        String(item.sku ?? '').toLowerCase().includes(term) :
         true;
 
       const matchesCategory = categoryFilter === 'All' ? true : item.category === categoryFilter;
@@ -246,6 +325,12 @@ export default function InventoryRegistry() {
         </button>
       </div>
 
+      {itemsWithWarnings > 0 && (
+        <div className="mb-6">
+          <AlertBanner type="info" title={feedCopy.dataWarnings.summaryTitle(itemsWithWarnings)} message={feedCopy.dataWarnings.summaryMessage} />
+        </div>
+      )}
+
       {/* SEARCH AND FILTER */}
       <div className="mb-6 flex min-w-0 flex-col gap-3 sm:flex-row sm:gap-4">
         <div className="relative min-w-0 flex-1">
@@ -268,12 +353,16 @@ export default function InventoryRegistry() {
                     <option key={cat} value={cat}>{cat === 'All' ? 'All Categories' : cat}</option>
                 ))}
             </select>
-            <ChevronDown size={16} className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+            <ChevronDown size={16} className="absolute right-4 top-1/2 -translate-y-1/2 text-ink-muted pointer-events-none" />
         </div>
+        <label className="flex min-h-11 items-center gap-2 text-xs font-bold text-ink">
+          <input type="checkbox" checked={showArchived} onChange={(event) => setShowArchived(event.target.checked)} className="h-4 w-4 accent-brand" />
+          {itemCopy.showArchived}
+        </label>
       </div>
 
       {/* STOCK TABLE */}
-      <div className="min-w-0 overflow-hidden rounded-xl border border-slate-100 bg-white">
+      <div className="min-w-0 overflow-hidden rounded-xl border border-ink/10 bg-white">
         {filteredInventoryData.length === 0 ? (
           <div className="flex flex-col items-center gap-3 p-8 text-center text-sm text-ink-muted">
             {(backendInventory || []).length === 0 ? (
@@ -300,39 +389,32 @@ export default function InventoryRegistry() {
               <th className="px-6 py-4 text-right">Actions</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-slate-100">
+          <tbody className="divide-y divide-ink/10">
             {filteredInventoryData.map((item) => (
-              <tr key={item.sku} className="hover:bg-slate-50 transition-colors">
+              <tr key={item.id ?? item.sku} className={`transition-colors hover:bg-brand-50 ${isArchived(item) ? 'opacity-70' : ''}`}>
                 <td className="px-6 py-4">
                   <div className="font-black text-sm text-ink">{item.name}</div>
-                  <div className="text-[11px] font-bold text-slate-400 font-mono">{item.sku}</div>
+                  {item.sku && <div className="text-[11px] font-bold text-ink-muted font-mono">{item.sku}</div>}
+                  {renderItemDetails(item)}
                 </td>
-                <td className="px-6 py-4 text-xs font-bold text-slate-600">{item.category}</td>
+                <td className="px-6 py-4 text-xs font-semibold text-ink-muted">{item.category}</td>
                 <td className="px-6 py-4 text-xs font-black text-ink font-mono">
-                  {item.stock?.value ?? 0} <span className="text-slate-400">{item.stock?.unit || 'units'}</span>
+                  {item.stock?.value ?? 0} <span className="text-ink-muted">{item.stock?.unit || 'units'}</span>
                 </td>
                 <td className="px-6 py-4">
-                  {(() => {
-                    const status = getItemStatus(item);
-                    const statusClass = 'border-brand/20 bg-brand-50 text-brand-dark';
-                    return (
-                      <span className={`text-[9px] font-black px-2 py-1 rounded border ${statusClass}`}>
-                        {status}
-                      </span>
-                    );
-                  })()}
+                  <StockStatusChip status={getItemStatus(item)} />
                 </td>
                 <td className="px-6 py-4 text-right">
                   <Popover>
                     <PopoverTrigger asChild>
-                      <button type="button" className="inline-flex h-8 w-8 items-center justify-center rounded-button border border-slate-300 text-slate-600 hover:border-brand-400 hover:text-brand-700" aria-label={`Actions for ${item.name}`}>
+                      <button type="button" className="inline-flex h-8 w-8 items-center justify-center rounded-button border border-ink/15 text-ink-muted hover:border-brand-400 hover:text-brand-700" aria-label={`Actions for ${item.name}`}>
                         <MoreVertical size={16} />
                       </button>
                     </PopoverTrigger>
-                    <PopoverContent align="end" className="w-44 p-1.5">
-                      <button type="button" onClick={() => handleRestock(item)} className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm text-ink-900 hover:bg-brand-50"><Plus size={14} /> Restock</button>
-                      <button type="button" onClick={() => handleEdit(item)} className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm text-ink-900 hover:bg-brand-50"><Edit2 size={14} /> Edit</button>
-                      <button type="button" onClick={() => handleDelete(item)} className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm text-danger hover:bg-danger/10"><Trash2 size={14} /> Delete</button>
+                    <PopoverContent align="end" className="w-52 p-1.5">
+                      {getRowActions(item).map(({ key, label, Icon, onClick, danger }) => (
+                        <button key={key} type="button" onClick={onClick} className={`flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm ${danger ? 'text-danger hover:bg-ink-100' : 'text-ink-900 hover:bg-brand-50'}`}><Icon size={14} /> {label}</button>
+                      ))}
                     </PopoverContent>
                   </Popover>
                 </td>
@@ -344,19 +426,19 @@ export default function InventoryRegistry() {
           {filteredInventoryData.map((item) => {
             const status = getItemStatus(item);
             return (
-              <article key={item.sku} className="min-w-0 space-y-3 p-4">
+              <article key={item.id ?? item.sku} className={`min-w-0 space-y-3 p-4 ${isArchived(item) ? 'opacity-70' : ''}`}>
                 <div className="flex min-w-0 items-start justify-between gap-3">
-                  <div className="min-w-0"><h3 className="break-words font-bold text-ink">{item.name}</h3><p className="mt-1 break-all font-mono text-xs text-ink-muted">{item.sku}</p></div>
-                  <span className="shrink-0 rounded border border-brand/20 bg-brand-50 px-2 py-1 text-[10px] font-bold text-brand-dark">{status}</span>
+                  <div className="min-w-0"><h3 className="break-words font-bold text-ink">{item.name}</h3>{item.sku && <p className="mt-1 break-all font-mono text-xs text-ink-muted">{item.sku}</p>}{renderItemDetails(item)}</div>
+                  <StockStatusChip status={status} />
                 </div>
                 <dl className="grid grid-cols-2 gap-3 border-t border-ink/10 pt-3 text-xs">
                   <div className="min-w-0"><dt className="text-ink-muted">Category</dt><dd className="mt-1 break-words font-semibold text-ink">{item.category}</dd></div>
                   <div className="min-w-0"><dt className="text-ink-muted">Current stock</dt><dd className="mt-1 break-words font-mono font-bold tabular-nums text-brand">{item.stock?.value ?? 0} {item.stock?.unit || 'units'}</dd></div>
                 </dl>
                 <div className="flex flex-wrap justify-end gap-2 border-t border-ink/10 pt-3">
-                  <button type="button" onClick={() => handleRestock(item)} className="rounded-button border border-brand/20 px-3 py-2 text-xs font-semibold text-brand">Restock</button>
-                  <button type="button" onClick={() => handleEdit(item)} className="rounded-button border border-brand/20 px-3 py-2 text-xs font-semibold text-brand">Edit</button>
-                  <button type="button" onClick={() => handleDelete(item)} className="rounded-button border border-brand/20 px-3 py-2 text-xs font-semibold text-brand-dark">Delete</button>
+                  {getRowActions(item).map(({ key, label, onClick, danger }) => (
+                    <button key={key} type="button" onClick={onClick} className={`min-h-10 rounded-button border border-brand/20 px-3 py-2 text-xs font-semibold ${danger ? 'text-danger' : 'text-brand'}`}>{label}</button>
+                  ))}
                 </div>
               </article>
             );
@@ -375,14 +457,33 @@ export default function InventoryRegistry() {
         />
       )}
 
+      {isRestockModalOpen && (
       <StandardDeliveryModal
-        isOpen={isRestockModalOpen}
+        key={selectedItem?.id ?? 'general'}
+        isOpen
         onClose={() => setIsRestockModalOpen(false)}
         item={selectedItem}
         onRestock={handleConfirmRestock}
         tenantId={tenantId}
         farmId={farmId}
       />
+      )}
+
+      {stockDialog?.kind === 'out' && (
+        <StockOutModal
+          item={stockDialog.item}
+          onClose={() => setStockDialog(null)}
+          onSubmit={(item, form) => stockOutMutation.mutateAsync({ item, form })}
+        />
+      )}
+
+      {stockDialog?.kind === 'count' && (
+        <StockCountModal
+          item={stockDialog.item}
+          onClose={() => setStockDialog(null)}
+          onSubmit={(item, counted) => stockCountMutation.mutateAsync({ item, counted })}
+        />
+      )}
 
       {isEditModalOpen && (
         <EditResourceModal

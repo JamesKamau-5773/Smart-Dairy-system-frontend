@@ -3,6 +3,7 @@ import toast from 'react-hot-toast';
 import { breedingApi, getApiErrorMessage } from '../../../lib/backendApi';
 import { resolveCowIdentity } from '../../../lib/breedingUtils';
 import { formatCowIdentity } from '../../../lib/cowIdentity';
+import { nowLocalDateTimeInput } from '../../../lib/localDate';
 
 const HEAT_SIGNS = [
   ['standing_heat', 'Standing to be mounted'],
@@ -13,14 +14,9 @@ const HEAT_SIGNS = [
   ['reduced_feed', 'Reduced feed intake'],
 ];
 
-function currentLocalDateTime() {
-  const now = new Date();
-  return new Date(now.getTime() - now.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
-}
-
 export default function LogHeatObservationForm({ herdOptions = [], onSuccess, onError }) {
   const [cowId, setCowId] = useState('');
-  const [observedAt, setObservedAt] = useState(currentLocalDateTime);
+  const [observedAt, setObservedAt] = useState(() => nowLocalDateTimeInput());
   const [intensity, setIntensity] = useState('MEDIUM');
   const [signs, setSigns] = useState([]);
   const [notes, setNotes] = useState('');

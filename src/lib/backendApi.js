@@ -9,6 +9,7 @@ import { readActiveSession } from './sessionStore';
 import { toLoginPayload } from './identifier';
 
 import { normalizeNutritionRequestPayload } from './feedUtils';
+import { todayLocalIso } from './localDate';
 const HEALTH_BASE_URL = BACKEND_BASE_URL;
 
 const authClient = axios.create({
@@ -253,6 +254,8 @@ export function normalizeStaffRecord(record = {}) {
     returnVerifiedAt: record.returnVerifiedAt ?? record.return_verified_at ?? null,
     returnVerificationDecision: record.returnVerificationDecision ?? record.return_verification_decision ?? null,
     returnVerificationNote: record.returnVerificationNote ?? record.return_verification_note ?? '',
+    // null when the backend didn't say (the switch is then hidden rather than guessed).
+    statutoryDeductionsEnabled: booleanOrNull(record.statutoryDeductionsEnabled ?? record.statutory_deductions_enabled),
   };
 }
 
@@ -277,7 +280,34 @@ export function normalizePayrollRow(row = {}) {
     deductions: Number(row.deductions ?? leaveDeduction + advanceDeduction),
     net: Number(row.net ?? row.netPay ?? row.net_pay ?? Math.max(0, grossPay - advanceDeduction)),
     status: row.status ?? 'PENDING',
+    // Statutory deductions (KRA PAYE, NSSF, SHIF, Housing Levy), as the backend calculated them.
+    daysPaid: numberOrNull(row.daysPaid ?? row.days_paid),
+    taxablePay: numberOrNull(row.taxablePay ?? row.taxable_pay),
+    paye: numberOrNull(row.paye),
+    nssfEmployee: numberOrNull(row.nssfEmployee ?? row.nssf_employee),
+    nssfEmployer: numberOrNull(row.nssfEmployer ?? row.nssf_employer),
+    shif: numberOrNull(row.shif),
+    housingLevyEmployee: numberOrNull(row.housingLevyEmployee ?? row.housing_levy_employee),
+    housingLevyEmployer: numberOrNull(row.housingLevyEmployer ?? row.housing_levy_employer),
+    totalStatutory: numberOrNull(row.totalStatutoryDeductions ?? row.total_statutory_deductions),
+    statutoryRatesVersion: row.statutoryRatesVersion ?? row.statutory_rates_version ?? null,
   };
+}
+
+// The backend gives file URLs from its root (`/api/...`); the client's base already ends in /api.
+function toApiPath(url) {
+  const path = String(url || '');
+  return path.startsWith('/api/') ? path.slice(4) : path;
+}
+
+function booleanOrNull(value) {
+  return typeof value === 'boolean' ? value : null;
+}
+
+function numberOrNull(value) {
+  if (value === null || value === undefined || value === '') return null;
+  const number = Number(value);
+  return Number.isFinite(number) ? number : null;
 }
 
 export function normalizePayrollRun(payload = {}) {
@@ -327,6 +357,13 @@ export function normalizePayrollRun(payload = {}) {
     status: String(run.status ?? 'DRAFT').toUpperCase(),
     employees,
     totalDisbursed,
+    statutoryTotals: {
+      paye: numberOrNull(run.totalPaye ?? run.total_paye),
+      nssf: numberOrNull(run.totalNssfEmployee ?? run.total_nssf_employee),
+      shif: numberOrNull(run.totalShif ?? run.total_shif),
+      housingLevy: numberOrNull(run.totalHousingLevyEmployee ?? run.total_housing_levy_employee),
+      employerContributions: numberOrNull(run.totalEmployerContributions ?? run.total_employer_contributions),
+    },
     summary,
     lineItems,
     details: lineItems,
@@ -354,6 +391,9 @@ export function normalizeInventoryItem(item = {}) {
     },
     reorderLevel,
     minimum_threshold: item.minimum_threshold ?? reorderLevel,
+    // Archived items keep their history but are hidden from lists and mixers.
+    is_active: item.is_active ?? item.isActive ?? true,
+    data_warnings: Array.isArray(item.data_warnings) ? item.data_warnings : [],
   };
 }
 
@@ -456,7 +496,7 @@ export function normalizeMedicalRecord(record = {}) {
   return {
     ...source,
     id: source.id ?? source.record_id ?? source.visit_id ?? null,
-    date: source.date ?? source.visit_date ?? source.createdAt ?? source.created_at ?? new Date().toISOString().split('T')[0],
+    date: source.date ?? source.visit_date ?? source.createdAt ?? source.created_at ?? todayLocalIso(),
     cow: String(normalizedCow).trim(),
     reason: String(normalizedReason ?? '').trim(),
     diagnosis: source.diagnosis ?? source.diagnosis_text ?? '',
@@ -622,20 +662,29 @@ const buildHerdPayload = (payload = {}) => {
   return request;
 };
 
-const buildInventoryItemPayload = (payload = {}) => {
+// `includeStock` is for creating an item with its opening stock. Updates leave
+// stock out: the backend only changes stock through movements (Restock, Use,
+// Stock Count) and rejects a PATCH whose stock differs from what it has stored,
+// which a form opened before someone else restocked would otherwise send.
+const buildInventoryItemPayload = (payload = {}, { includeStock = true } = {}) => {
   const unit = payload.unit ?? payload.stock?.unit ?? payload.stockUnit ?? '';
-  const currentStock = Number(payload.currentStock ?? payload.current_qty ?? payload.stock?.value ?? payload.stock?.quantity ?? payload.stock?.qty ?? payload.stock ?? payload.quantity ?? 0);
   const reorderLevel = Number(payload.reorderLevel ?? payload.minimum_threshold ?? payload.reorder_level ?? payload.threshold ?? 0);
+  const sku = String(payload.sku ?? '').trim();
   const request = {
     name: payload.name ?? '',
     category: payload.category ?? '',
     unit,
-    sku: payload.sku ?? '',
-    currentStock,
-    current_qty: payload.current_qty ?? currentStock,
     reorderLevel,
     minimum_threshold: payload.minimum_threshold ?? reorderLevel,
   };
+  // SKU is optional; a blank one is left out rather than stored as "".
+  if (sku) request.sku = sku;
+
+  if (includeStock) {
+    const currentStock = Number(payload.currentStock ?? payload.current_qty ?? payload.stock?.value ?? payload.stock?.quantity ?? payload.stock?.qty ?? payload.stock ?? payload.quantity ?? 0);
+    request.currentStock = currentStock;
+    request.current_qty = payload.current_qty ?? currentStock;
+  }
 
   const nutritionFieldNames = {
     energy_mj_per_kg: 'energyMjPerKg',
@@ -677,7 +726,7 @@ export const buildProductionYieldPayload = (payload = {}) => {
     ?? payload.milkingDate
     ?? payload.date
     ?? payload.dateOfMilking
-    ?? new Date().toISOString().slice(0, 10);
+    ?? todayLocalIso();
 
   return {
     cow_id: cowId,
@@ -844,13 +893,34 @@ export const authApi = {
   },
 };
 
+// Period totals (docs/contracts/period-totals.md). Transport only: every figure is
+// computed by the backend and returned as-is; adapters in lib/periodTotals.js map it.
+export const ledgerApi = {
+  getSummary({ period, anchor, ...filters }) {
+    return apiClient.get('/ledger/summary', { params: { period, anchor, ...filters } }).then((response) => toObject(response.data));
+  },
+  getGroupTotals(filters = {}) {
+    // The page names its levels (`levels`); all four when it doesn't.
+    return apiClient.get('/ledger/group-totals', { params: { levels: 'year,month,week,day', ...filters } }).then((response) => toObject(response.data));
+  },
+};
+
 export const productionApi = {
+  // Legacy all-time summary (Command Center). The period summary below shares the path
+  // but always sends `period`.
   summary() {
     return apiClient.get('/production/summary').then((response) => toObject(response.data));
   },
-  listYield() {
+  getPeriodSummary({ period, anchor, ...filters }) {
+    return apiClient.get('/production/summary', { params: { period, anchor, ...filters } }).then((response) => toObject(response.data));
+  },
+  getGroupTotals(filters = {}) {
+    // The page names its levels (`levels`); all four when it doesn't.
+    return apiClient.get('/production/group-totals', { params: { levels: 'year,month,week,day', ...filters } }).then((response) => toObject(response.data));
+  },
+  listYield(filters = {}) {
     const perPage = 100;
-    const fetchPage = (page) => apiClient.get('/production/yield', { params: { page, per_page: perPage } }).then((response) => response.data);
+    const fetchPage = (page) => apiClient.get('/production/yield', { params: { ...filters, page, per_page: perPage } }).then((response) => response.data);
 
     return fetchPage(1).then(async (firstPage) => {
       const items = toArray(firstPage);
@@ -1045,10 +1115,43 @@ export const hrApi = {
     const response = await requestWithFallback(apiClient, verifyRoutes(staffId).map((url) => ({ method: 'post', url, data: payload })));
     return normalizeStaffRecord(toObject(response.data) ?? payload);
   },
+  // Advances change the balance on the server, one recorded movement at a time
+  // (the backend rejects a loan balance sent through updateStaff).
+  // Returns { movement, loan_balance }.
+  async issueAdvance(staffId, { amount, date, note } = {}) {
+    const response = await apiClient.post(`/hr/staff/${staffId}/advances`, { amount: Number(amount), date, note: note || undefined });
+    return toObject(response.data) ?? {};
+  },
+  async recordAdvanceRepayment(staffId, { amount, date, note } = {}) {
+    const response = await apiClient.post(`/hr/staff/${staffId}/advance-repayments`, { amount: Number(amount), date, note: note || undefined });
+    return toObject(response.data) ?? {};
+  },
+  // Former staff: the backend checks the loan balance, disables the login and keeps the history.
+  async offboardStaff(staffId, { end_date: endDate, reason, note } = {}) {
+    const response = await apiClient.post(`/hr/staff/${staffId}/offboard`, {
+      end_date: endDate, offboarding_reason: reason, offboarding_note: note || undefined,
+    });
+    return normalizeStaffRecord(toObject(response.data) ?? {});
+  },
+  // Only for records added by mistake; the backend refuses staff with payroll or advance history.
+  async deleteStaff(staffId) {
+    await apiClient.delete(`/hr/staff/${staffId}`);
+  },
   async listPayrollRuns() {
     const response = await requestWithFallback(apiClient, payrollRoutes().map((url) => ({ method: 'get', url })));
     const runs = toArray(response.data).map(normalizePayrollRun);
     return Promise.all(runs.map((run) => hrApi.getPayrollRun(run.id)));
+  },
+  // One request for the history list and the next period to create (`next_period`).
+  async payrollSummary({ limit = 24 } = {}) {
+    const response = await apiClient.get('/hr/payroll/runs/summary', { params: { limit } });
+    const data = toObject(response.data) ?? {};
+    return { nextPeriod: data.next_period ?? null, runs: toArray(data.runs).map(normalizePayrollRun) };
+  },
+  // A5 PDF built by the backend from the stored line (finalized or paid runs only).
+  async downloadPayslip(runId, staffId) {
+    const response = await apiClient.get(`/hr/payroll/runs/${encodeURIComponent(runId)}/payslips/${staffId}.pdf`, { responseType: 'blob' });
+    return response.data;
   },
   async getPayrollRun(runId) {
     const response = await apiClient.get(`/hr/payroll/runs/${encodeURIComponent(runId)}`);
@@ -1062,8 +1165,9 @@ export const hrApi = {
     const response = await apiClient.post(`/hr/payroll/runs/${runId}/finalize`);
     return normalizePayrollRun(response.data);
   },
-  async payPayrollRun(runId) {
-    const response = await apiClient.post(`/hr/payroll/runs/${runId}/pay`);
+  // `payment_reference` (e.g. "M-Pesa: QJK1234567") is stored with the run for tracing.
+  async payPayrollRun(runId, { payment_reference: paymentReference } = {}) {
+    const response = await apiClient.post(`/hr/payroll/runs/${runId}/pay`, paymentReference ? { payment_reference: paymentReference } : {});
     return normalizePayrollRun(response.data);
   },
   async listPayrollRecords() {
@@ -1126,6 +1230,16 @@ export const financeApi = {
       },
     };
   },
+  /**
+   * Farm-wide balances right now: what buyers owe (all time, including debts entered on
+   * a buyer's profile) and customer credit. Read from an unfiltered, undated ledger
+   * request so no page filter or period can narrow them. A dedicated balances endpoint
+   * is requested from the backend (docs/audit/ledger-relayout.md).
+   */
+  getLedgerBalances(scope = {}) {
+    return apiClient.get('/finance/ledger', { params: { ...scope, page: 1, per_page: 1 } })
+      .then((response) => toObject(response.data)?.summary ?? {});
+  },
   createLedgerEntry(payload) {
     // The backend expects `transaction_type` as 'Revenue' or 'Expense', but older
     // form components may send `type` as 'income' or 'expense'. This adapter
@@ -1145,9 +1259,30 @@ export const financeApi = {
 
     return apiClient.post('/finance/ledger', apiPayload).then((response) => toObject(response.data));
   },
-  voidAndReplaceExpense(transactionId, payload) {
-    return apiClient.post(`/finance/transactions/${transactionId}/void-and-replace`, payload)
+  // The server's categories and cost classes, so forms never drift from its rules.
+  categories() {
+    return apiClient.get('/finance/categories').then((response) => toObject(response.data) ?? {});
+  },
+  // Voids a posted income or expense entry and posts a linked replacement.
+  correctTransaction(transactionId, payload) {
+    return apiClient.post(`/finance/transactions/${transactionId}/corrections`, payload)
       .then((response) => response.data);
+  },
+  // Receipt photos (JPEG, PNG, WebP or PDF) kept with a ledger entry.
+  uploadAttachment(transactionId, file, { onProgress } = {}) {
+    const body = new FormData();
+    body.append('file', file);
+    return apiClient.post(`/finance/transactions/${transactionId}/attachments`, body, {
+      timeout: PHOTO_UPLOAD_TIMEOUT_MS,
+      onUploadProgress: onProgress
+        ? (event) => { if (event.total) onProgress(Math.round((event.loaded / event.total) * 100)); }
+        : undefined,
+    }).then((response) => toObject(response.data));
+  },
+  // The attachment's `url` from the backend, fetched with the user's login (not a plain <img src>).
+  async fetchAttachment(url) {
+    const response = await apiClient.get(toApiPath(url), { responseType: 'blob' });
+    return response.data;
   },
   getReceipt(receiptId) {
     return apiClient.get(`/finance/receipts/${receiptId}`).then((response) => toObject(response.data));
@@ -1181,17 +1316,34 @@ export const financeApi = {
 };
 
 export const inventoryApi = {
-  listItems() {
-    return apiClient.get('/inventory/items').then((response) => toArray(response.data).map(normalizeInventoryItem));
+  listItems({ includeArchived = false } = {}) {
+    const params = includeArchived ? { include_archived: true } : undefined;
+    return apiClient.get('/inventory/items', { params }).then((response) => toArray(response.data).map(normalizeInventoryItem));
   },
   createItem(payload) {
     return apiClient.post('/inventory/items', buildInventoryItemPayload(payload)).then((response) => normalizeInventoryItem(toObject(response.data) ?? payload));
   },
   updateItem(itemId, payload) {
-    return apiClient.patch(`/inventory/items/${itemId}`, buildInventoryItemPayload(payload)).then((response) => normalizeInventoryItem(toObject(response.data) ?? payload));
+    return apiClient.patch(`/inventory/items/${itemId}`, buildInventoryItemPayload(payload, { includeStock: false })).then((response) => normalizeInventoryItem(toObject(response.data) ?? payload));
   },
   deleteItem(itemId) {
     return apiClient.delete(`/inventory/items/${itemId}`);
+  },
+  archiveItem(itemId) {
+    return apiClient.post(`/inventory/items/${itemId}/archive`).then((response) => normalizeInventoryItem(toObject(response.data) ?? {}));
+  },
+  restoreItem(itemId) {
+    return apiClient.post(`/inventory/items/${itemId}/restore`).then((response) => normalizeInventoryItem(toObject(response.data) ?? {}));
+  },
+  // Physical stock count: the server compares it with its own balance and records
+  // the gain or loss as a movement. Returns { status: 'matched' | 'reconciled', ... }.
+  countStock(itemId, physicalCount) {
+    return apiClient.post(`/inventory/items/${itemId}/audit`, { physical_count: Number(physicalCount) })
+      .then((response) => toObject(response.data) ?? {});
+  },
+  // Applies the correction the server computed for one of the item's data warnings.
+  applyDataFix(itemId, code) {
+    return apiClient.post(`/inventory/items/${itemId}/data-fixes`, { code }).then((response) => normalizeInventoryItem(toObject(response.data) ?? {}));
   },
   listMovements() {
     return apiClient.get('/inventory/movements').then((response) => toArray(response.data));
@@ -1582,6 +1734,33 @@ export const safetyApi = {
   activeHardlocks() {
     return apiClient.get('/veterinary/hardlocks/active').then((response) => toArray(response.data));
   },
+  // The paginated payload (`{ items, meta }`), for the safety board, which shows the total.
+  hardlockPage({ perPage = 100 } = {}) {
+    return apiClient.get('/veterinary/hardlocks/active', { params: { per_page: perPage } }).then((response) => response.data);
+  },
+  // Owners lock or release a cow's milk for sale.
+  // The clinical blueprint is mounted at /api/clinical. Releasing during a withdrawal
+  // needs `overrideReason` (audited); without it the backend answers 409 WITHDRAWAL_ACTIVE.
+  setHardlock(cowId, isLocked, { overrideReason } = {}) {
+    const body = { is_locked: Boolean(isLocked), ...(overrideReason ? { override_reason: overrideReason } : {}) };
+    return apiClient.put(`/clinical/cows/${cowId}/hardlock`, body).then((response) => toObject(response.data));
+  },
+  // Anyone who can see the board can hold a cow's milk; only the farmer releases it.
+  placeHold({ cowId, reason, until, notes }) {
+    const body = { cow_id: cowId, reason, ...(until ? { until } : {}), ...(notes ? { notes } : {}) };
+    return apiClient.post('/safety/holds', body).then((response) => toObject(response.data));
+  },
+  // A FAIL puts the milk on hold on the server; a PASS never releases it.
+  recordMilkTest({ cowId, testType, result, testedAt, notes }) {
+    const body = { cow_id: cowId, test_type: testType, result, ...(testedAt ? { tested_at: testedAt } : {}), ...(notes ? { notes } : {}) };
+    return apiClient.post('/safety/milk-tests', body).then((response) => {
+      const data = toObject(response.data) ?? {};
+      return { test: data.test ?? null, placedOnHold: Boolean(data.placed_on_hold), hold: data.hold ?? null };
+    });
+  },
+  milkTests(cowId) {
+    return apiClient.get(`/safety/cows/${cowId}/milk-tests`).then((response) => toArray(response.data?.items ?? response.data));
+  },
 };
 
 export const routineApi = {
@@ -1806,6 +1985,14 @@ export const nutritionApi = {
   },
   createConsumptionEvent(batchId, payload) {
     return apiClient.post(`/v1/nutrition/batches/${batchId}/consumption-events`, payload).then((response) => toObject(response.data));
+  },
+  // Cost-free instructions for the people doing the feeding (page access `feeding`).
+  feedingToday() {
+    return apiClient.get('/v1/nutrition/feeding/today').then((response) => toObject(response.data));
+  },
+  suggestedBatchSize(recipeType, days) {
+    return apiClient.get('/v1/nutrition/batches/suggested-size', { params: { recipe_type: recipeType, days } })
+      .then((response) => toObject(response.data));
   },
   feedCostEfficiency() {
     return apiClient.get('/v1/nutrition/analytics/feed-cost-efficiency')

@@ -4,14 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { ChevronDown, ChevronUp, Plus, Ruler, Save, Users } from 'lucide-react';
 import { getApiErrorMessage, nutritionApi } from '../../lib/backendApi';
 import { useTenant } from '../../hooks/useTenant';
-
-const GROUP_LABELS = {
-  lactating: 'Lactating',
-  dry: 'Dry cows',
-  calf_0_3m: 'Calves 0-3 months',
-  calf_3_6m: 'Calves 3-6 months',
-  heifer: 'Heifers',
-};
+import { feedingGroupLabel } from '../../lib/feedingGroups';
 
 const EMPTY_PROFILE = {
   avg_body_weight_kg: '',
@@ -136,8 +129,23 @@ function GroupDetails({ group, profile, onSaveProfile, onSaveRecipe, isSavingPro
   );
 }
 
-export default function FeedingGroupPlanner() {
+/** Opens the mixing planner ready to save a mix for this group (desktop and phone). */
+function AssignMixButton({ group }) {
   const navigate = useNavigate();
+  const label = feedingGroupLabel(group.feeding_group);
+  return (
+    <button
+      type="button"
+      onClick={() => navigate('/feed-nutrition/mix', { state: { feedingGroup: group.feeding_group, draftName: `${label} Feed Mix` } })}
+      className="inline-flex min-h-10 shrink-0 items-center justify-center gap-1.5 rounded-button bg-brand px-2.5 text-xs font-semibold text-white hover:bg-brand-dark"
+      aria-label={`Assign a mix to ${label}`}
+    >
+      <Plus size={15} /> Assign mix
+    </button>
+  );
+}
+
+export default function FeedingGroupPlanner() {
   const { tenantId, farmId } = useTenant();
   const queryClient = useQueryClient();
   const [expandedGroup, setExpandedGroup] = useState(null);
@@ -215,14 +223,14 @@ export default function FeedingGroupPlanner() {
                 return (
                   <React.Fragment key={group.feeding_group}>
                     <tr className="hover:bg-surface-raised">
-                      <td className="px-5 py-3"><span className="block text-sm font-semibold text-ink">{GROUP_LABELS[group.feeding_group] ?? group.feeding_group}</span><span className="text-[10px] font-bold uppercase text-ink-muted">{group.quantity_label}</span></td>
+                      <td className="px-5 py-3"><span className="block text-sm font-semibold text-ink">{feedingGroupLabel(group.feeding_group)}</span><span className="text-[10px] font-bold uppercase text-ink-muted">{group.quantity_label}</span></td>
                       <td className="px-5 py-3 text-right text-sm tabular-nums">{group.headcount}</td>
                       <td className="px-5 py-3 text-right text-sm tabular-nums">{Number(group.daily_kg_per_head || 0).toFixed(2)} kg</td>
                       <td className="px-5 py-3 text-right text-sm tabular-nums">{Number(group.kg_per_head_per_feeding || 0).toFixed(2)} kg</td>
                       <td className="px-5 py-3 text-right text-sm font-bold text-brand tabular-nums">{Number(group.daily_group_batch_kg || 0).toFixed(2)} kg</td>
                       <td className="px-5 py-3 text-right text-sm font-semibold text-ink tabular-nums">{Number(group.group_batch_per_feeding_kg || 0).toFixed(2)} kg</td>
-                      <td className="px-5 py-3 text-xs text-ink-muted">{group.assigned_recipe?.name ?? 'Not assigned'}</td>
-                      <td className="px-5 py-3 text-right"><button type="button" onClick={() => setExpandedGroup(isExpanded ? null : group.feeding_group)} className="p-1 text-ink-muted hover:text-brand" aria-label={`Edit ${GROUP_LABELS[group.feeding_group] ?? group.feeding_group} profile`}>{isExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}</button></td>
+                      <td className="px-5 py-3 text-xs text-ink-muted">{group.assigned_recipe?.name ?? <AssignMixButton group={group} />}</td>
+                      <td className="px-5 py-3 text-right"><button type="button" onClick={() => setExpandedGroup(isExpanded ? null : group.feeding_group)} className="p-1 text-ink-muted hover:text-brand" aria-label={`Edit ${feedingGroupLabel(group.feeding_group)} profile`}>{isExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}</button></td>
                     </tr>
                     {isExpanded && <tr><td colSpan={8} className="px-5 pb-4"><GroupDetails group={group} profile={profile} onSaveProfile={(feedingGroup, payload) => saveProfile.mutate({ group: feedingGroup, payload })} onSaveRecipe={(recipeId, payload) => saveRecipe.mutate({ recipeId, payload })} isSavingProfile={saveProfile.isPending} isSavingRecipe={saveRecipe.isPending} /></td></tr>}
                   </React.Fragment>
@@ -242,7 +250,7 @@ export default function FeedingGroupPlanner() {
               <article key={group.feeding_group} className="min-w-0 p-4">
                 <div className="flex min-w-0 items-start justify-between gap-3">
                   <div className="min-w-0">
-                    <h3 className="break-words font-semibold text-ink">{GROUP_LABELS[group.feeding_group] ?? group.feeding_group}</h3>
+                    <h3 className="break-words font-semibold text-ink">{feedingGroupLabel(group.feeding_group)}</h3>
                   </div>
                   <span className="shrink-0 rounded-badge border border-brand/20 bg-brand-50 px-2 py-1 text-[10px] font-bold text-brand-dark">{group.assigned_recipe ? 'Assigned' : 'Not assigned'}</span>
                 </div>
@@ -256,9 +264,9 @@ export default function FeedingGroupPlanner() {
                 <div className="mt-3 flex min-w-0 items-center justify-between gap-3 border-t border-ink/10 pt-3">
                   <p className="min-w-0 break-words text-xs text-ink-muted">{group.quantity_label}{group.assigned_recipe?.name ? ` · ${group.assigned_recipe.name}` : ''}</p>
                   {group.assigned_recipe ? (
-                    <button type="button" onClick={() => setExpandedGroup(isExpanded ? null : group.feeding_group)} className="inline-flex min-h-10 shrink-0 items-center justify-center gap-1.5 rounded-button border border-brand/20 px-2.5 text-xs font-semibold text-brand-dark" aria-label={`${isExpanded ? 'Close' : 'Edit'} ${GROUP_LABELS[group.feeding_group] ?? group.feeding_group} recipe details`} aria-expanded={isExpanded}>{isExpanded ? <><ChevronUp size={15} /> Close</> : <><ChevronDown size={15} /> Recipe details</>}</button>
+                    <button type="button" onClick={() => setExpandedGroup(isExpanded ? null : group.feeding_group)} className="inline-flex min-h-10 shrink-0 items-center justify-center gap-1.5 rounded-button border border-brand/20 px-2.5 text-xs font-semibold text-brand-dark" aria-label={`${isExpanded ? 'Close' : 'Edit'} ${feedingGroupLabel(group.feeding_group)} recipe details`} aria-expanded={isExpanded}>{isExpanded ? <><ChevronUp size={15} /> Close</> : <><ChevronDown size={15} /> Recipe details</>}</button>
                   ) : (
-                    <button type="button" onClick={() => navigate('/feed-nutrition/mix', { state: { feedingGroup: group.feeding_group, draftName: `${GROUP_LABELS[group.feeding_group] ?? group.feeding_group} Feed Mix` } })} className="inline-flex min-h-10 shrink-0 items-center justify-center gap-1.5 rounded-button bg-brand px-2.5 text-xs font-semibold text-white hover:bg-brand-dark" aria-label={`Assign a recipe to ${GROUP_LABELS[group.feeding_group] ?? group.feeding_group}`}><Plus size={15} /> Assign recipe</button>
+                    <AssignMixButton group={group} />
                   )}
                 </div>
                 {isExpanded && <GroupDetails group={group} profile={profile} onSaveProfile={(feedingGroup, payload) => saveProfile.mutate({ group: feedingGroup, payload })} onSaveRecipe={(recipeId, payload) => saveRecipe.mutate({ recipeId, payload })} isSavingProfile={saveProfile.isPending} isSavingRecipe={saveRecipe.isPending} />}

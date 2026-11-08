@@ -6,6 +6,7 @@ import { getSearchSuggestions, matchesSearch } from './fuzzySearch';
  */
 
 import { formatDateTime, getRelativeTime } from './audit';
+import { formatDate as formatDisplayDate } from './dateFormat';
 
 export function formatAge(ageMonths) {
   if (typeof ageMonths !== 'number' || !Number.isFinite(ageMonths)) return 'N/A';
@@ -14,11 +15,9 @@ export function formatAge(ageMonths) {
   return `${years}y ${months}m`;
 }
 
+// Day-first display ("03 Nov 2026"); one formatter for the whole app.
 export function formatDate(dateValue) {
-  if (!dateValue) return 'N/A';
-  const parsedDate = new Date(dateValue);
-  if (Number.isNaN(parsedDate.getTime())) return 'N/A';
-  return parsedDate.toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' });
+  return formatDisplayDate(dateValue);
 }
 
 function normalizeStatusValue(status = '') {

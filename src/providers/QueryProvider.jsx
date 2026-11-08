@@ -32,6 +32,13 @@ export const QUERY_KEYS = {
   MILK_DISPOSITIONS: (tenantId, farmId) => [tenantId, farmId, 'milk_dispositions'],
   UNIT_COST: (tenantId, farmId) => [tenantId, farmId, 'unit_cost'],
   HARDLOCKS: (tenantId, farmId) => [tenantId, farmId, 'hardlocks'],
+  CUSTOMERS: (tenantId, farmId) => ['customers', tenantId, farmId],
+  LEDGER_ENTRIES: (tenantId, farmId) => [tenantId, farmId, 'ledger_entries'],
+  LEDGER_SUMMARY: (tenantId, farmId) => [tenantId, farmId, 'ledger_summary'],
+  LEDGER_GROUP_TOTALS: (tenantId, farmId) => [tenantId, farmId, 'ledger_group_totals'],
+  YIELD_ROWS: (tenantId, farmId) => ['production-yield-rows', tenantId, farmId],
+  PRODUCTION_PERIOD_SUMMARY: (tenantId, farmId) => [tenantId, farmId, 'production_period_summary'],
+  PRODUCTION_GROUP_TOTALS: (tenantId, farmId) => [tenantId, farmId, 'production_group_totals'],
 };
 
 export const queryClient = new QueryClient({

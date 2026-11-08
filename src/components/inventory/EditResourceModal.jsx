@@ -3,6 +3,8 @@ import { createPortal } from 'react-dom';
 import { X, Save, Edit2 } from 'lucide-react';
 import { resolveIngredientStandards } from '../../lib/feedNutritionStandards';
 import { proteinGramsPerKgToInput, proteinInputToGramsPerKg } from '../../lib/feedNutritionUnits';
+import { validateInventoryItem } from '../../lib/inventoryItemRules';
+import { feedCopy } from '../../i18n/feed.en';
 
 export default function EditResourceModal({ isOpen, onClose, item, onSave }) {
   const initialStandards = resolveIngredientStandards({
@@ -11,6 +13,7 @@ export default function EditResourceModal({ isOpen, onClose, item, onSave }) {
   });
   const [defaultSource, setDefaultSource] = useState(initialStandards?.source || '');
   const [proteinUnit, setProteinUnit] = useState('percent');
+  const [errors, setErrors] = useState({});
   const [formData, setFormData] = useState({
     name: item?.name || '',
     sku: item?.sku || '',
@@ -49,7 +52,10 @@ export default function EditResourceModal({ isOpen, onClose, item, onSave }) {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    // Pass the merged data back to the parent so the table updates
+    const nextErrors = validateInventoryItem(formData);
+    setErrors(nextErrors);
+    if (Object.keys(nextErrors).length) return;
+    // The definition only: the API layer leaves stock out of updates.
     onSave({ ...item, ...formData });
     onClose();
   };
@@ -97,9 +103,8 @@ export default function EditResourceModal({ isOpen, onClose, item, onSave }) {
                 />
               </div>
               <div>
-                <label className="block text-[10px] font-black text-ink-muted uppercase tracking-widest mb-2">SKU / Code</label>
+                <label className="block text-[10px] font-black text-ink-muted uppercase tracking-widest mb-2">{feedCopy.item.skuOptional}</label>
                 <input
-                  required
                   value={formData.sku}
                   onChange={(e) => setFormData({...formData, sku: e.target.value})}
                   className="w-full p-3 border border-slate-200 rounded-lg text-sm font-bold font-mono focus:ring-2 focus:ring-brand/20 focus:border-brand outline-none transition-all"
@@ -145,8 +150,8 @@ export default function EditResourceModal({ isOpen, onClose, item, onSave }) {
                 <input
                   type="number"
                   min="0"
-                  max={proteinUnit === 'percent' ? 100 : 1000}
-                  step="0.1"
+                  max={proteinUnit === 'percent' ? 99.999 : 999.99}
+                  step="any"
                   value={proteinInputValue}
                   onChange={(e) => setFormData({ ...formData, proteinGramsPerKg: proteinInputToGramsPerKg(e.target.value, proteinUnit) })}
                   className="w-full p-3 border border-slate-200 rounded-lg text-sm font-bold focus:ring-2 focus:ring-brand/20 focus:border-brand outline-none transition-all"
@@ -162,7 +167,8 @@ export default function EditResourceModal({ isOpen, onClose, item, onSave }) {
                 <input
                   type="number"
                   min="0"
-                  step="0.1"
+                  step="any"
+                  max="30"
                   value={formData.energyMjPerKg}
                   onChange={(e) => setFormData({ ...formData, energyMjPerKg: Number(e.target.value) || 0 })}
                   className="w-full p-3 border border-slate-200 rounded-lg text-sm font-bold focus:ring-2 focus:ring-brand/20 focus:border-brand outline-none transition-all"
@@ -176,7 +182,8 @@ export default function EditResourceModal({ isOpen, onClose, item, onSave }) {
                 <input
                   type="number"
                   min="0"
-                  step="0.1"
+                  step="any"
+                  max="999.99"
                   value={formData.fiberGramsPerKg}
                   onChange={(e) => setFormData({ ...formData, fiberGramsPerKg: Number(e.target.value) || 0 })}
                   className="w-full p-3 border border-slate-200 rounded-lg text-sm font-bold focus:ring-2 focus:ring-brand/20 focus:border-brand outline-none transition-all"
@@ -187,7 +194,7 @@ export default function EditResourceModal({ isOpen, onClose, item, onSave }) {
                 <input
                   type="number"
                   min="0"
-                  step="0.1"
+                  step="any"
                   value={formData.costPerKg}
                   onChange={(e) => setFormData({ ...formData, costPerKg: Number(e.target.value) || 0 })}
                   className="w-full p-3 border border-slate-200 rounded-lg text-sm font-bold focus:ring-2 focus:ring-brand/20 focus:border-brand outline-none transition-all"
@@ -201,10 +208,16 @@ export default function EditResourceModal({ isOpen, onClose, item, onSave }) {
               </p>
             )}
 
+            {Object.keys(errors).length > 0 && (
+              <ul role="alert" className="space-y-1 rounded-lg border border-brand-dark/60 bg-brand-100 p-3 text-xs font-semibold text-ink">
+                {Object.entries(errors).map(([field, message]) => <li key={field}>{message}</li>)}
+              </ul>
+            )}
+
             {/* Note about stock */}
             <div className="bg-blue-50 border border-blue-100 rounded-lg p-4 mt-2">
               <p className="text-xs font-bold text-blue-800">
-                Note: To adjust actual physical stock quantities, please use the <span className="font-black">Restock</span> or <span className="font-black">Adjust</span> actions. This form only modifies the item's master definition.
+                Note: Stock is read-only here. Use <span className="font-black">Restock</span> to add stock, so every change is recorded. This form only changes the item's definition.
               </p>
             </div>
           </div>

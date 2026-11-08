@@ -5,6 +5,7 @@ import { clearSession, loadSession, saveSession } from '../lib/sessionStore';
 import { tenantRef } from '../lib/tenantRef';
 import { describeAuthError, getAuthErrorMessage } from '../lib/authErrorMessages';
 import { SESSION_EXPIRED_EVENT } from '../lib/sessionEvents';
+import { setFarmTimeZone } from '../lib/localDate';
 
 const AuthContext = createContext();
 
@@ -14,6 +15,11 @@ export function AuthProvider({ children }) {
   const [currentUser, setCurrentUser] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [sessionExpired, setSessionExpired] = useState(false);
+
+  // Farm calendar dates follow the backend's timezone once the session reports it.
+  useEffect(() => {
+    setFarmTimeZone(currentUser?.farm_timezone);
+  }, [currentUser?.farm_timezone]);
 
   useEffect(() => {
     const onExpired = () => setSessionExpired(true);

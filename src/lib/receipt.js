@@ -1,3 +1,5 @@
+import { downloadBlob } from './download';
+
 export function formatMoney(value) {
   const amount = Number(value || 0);
   return `KES ${amount.toLocaleString('en-KE', {
@@ -40,14 +42,7 @@ export function formatReceiptText(receipt) {
 }
 
 export function downloadReceiptPdf(receipt, blob) {
-  const url = URL.createObjectURL(blob);
-  const anchor = document.createElement('a');
-  anchor.href = url;
-  anchor.download = `${receipt.receipt_number || 'receipt'}.pdf`;
-  document.body.appendChild(anchor);
-  anchor.click();
-  anchor.remove();
-  URL.revokeObjectURL(url);
+  downloadBlob(blob, `${receipt.receipt_number || 'receipt'}.pdf`);
 }
 
 export function shareReceiptText(receipt) {

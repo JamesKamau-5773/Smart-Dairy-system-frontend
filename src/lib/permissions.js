@@ -25,4 +25,10 @@ export function canAccessHerdsmanView(user) {
   return isSuperAdmin(user) || isCooperativeAdmin(user) || hasAnyRole(user, ['FARMER', 'HERDSMAN']);
 }
 
-export default { isPrimaryAdmin, hasRole, canAccessHerdsmanView };
+// Archive, restore and data fixes on inventory items are owner actions on the backend.
+// Staff still see the warnings; the backend's 403 stays the final word.
+export function canManageInventoryItems(user) {
+  return isSuperAdmin(user) || isCooperativeAdmin(user) || hasAnyRole(user, ['FARMER', 'FARM_ADMIN']);
+}
+
+export default { isPrimaryAdmin, hasRole, canAccessHerdsmanView, canManageInventoryItems };

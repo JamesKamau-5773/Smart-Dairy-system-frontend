@@ -1,5 +1,6 @@
 import React, { Fragment, useEffect, useMemo, useState } from 'react';
 import { ChevronDown, ChevronRight } from 'lucide-react';
+import { toLocalIsoDate } from '../../lib/localDate';
 
 const UNKNOWN_DATE = 'unknown';
 
@@ -13,7 +14,7 @@ function getDateParts(value) {
   return {
     year: String(parsed.getFullYear()),
     month: parsed.toLocaleDateString(undefined, { month: 'long' }),
-    date: raw || parsed.toISOString().slice(0, 10),
+    date: raw || toLocalIsoDate(parsed),
   };
 }
 

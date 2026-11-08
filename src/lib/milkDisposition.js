@@ -1,9 +1,9 @@
+import { todayLocalIso } from './localDate';
+
 export const CALF_FEED_TYPE = 'CALF_FEED';
 
-export function todayLocalIso() {
-  const now = new Date();
-  return new Date(now.getTime() - now.getTimezoneOffset() * 60_000).toISOString().slice(0, 10);
-}
+// Moved to ./localDate; re-exported for existing callers.
+export { todayLocalIso } from './localDate';
 
 export function isActiveCalf(animal = {}) {
   const status = String(animal.current_status ?? animal.currentStatus ?? animal.status ?? '')

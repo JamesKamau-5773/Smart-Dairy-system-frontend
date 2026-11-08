@@ -5,8 +5,33 @@ import { Beaker, Tractor, Save, AlertCircle, XCircle } from 'lucide-react';
 import RecipeBuilder from '../nutrition/RecipeBuilder';
 import CreateBatchModal from '../../components/nutrition/CreateBatchModal';
 import FeedingGroupPlanner from '../../components/nutrition/FeedingGroupPlanner';
+import toast from 'react-hot-toast';
+import DataWarningList from '../../components/inventory/DataWarningList';
+import RecipeMeasurementFields from '../../components/nutrition/RecipeMeasurementFields';
 import { getApiErrorMessage, nutritionApi, inventoryApi } from '../../lib/backendApi';
+import { getApiErrorBody } from '../../lib/apiErrors';
+import { getFeedErrorMessage } from '../../lib/feedErrors';
+import { FEEDING_GROUPS } from '../../lib/feedingGroups';
+import { getDataWarnings } from '../../lib/inventoryItemRules';
+import { defaultMeasurements, toMeasurementPayload, validateMeasurements } from '../../lib/recipeMeasurements';
+import { getMixActionStates, getShareTotal } from '../../lib/mixPlannerRules';
+import { canManageInventoryItems } from '../../lib/permissions';
+import { useAuth } from '../../contexts/AuthContext';
 import { useTenant } from '../../hooks/useTenant';
+import { useInventoryItemActions } from '../../hooks/useInventoryItemActions';
+import { feedCopy } from '../../i18n/feed.en';
+import LABELS from '../../lib/labels';
+
+const MEASURES_BY_TYPE = {
+  dairy_meal: defaultMeasurements('dairy_meal'),
+  main_meal: defaultMeasurements('main_meal'),
+};
+
+/** A short line under a disabled button saying why it can't be used. */
+function DisabledReason({ state }) {
+  if (!state.disabled || !state.reason) return null;
+  return <p className="text-[11px] font-semibold text-ink-muted">{state.reason}</p>;
+}
 
 const DEFAULT_BATCH_SIZE_BY_TYPE = {
   dairy_meal: 500,
@@ -163,7 +188,8 @@ export default function FeedFormulation() {
 
   const routerState = location.state || {};
   const importedDraft = routerState.isImportedDraft ? routerState : null;
-  const [activeTab, setActiveTab] = useState(importedDraft?.draftType || 'dairy_meal');
+  // A draft or a dashboard card can ask for a mix type's tab (state.mixType).
+  const [activeTab, setActiveTab] = useState(importedDraft?.draftType || routerState.mixType || 'dairy_meal');
 
   const { data: savedRecipeIngredients = [], isLoading: isRecipeLoading } = useQuery({
     queryKey: ['mixer-ingredients', activeTab, tenantId, farmId],
@@ -190,6 +216,16 @@ export default function FeedFormulation() {
   const [formulationError, setFormulationError] = useState('');
   const [suggestedMixMessage, setSuggestedMixMessage] = useState('');
   const [isBatchModalOpen, setIsBatchModalOpen] = useState(false);
+  const [suspectIngredients, setSuspectIngredients] = useState([]);
+  const [saveError, setSaveError] = useState('');
+  const [feedingGroup, setFeedingGroup] = useState(routerState.feedingGroup ?? '');
+  // Kept per mix type, so switching tabs doesn't carry dairy-meal buckets into the main meal.
+  const [measuresByType, setMeasuresByType] = useState(MEASURES_BY_TYPE);
+  const [measureErrors, setMeasureErrors] = useState({});
+  const measures = measuresByType[activeTab] ?? defaultMeasurements(activeTab);
+  const { currentUser } = useAuth();
+  const canFixIngredients = canManageInventoryItems(currentUser);
+  const { applyDataFix } = useInventoryItemActions();
 
   // Synchronize the tab if a new draft is loaded while the component is already open
   useEffect(() => {
@@ -525,72 +561,92 @@ export default function FeedFormulation() {
       setFormulationError('');
       setRecipe(normalizedIngredients);
     },
+    onMutate: () => setSuspectIngredients([]),
     onError: (error) => {
+      // A 422 may name ingredients whose nutrition data is probably wrong; those come first.
+      const suspects = getApiErrorBody(error).suspect_ingredients;
+      setSuspectIngredients(Array.isArray(suspects) ? suspects : []);
       setFormulationError(getRequestErrorMessage(error, 'Could not formulate adjustments for this target.'));
     },
   });
 
+  // Shares are sent exactly as shown: the save button is blocked until they add
+  // up to 100%, so nothing is rescaled behind the farmer's back.
   const saveRecipe = useMutation({
     mutationFn: async () => {
-      // This reverts to the original logic. The component should build the payload,
-      // and the API layer (via normalizeNutritionRequestPayload) is responsible for final normalization.
       const requestPayload = buildRecipeRequestPayload({
         recipe_type: activeTab,
         recipe_name: routerState?.draftName ?? defaultRecipeName,
         name: routerState?.draftName ?? defaultRecipeName,
         source: routerState?.fromMilkLab ? 'milk_lab_export' : 'manual',
-        feeding_group: routerState?.feedingGroup,
+        feeding_group: feedingGroup || undefined,
+        ...toMeasurementPayload(measures),
       });
 
-      // --- START: In-component Normalization for Robustness ---
-      // To guarantee the payload is valid before it leaves the component,
-      // we normalize the ingredient percentages to sum to 100.
-      const ingredients = requestPayload.ingredients || [];
-      const totalPercentage = ingredients.reduce((sum, ing) => sum + Number(ing.inclusion_percentage ?? 0), 0);
-      const needsNormalization = Math.abs(totalPercentage - 100) > 0.01 && totalPercentage > 0;
-
-      if (needsNormalization) {
-        requestPayload.ingredients = ingredients.map(ing => {
-          const normalizedShare = (Number(ing.inclusion_percentage ?? 0) / totalPercentage) * 100;
-          // Round to 2 decimal places to avoid floating point issues
-          const finalPercentage = Math.round(normalizedShare * 100) / 100;
-          return {
-            ...ing,
-            percentage: finalPercentage,
-            inclusion_percentage: finalPercentage,
-          };
-        });
-      }
-      // --- END: In-component Normalization ---
-
       // The /auto-save endpoint expects `adjusted_ingredients`, while other
-      // nutrition endpoints expect `ingredients`. We must rename the key here
-      // to match the API contract for this specific mutation.
-      const finalPayload = {
-        ...requestPayload,
-        adjusted_ingredients: requestPayload.ingredients,
-      };
-      delete finalPayload.ingredients;
-
-      return nutritionApi.autoSaveRecipe(finalPayload);
+      // nutrition endpoints expect `ingredients`.
+      const { ingredients, ...rest } = requestPayload;
+      return nutritionApi.autoSaveRecipe({ ...rest, adjusted_ingredients: ingredients });
     },
+    onMutate: () => setSaveError(''),
     onSuccess: () => {
       // Clear the draft state from the URL so a refresh doesn't reload it
       if (importedDraft || routerState?.feedingGroup) {
         navigate(location.pathname, { replace: true, state: {} });
       }
-      // Safe object syntax for React Query v4/v5 compatibility
-      queryClient.invalidateQueries({ queryKey: ['active-feed-recipe', tenantId, farmId] });
-      queryClient.invalidateQueries({ queryKey: ['feed-recipes', tenantId, farmId] });
-      queryClient.invalidateQueries({ queryKey: ['feed-formulation-suggested-mix', tenantId, farmId] });
-      queryClient.invalidateQueries({ queryKey: ['mixer-ingredients', 'dairy_meal', tenantId, farmId] });
-      queryClient.invalidateQueries({ queryKey: ['mixer-ingredients', 'main_meal', tenantId, farmId] });
-      queryClient.invalidateQueries({ queryKey: ['inventory-items', tenantId, farmId] });
-      queryClient.invalidateQueries({ queryKey: ['inventory-stock', tenantId, farmId] });
+      [
+        ['active-feed-recipe', tenantId, farmId],
+        ['feed-recipes', tenantId, farmId],
+        ['nutrition-recipes', tenantId, farmId],
+        ['feed-formulation-suggested-mix', tenantId, farmId],
+        ['mixer-ingredients'],
+        ['inventory-items', tenantId, farmId],
+        ['inventory-stock', tenantId, farmId],
+        // A saved mix can be assigned to a group, which changes the plan and today's feeding.
+        ['feeding-plan-by-group', tenantId, farmId],
+        ['feeding-today', tenantId, farmId],
+      ].forEach((queryKey) => queryClient.invalidateQueries({ queryKey }));
+      toast.success(feedCopy.mix.saved);
     },
     onError: (error) => {
-      console.error("Failed to save recipe:", { error });
-    }
+      setSaveError(`${feedCopy.planner.saveError} ${getFeedErrorMessage(error, feedCopy.errors.saveMix)}`);
+    },
+  });
+
+  const handleSave = () => {
+    const errors = validateMeasurements(measures);
+    setMeasureErrors(errors);
+    if (Object.keys(errors).length === 0) saveRecipe.mutate();
+  };
+
+  // Warnings by ingredient id, from inventory and from this mixer's ingredient list,
+  // so a row keeps its warning even after auto-adjust replaces the shares.
+  const ingredientWarnings = useMemo(() => {
+    const savedIngredientsArray = Array.isArray(savedRecipeIngredients)
+      ? savedRecipeIngredients
+      : (savedRecipeIngredients.ingredients || savedRecipeIngredients.adjusted_ingredients || []);
+    const byId = {};
+    [...allInventoryItems, ...savedIngredientsArray].forEach((source) => {
+      const id = Number(source.ingredient_id ?? source.id);
+      const warnings = getDataWarnings(source);
+      if (Number.isFinite(id) && warnings.length) byId[id] = warnings;
+    });
+    return byId;
+  }, [allInventoryItems, savedRecipeIngredients]);
+
+  const fixIngredient = canFixIngredients
+    ? (ingredient, code) => applyDataFix.mutate({ item: { id: ingredient.ingredientId ?? ingredient.ingredient_id, name: ingredient.name }, code })
+    : undefined;
+  const pendingFix = applyDataFix.isPending
+    ? { ingredientId: applyDataFix.variables?.item?.id, code: applyDataFix.variables?.code }
+    : null;
+
+  const actionStates = getMixActionStates({
+    hasIngredients: recipe.length > 0,
+    hasSharedIngredients: hasValidIngredients,
+    hasLinkedIngredients: hasEligibleIngredients,
+    shareTotal: getShareTotal(recipe),
+    isBusy: saveRecipe.isPending,
   });
 
   const handleDiscardDraft = () => {
@@ -603,7 +659,7 @@ export default function FeedFormulation() {
 
       {/* Page Header */}
       <div className="border-b border-ink/10 pb-6">
-        <h1 className="text-3xl font-black tracking-tight text-ink">Feed Mixing Planner</h1>
+        <h1 className="text-3xl font-black tracking-tight text-ink">{LABELS.FEED_FORMULATION}</h1>
         <p className="mt-2 text-sm text-ink-muted max-w-2xl">
           Plan the right feed mix for your cows. Save your mix so the farm team can use it quickly during daily feeding.
         </p>
@@ -694,6 +750,9 @@ export default function FeedFormulation() {
                 onBatchSizeChange={setBatchSizeKg}
                 targetProtein={targetProtein}
                 isLoading={isInventoryLoading || isRecipeLoading}
+                ingredientWarnings={ingredientWarnings}
+                onApplyFix={fixIngredient}
+                pendingFix={pendingFix}
               />
             </div>
           )}
@@ -722,19 +781,23 @@ export default function FeedFormulation() {
 
             <div className="grid grid-cols-1 gap-2 mb-4">
               <button
+                type="button"
                 onClick={() => calculateNutritionMutation.mutate()}
-                disabled={calculateNutritionMutation.isPending || !hasValidIngredients}
+                disabled={calculateNutritionMutation.isPending || actionStates.check.disabled}
                 className="w-full bg-surface-raised hover:bg-ink/5 text-ink-strong px-4 py-2.5 rounded-button font-bold text-sm transition-colors disabled:opacity-70"
               >
                 {calculateNutritionMutation.isPending ? 'Checking...' : 'Check Protein Level'}
               </button>
+              <DisabledReason state={actionStates.check} />
               <button
+                type="button"
                 onClick={() => formulateMutation.mutate()}
-                disabled={formulateMutation.isPending || !hasEligibleIngredients}
+                disabled={formulateMutation.isPending || actionStates.adjust.disabled}
                 className="w-full bg-brand/10 hover:bg-brand/20 text-brand-dark px-4 py-2.5 rounded-button font-bold text-sm transition-colors disabled:opacity-70"
               >
                 {formulateMutation.isPending ? 'Adjusting...' : 'Auto-Adjust Feed Shares'}
               </button>
+              <DisabledReason state={actionStates.adjust} />
             </div>
 
             {!hasEligibleIngredients && ingredientEligibilityDiagnostics.total > 0 && (
@@ -764,21 +827,62 @@ export default function FeedFormulation() {
               </div>
             )}
 
+            {suspectIngredients.length > 0 && (
+              <div className="mb-4 space-y-2 rounded-md border border-brand/40 bg-brand-50 p-3">
+                <p className="text-xs font-black text-ink">{feedCopy.dataWarnings.suspectTitle}</p>
+                <p className="text-xs text-ink-muted">{feedCopy.dataWarnings.suspectHint}</p>
+                {suspectIngredients.map((suspect) => (
+                  <DataWarningList
+                    key={suspect.ingredient_id}
+                    itemName={suspect.name}
+                    warnings={getDataWarnings({ data_warnings: suspect.warnings })}
+                    onApplyFix={fixIngredient ? (code) => fixIngredient({ ingredientId: suspect.ingredient_id, name: suspect.name }, code) : undefined}
+                    pendingCode={pendingFix?.ingredientId === suspect.ingredient_id ? pendingFix.code : null}
+                  />
+                ))}
+              </div>
+            )}
+
             {formulationError && (
               <div className="mb-4 rounded-md border border-brand/30 bg-brand-50 p-3 text-xs text-brand-dark">
                 {formulationError}
               </div>
             )}
 
+            <div className="mb-4 space-y-1">
+              <label htmlFor="mix-feeding-group" className="block text-[10px] font-black uppercase tracking-wider text-ink-muted">{feedCopy.planner.feedingGroup}</label>
+              <select
+                id="mix-feeding-group"
+                value={feedingGroup}
+                onChange={(event) => setFeedingGroup(event.target.value)}
+                className="w-full rounded-lg border border-ink/20 bg-surface-raised px-3 py-2 text-sm font-bold text-ink focus:outline-none focus:ring-2 focus:ring-brand/40"
+              >
+                <option value="">{feedCopy.planner.feedingGroupNone}</option>
+                {FEEDING_GROUPS.map((group) => <option key={group.value} value={group.value}>{group.label}</option>)}
+              </select>
+            </div>
+
+            <RecipeMeasurementFields
+              measures={measures}
+              errors={measureErrors}
+              onChange={(next) => {
+                setMeasuresByType((current) => ({ ...current, [activeTab]: next }));
+                setMeasureErrors({});
+              }}
+            />
+
             <div className="space-y-3">
               <button
-                onClick={() => saveRecipe.mutate()}
-                disabled={saveRecipe.isPending || !hasValidIngredients}
+                type="button"
+                onClick={handleSave}
+                disabled={saveRecipe.isPending || actionStates.save.disabled}
                 className="w-full bg-brand hover:bg-brand-dark text-white px-4 py-3 rounded-button font-bold text-sm transition-colors  flex items-center justify-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed"
               >
                 <Save size={18} />
                 {saveRecipe.isPending ? 'Saving...' : 'Save As Current Feed Mix'}
               </button>
+              {!saveRecipe.isPending && <DisabledReason state={actionStates.save} />}
+              {saveError && <p role="alert" className="text-xs font-semibold text-danger">{saveError}</p>}
 
               {importedDraft && (
                 <button
@@ -790,12 +894,14 @@ export default function FeedFormulation() {
               )}
 
               <button
+                type="button"
                 onClick={() => setIsBatchModalOpen(true)}
-                disabled={saveRecipe.isPending}
+                disabled={actionStates.batch.disabled}
                 className="mt-3 flex w-full items-center justify-center gap-2 rounded-button bg-brand px-4 py-3 text-sm font-bold text-white transition-colors hover:bg-brand-dark disabled:opacity-70"
               >
                 Create Batch From This Mix
               </button>
+              <DisabledReason state={actionStates.batch} />
             </div>
           </div>
 

@@ -1,25 +1,39 @@
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { useTenant } from "../../hooks/useTenant";
 import { useAuth } from "../../contexts/AuthContext";
 import { canViewAdminControls } from "../../lib/roles";
 import { QUERY_KEYS } from "../../providers/QueryProvider";
-import { financeApi, productionApi, safetyApi } from "../../lib/backendApi";
-import { Plus, Beaker, AlertTriangle, ShieldCheck, Search, Filter, RotateCcw, ChevronDown, Pencil, Trash2, Baby, MoreVertical } from "lucide-react";
+import { productionApi, safetyApi } from "../../lib/backendApi";
+import { Plus, AlertTriangle, ShieldCheck, SlidersHorizontal, Pencil, Trash2, Baby } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import FastMilkLog from "../../components/operations/FastMilkLog";
 import QueuedMilkEntries from "../../components/operations/QueuedMilkEntries";
 import CalfMilkFeedModal from "../../components/operations/CalfMilkFeedModal";
-import MilkDispositionHistory from "../../components/operations/MilkDispositionHistory";
+import RecentCalfFeedings from "../../components/operations/RecentCalfFeedings";
 import Confirmation, { useConfirmation } from "../../components/ui/Confirmation";
-import GroupedDateRows from "../../components/ui/GroupedDateRows";
-import { CardSkeletons, ListLoadMessage, SlowLoadingHint, StaleDataNotice, StatValue, TableSkeletonRows } from "../../components/ui/ListLoadState";
+import PeriodSummary from "../../components/periods/PeriodSummary";
+import PeriodControl from "../../components/periods/PeriodControl";
+import PageHeader from "../../components/layout/PageHeader";
+import DataSection from "../../components/data/DataSection";
+import { SURFACE } from "../../components/data/surface";
+import { TableHead, cellClass } from "../../components/data/DataTable";
+import { FilterChips, Toolbar, ToolbarSearch } from "../../components/data/Toolbar";
+import OverflowMenu from "../../components/ui/OverflowMenu";
+import DateField from "../../components/ui/DateField";
+import GroupedList from "../../components/periods/GroupedList";
+import { productionGroupConfig, productionSummaryConfig } from "../../components/periods/periodConfigs";
+import { useInvalidateProduction, useProductionGroupTotals, useProductionSummary, usePeriodSelection } from "../../hooks/usePeriodTotals";
+import { formatLitres } from "../../lib/numberFormat";
+import { toTotalsParams } from "../../lib/periodTotals";
+import { CardSkeletons, ListLoadMessage, SlowLoadingHint, StaleDataNotice, TableSkeletonRows } from "../../components/ui/ListLoadState";
 import { getListLoadState } from "../../lib/listLoadState";
 import toast from "react-hot-toast";
 import { toNormalizedSessionLabel } from "../../lib/milkUtils";
 import { formatDate } from "../../lib/herdUtils";
 import { formatCowIdentity } from "../../lib/cowIdentity";
 import { Link } from "react-router-dom";
-import { Popover, PopoverContent, PopoverTrigger } from "../../components/ui/popover";
+import { todayLocalIso, toLocalIsoDate } from '../../lib/localDate';
 
 const AMOUNT_FIELD_CANDIDATES = [
   'amount',
@@ -71,43 +85,6 @@ function extractAmountCandidate(row) {
   return { value: null, key: null, found: false };
 }
 
-function parseAmountValue(rawValue) {
-  if (rawValue === null || rawValue === undefined) return null;
-  if (typeof rawValue === 'number') {
-    return Number.isFinite(rawValue) ? rawValue : null;
-  }
-
-  const normalized = `${rawValue}`.replace(/,/g, '').trim();
-  if (!normalized) return null;
-
-  const parsed = Number.parseFloat(normalized);
-  return Number.isFinite(parsed) ? parsed : null;
-}
-
-export function filterMilkRows(rows, filters) {
-  return rows.filter((row) => {
-    const rowAmount = typeof row.amountValue === 'number' ? row.amountValue : Number.parseFloat(row.amount);
-    const hasValidAmount = Number.isFinite(rowAmount);
-    const rowCowId = String(row.cowId ?? '').toLowerCase();
-    const rowCowName = String(row.cowName ?? '').toLowerCase();
-    const rowStatus = String(row.status ?? '').toLowerCase();
-    const rowSession = String(row.session ?? '').toLowerCase();
-    const cowIdMatch = filters.cowId ? (
-      rowCowId.includes(filters.cowId.toLowerCase()) ||
-      (rowCowName && rowCowName.includes(filters.cowId.toLowerCase()))
-    ) : true;
-
-    const dateMatch = filters.date ? row.date === filters.date : true;
-    const statusMatch = filters.status === 'all' ? true : rowStatus === String(filters.status ?? '').toLowerCase();
-    // Rows without a session only match an explicit session filter if they genuinely
-    // carry that session; missing session should not crash nor silently pass.
-    const sessionMatch = (filters.session === 'all' || !filters.session) ? true : rowSession === String(filters.session).toLowerCase();
-    const minMatch = filters.minAmount ? (hasValidAmount ? rowAmount >= Number(filters.minAmount) : false) : true;
-    const maxMatch = filters.maxAmount ? (hasValidAmount ? rowAmount <= Number(filters.maxAmount) : false) : true;
-    return cowIdMatch && dateMatch && statusMatch && sessionMatch && minMatch && maxMatch;
-  });
-}
-
 const BACKEND_STATUS_MAP = {
   RECORDED: 'Pending',
   PENDING: 'Pending',
@@ -120,27 +97,98 @@ function normalizeStatus(raw) {
   return BACKEND_STATUS_MAP[String(raw).toUpperCase()] ?? raw;
 }
 
+const getBucket = (row) => row.bucket;
+
+// One column definition for the header, rows and group rows (litres totals line up).
+const COLUMNS = [
+  { id: 'session', header: 'Session' },
+  { id: 'milker', header: 'Milker' },
+  { id: 'cow', header: 'Cow' },
+  { id: 'litres', header: 'Litres', align: 'right', mono: true },
+  { id: 'status', header: 'Status' },
+  { id: 'actions', header: 'Actions', align: 'right' },
+];
+const column = Object.fromEntries(COLUMNS.map((entry) => [entry.id, entry]));
+const EMPTY_FILTERS = { date: "", cowId: "", status: "all", session: "all" };
+
+// Maps a yield record from the API to what the page shows. Display only: the amount
+// is formatted, never parsed into a total.
+function normalizeYieldRow(row) {
+  const amountCandidate = extractAmountCandidate(row);
+  const timestamp = row?.timestamp ?? row?.createdAt ?? row?.created_at;
+
+  if (!amountCandidate.found) {
+    logDevWarning('Yield row missing expected amount field.', {
+      rowId: row?.id ?? row?.yield_id ?? row?.recordId ?? null,
+      knownAmountKeys: AMOUNT_FIELD_CANDIDATES,
+      receivedKeys: row && typeof row === 'object' ? Object.keys(row) : [],
+      row,
+    });
+  }
+
+  return {
+    id: row?.id ?? row?.yield_id ?? row?.recordId,
+    bucket: row?.bucket ?? null,
+    date: row?.date ?? row?.milkingDate ?? row?.milking_date ?? row?.entry_date ?? (timestamp ? toLocalIsoDate(timestamp) : todayLocalIso()),
+    time: timestamp ? new Date(timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : (row?.time ?? null),
+    milker: row?.milker_name ?? row?.milker ?? row?.created_by ?? 'SYSTEM',
+    animalRefId: row?.cow_tag ?? row?.cowTag ?? row?.animal_id ?? row?.animalId ?? row?.cow_id ?? row?.cowId ?? row?.cow ?? null,
+    cowId: row?.cow_tag ?? row?.cowTag ?? row?.cowId ?? row?.cow_id ?? row?.animal_id ?? '',
+    cowName: row?.cowName ?? row?.cow_name ?? row?.animal_name ?? row?.animalName ?? row?.name ?? '',
+    amount: amountCandidate.value,
+    session: row?.session ?? row?.milking_session ?? row?.milkingSession ?? 'morning',
+    status: normalizeStatus(row?.status),
+  };
+}
+
+const formatMilker = (value) => {
+  const milker = String(value || 'SYSTEM');
+  const digits = milker.replace(/\D/g, '');
+  return digits.length === 12 && digits.startsWith('254') ? `+254 ${digits.slice(3, 6)} ${digits.slice(6, 9)} ${digits.slice(9)}` : milker;
+};
+
+const StatusChip = ({ status }) => (
+  <span
+    className={`inline-flex items-center gap-1 rounded-badge border px-2 py-1 font-sans text-[11px] font-medium ${
+      status === 'Verified'
+        ? 'border-brand/20 bg-brand/5 text-brand'
+        : status === 'Pending'
+          ? 'border-brand-200 bg-brand-50 text-brand-800'
+          : 'border-brand/20 bg-brand/10 text-brand-dark'
+    }`}
+  >
+    <ShieldCheck size={10} aria-hidden="true" /> {status}
+  </span>
+);
+
 export default function YieldLog() {
   const { tenantId, farmId } = useTenant();
   const { currentUser } = useAuth();
   const canVerify = canViewAdminControls(currentUser);
+  const invalidateProduction = useInvalidateProduction();
   const queryClient = useQueryClient();
   const [showFastLog, setShowFastLog] = useState(false);
   const [showCalfMilkFeed, setShowCalfMilkFeed] = useState(false);
   const [selectedRecord, setSelectedRecord] = useState(null);
   const [fastLogInitialDate, setFastLogInitialDate] = useState('');
   const [fastLogMode, setFastLogMode] = useState('create');
-  const [milkRows, setMilkRows] = useState([]);
   const confirmation = useConfirmation();
   const [filtersOpen, setFiltersOpen] = useState(false);
-  const [filters, setFilters] = useState({
-    date: "",
-    cowId: "",
-    status: "all",
-    session: "all",
-    minAmount: "",
-    maxAmount: "",
-  });
+  const [filters, setFilters] = useState(EMPTY_FILTERS);
+
+  // Every filter runs on the server so rows, group headers and period totals agree.
+  const serverFilters = useMemo(() => ({
+    search: filters.cowId.trim(),
+    date_from: filters.date,
+    date_to: filters.date,
+    status: filters.status,
+    session: filters.session,
+  }), [filters]);
+
+  const { period, anchor, setPeriod, step } = usePeriodSelection('production');
+  const periodSummary = useProductionSummary({ period, anchor, filters: serverFilters });
+  const summary = periodSummary.data;
+  const groupTotals = useProductionGroupTotals(serverFilters);
 
   const {
     data: yieldRowsRaw,
@@ -150,18 +198,12 @@ export default function YieldLog() {
     fetchStatus: yieldRowsFetchStatus,
     refetch: refetchYieldRows,
   } = useQuery({
-    queryKey: ['production-yield-rows', tenantId, farmId],
-    queryFn: () => productionApi.listYield(),
+    queryKey: [...QUERY_KEYS.YIELD_ROWS(tenantId, farmId), toTotalsParams(serverFilters)],
+    queryFn: () => productionApi.listYield(toTotalsParams(serverFilters)),
+    placeholderData: keepPreviousData,
   });
   const milkLoadState = getListLoadState({ status: yieldRowsStatus, fetchStatus: yieldRowsFetchStatus, data: yieldRowsRaw });
   const hasMilkRowsToShow = milkLoadState === 'ready' || milkLoadState === 'stale';
-
-  // Fetch the production summary which now includes accurate financial data
-  const { data: productionSummary, isLoading: isLoadingProductionSummary } = useQuery({
-    queryKey: ['production-summary', tenantId, farmId],
-    queryFn: () => productionApi.summary(), // Calls GET /api/production/summary
-    enabled: !!tenantId && !!farmId,
-  });
 
   const {
     data: milkDispositions = [],
@@ -173,55 +215,14 @@ export default function YieldLog() {
     enabled: !!tenantId && !!farmId,
   });
 
-  const normalizeYieldRow = (row) => {
-    const amountCandidate = extractAmountCandidate(row);
-    const parsedAmount = parseAmountValue(amountCandidate.value);
-    const hasValidAmount = Number.isFinite(parsedAmount);
-    const timestamp = row?.timestamp ?? row?.createdAt ?? row?.created_at;
-
-    if (!amountCandidate.found) {
-      logDevWarning('Yield row missing expected amount field.', {
-        rowId: row?.id ?? row?.yield_id ?? row?.recordId ?? null,
-        knownAmountKeys: AMOUNT_FIELD_CANDIDATES,
-        receivedKeys: row && typeof row === 'object' ? Object.keys(row) : [],
-        row,
-      });
-    } else if (!hasValidAmount) {
-      logDevWarning('Yield row amount could not be parsed.', {
-        rowId: row?.id ?? row?.yield_id ?? row?.recordId ?? null,
-        amountKey: amountCandidate.key,
-        rawAmount: amountCandidate.value,
-        row,
-      });
-    }
-
-    return {
-      id: row?.id ?? row?.yield_id ?? row?.recordId ?? `milk-${Date.now()}`,
-      date: row?.date ?? row?.milkingDate ?? row?.milking_date ?? row?.entry_date ?? (timestamp ? new Date(timestamp).toISOString().slice(0, 10) : new Date().toISOString().slice(0, 10)),
-      time: timestamp ? new Date(timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : (row?.time ?? new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })),
-      milker: row?.milker_name ?? row?.milker ?? row?.created_by ?? 'SYSTEM',
-      animalRefId: row?.cow_tag ?? row?.cowTag ?? row?.animal_id ?? row?.animalId ?? row?.cow_id ?? row?.cowId ?? row?.cow ?? null,
-      cowId: row?.cow_tag ?? row?.cowTag ?? row?.cowId ?? row?.cow_id ?? row?.animal_id ?? '',
-      cowName: row?.cowName ?? row?.cow_name ?? row?.animal_name ?? row?.animalName ?? row?.name ?? '',
-      amountValue: hasValidAmount ? parsedAmount : null,
-      amount: hasValidAmount ? parsedAmount.toFixed(1) : '--',
-      session: row?.session ?? row?.milking_session ?? row?.milkingSession ?? 'morning',
-      status: normalizeStatus(row?.status),
-    };
-  };
-
-  useEffect(() => {
+  const milkRows = useMemo(() => {
     if (!Array.isArray(yieldRowsRaw)) {
       if (yieldRowsRaw !== undefined) {
-        logDevWarning('Expected yield rows array but received different payload shape.', {
-          payloadType: typeof yieldRowsRaw,
-          payload: yieldRowsRaw,
-        });
+        logDevWarning('Expected yield rows array but received different payload shape.', { payloadType: typeof yieldRowsRaw, payload: yieldRowsRaw });
       }
-      return;
+      return [];
     }
-
-    setMilkRows(yieldRowsRaw.map(normalizeYieldRow));
+    return yieldRowsRaw.map(normalizeYieldRow);
   }, [yieldRowsRaw]);
 
   useEffect(() => {
@@ -230,7 +231,6 @@ export default function YieldLog() {
     logDevError('Failed to load production yield rows.', {
       tenantId,
       farmId,
-      queryKey: ['production-yield-rows', tenantId, farmId],
       error: {
         message: yieldRowsError?.message,
         status: yieldRowsError?.response?.status,
@@ -240,46 +240,21 @@ export default function YieldLog() {
     });
   }, [hasYieldRowsError, yieldRowsError, tenantId, farmId]);
 
-  const filteredMilkRows = useMemo(() => {
-    return filterMilkRows(milkRows, filters);
-  }, [filters, milkRows]);
+  const hasActiveFilters = Boolean(filters.date || filters.cowId.trim() || filters.status !== 'all' || filters.session !== 'all');
+  const groupsUnavailable = groupTotals.loadState === 'error' || groupTotals.loadState === 'offline';
 
-  const summary = useMemo(() => {
-    const verified = milkRows.filter((row) => row.status === 'Verified').length;
-    const pending = milkRows.filter((row) => row.status === 'Pending').length;
-    const flagged = milkRows.filter((row) => row.status === 'Flagged').length;
-    const totalVolume = milkRows.reduce((sum, row) => (
-      typeof row.amountValue === 'number' ? sum + row.amountValue : sum
-    ), 0);
-
-    // Extract financial data from the production summary
-    const revenueToday = productionSummary?.revenue_total_kes ?? 0;
-    const netMarginToday = productionSummary?.net_margin_kes ?? 0;
-
-    return {
-      verified,
-      pending,
-      flagged,
-      totalVolume: totalVolume.toFixed(1),
-      revenueToday: revenueToday.toLocaleString(undefined, { minimumFractionDigits: 2 }),
-      netMarginToday: netMarginToday.toLocaleString(undefined, { minimumFractionDigits: 2 }),
-    };
-  }, [milkRows, productionSummary]);
-
-  const summaryTone = {
-    brand: 'text-brand',
-    success: 'text-brand-800',
-    warning: 'text-brand-700',
-    danger: 'text-brand-dark',
-  };
+  const activeChips = [
+    filters.cowId.trim() && { key: 'cowId', label: `“${filters.cowId.trim()}”`, clear: '' },
+    filters.date && { key: 'date', label: formatDate(filters.date), clear: '' },
+    filters.status !== 'all' && { key: 'status', label: filters.status, clear: 'all' },
+    filters.session !== 'all' && { key: 'session', label: filters.session, clear: 'all' },
+  ].filter(Boolean).map((chip) => ({ ...chip, onRemove: () => updateFilter(chip.key, chip.clear) }));
 
   const updateFilter = (name, value) => {
     setFilters((prev) => ({ ...prev, [name]: value }));
   };
 
-  const clearFilters = () => {
-    setFilters({ date: '', cowId: '', status: 'all', session: 'all', minAmount: '', maxAmount: '' });
-  };
+  const clearFilters = () => setFilters(EMPTY_FILTERS);
 
   // Integrated Safety Check: Fetching active medical withdrawals
   const {
@@ -315,10 +290,9 @@ export default function YieldLog() {
     });
   }, [hasHardlocksError, hardlocksError, tenantId, farmId]);
 
+  // After any write, the rows and every total are refetched from the server.
   const handleFastLogSaved = (animalRefId) => {
-    queryClient.invalidateQueries({ queryKey: QUERY_KEYS.YIELD_SUMMARY(tenantId, farmId) });
-    queryClient.invalidateQueries({ queryKey: QUERY_KEYS.YIELD_TREND(tenantId, farmId) });
-    queryClient.invalidateQueries({ queryKey: ['production-yield-rows', tenantId, farmId] });
+    invalidateProduction();
     if (animalRefId) {
       queryClient.invalidateQueries({ queryKey: ['milk-history', tenantId, farmId, animalRefId] });
     }
@@ -327,7 +301,7 @@ export default function YieldLog() {
   const openCreateLog = () => {
     setFastLogMode('create');
     setSelectedRecord(null);
-    setFastLogInitialDate(filters.date || new Date().toISOString().slice(0, 10));
+    setFastLogInitialDate(filters.date || todayLocalIso());
     setShowFastLog(true);
   };
 
@@ -337,7 +311,7 @@ export default function YieldLog() {
       <button type="button" onClick={() => openCreateLog()} className="btn-command">Record the first milking</button>
     </div>
   );
-
+  const emptyMessage = hasActiveFilters ? 'No milk log entries match the selected filters.' : milkFirstTimeEmpty;
 
   const openEditLog = (row) => {
     setFastLogMode('edit');
@@ -349,33 +323,10 @@ export default function YieldLog() {
   const handleLogSave = (savedRecord) => {
     const animalRefId = savedRecord?.animal_id || savedRecord?.animalId || savedRecord?.cow_id || savedRecord?.cowId || selectedRecord?.animalRefId || selectedRecord?.cowId || null;
     handleFastLogSaved(animalRefId);
-    setMilkRows((prev) => {
-      const savedAmount = parseAmountValue(savedRecord?.volume ?? savedRecord?.amount ?? selectedRecord?.amount ?? null);
-      const normalizedRow = {
-        id: savedRecord?.id || savedRecord?.log_id || selectedRecord?.id || `milk-${Date.now()}`,
-        date: savedRecord?.date || savedRecord?.milkingDate || savedRecord?.milking_date || selectedRecord?.date || new Date().toISOString().slice(0, 10),
-        time: selectedRecord?.time || new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-        milker: savedRecord?.milker_name || savedRecord?.milker || selectedRecord?.milker || 'SYSTEM',
-        animalRefId,
-        cowId: savedRecord?.cow_tag || savedRecord?.cowTag || savedRecord?.cow_id || savedRecord?.cowId || selectedRecord?.cowId || '',
-        cowName: savedRecord?.cow_name || savedRecord?.cowName || selectedRecord?.cowName || '',
-        amountValue: Number.isFinite(savedAmount) ? savedAmount : null,
-        amount: Number.isFinite(savedAmount) ? savedAmount.toFixed(1) : '--',
-        session: savedRecord?.session || selectedRecord?.session || 'morning',
-        status: selectedRecord?.status || 'Pending',
-      };
-
-      if (fastLogMode === 'edit' && selectedRecord) {
-        return prev.map((row) => (row.id === selectedRecord.id ? { ...row, ...normalizedRow } : row));
-      }
-
-      return [normalizedRow, ...prev];
-    });
   };
 
   const handleLogDelete = (deletedRecord) => {
     handleFastLogSaved(deletedRecord?.animalRefId || selectedRecord?.animalRefId);
-    setMilkRows((prev) => prev.filter((row) => row.id !== (deletedRecord?.id || selectedRecord?.id)));
   };
 
   const handleDeleteFromTable = async (row) => {
@@ -390,7 +341,6 @@ export default function YieldLog() {
     try {
       await productionApi.deleteYield(row.id);
       handleFastLogSaved(row.animalRefId);
-      setMilkRows((prev) => prev.filter((entry) => entry.id !== row.id));
       toast.success('Milk record deleted.');
     } catch (error) {
       console.error('[productionLog] delete milk record failed', { rowId: row.id, cowId: row.cowId, error });
@@ -401,65 +351,116 @@ export default function YieldLog() {
   const handleVerifyEntry = async (row) => {
     try {
       await productionApi.verifyYield(row.id);
-      setMilkRows((prev) =>
-        prev.map((entry) => (entry.id === row.id ? { ...entry, status: 'Verified' } : entry))
-      );
       handleFastLogSaved(row.animalRefId);
     } catch (error) {
       console.error('Failed to verify milk record', error);
+      toast.error('Could not verify this milk record. Please try again.');
     }
   };
 
-  return (
-    <div className="animate-reveal space-y-6">
-      <Confirmation {...confirmation} />
-      <div className="rounded-[28px] border border-brand/15 bg-brand-50 p-5 sm:p-6">
-        <div className="flex flex-col gap-4 border-b border-ink/10 pb-5 lg:flex-row lg:items-end lg:justify-between">
-          <div className="min-w-0">
-            <div className="inline-flex items-center gap-2 px-2 py-1 bg-brand/10 text-brand text-[10px] font-semibold tracking-normal mb-4 rounded-md border border-brand/20">
-              <Beaker size={12} /> Production Interface
-            </div>
-            <h2 className="m-0 break-words font-display text-3xl font-semibold tracking-tight text-brand sm:text-4xl">
-              Daily <span className="text-ink/30">Milk Log</span>
-            </h2>
-            <p className="mt-2 max-w-2xl text-sm leading-6 text-ink-muted">
-              Review milk entries, keep withdrawals visible, and work from a single place with filters and edit history.
-            </p>
-          </div>
-          <div className="flex flex-col gap-2 sm:flex-row">
-            <button
-              type="button"
-              onClick={() => setShowCalfMilkFeed(true)}
-              className="btn-secondary w-full justify-center gap-2 whitespace-nowrap px-4 py-3 sm:w-auto"
-            >
-              <Baby size={16} className="shrink-0" />
-              <span className="text-sm sm:text-base">Feed Calf</span>
-            </button>
-            <button
-              type="button"
-              onClick={openCreateLog}
-              className="btn-command w-full sm:w-auto justify-center gap-2 whitespace-nowrap min-h-11 px-4 py-3 sm:px-5 sm:py-3"
-            >
-              <Plus size={10} className="shrink-0" />
-              <span className="text-sm sm:text-base">Record Milk</span>
-            </button>
-          </div>
-        </div>
+  const actionsMenu = (row, size) => (
+    <OverflowMenu
+      label={`Actions for milk record ${formatCowIdentity({ cowName: row.cowName, cowTag: row.cowId })}`}
+      size={size}
+      bordered
+      items={[
+        { key: 'edit', label: 'Edit', icon: Pencil, onSelect: () => openEditLog(row) },
+        { key: 'delete', label: 'Delete', icon: Trash2, tone: 'danger', onSelect: () => handleDeleteFromTable(row) },
+      ]}
+    />
+  );
 
-        <div className="mt-5 grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4">
-          {[
-            { label: 'Total volume', value: `${summary.totalVolume} L`, tone: 'brand' },
-            { label: 'Verified entries', value: summary.verified, tone: 'success' },
-            { label: 'Pending entries', value: summary.pending, tone: 'warning' },
-            { label: 'Flagged entries', value: summary.flagged, tone: 'danger' },
-          ].map((item) => (
-            <div key={item.label} className="rounded-2xl border border-ink/10 bg-surface p-4 ">
-              <p className="text-[10px] font-bold uppercase tracking-widest text-ink-muted">{item.label}</p>
-              <StatValue state={milkLoadState} label="milk records" className={`mt-2 break-words text-2xl font-black tabular-nums ${summaryTone[item.tone]} sm:text-3xl`}>{item.value}</StatValue>
-            </div>
-          ))}
+  const tableLink = 'text-ink underline-offset-2 hover:text-brand hover:underline focus-visible:text-brand focus-visible:underline focus-visible:outline-none';
+  const cowLink = (row, className) => (
+    <Link to={`/operations/animal/${row.animalRefId ?? row.cowId}/milk-history`} className={className}>
+      {formatCowIdentity({ cowName: row.cowName, cowTag: row.cowId })}
+    </Link>
+  );
+
+  // Dense desktop row (~40px).
+  const renderRow = (row) => (
+    <tr key={row.id} className="h-10 border-b border-ink/5 hover:bg-ink-50">
+      <td className={cellClass(column.session, '!py-1 text-xs text-ink')}>{toNormalizedSessionLabel(row.session)}</td>
+      <td className={cellClass(column.milker, '!py-1 text-xs text-ink')}>{formatMilker(row.milker)}</td>
+      <td className={cellClass(column.cow, '!py-1 text-sm')}>{cowLink(row, tableLink)}</td>
+      <td className={cellClass(column.litres, '!py-1 text-sm text-ink')}>{formatLitres(row.amount)}</td>
+      <td className={cellClass(column.status, '!py-1')}><StatusChip status={row.status} /></td>
+      <td className={cellClass(column.actions, '!py-1')}>
+        <div className="inline-flex items-center gap-2">
+          {canVerify && row.status !== 'Verified' && (
+            <button type="button" onClick={() => handleVerifyEntry(row)} className="inline-flex h-8 items-center gap-1 !rounded-input border border-ink/10 px-2.5 text-xs font-semibold text-brand hover:bg-ink-50">
+              <ShieldCheck size={12} aria-hidden="true" /> Verify
+            </button>
+          )}
+          {actionsMenu(row, 'h-8 w-8')}
         </div>
+      </td>
+    </tr>
+  );
+
+  // Inside a day group the card doesn't repeat the date; ⋮ sits in the top row.
+  const renderCard = (row) => (
+    <article key={row.id} className="min-w-0 space-y-2 bg-card p-4">
+      <div className="flex min-w-0 items-start gap-3">
+        <div className="min-w-0 flex-1">
+          {cowLink(row, 'break-words font-semibold text-brand')}
+          <p className="mt-1 text-xs text-ink-muted">{toNormalizedSessionLabel(row.session)}</p>
+        </div>
+        <p className="shrink-0 pt-0.5 text-right font-mono text-lg font-bold tabular-nums text-brand">{formatLitres(row.amount)}</p>
+        {actionsMenu(row, 'h-11 w-11')}
       </div>
+      <div className="flex min-w-0 flex-wrap items-center justify-between gap-x-3 gap-y-2 border-t border-ink/10 pt-2 text-xs">
+        <span className="min-w-0 break-all text-ink-muted">Milker <span className="font-medium text-ink">{formatMilker(row.milker)}</span></span>
+        <span className="flex items-center gap-2">
+          <StatusChip status={row.status} />
+          {canVerify && row.status !== 'Verified' && <button type="button" onClick={() => handleVerifyEntry(row)} className="min-h-11 rounded-lg border border-brand/20 px-3 text-xs font-semibold text-brand">Verify</button>}
+        </span>
+      </div>
+    </article>
+  );
+
+  const groupedListProps = {
+    records: milkRows,
+    getBucket,
+    groups: groupTotals.data,
+    groupsUnavailable,
+    onRetryGroups: groupTotals.refetch,
+    config: productionGroupConfig,
+  };
+
+
+  return (
+    <div className="space-y-4">
+      <Confirmation {...confirmation} />
+      <PageHeader
+        title="Production Log"
+        primaryAction={{ label: 'Record milk', icon: Plus, onClick: openCreateLog }}
+        secondaryActions={[{ key: 'calf', label: 'Feed calf', icon: Baby, onClick: () => setShowCalfMilkFeed(true) }]}
+        secondaryOnMobile="inline"
+      />
+
+      <PeriodSummary
+        control={(
+          <PeriodControl
+            period={period}
+            label={summary?.label}
+            onPeriodChange={setPeriod}
+            onPrevious={() => step(summary?.range, -1)}
+            onNext={() => step(summary?.range, 1)}
+            canGoPrevious={Boolean(summary?.range)}
+            canGoNext={Boolean(summary?.range) && summary.hasNext}
+          />
+        )}
+        loadState={periodSummary.loadState}
+        hasData={Boolean(summary)}
+        isEmpty={summary?.current?.count === 0}
+        error={periodSummary.error}
+        asOf={periodSummary.asOf}
+        onRetry={periodSummary.refetch}
+        metrics={summary ? productionSummaryConfig.metrics(summary) : []}
+        emptyMessage={summary && productionSummaryConfig.emptyMessage(summary)}
+        skeletonCount={3}
+      />
 
       {showFastLog && (
         <FastMilkLog
@@ -479,269 +480,92 @@ export default function YieldLog() {
       />
 
       {hardlocks?.length > 0 && (
-        <div className="card-machined flex items-start gap-6 border border-brand/20 bg-brand-50 p-6">
-          <div className="bg-brand p-3 text-surface">
-            <AlertTriangle size={24} />
-          </div>
-          <div>
-            <h4 className="font-display text-lg font-semibold tracking-tight text-brand-dark">
-              Cows on Medicine (Do Not Mix!)
-            </h4>
-            <p className="font-sans text-sm text-ink-normal mt-1 max-w-2xl">
-              The system has identified <strong className="text-ink-strong">{hardlocks.length} cows</strong> currently under withdrawal periods.
-              Milk entries for these specific IDs are restricted to prevent contamination of the batch.
+        <div role="status" className={`${SURFACE} flex items-start gap-3 p-3 sm:p-4`}>
+          <AlertTriangle size={18} className="mt-0.5 shrink-0 text-brand-dark" aria-hidden="true" />
+          <div className="min-w-0">
+            <h3 className="text-sm font-semibold text-ink">Cows on medicine: do not mix their milk</h3>
+            <p className="mt-0.5 text-xs text-ink-muted">
+              <span className="tabular-nums">{hardlocks.length}</span> cows are under withdrawal periods. Their milk entries are restricted to prevent contamination of the batch.
             </p>
           </div>
         </div>
       )}
 
-      <MilkDispositionHistory
-        records={milkDispositions.slice(0, 5)}
-        isLoading={isLoadingMilkDispositions}
-        error={milkDispositionsError}
-        title="Recent calf milk allocations"
-        totalCount={milkDispositions.length}
-        totalLiters={milkDispositions.reduce((total, record) => total + record.liters, 0)}
-        viewAllHref="/operations/milk-usage"
-      />
-
-      <div className="card-machined p-5 space-y-4">
-        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-          <button
-            type="button"
-            onClick={() => setFiltersOpen((prev) => !prev)}
-            className="inline-flex items-center gap-1.5 rounded-lg border border-ink/10 bg-surface px-3 py-1.5 text-xs font-semibold text-ink  transition-all hover:border-brand/20 hover:bg-brand/5 hover:text-brand"
-            aria-expanded={filtersOpen}
-            aria-controls="production-filter-panel"
-          >
-            <Filter size={12} /> Production filters
-            <ChevronDown
-              size={12}
-              className={`text-ink-muted transition-transform duration-300 ease-out motion-reduce:transition-none ${filtersOpen ? 'rotate-180' : ''}`}
-            />
-          </button>
-          <button
-            type="button"
-            onClick={clearFilters}
-            className="btn-ghost gap-2 px-3 py-1.5 text-xs"
-          >
-            <RotateCcw size={14} /> Reset filters
-          </button>
-        </div>
-
-        {hasMilkRowsToShow && (
-          <div className="flex items-center gap-2 text-xs text-ink-muted">
-            <Search size={14} />
-            Showing all {filteredMilkRows.length} of {milkRows.length} records
-          </div>
-        )}
-
-        {filtersOpen && (
-          <div id="production-filter-panel" className="space-y-4">
-            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-6 gap-3">
-              <label className="space-y-1 text-xs font-semibold text-ink-muted">
-                Date
-                <input
-                  type="date"
-                  value={filters.date}
-                  onChange={(e) => updateFilter('date', e.target.value)}
-                  className="input-machined"
-                />
-              </label>
-              <label className="space-y-1 text-xs font-semibold text-ink-muted">
-                Cow name or ear tag
-                <input
-                  type="text"
-                  value={filters.cowId}
-                  onChange={(e) => updateFilter('cowId', e.target.value)}
-                  placeholder="e.g. Malaika or KE-0046"
-                  className="input-machined"
-                />
-              </label>
-              <label className="space-y-1 text-xs font-semibold text-ink-muted">
-                Status
-                <select
-                  value={filters.status}
-                  onChange={(e) => updateFilter('status', e.target.value)}
-                  className="input-machined"
-                >
-                  <option value="all">All</option>
-                  <option value="Verified">Verified</option>
-                  <option value="Pending">Pending</option>
-                  <option value="Flagged">Flagged</option>
-                </select>
-              </label>
-              <label className="space-y-1 text-xs font-semibold text-ink-muted">
-                Session
-                <select
-                  value={filters.session}
-                  onChange={(e) => updateFilter('session', e.target.value)}
-                  className="input-machined"
-                >
-                  <option value="all">All</option>
-                  <option value="Morning">Morning</option>
-                  <option value="Afternoon">Afternoon</option>
-                  <option value="Evening">Evening</option>
-                </select>
-              </label>
-              <label className="space-y-1 text-xs font-semibold text-ink-muted">
-                Min Amount
-                <input
-                  type="number"
-                  step="0.1"
-                  value={filters.minAmount}
-                  onChange={(e) => updateFilter('minAmount', e.target.value)}
-                  placeholder="0.0"
-                  className="input-machined"
-                />
-              </label>
-              <label className="space-y-1 text-xs font-semibold text-ink-muted">
-                Max Amount
-                <input
-                  type="number"
-                  step="0.1"
-                  value={filters.maxAmount}
-                  onChange={(e) => updateFilter('maxAmount', e.target.value)}
-                  placeholder="20.0"
-                  className="input-machined"
-                />
-              </label>
-            </div>
-          </div>
-        )}
-      </div>
-
       <QueuedMilkEntries />
 
-      <div className="card-machined !p-0">
+      <DataSection
+        label="Milk entries"
+        toolbar={(
+          <>
+            <Toolbar>
+              <ToolbarSearch label="Search by cow name or ear tag" value={filters.cowId} onChange={(value) => updateFilter('cowId', value)} placeholder="Search cow name or ear tag" />
+              <button
+                type="button"
+                onClick={() => setFiltersOpen((prev) => !prev)}
+                aria-expanded={filtersOpen}
+                aria-controls="production-filter-panel"
+                className="inline-flex min-h-11 items-center gap-1.5 !rounded-input border border-ink/15 px-3 text-xs font-semibold text-ink hover:bg-ink-50 sm:min-h-9"
+              >
+                <SlidersHorizontal size={14} aria-hidden="true" /> Filters
+              </button>
+              <FilterChips chips={activeChips} onReset={clearFilters} />
+            </Toolbar>
+            {filtersOpen && (
+              <div id="production-filter-panel" className="grid grid-cols-1 gap-3 pb-2 pt-1 sm:grid-cols-3">
+                <DateField label="Date" value={filters.date} onChange={(value) => updateFilter('date', value)} max={todayLocalIso()} inputClassName="input-machined h-10 min-h-0 !py-2 text-sm" />
+                <label className="space-y-1 text-xs font-semibold text-ink-muted">
+                  Status
+                  <select value={filters.status} onChange={(e) => updateFilter('status', e.target.value)} className="input-machined">
+                    <option value="all">All</option>
+                    <option value="Verified">Verified</option>
+                    <option value="Pending">Pending</option>
+                    <option value="Flagged">Flagged</option>
+                  </select>
+                </label>
+                <label className="space-y-1 text-xs font-semibold text-ink-muted">
+                  Session
+                  <select value={filters.session} onChange={(e) => updateFilter('session', e.target.value)} className="input-machined">
+                    <option value="all">All</option>
+                    <option value="Morning">Morning</option>
+                    <option value="Afternoon">Afternoon</option>
+                    <option value="Evening">Evening</option>
+                  </select>
+                </label>
+              </div>
+            )}
+          </>
+        )}
+      >
         {milkLoadState === 'loading' && <SlowLoadingHint label="milk records" />}
         {milkLoadState === 'stale' && <StaleDataNotice label="milk records" error={yieldRowsError} onRetry={refetchYieldRows} />}
         {(milkLoadState === 'offline' || milkLoadState === 'error') && (
           <ListLoadMessage state={milkLoadState} label="milk records" error={yieldRowsError} onRetry={refetchYieldRows} />
         )}
-        <table className={`hidden w-full min-w-[720px] border-collapse text-left ${hasMilkRowsToShow || milkLoadState === 'loading' ? 'md:table' : ''}`}>
-          <thead>
-            <tr className="bg-brand text-surface">
-              <th className="p-5 font-sans text-xs font-semibold uppercase tracking-[0.12em] text-surface/95">Date</th>
-              <th className="p-5 font-sans text-xs font-semibold uppercase tracking-[0.12em] text-surface/95">Session</th>
-              <th className="p-5 font-sans text-xs font-semibold uppercase tracking-[0.12em] text-surface/95">Milker</th>
-              <th className="p-5 font-sans text-xs font-semibold uppercase tracking-[0.12em] text-surface/95">Cow</th>
-              <th className="p-5 font-sans text-xs font-semibold uppercase tracking-[0.12em] text-right text-surface/95">Amount</th>
-              <th className="p-5 font-sans text-xs font-semibold uppercase tracking-[0.12em] text-center text-surface/95">Status</th>
-              <th className="p-5 font-sans text-xs font-semibold uppercase tracking-[0.12em] text-right text-surface/95">Actions</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y-2 divide-ink/5" aria-busy={milkLoadState === 'loading'}>
-            {milkLoadState === 'loading' ? <TableSkeletonRows columns={7} /> : hasMilkRowsToShow && <GroupedDateRows
-              items={filteredMilkRows}
-              getDate={(row) => row.date}
-              colSpan={7}
-              renderGroupMeta={(items) => {
-                const total = items.reduce((sum, item) => sum + (item.amountValue ?? 0), 0);
-                return `${items.length} ${items.length === 1 ? 'entry' : 'entries'} / ${total.toFixed(1)} L`;
-              }}
-              renderItem={(row) => (
-              <tr key={row.id} style={{ animationDelay: '0.1s' }} className="animate-stagger group hover:bg-surface-raised transition-colors">
-                <td className="p-5 font-sans text-xs text-ink-muted">{formatDate(row.date)}</td>
-                <td className="p-5 font-sans text-xs font-medium text-ink">{toNormalizedSessionLabel(row.session)}</td>
-                <td className="p-5 font-sans text-xs font-medium text-ink">{row.milker}</td>
-                <td className="p-5">
-                  <div className="flex items-center gap-3">
-                    <div className="w-2 h-2 rounded-full bg-accent"></div>
-                    <Link to={`/operations/animal/${row.animalRefId ?? row.cowId}/milk-history`} className="p-3 text-right font-sans text-1.8xl font-medium text-brand tabular-nums">
-                      {formatCowIdentity({ cowName: row.cowName, cowTag: row.cowId })}
-                    </Link>
-                  </div>
-                </td>
-                <td className="p-3 text-right font-sans text-1.8xl font-medium text-brand tabular-nums">
-                  {row.amount} {row.amount === '--' ? null : <span className="text-[18px] opacity-100 ml-0.4">L</span>}
-                </td>
-                <td className="p-5">
-                  <div className="flex justify-center">
-                    <div
-                      className={`inline-flex items-center gap-1 px-2 py-1 border font-sans text-[11px] font-medium ${
-                        row.status === 'Verified'
-                          ? 'border-brand/20 bg-brand/5 text-brand'
-                          : row.status === 'Pending'
-                            ? 'border-brand-200 bg-brand-50 text-brand-800'
-                            : 'border-brand/20 bg-brand/10 text-brand-dark'
-                      }`}
-                    >
-                      <ShieldCheck size={10} /> {row.status}
-                    </div>
-                  </div>
-                </td>
-                <td className="p-5 text-right">
-                  <div className="inline-flex items-center gap-2">
-                    {canVerify && row.status !== 'Verified' && (
-                      <button
-                        type="button"
-                        onClick={() => handleVerifyEntry(row)}
-                        className="btn-ghost gap-1 border border-brand/30 px-3 py-2 text-xs text-brand hover:bg-brand/10"
-                      >
-                        <ShieldCheck size={12} /> Verify
-                      </button>
-                    )}
-                    <Popover>
-                      <PopoverTrigger asChild>
-                        <button type="button" className="inline-flex h-8 w-8 items-center justify-center rounded-button border border-brand/20 text-brand hover:border-brand-400 hover:bg-brand-50" aria-label={`Actions for milk record ${row.id}`}><MoreVertical size={16} /></button>
-                      </PopoverTrigger>
-                      <PopoverContent align="end" className="w-40 p-1.5">
-                        <button type="button" onClick={() => openEditLog(row)} className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm text-ink-900 hover:bg-brand-50"><Pencil size={14} /> Edit</button>
-                        <button type="button" onClick={() => handleDeleteFromTable(row)} className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm text-brand-dark hover:bg-brand-50"><Trash2 size={14} /> Delete</button>
-                      </PopoverContent>
-                    </Popover>
-                  </div>
-                </td>
-              </tr>
-              )}
-              empty={filteredMilkRows.length === 0 && (
-              <tr>
-                <td className="p-6 text-center text-ink-muted" colSpan={7}>
-                  {milkRows.length === 0 ? milkFirstTimeEmpty : 'No milk log entries match the selected filters.'}
-                </td>
-              </tr>
-              )}
-            />}
-          </tbody>
-        </table>
-        <div className="divide-y divide-ink/10 md:hidden" aria-busy={milkLoadState === 'loading'}>
-          {milkLoadState === 'loading' && <CardSkeletons />}
-          {hasMilkRowsToShow && filteredMilkRows.map((row) => {
-            const milker = String(row.milker || 'SYSTEM');
-            const digits = milker.replace(/\D/g, '');
-            const displayMilker = digits.length === 12 && digits.startsWith('254') ? `+254 ${digits.slice(3, 6)} ${digits.slice(6, 9)} ${digits.slice(9)}` : milker;
-            return (
-              <article key={row.id} className="min-w-0 space-y-3 p-4">
-                <div className="flex min-w-0 items-start justify-between gap-3">
-                  <div className="min-w-0">
-                    <Link to={`/operations/animal/${row.animalRefId ?? row.cowId}/milk-history`} className="break-words font-semibold text-brand">{formatCowIdentity({ cowName: row.cowName, cowTag: row.cowId })}</Link>
-                    <p className="mt-1 break-words text-xs text-ink-muted">{formatDate(row.date)} · {toNormalizedSessionLabel(row.session)}</p>
-                  </div>
-                  <div className="shrink-0 text-right">
-                    <p className="font-mono text-lg font-bold tabular-nums text-brand">{row.amount} {row.amount === '--' ? '' : 'L'}</p>
-                    <span className="inline-flex items-center gap-1 rounded border border-brand/20 bg-brand-50 px-2 py-1 text-[10px] font-semibold text-brand-dark"><ShieldCheck size={11} /> {row.status}</span>
-                  </div>
-                </div>
-                <div className="flex min-w-0 flex-wrap items-baseline justify-between gap-x-3 gap-y-1 border-t border-ink/10 pt-2 text-xs">
-                  <span className="text-ink-muted">Milker</span><span className="break-all text-right font-medium text-ink">{displayMilker}</span>
-                </div>
-                <div className="flex flex-wrap items-center justify-end gap-2">
-                  {canVerify && row.status !== 'Verified' && <button type="button" onClick={() => handleVerifyEntry(row)} className="rounded-lg border border-brand/20 px-3 py-2 text-xs font-semibold text-brand">Verify</button>}
-                  <Popover>
-                    <PopoverTrigger asChild><button type="button" className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-brand/20 text-brand" aria-label={`Actions for milk record ${row.id}`}><MoreVertical size={16} /></button></PopoverTrigger>
-                    <PopoverContent align="end" className="w-40 p-1.5">
-                      <button type="button" onClick={() => openEditLog(row)} className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm text-ink hover:bg-brand-50"><Pencil size={14} /> Edit</button>
-                      <button type="button" onClick={() => handleDeleteFromTable(row)} className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm text-brand-dark hover:bg-brand-50"><Trash2 size={14} /> Delete</button>
-                    </PopoverContent>
-                  </Popover>
-                </div>
-              </article>
-            );
-          })}
-          {hasMilkRowsToShow && filteredMilkRows.length === 0 && <div className="p-6 text-center text-sm text-ink-muted">{milkRows.length === 0 ? milkFirstTimeEmpty : 'No milk log entries match the selected filters.'}</div>}
+        <div className={`hidden ${hasMilkRowsToShow || milkLoadState === 'loading' ? 'xl:block' : ''}`}>
+          <table className="w-full border-collapse text-left">
+            <TableHead columns={COLUMNS} />
+            <tbody className="bg-card" aria-busy={milkLoadState === 'loading'}>
+              {milkLoadState === 'loading' ? <TableSkeletonRows columns={COLUMNS.length} />
+                : hasMilkRowsToShow && (milkRows.length > 0
+                  ? <GroupedList {...groupedListProps} variant="table" columns={COLUMNS} renderRecord={renderRow} />
+                  : <tr><td className="p-6 text-center text-sm text-ink-muted" colSpan={COLUMNS.length}>{emptyMessage}</td></tr>)}
+            </tbody>
+          </table>
         </div>
-      </div>
+        <div className="xl:hidden" aria-busy={milkLoadState === 'loading'}>
+          {milkLoadState === 'loading' && <div className="divide-y divide-ink/10"><CardSkeletons /></div>}
+          {hasMilkRowsToShow && (milkRows.length > 0
+            ? <GroupedList {...groupedListProps} variant="cards" renderRecord={renderCard} />
+            : <div className="p-6 text-center text-sm text-ink-muted">{emptyMessage}</div>)}
+        </div>
+      </DataSection>
+
+      <RecentCalfFeedings
+        records={milkDispositions.slice(0, 5)}
+        isLoading={isLoadingMilkDispositions}
+        error={milkDispositionsError}
+        viewAllHref="/operations/milk-usage"
+      />
     </div>
   );
 }

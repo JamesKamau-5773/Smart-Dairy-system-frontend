@@ -44,7 +44,8 @@ export const STAFF_PAGE_ACCESS_OPTIONS = Object.freeze([
   { key: 'herd', label: 'Cow register and animal records' },
   { key: 'breeding', label: 'Breeding and genetics' },
   { key: 'medical', label: 'Medical records and veterinary care' },
-  { key: 'feed', label: 'Feed planning and milk lab' },
+  { key: 'feeding', label: 'Daily feeding (no costs or recipes)' },
+  { key: 'feed', label: 'Feed planning, costs and milk lab (includes daily feeding)' },
   { key: 'customers', label: 'Customer and buyer management' },
   { key: 'finance', label: 'Ledger and financial reports' },
   { key: 'inventory', label: 'Inventory' },
@@ -57,7 +58,8 @@ export const STAFF_PAGE_ACCESS_OPTIONS = Object.freeze([
 
 const allPageKeys = STAFF_PAGE_ACCESS_OPTIONS.map(({ key }) => key);
 export const DEFAULT_STAFF_PAGE_ACCESS = Object.freeze({
-  FARM_HAND: ['production', 'tasks', 'herd', 'feed'],
+  // Farm hands feed the cows but don't see prices or recipe shares.
+  FARM_HAND: ['production', 'tasks', 'herd', 'feeding'],
   VETERINARY_DOCTOR: ['herd', 'breeding', 'medical'],
   FARM_SUPERVISOR: ['production', 'tasks', 'herd', 'breeding', 'medical', 'feed', 'reports', 'safety'],
   FARM_MANAGER: ['dashboard', 'production', 'tasks', 'herd', 'breeding', 'medical', 'feed', 'customers', 'reports', 'safety'],

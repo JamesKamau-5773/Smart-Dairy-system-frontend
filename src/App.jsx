@@ -3,6 +3,7 @@ import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-route
 import { useAuth } from './contexts/AuthContext';
 import { canAccessCommandCenter, getDefaultLandingPath, hasRole, isSingleTenantUser } from './lib/roles';
 import { AUTH_STATES, getAuthState, getGateRoute } from './lib/authState';
+import { getPageKeyForPath } from './lib/pageRoutes';
 
 // Import the StaffProvider to fix the useStaff context error
 import { StaffProvider } from './providers/StaffProvider';
@@ -48,6 +49,7 @@ const DairyUnitEconomicsReport = lazy(() => import('./pages/finance/DairyUnitEco
 const AnimalEconomicsReport = lazy(() => import('./pages/finance/AnimalEconomicsReport.jsx'));
 const CustomersPage = lazy(() => import('./pages/operations/Customers.jsx'));
 const NutritionDashboard = lazy(() => import('./pages/nutrition/NutritionDashboard.jsx'));
+const TodayFeedingPage = lazy(() => import('./pages/nutrition/TodayFeedingPage.jsx'));
 // UPDATED: Pointing to the new correct location in the nutrition folder
 const UnitConversions = lazy(() => import('./pages/nutrition/UnitConversions.jsx'));
 const DailyRoutinePlanner = lazy(() => import('./pages/operations/DailyRoutinePlanner.jsx'));
@@ -133,16 +135,11 @@ const RoleRoute = ({ children, allowedRoles }) => {
     return <Navigate to="/login" replace />;
   }
 
-  if (Array.isArray(currentUser.page_access)) {
-    const pagePaths = [
-      '/dashboard', '/operations/yield', '/operations/milk-usage', '/operations/routine', '/tasks',
-      '/operations/herd', '/operations/breeding', '/operations/records', '/operations/milk-drop-reports',
-      '/feed-nutrition', '/operations/lab', '/settings/unit-conversions', '/operations/customers',
-      '/finance/buyers', '/finance/ledger', '/operations/inventory', '/operations/reports',
-      '/finance/reports', '/operations/safety', '/hr/staff', '/hr/payroll',
-    ];
-    const assignedPageRoute = pagePaths.some((path) => pathname === path || pathname.startsWith(`${path}/`));
-    if (assignedPageRoute) return children;
+  // Staff with explicit page access: DashboardLayout's page gate decides these routes.
+  // Member onboarding also needs an admin role, so it stays with the role check below.
+  const pageKey = getPageKeyForPath(pathname);
+  if (Array.isArray(currentUser.page_access) && pageKey && pageKey !== 'member_admin') {
+    return children;
   }
 
   if (isSingleTenantUser(currentUser)) {
@@ -291,6 +288,8 @@ export default function App() {
             <Route path="operations/lab" element={renderLazyPage(MilkLab, 'Loading milk feeding planner…')} />
             <Route path="operations/nutrition" element={renderLazyPage(NutritionDashboard, 'Loading feed planner…')} />
             <Route path="feed-nutrition" element={renderLazyPage(NutritionDashboard, 'Loading feed planner…')} />
+            {/* Page access `feeding` (or `feed`); DashboardLayout's page gate enforces it. */}
+            <Route path="feeding" element={renderLazyPage(TodayFeedingPage, 'Loading today’s feeding…')} />
 
             {/* UPDATED: Unit Helpers moved to operations layer to match sidebar UX */}
             <Route

@@ -14,6 +14,7 @@ import { createAuditEntry, logToAuditTrail } from '../../../lib/audit';
 import { formatCowIdentity } from '../../../lib/cowIdentity';
 import { breedingApi } from '../../../lib/backendApi';
 import { useTenant } from '../../../hooks/useTenant';
+import { todayLocalIso } from '../../../lib/localDate';
 
 /**
  * LogAIServiceForm
@@ -115,7 +116,7 @@ export default function LogAIServiceForm({
       const payload = normalizeBreedingLogPayload({
         cowId: resolvedCow.id,
         cow_name: resolvedCow.name,
-        event_date: logForm.aiDate || new Date().toISOString().slice(0, 10),
+        event_date: logForm.aiDate || todayLocalIso(),
         insemination_time: logForm.aiTime,
         sireCode: logForm.sireCode,
         semenSource: logForm.semenSource,

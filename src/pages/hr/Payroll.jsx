@@ -1,377 +1,405 @@
-import { useState, useMemo, useEffect } from 'react';
-import { getApiErrorMessage, hrApi } from '../../lib/backendApi';
-import { offlineFailureMessage } from '../../lib/offlinePolicy';
-import { Calendar, CheckCircle, Clock, Users, Banknote, CalendarClock, History } from 'lucide-react';
-import { useStaff } from '../../providers/StaffProvider';
-import SlidePanel from '../../components/ui/SlidePanel';
+import { useEffect, useMemo, useState } from 'react';
+import { Banknote, CalendarClock, Download, FileText, History, Users } from 'lucide-react';
 import toast from 'react-hot-toast';
+import PayPayrollModal from '../../components/forms/PayPayrollModal';
+import AlertBanner from '../../components/ui/AlertBanner';
+import Confirmation, { useConfirmation } from '../../components/ui/Confirmation';
+import SlidePanel from '../../components/ui/SlidePanel';
+import { Skeleton } from '../../components/ui';
+import { getApiErrorMessage, hrApi } from '../../lib/backendApi';
+import { downloadBlob } from '../../lib/download';
+import { offlineFailureMessage } from '../../lib/offlinePolicy';
+import { canDownloadPayslips, lineStatusLabel, nextPayrollPeriod, payrollRunToCsv, periodLabel, periodPayDate, runStatus, sortRunsNewestFirst, statutoryBreakdown } from '../../lib/payroll';
+import { roleLabel } from '../../lib/staffLabels';
+import { tone } from '../../components/ui/tones';
 
-const formatMoney = (value) => Number(value || 0).toLocaleString();
+const money = (value) => Number(value || 0).toLocaleString();
 
-const PayrollActions = ({ activeRun, nextPayrollDate, onRunPayroll, nextPayrollPeriod, isRunning }) => (
-  <section className="rounded-[28px] border border-ink/10 bg-[linear-gradient(135deg,rgba(223,249,255,0.95),rgba(255,255,255,0.98))] p-5  sm:p-6">
-    <div className="flex flex-col gap-4 border-b border-ink/10 pb-5 lg:flex-row lg:items-end lg:justify-between">
-      <div className="min-w-0">
-        <div className="mb-4 inline-flex items-center gap-2 rounded-md border border-brand/20 bg-brand/10 px-2 py-1 text-[10px] font-semibold text-brand">
-          <Banknote size={12} /> Human Resources
-        </div>
-        <h2 className="m-0 font-display text-4xl font-semibold tracking-tight text-brand">
-          Staff <span className="text-ink/30">Payroll</span>
-        </h2>
-        <p className="mt-2 max-w-2xl text-sm leading-6 text-ink-muted">Process and review monthly staff payments, leave adjustments, and advance repayments.</p>
-      </div>
-      <button
-        type="button"
-        onClick={onRunPayroll}
-        disabled={isRunning}
-        className="btn-command w-full justify-center whitespace-nowrap px-5 py-3 disabled:opacity-60 sm:w-auto"
-      >
-        {isRunning ? 'Running...' : `Run ${nextPayrollPeriod} Payroll`}
-      </button>
-    </div>
-
-    {activeRun && (
-      <div className="mt-5 grid gap-4 md:grid-cols-3">
-        <PayrollKPI title={`Total payroll (${activeRun.period.split(' ')[0]})`} value={`KES ${activeRun.totalDisbursed.toLocaleString()}`} icon={Banknote} />
-        <PayrollKPI title="Active staff" value={`${activeRun.employees} Employees`} icon={Users} />
-        <PayrollKPI title="Next payroll date" value={nextPayrollDate} icon={CalendarClock} />
-      </div>
-    )}
-  </section>
-);
-
-const PayrollKPI = ({ title, value, icon: Icon }) => (
-  <div className="flex items-start justify-between gap-4 rounded-2xl border border-ink/10 bg-surface p-4 ">
-    <div>
-      <span className="text-[10px] font-bold uppercase tracking-widest text-ink-muted">{title}</span>
-      <p className="mt-2 text-3xl font-black text-brand tabular-nums">{value}</p>
-    </div>
-    <div className="mt-1 text-brand">
-      <Icon size={18} />
-    </div>
-  </div>
-);
-
-const PayrollTable = ({ run }) => {
-  const summary = useMemo(() => {
-    const rows = Array.isArray(run.lineItems)
-      ? run.lineItems
-      : Array.isArray(run.details)
-        ? run.details
-        : [];
-    const backendSummary = run.summary;
-
-    if (backendSummary) {
-      return {
-        totalBase: Number(backendSummary.totalBase ?? 0),
-        totalLeave: Number(backendSummary.totalLeave ?? 0),
-        totalGross: Number(backendSummary.totalGross ?? 0),
-        totalDeductions: Number(backendSummary.totalDeductions ?? 0),
-        totalNet: Number(backendSummary.totalNet ?? 0),
-        rows,
-      };
-    }
-
-    return {
-      totalBase: rows.reduce((acc, row) => acc + row.base, 0),
-      totalLeave: rows.reduce((acc, row) => acc + row.leaveDeduction, 0),
-      totalGross: rows.reduce((acc, row) => acc + row.grossPay, 0),
-      totalDeductions: rows.reduce((acc, row) => acc + row.advanceDeduction, 0),
-      totalNet: rows.reduce((acc, row) => acc + row.net, 0),
-      rows,
-    };
-  }, [run.lineItems, run.details, run.summary]);
-
+function Kpi({ title, value, Icon }) {
   return (
-  <div className="overflow-hidden rounded-md border border-gray-200 bg-white ">
-    <div className="flex flex-col gap-2 border-b border-gray-200 bg-white px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
+    <div className="flex items-start justify-between gap-4 rounded-card border border-ink/10 bg-card p-4">
       <div>
-        <h3 className="flex items-center gap-2 font-semibold text-gray-900">
-          <Calendar size={16} /> Payroll for {run.period}
-        </h3>
-        <p className="mt-1 text-xs font-medium uppercase tracking-[0.18em] text-gray-500">Accounting flow: base salary → leave adjustment → gross pay → deductions → net pay</p>
+        <p className="text-[11px] font-semibold uppercase tracking-wider text-ink-muted">{title}</p>
+        <p className="mt-1 text-2xl font-bold tabular-nums text-ink">{value}</p>
       </div>
-      <span className="inline-flex items-center gap-2 rounded-md border border-gray-200 bg-gray-50 px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.18em] text-gray-600">
-        <History size={12} /> {summary.rows.length} employees
-      </span>
+      <Icon size={18} className="mt-1 text-brand" aria-hidden="true" />
     </div>
-
-    <div className="hidden overflow-x-auto md:block">
-      <table className="min-w-full table-fixed text-left">
-        <thead className="bg-gray-50 text-xs font-semibold uppercase tracking-[0.18em] text-gray-500">
-          <tr>
-            <th className="px-5 py-3 w-44">Employee</th>
-            <th className="px-5 py-3 text-right tabular-nums w-28">Base Salary</th>
-            <th className="px-5 py-3 text-right tabular-nums w-28">Leave Adjustments</th>
-            <th className="px-5 py-3 text-right tabular-nums w-28">Gross Pay</th>
-            <th className="px-5 py-3 text-right tabular-nums w-28">Deductions</th>
-            <th className="px-5 py-3 text-right tabular-nums w-28">Net Pay</th>
-            <th className="px-5 py-3 text-center w-24">Status</th>
-            <th className="px-5 py-3 text-right w-28">Payment</th>
-          </tr>
-        </thead>
-        <tbody className="divide-y divide-gray-200">
-          {summary.rows.map((item) => (
-            <tr key={item.staffId} className="hover:bg-gray-50/70 transition-colors">
-              <td className="px-5 py-4 align-top">
-                <div className="font-semibold text-sm text-gray-900">{item.name}</div>
-                <div className="text-xs text-gray-500">{item.role}</div>
-              </td>
-              <td className="px-5 py-4 text-right font-medium tabular-nums text-gray-700 align-top">{formatMoney(item.base)}</td>
-              <td className={`px-5 py-4 text-right tabular-nums font-medium align-top ${item.leaveDeduction > 0 ? 'text-brand-dark' : 'text-gray-500'}`}>
-                {item.leaveDeduction > 0 ? `-${formatMoney(item.leaveDeduction)}` : '0'}
-                {(item.approvedLeaveDays > 0 || item.overduePenaltyDays > 0) && (
-                  <p className="mt-1 text-[10px] font-medium normal-case tracking-normal text-gray-500">
-                    {item.approvedLeaveDays > 0 ? `${item.approvedLeaveDays} approved` : 'No approved leave'}
-                    {item.overduePenaltyDays > 0 ? ` + ${item.overduePenaltyDays} overdue` : ''}
-                  </p>
-                )}
-              </td>
-              <td className="px-5 py-4 text-right tabular-nums font-semibold text-gray-900 align-top">{formatMoney(item.grossPay)}</td>
-              <td className={`px-5 py-4 text-right tabular-nums font-medium align-top ${item.advanceDeduction > 0 ? 'text-brand' : 'text-gray-500'}`}>
-                {formatMoney(item.advanceDeduction)}
-              </td>
-              <td className="px-5 py-4 text-right tabular-nums font-semibold text-gray-900 align-top">{formatMoney(item.net)}</td>
-              <td className="px-5 py-4 text-center align-top">
-                <span className={`inline-flex items-center gap-1.5 rounded-md px-2.5 py-1 text-xs font-semibold ${
-                  item.status === 'PAID' ? 'text-brand-dark bg-brand/15' : 'text-brand bg-brand/10'
-                }`}>
-                  {item.status === 'PAID' ? <CheckCircle size={14} /> : <Clock size={14} />}
-                  {item.status}
-                </span>
-              </td>
-              <td className="px-5 py-4 text-right align-top text-xs text-gray-500">Run-level payment</td>
-            </tr>
-          ))}
-        </tbody>
-        <tfoot className="border-t border-gray-200 bg-gray-50 text-xs font-semibold uppercase tracking-[0.18em] text-gray-600">
-          <tr>
-            <td className="px-5 py-3">Totals</td>
-            <td className="px-5 py-3 text-right tabular-nums">{formatMoney(summary.totalBase)}</td>
-            <td className="px-5 py-3 text-right tabular-nums text-brand-dark">-{formatMoney(summary.totalLeave)}</td>
-            <td className="px-5 py-3 text-right tabular-nums">{formatMoney(summary.totalGross)}</td>
-            <td className="px-5 py-3 text-right tabular-nums text-brand">{formatMoney(summary.totalDeductions)}</td>
-            <td className="px-5 py-3 text-right tabular-nums text-gray-900">{formatMoney(summary.totalNet)}</td>
-            <td className="px-5 py-3" />
-            <td className="px-5 py-3" />
-          </tr>
-        </tfoot>
-      </table>
-    </div>
-    <div className="space-y-3 p-3 md:hidden">
-      {summary.rows.map((item) => (
-        <article key={item.staffId} className="min-w-0 rounded-xl border border-ink/10 bg-surface p-4">
-          <div className="flex items-start justify-between gap-3">
-            <div className="min-w-0"><h4 className="truncate text-sm font-bold text-ink">{item.name}</h4><p className="mt-1 truncate text-xs text-ink-muted">{item.role}</p></div>
-            <span className="shrink-0 rounded-full bg-brand/10 px-2 py-1 text-[10px] font-semibold text-brand">{item.status}</span>
-          </div>
-          <div className="mt-3 grid grid-cols-2 gap-3 rounded-lg bg-surface-raised p-3 text-xs">
-            <div><p className="text-ink-muted">Base salary</p><p className="mt-1 font-semibold tabular-nums text-ink">KES {formatMoney(item.base)}</p></div>
-            <div><p className="text-ink-muted">Leave adjustment</p><p className="mt-1 font-semibold tabular-nums text-ink">KES {formatMoney(item.leaveDeduction)}</p></div>
-            <div><p className="text-ink-muted">Gross pay</p><p className="mt-1 font-semibold tabular-nums text-ink">KES {formatMoney(item.grossPay)}</p></div>
-            <div><p className="text-ink-muted">Deductions</p><p className="mt-1 font-semibold tabular-nums text-ink">KES {formatMoney(item.advanceDeduction)}</p></div>
-            <div className="col-span-2 border-t border-ink/10 pt-2"><p className="text-ink-muted">Net pay</p><p className="mt-1 text-base font-bold tabular-nums text-brand">KES {formatMoney(item.net)}</p></div>
-          </div>
-          {(item.approvedLeaveDays > 0 || item.overduePenaltyDays > 0) && <p className="mt-2 text-xs text-ink-muted">{item.approvedLeaveDays > 0 ? `${item.approvedLeaveDays} approved leave days` : 'No approved leave'}{item.overduePenaltyDays > 0 ? ` · ${item.overduePenaltyDays} overdue days` : ''}</p>}
-        </article>
-      ))}
-      <div className="rounded-xl border border-brand/20 bg-brand/5 p-4 text-xs">
-        <p className="font-bold text-brand">Run totals</p>
-        <div className="mt-2 grid grid-cols-2 gap-2 text-ink"><span>Base: KES {formatMoney(summary.totalBase)}</span><span>Gross: KES {formatMoney(summary.totalGross)}</span><span>Leave: KES {formatMoney(summary.totalLeave)}</span><span>Deductions: KES {formatMoney(summary.totalDeductions)}</span><span className="col-span-2 font-bold">Net: KES {formatMoney(summary.totalNet)}</span></div>
-      </div>
-    </div>
-  </div>
   );
-};
+}
+
+function StatusChip({ status }) {
+  const { label, tone: toneName } = runStatus(status);
+  return <span className={`inline-flex rounded-badge px-2 py-0.5 text-xs font-semibold ${tone(toneName).chip}`}>{label}</span>;
+}
+
+// Totals are the backend's (`summary`); without them, none are shown rather than added up here.
+function RunTotals({ summary, statutoryTotals }) {
+  if (!summary) return null;
+  const employer = statutoryTotals?.employerContributions;
+  return (
+    <>
+    <dl className="grid grid-cols-2 gap-x-4 gap-y-2 border-t border-ink/10 px-5 py-4 text-sm sm:grid-cols-5">
+      {[
+        ['Base', summary.totalBase],
+        ['Leave adjustments', -summary.totalLeave],
+        ['Gross', summary.totalGross],
+        ['Deductions', -summary.totalDeductions],
+        ['Net pay', summary.totalNet],
+      ].map(([label, value]) => (
+        <div key={label}>
+          <dt className="text-[11px] font-semibold uppercase tracking-wider text-ink-muted">{label}</dt>
+          <dd className={`tabular-nums ${label === 'Net pay' ? 'text-base font-bold text-ink' : 'text-ink'}`}>KES {money(value)}</dd>
+        </div>
+      ))}
+    </dl>
+    {statutoryTotals?.paye !== null && statutoryTotals?.paye !== undefined && (
+      <p className="border-t border-ink/10 px-5 py-3 text-xs text-ink-muted">
+        Deductions include PAYE KES {money(statutoryTotals.paye)}, NSSF KES {money(statutoryTotals.nssf)}, SHIF KES {money(statutoryTotals.shif)} and Housing Levy KES {money(statutoryTotals.housingLevy)}.
+        {employer !== null && employer !== undefined && <> The farm also pays KES {money(employer)} in employer NSSF and Housing Levy.</>}
+      </p>
+    )}
+    </>
+  );
+}
+
+function LeaveNote({ line }) {
+  if (!(line.approvedLeaveDays > 0 || line.overduePenaltyDays > 0)) return null;
+  return (
+    <span className="block text-xs text-ink-muted">
+      {line.approvedLeaveDays > 0 ? `${line.approvedLeaveDays} leave days` : ''}
+      {line.approvedLeaveDays > 0 && line.overduePenaltyDays > 0 ? ' · ' : ''}
+      {line.overduePenaltyDays > 0 ? `${line.overduePenaltyDays} days overdue` : ''}
+    </span>
+  );
+}
+
+function StatutoryCell({ line }) {
+  if (line.totalStatutory === null) return <span className="text-ink-muted">—</span>;
+  return (
+    <>
+      {line.totalStatutory > 0 ? `−${money(line.totalStatutory)}` : '0'}
+      <span className="block text-xs text-ink-muted">{statutoryBreakdown(line)}</span>
+    </>
+  );
+}
+
+function PayslipButton({ line, run, onDownload, pending }) {
+  if (!canDownloadPayslips(run.status)) return null;
+  return (
+    <button type="button" onClick={() => onDownload(line)} disabled={pending} className="inline-flex min-h-9 items-center gap-1 text-xs font-semibold text-brand underline-offset-4 hover:underline disabled:opacity-50">
+      <FileText size={14} aria-hidden="true" /> {pending ? 'Preparing…' : 'Payslip'}
+    </button>
+  );
+}
+
+function PayrollLines({ run, onPayslip, payslipPending }) {
+  const lines = run.lineItems ?? [];
+  return (
+    <>
+      <div className="hidden overflow-x-auto md:block">
+        <table className="w-full min-w-[960px] text-left">
+          <thead className="border-b border-ink/10 text-[11px] font-semibold uppercase tracking-wider text-ink-muted">
+            <tr>
+              <th scope="col" className="px-5 py-3">Employee</th>
+              <th scope="col" className="px-5 py-3 text-right">Base</th>
+              <th scope="col" className="px-5 py-3 text-right">Leave</th>
+              <th scope="col" className="px-5 py-3 text-right">Gross</th>
+              <th scope="col" className="px-5 py-3 text-right">Statutory</th>
+              <th scope="col" className="px-5 py-3 text-right">Advances</th>
+              <th scope="col" className="px-5 py-3 text-right">Net pay</th>
+              <th scope="col" className="px-5 py-3">Status</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-ink/10">
+            {lines.map((line) => (
+              <tr key={line.staffId}>
+                <td className="px-5 py-3.5">
+                  <p className="text-sm font-semibold text-ink">{line.name}</p>
+                  <p className="text-xs text-ink-muted">{roleLabel(line.role)}</p>
+                </td>
+                <td className="px-5 py-3.5 text-right text-sm tabular-nums text-ink">{money(line.base)}</td>
+                <td className="px-5 py-3.5 text-right text-sm tabular-nums text-ink">
+                  {line.leaveDeduction > 0 ? `−${money(line.leaveDeduction)}` : '0'}
+                  <LeaveNote line={line} />
+                </td>
+                <td className="px-5 py-3.5 text-right text-sm tabular-nums text-ink">
+                  {money(line.grossPay)}
+                  {line.daysPaid !== null && <span className="block text-xs text-ink-muted">{line.daysPaid} days paid</span>}
+                </td>
+                <td className="px-5 py-3.5 text-right text-sm tabular-nums text-ink"><StatutoryCell line={line} /></td>
+                <td className="px-5 py-3.5 text-right text-sm tabular-nums text-ink">{line.advanceDeduction > 0 ? `−${money(line.advanceDeduction)}` : '0'}</td>
+                <td className="px-5 py-3.5 text-right text-sm font-bold tabular-nums text-ink">{money(line.net)}</td>
+                <td className="px-5 py-3.5 text-sm text-ink-muted">
+                  {lineStatusLabel(line.status)}
+                  <span className="block"><PayslipButton line={line} run={run} onDownload={onPayslip} pending={payslipPending === line.staffId} /></span>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <div className="space-y-3 p-3 md:hidden">
+        {lines.map((line) => (
+          <article key={line.staffId} className="rounded-card border border-ink/10 p-4" aria-label={line.name}>
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <h4 className="truncate text-sm font-bold text-ink">{line.name}</h4>
+                <p className="text-xs text-ink-muted">{roleLabel(line.role)}</p>
+              </div>
+              <span className="text-xs text-ink-muted">{lineStatusLabel(line.status)}</span>
+            </div>
+            <dl className="mt-3 grid grid-cols-2 gap-3 text-xs">
+              <div><dt className="text-ink-muted">Base</dt><dd className="font-semibold tabular-nums text-ink">KES {money(line.base)}</dd></div>
+              <div><dt className="text-ink-muted">Leave</dt><dd className="font-semibold tabular-nums text-ink">KES {money(line.leaveDeduction)}</dd><LeaveNote line={line} /></div>
+              <div><dt className="text-ink-muted">Gross</dt><dd className="font-semibold tabular-nums text-ink">KES {money(line.grossPay)}</dd>{line.daysPaid !== null && <dd className="text-ink-muted">{line.daysPaid} days paid</dd>}</div>
+              <div><dt className="text-ink-muted">Advances</dt><dd className="font-semibold tabular-nums text-ink">KES {money(line.advanceDeduction)}</dd></div>
+              <div className="col-span-2"><dt className="text-ink-muted">Statutory deductions</dt><dd className="font-semibold tabular-nums text-ink"><StatutoryCell line={line} /></dd></div>
+              <div className="col-span-2 border-t border-ink/10 pt-2"><dt className="text-ink-muted">Net pay</dt><dd className="text-base font-bold tabular-nums text-ink">KES {money(line.net)}</dd></div>
+            </dl>
+            <div className="mt-2"><PayslipButton line={line} run={run} onDownload={onPayslip} pending={payslipPending === line.staffId} /></div>
+          </article>
+        ))}
+      </div>
+    </>
+  );
+}
 
 export default function Payroll() {
-  useStaff();
-  const [allRuns, setAllRuns] = useState([]);
-  const [activeRunId, setActiveRunId] = useState(null);
-  const [historyOpen, setHistoryOpen] = useState(false);
+  const confirmation = useConfirmation();
+  const [runs, setRuns] = useState([]);
+  const [backendNext, setBackendNext] = useState(null);
+  const [status, setStatus] = useState('loading');
   const [loadError, setLoadError] = useState('');
-  const [isRunning, setIsRunning] = useState(false);
-  const [isUpdatingLifecycle, setIsUpdatingLifecycle] = useState(false);
+  const [activeRunId, setActiveRunId] = useState(null);
+  // Full runs (lines and totals) by id, fetched only when opened.
+  const [details, setDetails] = useState({});
+  const [detailError, setDetailError] = useState('');
+  const [historyOpen, setHistoryOpen] = useState(false);
+  const [payOpen, setPayOpen] = useState(false);
+  const [busy, setBusy] = useState(null); // 'run' | 'finalize' | 'pay'
+  const [payslipPending, setPayslipPending] = useState(null);
 
+  // Bumped by "Try again"; the effect reloads whenever it changes.
+  const [reloadKey, setReloadKey] = useState(0);
+
+  // One request for the history and the next period (backend `runs/summary`).
   useEffect(() => {
     let cancelled = false;
-
-    const loadRuns = async () => {
-      try {
-        const records = await hrApi.listPayrollRuns();
-
-        if (cancelled) {
-          return;
-        }
-
-        const normalizedRuns = Array.isArray(records) ? records : [];
-        setAllRuns(normalizedRuns);
-        setActiveRunId((current) => current ?? normalizedRuns[0]?.id ?? null);
-      } catch (error) {
-        if (!cancelled) {
-          console.warn('Failed to load payroll runs.', error);
-          setLoadError(getApiErrorMessage(error) || 'Could not load payroll runs.');
-          setAllRuns([]);
-          setActiveRunId(null);
-        }
-      }
-    };
-
-    loadRuns();
-
+    hrApi.payrollSummary()
+      .then(({ runs: summaryRuns, nextPeriod: next }) => {
+        if (cancelled) return;
+        const ordered = sortRunsNewestFirst(summaryRuns);
+        setRuns(ordered);
+        setBackendNext(next);
+        setActiveRunId((current) => current ?? ordered[0]?.id ?? null);
+        setLoadError('');
+        setStatus('ready');
+      })
+      .catch((error) => {
+        if (cancelled) return;
+        setLoadError(getApiErrorMessage(error, 'Payroll runs could not be loaded.'));
+        setStatus('error');
+      });
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [reloadKey]);
 
-  // Derive active run and history from state
-  const activeRun = useMemo(() => allRuns.find((r) => r.id === activeRunId) || allRuns[0] || null, [allRuns, activeRunId]);
-  const payrollHistory = useMemo(() => (activeRun ? allRuns.filter((r) => r.id !== activeRun.id) : allRuns), [allRuns, activeRun]);
-
-  const getNextPayrollPeriod = (latestRun) => {
-    const [monthStr, yearStr] = latestRun?.period?.split(' ') ?? [];
-    const latestDate = new Date(`${monthStr} 1, ${yearStr}`);
-    const date = Number.isNaN(latestDate.getTime()) ? new Date() : latestDate;
-
-    if (!Number.isNaN(latestDate.getTime())) {
-      date.setMonth(date.getMonth() + 1);
-    }
-
-    return {
-      period: date.toLocaleString('default', { month: 'long', year: 'numeric' }),
-      date,
-      payroll_month: date.getMonth() + 1,
-      payroll_year: date.getFullYear(),
+  useEffect(() => {
+    if (!activeRunId || details[activeRunId]) return undefined;
+    let cancelled = false;
+    hrApi.getPayrollRun(activeRunId)
+      .then((run) => { if (!cancelled) setDetails((current) => ({ ...current, [run.id]: run })); })
+      .catch((error) => { if (!cancelled) setDetailError(getApiErrorMessage(error, 'This payroll run could not be loaded.')); });
+    return () => {
+      cancelled = true;
     };
+  }, [activeRunId, details]);
+
+  const retry = () => {
+    setStatus('loading');
+    setDetailError('');
+    setDetails({});
+    setReloadKey((key) => key + 1);
   };
 
-  const handleRunPayroll = () => {
-    const runFromBackend = async () => {
-      setIsRunning(true);
-      try {
-        const { payroll_month, payroll_year } = getNextPayrollPeriod(allRuns[0]);
-        const newRun = await hrApi.runPayroll({ payroll_month, payroll_year });
-        setAllRuns((prevRuns) => [newRun, ...prevRuns.filter((run) => run.id !== newRun.id)]);
-        setActiveRunId(newRun.id);
-        setLoadError('');
-        toast.success(newRun.message || 'Payroll run created.');
-      } catch (error) {
-        const message = offlineFailureMessage(error, 'The payroll run was not created.') || getApiErrorMessage(error) || 'Could not run payroll.';
-        setLoadError(message);
-        toast.error(message);
-      } finally {
-        setIsRunning(false);
-      }
-    };
+  const activeSummary = useMemo(() => runs.find((run) => run.id === activeRunId) ?? runs[0] ?? null, [runs, activeRunId]);
+  const activeRun = activeSummary ? details[activeSummary.id] ?? null : null;
+  const nextPeriod = useMemo(() => nextPayrollPeriod(runs, backendNext), [runs, backendNext]);
+  const nextLabel = periodLabel(nextPeriod);
+  // The backend says when the next period already has a draft; open it instead of creating another.
+  const nextDraftId = backendNext?.existing_status ? backendNext.id : null;
 
-    runFromBackend();
+  const replaceRun = (updated) => {
+    setDetails((current) => ({ ...current, [updated.id]: updated }));
+    setRuns((current) => sortRunsNewestFirst([updated, ...current.filter((run) => run.id !== updated.id)]));
   };
 
-  const updateRun = async (action, method) => {
-    if (!activeRun?.id) return;
-    setIsUpdatingLifecycle(true);
+  const downloadPayslip = async (line) => {
+    setPayslipPending(line.staffId);
     try {
-      const updatedRun = await method(activeRun.id);
-      setAllRuns((current) => current.map((run) => run.id === updatedRun.id ? updatedRun : run));
-      toast.success(action === 'finalize' ? 'Payroll run finalized.' : 'Payroll run paid successfully.');
+      const pdf = await hrApi.downloadPayslip(activeRun.id, line.staffId);
+      downloadBlob(pdf, `payslip-${activeRun.id}-${line.name.replace(/\s+/g, '-').toLowerCase()}.pdf`);
     } catch (error) {
-      toast.error(
-        offlineFailureMessage(error, action === 'finalize' ? 'The payroll run was not finalized.' : 'Nobody was paid and nothing was changed.')
-          || getApiErrorMessage(error)
-          || `Could not ${action} payroll run.`,
-      );
+      toast.error(getApiErrorMessage(error, `${line.name}'s payslip could not be downloaded.`));
     } finally {
-      setIsUpdatingLifecycle(false);
+      setPayslipPending(null);
     }
   };
 
-  const nextPayrollInfo = useMemo(() => {
-    const { period, date } = getNextPayrollPeriod(allRuns[0]);
-    const lastDay = new Date(date.getFullYear(), date.getMonth() + 1, 0).getDate();
-    return {
-        period,
-        displayDate: `${date.toLocaleString('default', { month: 'long' })} ${lastDay}, ${date.getFullYear()}`
-    };
-  }, [allRuns]);
+  const runPayroll = async () => {
+    if (nextDraftId) {
+      setActiveRunId(nextDraftId);
+      return;
+    }
+    const confirmed = await confirmation.confirm({
+      title: `Create the ${nextLabel} payroll?`,
+      message: 'It works out pay from current salaries, approved leave, statutory deductions (PAYE, NSSF, SHIF, Housing Levy) and advance repayments. Nothing is paid until you finalize it and record the payment.',
+      confirmText: 'Create payroll',
+      type: 'info',
+    });
+    if (!confirmed) return;
+    setBusy('run');
+    try {
+      const created = await hrApi.runPayroll(nextPeriod);
+      replaceRun(created);
+      setActiveRunId(created.id);
+      toast.success(created.message || `${nextLabel} payroll created as a draft.`);
+    } catch (error) {
+      toast.error(offlineFailureMessage(error, 'The payroll run was not created.') || getApiErrorMessage(error, 'The payroll run was not created.'));
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  const finalize = async () => {
+    const confirmed = await confirmation.confirm({
+      title: `Finalize ${activeRun.period} payroll?`,
+      message: `${activeRun.employees} employees, KES ${money(activeRun.totalDisbursed)} net pay. After this the amounts can’t change.`,
+      confirmText: 'Finalize',
+      type: 'warning',
+    });
+    if (!confirmed) return;
+    setBusy('finalize');
+    try {
+      replaceRun(await hrApi.finalizePayrollRun(activeRun.id));
+      toast.success('Payroll finalized. Pay staff, then record the payment.');
+    } catch (error) {
+      toast.error(offlineFailureMessage(error, 'The payroll run was not finalized.') || getApiErrorMessage(error, 'The payroll run was not finalized.'));
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  const recordPayment = async (payload) => {
+    setBusy('pay');
+    try {
+      replaceRun(await hrApi.payPayrollRun(activeRun.id, payload));
+      setPayOpen(false);
+      toast.success(`${activeRun.period} payroll recorded as paid.`);
+    } catch (error) {
+      toast.error(offlineFailureMessage(error, 'Nothing was recorded as paid.') || getApiErrorMessage(error, 'The payment was not recorded.'));
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  const exportCsv = () => {
+    downloadBlob(new Blob([payrollRunToCsv(activeRun)], { type: 'text/csv;charset=utf-8' }), `payroll-${activeRun.id}.csv`);
+  };
+
+  const runStatusCode = String(activeRun?.status ?? '').toUpperCase();
 
   return (
-    <div className="animate-reveal space-y-6">
-      <div className="space-y-6">
-        <PayrollActions
-          activeRun={activeRun}
-          nextPayrollDate={nextPayrollInfo.displayDate}
-          onRunPayroll={handleRunPayroll}
-          nextPayrollPeriod={nextPayrollInfo.period}
-          isRunning={isRunning}
-        />
+    <div className="animate-reveal space-y-5 p-4 sm:p-8">
+      <Confirmation {...confirmation} />
 
-        {loadError && <div role="alert" className="rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-800">{loadError}</div>}
-
-        {activeRun ? (
-          <>
-            <section className="space-y-4 rounded-2xl border border-ink/10 bg-surface ">
-          <div className="flex flex-col gap-3 border-b border-gray-200 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
-            <div>
-              <h3 className="flex items-center gap-2 font-semibold text-gray-900">
-                <Calendar size={16} /> Current payroll run
-              </h3>
-              <p className="mt-1 text-xs font-medium uppercase tracking-[0.18em] text-gray-500">{activeRun.period} • {activeRun.employees} employees</p>
-            </div>
-            <div className="flex flex-wrap justify-end gap-2">
-              {activeRun.status === 'DRAFT' && <button type="button" onClick={() => updateRun('finalize', hrApi.finalizePayrollRun)} disabled={isUpdatingLifecycle} className="rounded-md bg-slate-900 px-3 py-2 text-xs font-semibold uppercase tracking-[0.18em] text-white disabled:opacity-60">{isUpdatingLifecycle ? 'Saving...' : 'Finalize run'}</button>}
-              {activeRun.status === 'FINALIZED' && <button type="button" onClick={() => updateRun('pay', hrApi.payPayrollRun)} disabled={isUpdatingLifecycle} className="rounded-md bg-emerald-700 px-3 py-2 text-xs font-semibold uppercase tracking-[0.18em] text-white disabled:opacity-60">{isUpdatingLifecycle ? 'Saving...' : 'Pay payroll'}</button>}
-              <button type="button" onClick={() => setHistoryOpen(true)} className="inline-flex items-center gap-2 rounded-md border border-gray-200 bg-white px-3 py-2 text-xs font-semibold uppercase tracking-[0.18em] text-gray-600 transition-colors hover:bg-gray-50"><History size={12} /> View history</button>
-            </div>
-          </div>
-
-          <div className="px-0 pb-0">
-            <PayrollTable run={activeRun} />
-          </div>
-            </section>
-          </>
-        ) : (
-          <section className="rounded-md border border-gray-200 bg-white p-8 text-sm text-gray-600">
-            {loadError || 'No payroll runs are available yet. Create the first run to calculate staff payments.'}
-          </section>
-        )}
-      </div>
-
-      <SlidePanel
-        isOpen={historyOpen}
-        onClose={() => setHistoryOpen(false)}
-        title="Payroll History"
-        subtitle="Review prior payroll runs without leaving the current ledger."
-      >
-        <div className="space-y-3">
-          <div className="flex items-center justify-between border-b border-gray-200 pb-3">
-            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-gray-500">Historical runs</p>
-            <span className="text-xs font-medium text-gray-500 tabular-nums">{payrollHistory.length} archived</span>
-          </div>
-
-          <div className="space-y-2">
-            {allRuns.map((run) => (
-              <button
-                key={run.id}
-                type="button"
-                onClick={() => setActiveRunId(run.id)}
-                className={`flex w-full items-center justify-between rounded-md border px-4 py-3 text-left transition-colors ${
-                  activeRunId === run.id
-                    ? 'border-slate-900 bg-slate-50 text-gray-900'
-                    : 'border-gray-200 bg-white text-gray-700 hover:bg-gray-50'
-                }`}
-              >
-                <div>
-                  <p className="text-sm font-semibold">{run.period}</p>
-                  <p className="mt-1 text-xs text-gray-500">Processed on {run.date}</p>
-                </div>
-                <div className="text-right">
-                  <p className="text-xs font-semibold uppercase tracking-[0.18em] text-gray-500">Net payout</p>
-                  <p className="mt-1 text-sm font-semibold tabular-nums text-gray-900">KES {run.totalDisbursed.toLocaleString()}</p>
-                </div>
-              </button>
-            ))}
-          </div>
+      <header className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <p className="text-[11px] font-semibold uppercase tracking-wider text-ink-muted">People</p>
+          <h1 className="text-2xl font-black tracking-tight text-ink sm:text-3xl">Payroll</h1>
+          <p className="mt-1 text-sm text-ink-muted">Monthly pay, statutory deductions, leave and advance repayments.</p>
         </div>
+        <button type="button" onClick={runPayroll} disabled={busy !== null || status !== 'ready'} className="btn-command gap-2 self-start text-sm">
+          <Banknote size={16} aria-hidden="true" /> {busy === 'run' ? 'Creating…' : nextDraftId ? `Open ${nextLabel} draft` : `Create ${nextLabel} payroll`}
+        </button>
+      </header>
+
+      {status === 'loading' && <div className="space-y-3" aria-busy="true">{[0, 1, 2].map((key) => <Skeleton key={key} className="h-24 w-full" />)}</div>}
+      {status === 'error' && <AlertBanner type="danger" message={loadError} onRetry={retry} />}
+
+      {status === 'ready' && !activeSummary && (
+        <section className="card-machined p-6">
+          <p className="text-base font-bold text-ink">No payroll yet</p>
+          <p className="mt-1 text-sm text-ink-muted">Create the {nextLabel} payroll to work out each employee’s pay. You can check it before anything is paid.</p>
+        </section>
+      )}
+
+      {status === 'ready' && activeSummary && !activeRun && (
+        detailError
+          ? <AlertBanner type="danger" message={detailError} onRetry={retry} />
+          : <div className="space-y-3" aria-busy="true"><Skeleton className="h-24 w-full" /><Skeleton className="h-48 w-full" /></div>
+      )}
+
+      {status === 'ready' && activeRun && (
+        <>
+          <div className="grid gap-3 md:grid-cols-3">
+            <Kpi title={`Net pay · ${activeRun.period}`} value={`KES ${money(activeRun.totalDisbursed)}`} Icon={Banknote} />
+            <Kpi title="Employees in this run" value={activeRun.employees} Icon={Users} />
+            <Kpi title={`Next payroll · ${nextLabel}`} value={periodPayDate(nextPeriod)} Icon={CalendarClock} />
+          </div>
+
+          <section className="card-machined overflow-hidden" aria-labelledby="active-run-title">
+            <div className="flex flex-col gap-3 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <h2 id="active-run-title" className="text-base font-bold text-ink">{activeRun.period} payroll</h2>
+                <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-ink-muted">
+                  <StatusChip status={activeRun.status} />
+                  {activeRun.paidAt && <span>Paid {new Date(activeRun.paidAt).toLocaleDateString()}</span>}
+                </div>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {runStatusCode === 'DRAFT' && (
+                  <button type="button" onClick={finalize} disabled={busy !== null} className="btn-command text-sm">{busy === 'finalize' ? 'Finalizing…' : 'Finalize'}</button>
+                )}
+                {runStatusCode === 'FINALIZED' && (
+                  <button type="button" onClick={() => setPayOpen(true)} disabled={busy !== null} className="btn-command text-sm">Record payment</button>
+                )}
+                <button type="button" onClick={exportCsv} className="btn-secondary gap-2 text-sm"><Download size={15} aria-hidden="true" /> Export CSV</button>
+                {runs.length > 1 && (
+                  <button type="button" onClick={() => setHistoryOpen(true)} className="btn-ghost gap-2 text-sm"><History size={15} aria-hidden="true" /> Earlier runs ({runs.length - 1})</button>
+                )}
+              </div>
+            </div>
+            <PayrollLines run={activeRun} onPayslip={downloadPayslip} payslipPending={payslipPending} />
+            <RunTotals summary={activeRun.summary} statutoryTotals={activeRun.statutoryTotals} />
+          </section>
+        </>
+      )}
+
+      {payOpen && activeRun && (
+        <PayPayrollModal run={activeRun} onClose={() => setPayOpen(false)} onConfirm={recordPayment} isPending={busy === 'pay'} />
+      )}
+
+      <SlidePanel isOpen={historyOpen} onClose={() => setHistoryOpen(false)} title="Payroll history" subtitle="Open an earlier run to review or export it.">
+        <ul className="space-y-2">
+          {runs.map((run) => (
+            <li key={run.id}>
+              <button
+                type="button"
+                onClick={() => { setActiveRunId(run.id); setHistoryOpen(false); }}
+                aria-current={run.id === activeSummary?.id ? 'true' : undefined}
+                className={`flex w-full items-center justify-between gap-3 rounded-card border px-4 py-3 text-left ${run.id === activeSummary?.id ? 'border-brand bg-brand-50' : 'border-ink/10 hover:bg-brand-50'}`}
+              >
+                <span>
+                  <span className="block text-sm font-semibold text-ink">{run.period || periodLabel({ payroll_year: run.payrollYear ?? run.payroll_year, payroll_month: run.payrollMonth ?? run.payroll_month })}</span>
+                  <StatusChip status={run.status} />
+                </span>
+                <span className="text-right text-sm font-semibold tabular-nums text-ink">KES {money(run.totalDisbursed)}</span>
+              </button>
+            </li>
+          ))}
+        </ul>
       </SlidePanel>
     </div>
   );

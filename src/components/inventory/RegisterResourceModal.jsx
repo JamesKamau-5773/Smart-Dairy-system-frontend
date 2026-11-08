@@ -3,6 +3,8 @@ import { useState } from 'react';
 import { createPortal } from 'react-dom';
 import { X, Check } from 'lucide-react';
 import { proteinGramsPerKgToInput, proteinInputToGramsPerKg } from '../../lib/feedNutritionUnits';
+import { validateInventoryItem } from '../../lib/inventoryItemRules';
+import { feedCopy } from '../../i18n/feed.en';
 
 const INITIAL_STATE = {
   name: '',
@@ -20,14 +22,19 @@ const INITIAL_STATE = {
 export default function RegisterResourceModal({ isOpen, onClose, onRegister }) {
   const [formData, setFormData] = useState(INITIAL_STATE); // Initialize with all fields
   const [proteinUnit, setProteinUnit] = useState('percent');
+  const [errors, setErrors] = useState({});
 
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
   };
 
+  // Validate here so an invalid form stays open with what the farmer typed.
   const handleSubmit = (e) => {
     e.preventDefault();
+    const nextErrors = validateInventoryItem(formData);
+    setErrors(nextErrors);
+    if (Object.keys(nextErrors).length) return;
     onRegister(formData);
     onClose();
   };
@@ -62,8 +69,8 @@ export default function RegisterResourceModal({ isOpen, onClose, onRegister }) {
                 <input required name="name" value={formData.name} onChange={handleChange} placeholder="e.g. Sunflower Cake" className="w-full p-3 border border-slate-200 rounded-[12px] text-sm font-bold focus:ring-2 focus:ring-brand/20 outline-none" />
               </div>
               <div>
-                <label className="text-[10px] font-black text-ink-muted uppercase tracking-widest mb-1.5 block">SKU / Code</label>
-                <input required name="sku" value={formData.sku} onChange={handleChange} placeholder="e.g. FD-006" className="w-full p-3 border border-slate-200 rounded-[12px] text-sm font-bold focus:ring-2 focus:ring-brand/20 outline-none" />
+                <label className="text-[10px] font-black text-ink-muted uppercase tracking-widest mb-1.5 block">{feedCopy.item.skuOptional}</label>
+                <input name="sku" value={formData.sku} onChange={handleChange} placeholder="e.g. FD-006" className="w-full p-3 border border-slate-200 rounded-[12px] text-sm font-bold focus:ring-2 focus:ring-brand/20 outline-none" />
               </div>
             </div>
             <div>
@@ -77,7 +84,7 @@ export default function RegisterResourceModal({ isOpen, onClose, onRegister }) {
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="text-[10px] font-black text-ink-muted uppercase tracking-widest mb-1.5 block">Current Stock</label>
-                <input required name="currentStock" value={formData.currentStock} onChange={handleChange} type="number" min="0" className="w-full p-3 border border-slate-200 rounded-[12px] text-sm font-bold focus:ring-2 focus:ring-brand/20 outline-none" />
+                <input required name="currentStock" value={formData.currentStock} onChange={handleChange} type="number" min="0" step="any" inputMode="decimal" className="w-full p-3 border border-slate-200 rounded-[12px] text-sm font-bold focus:ring-2 focus:ring-brand/20 outline-none" />
               </div>
               <div>
                 <label className="text-[10px] font-black text-ink-muted uppercase tracking-widest mb-1.5 block">Unit</label>
@@ -105,8 +112,8 @@ export default function RegisterResourceModal({ isOpen, onClose, onRegister }) {
                   onChange={(e) => setFormData((previous) => ({ ...previous, proteinGramsPerKg: proteinInputToGramsPerKg(e.target.value, proteinUnit) }))}
                   type="number"
                   min="0"
-                  max={proteinUnit === 'percent' ? 100 : 1000}
-                  step="0.1"
+                  max={proteinUnit === 'percent' ? 99.999 : 999.99}
+                  step="any"
                   className="w-full p-3 border border-slate-200 rounded-[12px] text-sm font-bold focus:ring-2 focus:ring-brand/20 outline-none"
                 />
                 <p className="mt-1 text-[10px] font-semibold text-slate-500">
@@ -117,19 +124,25 @@ export default function RegisterResourceModal({ isOpen, onClose, onRegister }) {
               </div>
               <div>
                 <label className="text-[10px] font-black text-ink-muted uppercase tracking-widest mb-1.5 block">Energy (MJ/kg)</label>
-                <input name="energyMjPerKg" value={currentFormData.energyMjPerKg || ''} onChange={handleChange} type="number" min="0" step="0.1" className="w-full p-3 border border-slate-200 rounded-[12px] text-sm font-bold focus:ring-2 focus:ring-brand/20 outline-none" />
+                <input name="energyMjPerKg" value={currentFormData.energyMjPerKg || ''} onChange={handleChange} type="number" min="0" max="30" step="any" className="w-full p-3 border border-slate-200 rounded-[12px] text-sm font-bold focus:ring-2 focus:ring-brand/20 outline-none" />
               </div>
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="text-[10px] font-black text-ink-muted uppercase tracking-widest mb-1.5 block">Fiber (g/kg)</label>
-                <input name="fiberGramsPerKg" value={currentFormData.fiberGramsPerKg || ''} onChange={handleChange} type="number" min="0" step="0.1" className="w-full p-3 border border-slate-200 rounded-[12px] text-sm font-bold focus:ring-2 focus:ring-brand/20 outline-none" />
+                <input name="fiberGramsPerKg" value={currentFormData.fiberGramsPerKg || ''} onChange={handleChange} type="number" min="0" max="999.99" step="any" className="w-full p-3 border border-slate-200 rounded-[12px] text-sm font-bold focus:ring-2 focus:ring-brand/20 outline-none" />
               </div>
               <div>
                 <label className="text-[10px] font-black text-ink-muted uppercase tracking-widest mb-1.5 block">Cost (KES/kg)</label>
-                <input name="costPerKg" value={currentFormData.costPerKg || ''} onChange={handleChange} type="number" min="0" step="0.1" className="w-full p-3 border border-slate-200 rounded-[12px] text-sm font-bold focus:ring-2 focus:ring-brand/20 outline-none" />
+                <input name="costPerKg" value={currentFormData.costPerKg || ''} onChange={handleChange} type="number" min="0" step="any" className="w-full p-3 border border-slate-200 rounded-[12px] text-sm font-bold focus:ring-2 focus:ring-brand/20 outline-none" />
               </div>
             </div>
+
+            {Object.keys(errors).length > 0 && (
+              <ul role="alert" className="space-y-1 rounded-[12px] border border-brand-dark/60 bg-brand-100 p-3 text-xs font-semibold text-ink">
+                {Object.entries(errors).map(([field, message]) => <li key={field}>{message}</li>)}
+              </ul>
+            )}
 
             <button type="submit" className="w-full py-4 mt-4 bg-brand text-white rounded-[12px] font-black text-xs uppercase tracking-wider flex items-center justify-center gap-2 hover:bg-brand-dark transition-colors">
               <Check size={16} /> Save Resource
