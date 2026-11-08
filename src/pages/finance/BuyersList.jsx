@@ -62,7 +62,7 @@ export default function BuyersList() {
 
   // --- Mutations for CUD (Create, Update, Delete) ---
   // We only need 'create' on this page. The full management is on Customers.jsx
-  const { mutate: createCustomer, isLoading: isSaving } = useMutation({
+  const { mutate: createCustomer, isPending: isSaving } = useMutation({
     mutationFn: (customerData) => financeApi.createCustomer(customerData),
     onSuccess: (result) => {
       if (isQueuedOffline(result)) {

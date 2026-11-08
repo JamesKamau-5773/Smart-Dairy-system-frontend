@@ -3,6 +3,7 @@ import globals from 'globals'
 import reactHooks from 'eslint-plugin-react-hooks'
 import reactRefresh from 'eslint-plugin-react-refresh'
 import { defineConfig, globalIgnores } from 'eslint/config'
+import localRules from './eslint-rules/index.js'
 
 export default defineConfig([
   globalIgnores(['dist']),
@@ -17,7 +18,10 @@ export default defineConfig([
       globals: globals.browser,
       parserOptions: { ecmaFeatures: { jsx: true } },
     },
+    plugins: { local: localRules },
     rules: {
+      // TanStack Query v5 mutations have isPending, not isLoading (eslint-rules/no-mutation-is-loading.js).
+      'local/no-mutation-is-loading': 'error',
       // Farm dates are local calendar days. `toISOString()` is UTC, which in Nairobi
       // is still yesterday until 03:00. Use todayLocalIso / toLocalIsoDate (src/lib/localDate).
       'no-restricted-syntax': ['error',

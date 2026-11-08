@@ -950,6 +950,18 @@ export const productionApi = {
   getYield(yieldId) {
     return apiClient.get(`/production/yield/${yieldId}`).then((response) => toObject(response.data));
   },
+  // Edits one milk record in place (PATCH). Only the fields the backend applies are sent:
+  // amount, session and milking date. The cow can't be changed by this endpoint
+  // (BACKEND_REQUESTS.md, BR-001).
+  updateYield(yieldId, payload = {}, config = {}) {
+    const milkingDate = payload.milking_date ?? payload.milkingDate;
+    const body = {
+      amount: Number(payload.amount ?? payload.volume),
+      session: payload.session,
+      ...(milkingDate ? { milking_date: milkingDate } : {}),
+    };
+    return apiClient.patch(`/production/yield/${yieldId}`, body, config).then((response) => toObject(response.data));
+  },
   deleteYield(yieldId) {
     return apiClient.delete(`/production/yield/${yieldId}`);
   },

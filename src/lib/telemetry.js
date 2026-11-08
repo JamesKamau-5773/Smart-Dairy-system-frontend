@@ -40,6 +40,30 @@ export function logError(message, context = {}) {
   return push({ type: 'error', message: String(message), context });
 }
 
+/**
+ * The one place a caught error is reported. Records only what helps diagnose it (where it
+ * happened, HTTP status, the backend's error code, the error message), never request
+ * bodies, phone numbers, balances or tokens. Logs to the console in development only; a
+ * remote sink can be attached later through `onTelemetryEvent` / `flushTelemetry`.
+ *
+ * @param {unknown} error The caught error (an axios error or any thrown value).
+ * @param {{ where: string }} context `where` names the action, e.g. 'FastMilkLog.save'.
+ * @returns {object} The buffered telemetry entry.
+ *
+ * @example
+ * catch (error) { reportError(error, { where: 'FastMilkLog.delete' }); }
+ */
+export function reportError(error, { where } = {}) {
+  const status = error?.response?.status ?? null;
+  const code = typeof error?.response?.data?.code === 'string' ? error.response.data.code : null;
+  const message = error instanceof Error ? error.message : String(error);
+  const entry = push({ type: 'error', message, context: { where: where ?? 'unknown', status, code } });
+  if (import.meta.env?.DEV) {
+    console.error(`[${entry.context.where}]`, error);
+  }
+  return entry;
+}
+
 /** Log a domain event (e.g. batch created, delivery logged) for analytics/debug. */
 export function logEvent(name, context = {}) {
   return push({ type: 'event', name, context });

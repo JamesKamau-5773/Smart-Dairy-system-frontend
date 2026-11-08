@@ -24,7 +24,7 @@ export default function CustomersPage() {
     queryFn: () => financeApi.listCustomers().then(res => res.items || res.data || res || []),
   });
 
-  const { mutate: saveCustomer, isLoading: isSaving } = useMutation({
+  const { mutate: saveCustomer, isPending: isSaving } = useMutation({
     mutationFn: (customerData) => {
       const { id, ...rest } = customerData;
       return id

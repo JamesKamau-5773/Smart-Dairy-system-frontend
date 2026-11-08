@@ -1,23 +1,46 @@
-import React, { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
+import toast from 'react-hot-toast';
 import { useTenant } from '../../hooks/useTenant';
+import { useSubmissionKey } from '../../hooks/useSubmissionKey';
 import { QUERY_KEYS } from '../../providers/QueryProvider';
-import { herdApi, productionApi, safetyApi } from '../../lib/backendApi';
-import { createIdempotencyKey } from '../../lib/apiClient';
+import { getApiErrorMessage, herdApi, productionApi, safetyApi } from '../../lib/backendApi';
+import { getApiErrorCode } from '../../lib/apiErrors';
+import { reportError } from '../../lib/telemetry';
 import AlertBanner from '../../components/ui/AlertBanner';
+import Confirmation, { useConfirmation } from '../ui/Confirmation';
 import offlineQueue from '../../lib/offlineQueue';
 import { QUEUED_OFFLINE_MESSAGE, isQueuedOffline } from '../../lib/offlinePolicy';
 import { useFormDraft } from '../../hooks/useFormDraft';
 import DraftRestoredNotice from '../ui/DraftRestoredNotice';
-import { formatCowIdentity, resolveCowIdentityFromHerd } from '../../lib/cowIdentity';
+import { formatCowIdentity } from '../../lib/cowIdentity';
 import { ArrowLeft, Droplets, CheckCircle2, AlertOctagon, CloudOff, Trash2, X } from 'lucide-react';
 import { todayLocalIso } from '../../lib/localDate';
 
 const todayIso = () => todayLocalIso();
 
 const SESSION_OPTIONS = ['morning', 'midday', 'evening'];
+
+// How long the "Saved" / "Saved on this phone" screen shows before the form is ready again.
+const OUTCOME_SCREEN_MS = 1400;
+
+const DUPLICATE_MESSAGE = 'Already recorded for this cow and session. Duplicate blocked.';
+const IN_PROGRESS_MESSAGE = 'Still saving your last try. Wait a few seconds, then press Save again.';
+const SIGNED_OUT_MESSAGE = 'You were signed out, so this wasn’t saved. Sign in again, then press Save.';
+const SAVE_FAILED_MESSAGE = 'Couldn’t save. Your entry is still here. Try again.';
+const DELETE_FAILED_MESSAGE = 'Couldn’t delete this record. Try again.';
+const DELETED_MESSAGE = 'Milk record deleted.';
+const DELETE_QUEUED_MESSAGE = 'Will be deleted when you’re back online.';
+
+/** "Neema · KE-012 · morning · 2026-11-08 · 12.5 L" for the delete dialog; parts the row lacks are left out. */
+const describeMilkRecord = (record) => [
+  formatCowIdentity({ cowName: record?.cowName, cowTag: record?.cowId }, ''),
+  record?.session,
+  record?.date ?? record?.milkingDate ?? record?.milking_date,
+  record?.amount != null && record?.amount !== '' ? `${record.amount} L` : null,
+].filter(Boolean).join(' · ');
 
 // A milk draft is worth keeping once a cow or a volume has been entered.
 const isMilkDraftEmpty = (values) => !values?.cowId && !values?.volume;
@@ -36,7 +59,6 @@ const normalizeFormData = (record, fallbackDate = todayIso()) => ({
 ========================================================================= */
 
 const FastMilkUI = ({
-  herd,
   displayHerd,
   isLocked,
   formData,
@@ -52,6 +74,7 @@ const FastMilkUI = ({
   messageType,
   onDismissMessage,
   mode,
+  editCowLabel = '',
   draftNotice = null,
 }) => {
   const isEditMode = mode === 'edit';
@@ -114,27 +137,45 @@ const FastMilkUI = ({
       <form onSubmit={onSubmit} className="p-8 space-y-6 bg-surface-warm/30">
         {draftNotice}
         <div className="space-y-2">
-          <label className="text-[11px] font-black text-ink-muted uppercase tracking-widest block">Select Cow</label>
-          <div className="relative">
-            <select
-              value={formData.cowId}
-              onChange={(e) => setFormData({ ...formData, cowId: e.target.value })}
-              className="w-full appearance-none bg-white border-2 border-ink/10 rounded-xl p-4 pr-10 text-lg font-bold text-ink-strong focus:outline-none focus:border-brand focus:ring-4 focus:ring-brand/10 transition-all cursor-pointer "
-              required
-            >
-              <option value="" disabled>Choose cow...</option>
-              {displayHerd.map((cow) => (
-                <option key={cow.id} value={cow.id}>
-                  {formatCowIdentity(cow)}
-                </option>
-              ))}
-            </select>
-            <div className="absolute inset-y-0 right-0 flex items-center px-4 pointer-events-none text-ink-muted">
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
-              </svg>
+          <label htmlFor="fast-milk-cow" className="text-[11px] font-black text-ink-muted uppercase tracking-widest block">{isEditMode ? 'Cow' : 'Select Cow'}</label>
+          {isEditMode ? (
+            // Editing changes amount, session and date only; the backend keeps the record's cow.
+            <input
+              id="fast-milk-cow"
+              type="text"
+              readOnly
+              value={editCowLabel}
+              aria-describedby="fast-milk-cow-hint"
+              className="w-full rounded-xl border-2 border-ink/10 bg-ink/5 p-4 text-lg font-bold text-ink-strong focus:outline-none focus:border-brand focus:ring-4 focus:ring-brand/10"
+            />
+          ) : (
+            <div className="relative">
+              <select
+                id="fast-milk-cow"
+                value={formData.cowId}
+                onChange={(e) => setFormData({ ...formData, cowId: e.target.value })}
+                className="w-full appearance-none bg-white border-2 border-ink/10 rounded-xl p-4 pr-10 text-lg font-bold text-ink-strong focus:outline-none focus:border-brand focus:ring-4 focus:ring-brand/10 transition-all cursor-pointer "
+                required
+              >
+                <option value="" disabled>Choose cow...</option>
+                {displayHerd.map((cow) => (
+                  <option key={cow.id} value={cow.id}>
+                    {formatCowIdentity(cow)}
+                  </option>
+                ))}
+              </select>
+              <div className="absolute inset-y-0 right-0 flex items-center px-4 pointer-events-none text-ink-muted">
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
+                </svg>
+              </div>
             </div>
-          </div>
+          )}
+          {isEditMode && (
+            <p id="fast-milk-cow-hint" className="text-xs text-ink-muted">
+              To move this milk to another cow, delete this record and record it again for the right cow.
+            </p>
+          )}
         </div>
 
         <div className="grid grid-cols-2 gap-4">
@@ -192,21 +233,23 @@ const FastMilkUI = ({
           </div>
         </div>
 
-        <div className="pt-4 flex gap-3">
+        {/* Edit has three actions: on phones, Cancel and Delete share a row and the primary
+            action takes the full width below them, within thumb reach. */}
+        <div className="pt-4 flex flex-wrap gap-3 sm:flex-nowrap">
           {onClose && (
-            <button type="button" onClick={onClose} className="px-6 py-4 rounded-xl font-bold text-ink-muted hover:bg-ink/20 hover:text-ink-strong transition-colors">Cancel</button>
+            <button type="button" onClick={onClose} className={`px-6 py-4 rounded-xl font-bold text-ink-muted hover:bg-ink/20 hover:text-ink-strong transition-colors ${isEditMode ? 'flex-1 sm:flex-none' : ''}`}>Cancel</button>
           )}
           {isEditMode && onDelete && (
             <button
               type="button"
               onClick={onDelete}
               disabled={isPending || isDeleting}
-              className="inline-flex items-center justify-center gap-2 rounded-xl border border-danger/20 px-5 py-4 font-bold text-danger hover:bg-danger/5 disabled:opacity-60 transition-colors"
+              className="inline-flex flex-1 items-center justify-center gap-2 rounded-xl border border-danger/20 px-5 py-4 font-bold text-danger hover:bg-danger/5 disabled:opacity-60 transition-colors sm:flex-none"
             >
               <Trash2 size={16} /> {isDeleting ? 'Deleting...' : 'Delete Record'}
             </button>
           )}
-          <button type="submit" disabled={!formData.cowId || !formData.volume || !formData.date || isLocked || isPending} className="flex-1 bg-brand text-surface font-black text-lg py-4 rounded-xl hover:bg-brand-dark disabled:opacity-70 transition-all active:scale-95  ">
+          <button type="submit" disabled={!formData.cowId || !formData.volume || !formData.date || isLocked || isPending} className={`flex-1 bg-brand text-surface font-black text-lg py-4 rounded-xl hover:bg-brand-dark disabled:opacity-70 transition-all active:scale-95 ${isEditMode ? 'basis-full sm:basis-auto' : ''}`}>
             {isPending ? 'Saving...' : isEditMode ? 'Update Record' : 'Save Record'}
           </button>
         </div>
@@ -230,7 +273,15 @@ export default function FastMilkLog({ onClose, onSaveSuccess, onDeleteSuccess, m
   const [messageType, setMessageType] = useState('info');
   const [isDeleting, setIsDeleting] = useState(false);
   const inputRef = useRef(null);
+  // React Query tells React about isPending on a later tick, so a second submit in the same
+  // tick (Enter plus a tap, a very fast double tap) would still read isPending === false.
+  // This ref closes that gap; isPending drives what the farmer sees.
+  const submitInFlight = useRef(false);
+  const submissionKey = useSubmissionKey();
+  const deleteConfirmation = useConfirmation();
 
+  // The form starts from `record` when it mounts. To show another record, the parent
+  // mounts a new FastMilkLog (productionLog opens one per record).
   const isEditMode = mode === 'edit' && !!record?.id;
 
   // Herd fetch (scoped by tenant/farm)
@@ -267,144 +318,98 @@ export default function FastMilkLog({ onClose, onSaveSuccess, onDeleteSuccess, m
 
   const isLocked = !!formData.cowId && hardlocks.some(h => h.cow_id === formData.cowId || h.cow_id === formData.cowId.replace(/^C-?/i, ''));
 
-  useEffect(() => {
-    setFormData(normalizeFormData(record, defaultCreateDate));
-    setSaveStatus(null);
-    setMessage('');
-    setMessageType('info');
-    setIsDeleting(false);
-  }, [record, mode, defaultCreateDate]);
-
   const milkDraft = useFormDraft('milk-log', formData, setFormData, { enabled: !isEditMode, isEmpty: isMilkDraftEmpty });
   const handleClose = onClose
     ? () => { milkDraft.clearDraft(); onClose(); }
     : undefined;
 
-  // Mutation with idempotency and robust error handling
-  const mutation = useMutation({
-    mutationFn: async (payload) => {
-      const date = payload.milking_date || payload.milkingDate || todayLocalIso();
-      const requestPayload = {
-        cow_id: payload.cowId,
-        amount: Number(payload.volume ?? payload.amount ?? 0),
-        session: payload.session || 'morning',
-        milking_date: date,
-        milkingDate: date,
-      };
-      // Keep the key supplied by handleSubmit for a retry of this submission.
-      // Do not derive it from cow/date/session: those fields can legitimately
-      // be submitted again with a different amount.
-      const idempotencyKey = payload.idempotencyKey ?? createIdempotencyKey();
-
-      if (isEditMode) {
-        await productionApi.deleteYield(record.id);
+  // Shows the outcome screen, then readies the form for the next cow (or closes an edit).
+  // The entry is settled, so its idempotency key is forgotten: the next entry gets a new one.
+  const settleEntry = (type, text) => {
+    submissionKey.reset();
+    setSaveStatus('success');
+    setMessageType(type);
+    setMessage(text);
+    setTimeout(() => {
+      setSaveStatus(null);
+      setMessage('');
+      if (isEditMode && onClose) {
+        onClose();
+        return;
       }
+      setFormData(normalizeFormData(null, defaultCreateDate));
+      inputRef.current?.focus();
+    }, OUTCOME_SCREEN_MS);
+  };
 
-      return productionApi.createYield(requestPayload, { headers: { 'Idempotency-Key': idempotencyKey } });
+  // A new record is created (POST); an existing one is edited in place (PATCH), so an edit
+  // can never leave the farm with the old record deleted and the new one missing.
+  // Every attempt of one submission carries the same Idempotency-Key (useSubmissionKey).
+  const mutation = useMutation({
+    mutationFn: ({ entry, idempotencyKey }) => {
+      const config = { headers: { 'Idempotency-Key': idempotencyKey } };
+      return isEditMode
+        ? productionApi.updateYield(record.id, entry, config)
+        : productionApi.createYield(entry, config);
     },
-    onSuccess: (data, variables) => {
+    onSuccess: (data) => {
       if (isQueuedOffline(data)) {
         // Queued by apiClient: there is no saved record yet. The milk log lists it under
         // "Not sent yet" from the offline queue until it syncs.
-        setSaveStatus('success');
-        setMessage(QUEUED_OFFLINE_MESSAGE);
-        setMessageType('info');
-        setTimeout(() => {
-          setSaveStatus(null);
-          setMessage('');
-          if (isEditMode && onClose) {
-            onClose();
-            return;
-          }
-          setFormData(normalizeFormData(null, defaultCreateDate));
-          if (inputRef.current) inputRef.current.focus();
-        }, 1400);
+        settleEntry('info', QUEUED_OFFLINE_MESSAGE);
         return;
       }
-
-      const rawSavedRecord = data?.received || data?.updated || data;
-      // Backend currently echoes today's date instead of the submitted milking date;
-      // trust what the user entered until the server-side bug is fixed.
-      const submittedDate = variables?.milkingDate;
-      const savedRecord = submittedDate
-        ? { ...rawSavedRecord, date: submittedDate, milkingDate: submittedDate, milking_date: submittedDate }
-        : rawSavedRecord;
-      setSaveStatus('success');
-      setMessage(isEditMode ? 'Updated' : 'Saved');
-      setMessageType('success');
-      if (onSaveSuccess) onSaveSuccess(savedRecord);
-      setTimeout(() => {
-        setSaveStatus(null);
-        if (!isEditMode) {
-          setFormData(normalizeFormData(null, defaultCreateDate));
-        }
-        setMessage('');
-        if (isEditMode && onClose) {
-          onClose();
-        } else if (inputRef.current) {
-          inputRef.current.focus();
-        }
-      }, 1400);
+      if (onSaveSuccess) onSaveSuccess(data?.received || data?.updated || data);
+      settleEntry('success', isEditMode ? 'Updated' : 'Saved');
     },
-    onError: (err, variables) => {
-      const status = err?.response?.status;
-      const code = err?.response?.data?.code;
+    onError: async (error, { entry, idempotencyKey }) => {
+      const code = getApiErrorCode(error);
 
-      if (status === 409 && code === 'DUPLICATE_MILK_ENTRY') {
-        setMessageType('warning');
-        setMessage('Already recorded for this cow and session. Duplicate blocked.');
-        setSaveStatus('success');
-        setTimeout(() => {
-          setSaveStatus(null);
-          setFormData(normalizeFormData(null, defaultCreateDate));
-          setMessage('');
-          if (inputRef.current) inputRef.current.focus();
-        }, 1400);
+      if (code === 'DUPLICATE_MILK_ENTRY') {
+        settleEntry('warning', DUPLICATE_MESSAGE);
         return;
       }
 
-      const isNetwork = !err?.response && !isEditMode;
-      if (isNetwork) {
+      // No answer from the server and apiClient didn't queue it (an error it doesn't treat
+      // as offline). The request may still have arrived, so it is queued under the same key:
+      // the backend then saves it once.
+      if (!error?.response && !isEditMode) {
         try {
-          const cowIdentity = resolveCowIdentityFromHerd({ cowId: variables.cowId }, herd);
-          offlineQueue.enqueue({
-            cow_id: variables.cowId,
-            cow_name: cowIdentity.name,
-            cow_tag: cowIdentity.earTag,
-            amount: Number(variables.volume ?? variables.amount ?? 0),
-            session: variables.session || 'morning',
-            milking_date: variables.milking_date || variables.milkingDate || todayIso(),
-            milkingDate: variables.milkingDate || variables.milking_date || todayIso(),
-          });
-          setMessageType('info');
-          setMessage(QUEUED_OFFLINE_MESSAGE);
-          setSaveStatus('success');
-          setTimeout(() => {
-            setSaveStatus(null);
-            setFormData(normalizeFormData(null, defaultCreateDate));
-            setMessage('');
-            if (inputRef.current) inputRef.current.focus();
-          }, 1400);
+          await offlineQueue.enqueue(entry, { idempotencyKey });
+          settleEntry('info', QUEUED_OFFLINE_MESSAGE);
           return;
-        } catch (e) {
-          console.error('Failed to enqueue offline payload', e);
+        } catch (queueError) {
+          reportError(queueError, { where: 'FastMilkLog.queue' });
         }
       }
 
-      console.error('Fast log save failed', err);
+      // The first try is still being saved; keep the key so the next try is matched to it.
+      if (code === 'IDEMPOTENCY_IN_PROGRESS') {
+        setMessageType('warning');
+        setMessage(IN_PROGRESS_MESSAGE);
+        return;
+      }
+      // Should not happen (the key follows the content), but never get stuck on a bad key.
+      if (code === 'IDEMPOTENCY_KEY_REUSED') submissionKey.reset();
+
+      reportError(error, { where: 'FastMilkLog.save' });
       setMessageType('danger');
-      setMessage(status === 401
-        ? 'You were signed out, so this wasn’t saved. Sign in again, then press Save.'
-        : 'Failed to save. Try again.');
+      setMessage(error?.response?.status === 401
+        ? SIGNED_OUT_MESSAGE
+        : getApiErrorMessage(error, SAVE_FAILED_MESSAGE));
+    },
+    onSettled: () => {
+      submitInFlight.current = false;
     },
   });
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    if (!formData.cowId || !formData.volume || !formData.date || isLocked || mutation.isLoading || isDeleting) return;
+  const handleSubmit = (event) => {
+    event.preventDefault();
+    if (submitInFlight.current || mutation.isPending || isDeleting) return;
+    if (!formData.cowId || !formData.volume || !formData.date || isLocked) return;
 
-    const numeric = parseFloat(formData.volume);
-    if (Number.isNaN(numeric) || numeric < 0) {
+    const amount = parseFloat(formData.volume);
+    if (Number.isNaN(amount) || amount < 0) {
       setMessageType('danger');
       setMessage('Enter a valid amount');
       return;
@@ -416,37 +421,48 @@ export default function FastMilkLog({ onClose, onSaveSuccess, onDeleteSuccess, m
       return;
     }
 
-    mutation.mutate({
-      cowId: formData.cowId,
-      volume: numeric,
+    const entry = {
+      cow_id: formData.cowId,
+      amount,
       session: formData.session,
-      milkingDate: formData.date,
-      idempotencyKey: createIdempotencyKey(),
-      id: record?.id,
+      milking_date: formData.date,
+    };
+    submitInFlight.current = true;
+    mutation.mutate({
+      entry,
+      idempotencyKey: submissionKey.keyFor({ recordId: isEditMode ? record.id : null, ...entry }),
     });
   };
 
   const handleDelete = async () => {
-    if (!isEditMode || !record?.id || isDeleting || mutation.isLoading) return;
-    if (!window.confirm('Delete this milk record?')) return;
+    if (!isEditMode || isDeleting || submitInFlight.current || mutation.isPending) return;
+    const description = describeMilkRecord(record);
+    const confirmed = await deleteConfirmation.confirm({
+      title: 'Delete this milk record?',
+      message: `${description ? `${description}. ` : ''}You can’t undo this.`,
+      type: 'danger',
+      confirmText: 'Delete',
+      cancelText: 'Keep',
+    });
+    if (!confirmed) return;
 
     setIsDeleting(true);
     try {
-      await productionApi.deleteYield(record.id);
-      setMessageType('success');
-      setMessage('Deleted');
+      const response = await productionApi.deleteYield(record.id);
+      // Offline, apiClient queues the delete: the record stays until it is sent.
+      if (isQueuedOffline(response?.data)) {
+        toast(DELETE_QUEUED_MESSAGE);
+      } else {
+        toast.success(DELETED_MESSAGE);
+      }
       if (onDeleteSuccess) onDeleteSuccess(record);
-      setTimeout(() => {
-        setMessage('');
-        setIsDeleting(false);
-        setSaveStatus(null);
-        if (onClose) onClose();
-      }, 800);
-    } catch (err) {
-      setIsDeleting(false);
+      if (onClose) onClose();
+    } catch (error) {
+      reportError(error, { where: 'FastMilkLog.delete' });
       setMessageType('danger');
-      setMessage('Failed to delete. Try again.');
-      console.error('Fast log delete failed', err);
+      setMessage(getApiErrorMessage(error, DELETE_FAILED_MESSAGE));
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -455,9 +471,10 @@ export default function FastMilkLog({ onClose, onSaveSuccess, onDeleteSuccess, m
   }, []);
 
   return createPortal(
-    <div className="fixed inset-0 z-[9999] flex items-start justify-center overflow-y-auto overscroll-contain bg-slate-900/50 p-3 touch-pan-y sm:items-center sm:p-4">
+    // z-[100] is the modal layer (as the other form modals), so the delete confirmation,
+    // the session-expired sheet and toasts stay on top of it.
+    <div className="fixed inset-0 z-[100] flex items-start justify-center overflow-y-auto overscroll-contain bg-slate-900/50 p-3 touch-pan-y sm:items-center sm:p-4">
       <FastMilkUI
-        herd={herd}
         displayHerd={displayHerd}
         isLocked={isLocked}
         formData={formData}
@@ -465,7 +482,7 @@ export default function FastMilkLog({ onClose, onSaveSuccess, onDeleteSuccess, m
         onSubmit={handleSubmit}
         onDelete={handleDelete}
         saveStatus={saveStatus}
-        isPending={mutation.isLoading}
+        isPending={mutation.isPending}
         isDeleting={isDeleting}
         onClose={handleClose}
         onBack={!onClose ? () => navigate(-1) : undefined}
@@ -479,9 +496,9 @@ export default function FastMilkLog({ onClose, onSaveSuccess, onDeleteSuccess, m
         messageType={messageType}
         onDismissMessage={() => setMessage('')}
         mode={mode}
+        editCowLabel={isEditMode ? formatCowIdentity({ cowName: record.cowName, cowTag: record.cowId }) : ''}
       />
-
-      {/* Success handled inside FastMilkUI; no extra floating overlay needed */}
+      <Confirmation {...deleteConfirmation} />
     </div>,
     document.body
   );
