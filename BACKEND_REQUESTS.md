@@ -322,7 +322,7 @@ Add `entitlements` to the session returned by login, `GET /api/auth/me` and swit
   "entitlements": {
     "plan": { "id": "starter", "name": "Starter" },
     "is_demo": false,
-    "features": ["milk_records", "herd", "breeding", "feed", "buyers", "ledger", "reports", "payroll"],
+    "features": ["dashboard", "production", "tasks", "herd", "breeding", "medical", "feeding", "feed", "customers", "finance", "inventory", "reports", "safety", "staff", "payroll"],
     "limits": {
       "cows": 50,
       "staff_accounts": 3,
@@ -335,9 +335,13 @@ Add `entitlements` to the session returned by login, `GET /api/auth/me` and swit
 }
 ```
 
-- `features`: every feature key the plan includes. A key missing from the list means locked.
-  Please confirm the list of keys and which plans include which; the frontend will wrap the
-  matching pages in `<LockedFeature feature="…">`.
+- `features`: every area the plan includes, using the **same keys as `page_access`** (`dashboard`,
+  `production`, `tasks`, `herd`, `breeding`, `medical`, `feeding`, `feed`, `customers`, `finance`,
+  `inventory`, `reports`, `safety`, `staff`, `payroll`, `member_admin`). A key missing from the
+  list means that area is locked: the app shows an "isn't in your plan" card on its pages
+  (`PageAccessGate` in `DashboardLayout.jsx`, list in `pageRoutes.js`). Send the full list, not
+  just the extras: an empty list locks every area. Omit `features` entirely if unknown.
+  Which plans include which areas is the backend's decision; the frontend holds no such table.
 - `limits` / `usage`: numbers, or `null` for unlimited / unknown.
 - `upgrade_url`: https only; when absent the app shows the support phone number instead.
 - `is_demo: true` for the shared demo account. The backend must refuse changes that would alter

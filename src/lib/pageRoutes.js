@@ -28,6 +28,29 @@ export const PAGE_ROUTES = Object.freeze([
   ['/cooperative-admin/members', 'member_admin'],
 ]);
 
+/**
+ * What each page-access key is called, for messages about the whole area (e.g. the
+ * "isn't in your plan" card). The same keys are the plan feature keys (BR-014).
+ */
+export const PAGE_TITLES = Object.freeze({
+  dashboard: 'Dashboard',
+  production: 'Milk records',
+  tasks: 'Daily tasks',
+  herd: 'Cow register',
+  breeding: 'Breeding',
+  medical: 'Health records',
+  feeding: 'Feeding',
+  feed: 'Feed and nutrition',
+  customers: 'Buyers',
+  finance: 'Ledger',
+  inventory: 'Inventory',
+  reports: 'Reports',
+  safety: 'Milk safety',
+  staff: 'Staff',
+  payroll: 'Payroll',
+  member_admin: 'Member onboarding',
+});
+
 const matches = (pathname, path) => pathname === path || pathname.startsWith(`${path}/`);
 
 /** The page-access key for a route, or undefined when the route isn't access-controlled. */

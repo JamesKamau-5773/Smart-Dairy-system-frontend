@@ -4,6 +4,14 @@ What changed for farmers and staff using Maziwa Smart. Newest first.
 
 ## Unreleased
 
+### Plan locks by area
+
+- **Areas outside the farm's plan explain themselves.** When the server says a plan doesn't
+  include an area (e.g. Payroll or Reports), every page in that area shows "isn't in your plan"
+  with how to upgrade, instead of the page. Which areas each plan includes is decided by the
+  server alone; until it sends that, nothing is locked. Switched off with the same
+  `VITE_FEATURE_PLAN_INDICATORS=false` setting.
+
 ### Phase 5 — Plan, limits and demo (UX audit)
 
 - **Ready for plans and the demo farm.** When the server starts sending a farm's plan, the app will:

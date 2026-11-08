@@ -10,21 +10,7 @@ import ErrorBoundary from '../components/errors/ErrorBoundary';
 import SessionExpiredSheet from '../components/ui/SessionExpiredSheet';
 import { usePrefetchOfflineEssentials } from '../hooks/usePrefetchOfflineEssentials';
 import { useLayoutEffect, useRef, useState } from 'react';
-import { useAuth } from '../contexts/AuthContext';
-import { hasPageAccess } from '../lib/roles';
-import { getFirstAllowedPath, getPageKeyForPath } from '../lib/pageRoutes';
-import NoPageAccess from '../components/ui/NoPageAccess';
-
-function PageAccessGate({ children }) {
-  const { currentUser } = useAuth();
-  const { pathname } = useLocation();
-  const access = getPageKeyForPath(pathname);
-  if (access && !hasPageAccess(currentUser, access)) {
-    // Say why, rather than silently landing the person somewhere else.
-    return <NoPageAccess allowedPath={getFirstAllowedPath(currentUser)} />;
-  }
-  return children;
-}
+import PageAccessGate from './PageAccessGate';
 
 const isDevelopment = import.meta.env.DEV
   || globalThis.process?.env?.NODE_ENV === 'development';
