@@ -10,7 +10,7 @@ import SubmitButton from '../../components/auth/SubmitButton';
 import { useOnlineStatus } from '../../hooks/useOnlineStatus';
 import { getGateRoute, safeNextPath } from '../../lib/authState';
 import { getAuthErrorMessage } from '../../lib/authErrorMessages';
-import { authCopy } from '../../i18n/auth.en';
+import { authCopy } from '../../i18n/auth';
 
 const { google: copy, common } = authCopy;
 

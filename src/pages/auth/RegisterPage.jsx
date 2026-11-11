@@ -17,7 +17,7 @@ import { authApi } from '../../lib/backendApi';
 import { rememberLogin } from '../../lib/lastLogin';
 import { normalizeKenyanPhone } from '../../lib/phone';
 import { validateRegistration } from '../../lib/authValidation';
-import { authCopy } from '../../i18n/auth.en';
+import { authCopy } from '../../i18n/auth';
 
 const { register: copy, fields, common } = authCopy;
 

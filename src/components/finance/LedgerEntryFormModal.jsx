@@ -4,7 +4,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { ChevronDown, ChevronUp, Info, X } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { financeApi, getApiErrorMessage, herdApi } from '../../lib/backendApi';
-import { QUEUED_OFFLINE_MESSAGE, isQueuedOffline, offlineFailureMessage } from '../../lib/offlinePolicy';
+import { queuedOfflineMessage, isQueuedOffline, offlineFailureMessage } from '../../lib/offlinePolicy';
 import { missingLedgerFields } from '../../lib/ledgerForm';
 import { useLedgerCategories } from '../../hooks/useLedgerCategories';
 import { useInvalidateLedger } from '../../hooks/usePeriodTotals';
@@ -17,10 +17,16 @@ import { QUERY_KEYS } from '../../providers/QueryProvider';
 import DraftRestoredNotice from '../ui/DraftRestoredNotice';
 import DateField from '../ui/DateField';
 import { Popover, PopoverContent, PopoverTrigger } from '../ui/popover';
+import FieldError from '../ui/FieldError';
+import { fieldErrorProps } from '../ui/fieldErrorProps';
+import { useServerFieldErrors } from '../../hooks/useServerFieldErrors';
 
 // A ledger draft is worth keeping once any amount, party, item or note has been typed.
 const isLedgerDraftEmpty = (values) => !['amount', 'party', 'item_name', 'description', 'reference_code', 'customer_id', 'income_source']
   .some((field) => String(values?.[field] ?? '').trim());
+
+// The backend's ledger fields, by this form's names, for showing its errors per input.
+const SERVER_FIELDS = Object.freeze({ fieldMap: { payment_method: 'paymentMethod', paid_to: 'party', note: 'description' } });
 
 /** Log income (or a customer payment) or an expense. Saves a draft until it closes. */
 export default function LedgerEntryFormModal({ onClose: closeModal, transactionType, farmId, tenantId }) {
@@ -60,9 +66,9 @@ export default function LedgerEntryFormModal({ onClose: closeModal, transactionT
     enabled: !!tenantId && !!farmId && transactionType === 'income',
   });
   const { data: animals = [] } = useQuery({
-    queryKey: ['herd', tenantId],
+    queryKey: QUERY_KEYS.COWS(tenantId, farmId),
     queryFn: () => herdApi.list(),
-    enabled: !!tenantId && transactionType === 'expense',
+    enabled: !!tenantId && !!farmId && transactionType === 'expense',
   });
 
   const mutation = useMutation({
@@ -83,7 +89,7 @@ export default function LedgerEntryFormModal({ onClose: closeModal, transactionT
       invalidateLedger();
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.CUSTOMERS(tenantId, farmId) });
       if (isQueuedOffline(result)) {
-        toast(QUEUED_OFFLINE_MESSAGE);
+        toast(queuedOfflineMessage());
       } else {
         toast.success(isCustomerPayment ? 'Customer payment recorded.' : transactionType === 'income' ? 'Income recorded.' : 'Expense recorded.');
       }
@@ -97,11 +103,15 @@ export default function LedgerEntryFormModal({ onClose: closeModal, transactionT
     },
   });
 
+  const server = useServerFieldErrors(mutation.error, SERVER_FIELDS);
+  const fieldError = server.errorFor;
+
   // The cost class follows the category until the farmer chooses one themselves.
   const [costClassChosen, setCostClassChosen] = useState(false);
   const handleChange = (e) => {
     const { name, value } = e.target;
     if (name === 'cost_class') setCostClassChosen(true);
+    server.dismiss(name);
     setFormData((prev) => ({
       ...prev,
       [name]: value,
@@ -110,7 +120,10 @@ export default function LedgerEntryFormModal({ onClose: closeModal, transactionT
     }));
   };
 
-  const setDate = (date) => setFormData((prev) => ({ ...prev, date }));
+  const setDate = (date) => {
+    server.dismiss('date');
+    setFormData((prev) => ({ ...prev, date }));
+  };
 
   const handleAnimalToggle = (animalId) => {
     setFormData((prev) => {
@@ -163,8 +176,8 @@ export default function LedgerEntryFormModal({ onClose: closeModal, transactionT
             {transactionType === 'income' ? (
               <>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <DateField label="Date received" name="date" value={formData.date} max={todayLocalIso()} onChange={setDate} required className="form-control" />
-                  <label className="form-control"><span className="label-text">Income amount (KES)</span><input type="number" min="0.01" step="0.01" name="amount" value={formData.amount} onChange={handleChange} className="input-machined" placeholder="e.g., 5000" required /></label>
+                  <DateField label="Date received" name="date" value={formData.date} max={todayLocalIso()} onChange={setDate} required className="form-control" error={fieldError('date')} />
+                  <label className="form-control"><span className="label-text">Income amount (KES)</span><input type="number" min="0.01" step="0.01" id="ledger-amount" {...fieldErrorProps('ledger-amount', fieldError('amount'))} name="amount" value={formData.amount} onChange={handleChange} className="input-machined" placeholder="e.g., 5000" required /><FieldError id="ledger-amount" message={fieldError('amount')} /></label>
                 </div>
                 <fieldset className="space-y-2">
                   <legend className="label-text">Payment source</legend>
@@ -176,45 +189,48 @@ export default function LedgerEntryFormModal({ onClose: closeModal, transactionT
                 {formData.incomePayerType === 'customer' ? (
                   <label className="form-control">
                     <span className="label-text">Customer making payment</span>
-                    <select name="customer_id" value={formData.customer_id} onChange={handleChange} className="input-machined" required>
+                    <select id="ledger-customer_id" {...fieldErrorProps('ledger-customer_id', fieldError('customer_id'))} name="customer_id" value={formData.customer_id} onChange={handleChange} className="input-machined" required>
                       <option value="" disabled>Select who paid</option>
                       {customers.map(customer => (
                         <option key={customer.id} value={customer.id}>{customer.name}</option>
                       ))}
                     </select>
+                    <FieldError id="ledger-customer_id" message={fieldError('customer_id')} />
                   </label>
                 ) : (
-                  <label className="form-control"><span className="label-text">Payer or income source</span><input type="text" name="income_source" value={formData.income_source} onChange={handleChange} className="input-machined" placeholder="e.g., County show or walk-in buyer" required /></label>
+                  <label className="form-control"><span className="label-text">Payer or income source</span><input type="text" id="ledger-income_source" {...fieldErrorProps('ledger-income_source', fieldError('income_source'))} name="income_source" value={formData.income_source} onChange={handleChange} className="input-machined" placeholder="e.g., County show or walk-in buyer" required /><FieldError id="ledger-income_source" message={fieldError('income_source')} /></label>
                 )}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <label className="form-control">
                     <span className="label-text">Income source</span>
-                    <select name="category" value={formData.category} onChange={handleChange} className="input-machined" required>
+                    <select id="ledger-category" {...fieldErrorProps('ledger-category', fieldError('category'))} name="category" value={formData.category} onChange={handleChange} className="input-machined" required>
                       {categories.income.map(([value, label]) => <option key={value} value={value}>{label}</option>)}
                     </select>
+                    <FieldError id="ledger-category" message={fieldError('category')} />
                   </label>
                   <label className="form-control">
                     <span className="label-text">Payment received via</span>
-                    <select name="paymentMethod" value={formData.paymentMethod} onChange={handleChange} className="input-machined" required>
+                    <select id="ledger-paymentMethod" {...fieldErrorProps('ledger-paymentMethod', fieldError('paymentMethod'))} name="paymentMethod" value={formData.paymentMethod} onChange={handleChange} className="input-machined" required>
                       <option value="M-Pesa">M-Pesa</option><option value="Cash">Cash</option><option value="Bank">Bank transfer</option><option value="Other">Other</option>
                     </select>
+                    <FieldError id="ledger-paymentMethod" message={fieldError('paymentMethod')} />
                   </label>
                 </div>
-                <label className="form-control"><span className="label-text">Payment reference{isPaymentReferenceRequired ? ' (required)' : ' (optional)'}</span><input type="text" name="reference_code" value={formData.reference_code} onChange={handleChange} className="input-machined uppercase" placeholder={formData.paymentMethod === 'Cash' ? 'Optional for cash payments' : 'M-Pesa or bank transaction code'} required={isPaymentReferenceRequired} aria-invalid={Boolean(mpesaCodeError)} aria-describedby={mpesaCodeError ? 'reference-code-error' : undefined} />{mpesaCodeError && <span id="reference-code-error" className="mt-1.5 block text-xs text-danger-900">{mpesaCodeError}</span>}</label>
-                <label className="form-control"><span className="label-text">Income notes</span><textarea name="description" value={formData.description} onChange={handleChange} className="input-machined" rows="2" placeholder="What was this payment for?" /></label>
+                <label className="form-control"><span className="label-text">Payment reference{isPaymentReferenceRequired ? ' (required)' : ' (optional)'}</span><input type="text" id="ledger-reference_code" name="reference_code" value={formData.reference_code} onChange={handleChange} className="input-machined uppercase" placeholder={formData.paymentMethod === 'Cash' ? 'Optional for cash payments' : 'M-Pesa or bank transaction code'} required={isPaymentReferenceRequired} {...fieldErrorProps('ledger-reference_code', mpesaCodeError || fieldError('reference_code'))} /><FieldError id="ledger-reference_code" message={mpesaCodeError || fieldError('reference_code')} /></label>
+                <label className="form-control"><span className="label-text">Income notes</span><textarea id="ledger-description" {...fieldErrorProps('ledger-description', fieldError('description'))} name="description" value={formData.description} onChange={handleChange} className="input-machined" rows="2" placeholder="What was this payment for?" /><FieldError id="ledger-description" message={fieldError('description')} /></label>
               </>
             ) : (
               <>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <DateField label="Expense date" name="date" value={formData.date} max={todayLocalIso()} onChange={setDate} required className="form-control" />
-                  <label className="form-control"><span className="label-text">Amount paid (KES)</span><input type="number" min="0.01" step="0.01" name="amount" value={formData.amount} onChange={handleChange} className="input-machined" placeholder="e.g., 2500" required /></label>
+                  <DateField label="Expense date" name="date" value={formData.date} max={todayLocalIso()} onChange={setDate} required className="form-control" error={fieldError('date')} />
+                  <label className="form-control"><span className="label-text">Amount paid (KES)</span><input type="number" min="0.01" step="0.01" id="ledger-amount" {...fieldErrorProps('ledger-amount', fieldError('amount'))} name="amount" value={formData.amount} onChange={handleChange} className="input-machined" placeholder="e.g., 2500" required /><FieldError id="ledger-amount" message={fieldError('amount')} /></label>
                 </div>
-                <label className="form-control"><span className="label-text">Supplier or payee</span><input type="text" name="party" value={formData.party} onChange={handleChange} className="input-machined" placeholder="e.g., Agrovet Store or employee name" required /></label>
-                <label className="form-control"><span className="label-text">Expense category</span><select name="category" value={formData.category} onChange={handleChange} className="input-machined" required>{categories.expense.map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label>
-                <label className="form-control"><span className="label-text">{requiresCommodityQuantity ? 'Item / commodity name' : 'Expense or service description'}</span><input type="text" name="item_name" value={formData.item_name} onChange={handleChange} className="input-machined" placeholder={requiresCommodityQuantity ? 'e.g., Dairy Meal' : 'e.g., Veterinary visit or vaccination'} required /></label>
+                <label className="form-control"><span className="label-text">Supplier or payee</span><input type="text" id="ledger-party" {...fieldErrorProps('ledger-party', fieldError('party'))} name="party" value={formData.party} onChange={handleChange} className="input-machined" placeholder="e.g., Agrovet Store or employee name" required /><FieldError id="ledger-party" message={fieldError('party')} /></label>
+                <label className="form-control"><span className="label-text">Expense category</span><select id="ledger-category" {...fieldErrorProps('ledger-category', fieldError('category'))} name="category" value={formData.category} onChange={handleChange} className="input-machined" required>{categories.expense.map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select><FieldError id="ledger-category" message={fieldError('category')} /></label>
+                <label className="form-control"><span className="label-text">{requiresCommodityQuantity ? 'Item / commodity name' : 'Expense or service description'}</span><input type="text" id="ledger-item_name" {...fieldErrorProps('ledger-item_name', fieldError('item_name'))} name="item_name" value={formData.item_name} onChange={handleChange} className="input-machined" placeholder={requiresCommodityQuantity ? 'e.g., Dairy Meal' : 'e.g., Veterinary visit or vaccination'} required /><FieldError id="ledger-item_name" message={fieldError('item_name')} /></label>
                 {requiresCommodityQuantity && (
                   <div className="grid grid-cols-2 gap-3">
-                    <label className="form-control"><span className="label-text">Quantity</span><input type="number" min="0.001" step="0.001" name="quantity" value={formData.quantity} onChange={handleChange} className="input-machined" placeholder="e.g., 50" required /></label>
+                    <label className="form-control"><span className="label-text">Quantity</span><input type="number" min="0.001" step="0.001" id="ledger-quantity" {...fieldErrorProps('ledger-quantity', fieldError('quantity'))} name="quantity" value={formData.quantity} onChange={handleChange} className="input-machined" placeholder="e.g., 50" required /><FieldError id="ledger-quantity" message={fieldError('quantity')} /></label>
                     <label className="form-control"><span className="label-text">Unit</span><select name="quantity_unit" value={formData.quantity_unit} onChange={handleChange} className="input-machined" required><option value="kg">Kilograms (kg)</option><option value="g">Grams (g)</option><option value="L">Litres (L)</option><option value="mL">Millilitres (mL)</option><option value="bags">Bags</option><option value="pieces">Pieces</option><option value="packs">Packs</option><option value="units">Units</option></select></label>
                   </div>
                 )}
@@ -240,19 +256,21 @@ export default function LedgerEntryFormModal({ onClose: closeModal, transactionT
                         </PopoverContent>
                       </Popover>
                     </div>
-                    <select name="cost_class" value={categories.resolveCostClass(formData.category, formData.cost_class)} onChange={handleChange} className="input-machined" required>
+                    <select id="ledger-cost_class" {...fieldErrorProps('ledger-cost_class', fieldError('cost_class'))} name="cost_class" value={categories.resolveCostClass(formData.category, formData.cost_class)} onChange={handleChange} className="input-machined" required>
                       {categories.costClasses.map(([value, label]) => <option key={value} value={value}>{label}</option>)}
                     </select>
+                    <FieldError id="ledger-cost_class" message={fieldError('cost_class')} />
                   </div>
                 </div>
                 <label className="form-control">
                   <span className="label-text">Payment method used</span>
-                  <select name="paymentMethod" value={formData.paymentMethod} onChange={handleChange} className="input-machined" required>
+                  <select id="ledger-paymentMethod" {...fieldErrorProps('ledger-paymentMethod', fieldError('paymentMethod'))} name="paymentMethod" value={formData.paymentMethod} onChange={handleChange} className="input-machined" required>
                     <option value="M-Pesa">M-Pesa</option><option value="Cash">Cash</option><option value="Bank">Bank transfer</option><option value="Other">Other</option>
                   </select>
+                  <FieldError id="ledger-paymentMethod" message={fieldError('paymentMethod')} />
                 </label>
-                <label className="form-control"><span className="label-text">Receipt or invoice number</span><input type="text" name="reference_code" value={formData.reference_code} onChange={handleChange} className="input-machined" placeholder="Supplier receipt, invoice, or transaction code" /></label>
-                <label className="form-control"><span className="label-text">Purchase or expense details</span><textarea name="description" value={formData.description} onChange={handleChange} className="input-machined" rows="2" placeholder="Describe the goods or services purchased" /></label>
+                <label className="form-control"><span className="label-text">Receipt or invoice number</span><input type="text" id="ledger-reference_code" {...fieldErrorProps('ledger-reference_code', fieldError('reference_code'))} name="reference_code" value={formData.reference_code} onChange={handleChange} className="input-machined" placeholder="Supplier receipt, invoice, or transaction code" /><FieldError id="ledger-reference_code" message={fieldError('reference_code')} /></label>
+                <label className="form-control"><span className="label-text">Purchase or expense details</span><textarea id="ledger-description" {...fieldErrorProps('ledger-description', fieldError('description'))} name="description" value={formData.description} onChange={handleChange} className="input-machined" rows="2" placeholder="Describe the goods or services purchased" /><FieldError id="ledger-description" message={fieldError('description')} /></label>
                 <div className="grid grid-cols-1 gap-4 border-t border-ink/10 pt-4">
                   <div className="form-control">
                     <span className="label-text">Animals for this expense (optional)</span>
@@ -307,10 +325,11 @@ export default function LedgerEntryFormModal({ onClose: closeModal, transactionT
                         </PopoverContent>
                       </Popover>
                     </div>
-                    <select name="animal_cost_type" value={formData.animal_cost_type} onChange={handleChange} className="input-machined" disabled={!hasSelectedAnimals}>
+                    <select id="ledger-animal_cost_type" {...fieldErrorProps('ledger-animal_cost_type', fieldError('animal_cost_type'))} name="animal_cost_type" value={formData.animal_cost_type} onChange={handleChange} className="input-machined" disabled={!hasSelectedAnimals}>
                       <option value="">Select cost type</option>
                       <option value="PURCHASE">Purchase</option><option value="CALF_FEED">Calf feed</option><option value="HEIFER_FEED">Heifer feed</option><option value="BREEDING">Breeding</option><option value="VETERINARY">Veterinary</option><option value="LABOR">Labor</option><option value="HOUSING">Housing</option><option value="OVERHEAD">Overhead</option><option value="OTHER">Other</option>
                     </select>
+                    <FieldError id="ledger-animal_cost_type" message={fieldError('animal_cost_type')} />
                   </div>
                 </div>
                 {!hasSelectedAnimals && <p className="text-xs text-ink-muted">Choose cows only if this cost was for specific animals, such as treatment or AI.</p>}

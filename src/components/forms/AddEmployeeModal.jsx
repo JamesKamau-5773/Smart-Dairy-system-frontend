@@ -14,6 +14,14 @@ import {
 } from '../../lib/staffAccessForm';
 import { todayLocalIso } from '../../lib/localDate';
 import StatutoryDeductionsToggle from './StatutoryDeductionsToggle';
+import { useServerFieldErrors } from '../../hooks/useServerFieldErrors';
+import FieldError from '../ui/FieldError';
+import { fieldErrorProps } from '../ui/fieldErrorProps';
+
+// The backend's employee fields, by this form's names, for showing its errors per input.
+const SERVER_FIELDS = Object.freeze({
+  fieldMap: { full_name: 'name', phone_number: 'phoneNumber', base_salary: 'baseSalary', hire_date: 'hireDate' },
+});
 
 const INITIAL_STATE = {
   name: '',
@@ -35,6 +43,10 @@ export default function AddEmployeeModal({ isOpen, onClose, onSave }) {
   const [partialFailureMessage, setPartialFailureMessage] = useState('');
   const [employeeCreated, setEmployeeCreated] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [saveError, setSaveError] = useState(null);
+  const server = useServerFieldErrors(saveError, SERVER_FIELDS);
+  // This form's own checks first, then the backend's.
+  const errorFor = (name) => errors[name] || server.errorFor(name);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -45,6 +57,7 @@ export default function AddEmployeeModal({ isOpen, onClose, onSave }) {
         : value;
     setFormData(prev => ({ ...prev, [name]: formattedValue }));
     setErrors((current) => ({ ...current, [name]: undefined }));
+    server.dismiss(name);
   };
 
   const handleSubmit = async (e) => {
@@ -66,6 +79,7 @@ export default function AddEmployeeModal({ isOpen, onClose, onSave }) {
 
     try {
       setIsSaving(true);
+      setSaveError(null);
       await onSave({
         ...formData,
         phoneNumber: normalizeKenyanPhone(formData.phoneNumber),
@@ -80,6 +94,8 @@ export default function AddEmployeeModal({ isOpen, onClose, onSave }) {
       setTemporaryPassword('');
       onClose();
     } catch (error) {
+      // The profile wasn't saved: show the backend's field errors under the inputs.
+      if (!error?.employeeCreated) setSaveError(error);
       if (error?.employeeCreated) {
         setEmployeeCreated(true);
         setTemporaryPassword('');
@@ -126,29 +142,30 @@ export default function AddEmployeeModal({ isOpen, onClose, onSave }) {
               <div className="grid gap-x-5 gap-y-4 sm:grid-cols-2">
                 <label className="block">
                   <span className="mb-2 flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-slate-500"><UserPlus size={13} /> Full name <span className="text-danger">*</span></span>
-                  <input required autoFocus autoComplete="name" name="name" value={formData.name} onChange={handleChange} placeholder="e.g. Mary Wanjiku" className="input-machined w-full" aria-invalid={Boolean(errors.name)} />
-                  {errors.name && <span className="mt-1.5 block text-xs text-danger">{errors.name}</span>}
+                  <input required autoFocus autoComplete="name" id="employee-name" name="name" value={formData.name} onChange={handleChange} placeholder="e.g. Mary Wanjiku" className="input-machined w-full" {...fieldErrorProps('employee-name', errorFor('name'))} />
+                  <FieldError id="employee-name" message={errorFor('name')} />
                 </label>
                 <label className="block">
                   <span className="mb-2 flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-slate-500"><BriefcaseBusiness size={13} /> Job role <span className="text-danger">*</span></span>
-                  <select required name="role" value={formData.role} onChange={handleChange} className="input-machined w-full">
+                  <select required id="employee-role" name="role" value={formData.role} onChange={handleChange} className="input-machined w-full" {...fieldErrorProps('employee-role', errorFor('role'))}>
                     {FARM_STAFF_ROLE_OPTIONS.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
                   </select>
-                  {errors.role && <span className="mt-1.5 block text-xs text-danger">{errors.role}</span>}
+                  <FieldError id="employee-role" message={errorFor('role')} />
                 </label>
                 <label className="block">
                   <span className="mb-2 flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-slate-500"><Phone size={13} /> Phone number <span className="text-danger">*</span></span>
-                  <input required name="phoneNumber" type="tel" inputMode="tel" autoComplete="tel" value={formData.phoneNumber} onChange={handleChange} placeholder="e.g. 0712 345 678" className="input-machined w-full tabular-nums" aria-invalid={Boolean(errors.phoneNumber)} />
-                  {errors.phoneNumber && <span className="mt-1.5 block text-xs text-danger">{errors.phoneNumber}</span>}
+                  <input required id="employee-phone" name="phoneNumber" type="tel" inputMode="tel" autoComplete="tel" value={formData.phoneNumber} onChange={handleChange} placeholder="e.g. 0712 345 678" className="input-machined w-full tabular-nums" {...fieldErrorProps('employee-phone', errorFor('phoneNumber'))} />
+                  <FieldError id="employee-phone" message={errorFor('phoneNumber')} />
                 </label>
                 <label className="block">
                   <span className="mb-2 flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-slate-500"><WalletCards size={13} /> Base salary (KES) <span className="text-danger">*</span></span>
-                  <input required name="baseSalary" type="text" inputMode="numeric" value={formData.baseSalary} onChange={handleChange} placeholder="e.g. 35,000" className="input-machined w-full tabular-nums" aria-invalid={Boolean(errors.baseSalary)} />
-                  {errors.baseSalary && <span className="mt-1.5 block text-xs text-danger">{errors.baseSalary}</span>}
+                  <input required id="employee-salary" name="baseSalary" type="text" inputMode="numeric" value={formData.baseSalary} onChange={handleChange} placeholder="e.g. 35,000" className="input-machined w-full tabular-nums" {...fieldErrorProps('employee-salary', errorFor('baseSalary'))} />
+                  <FieldError id="employee-salary" message={errorFor('baseSalary')} />
                 </label>
                 <label className="block sm:col-span-2 sm:max-w-[calc(50%-0.625rem)]">
                   <span className="mb-2 flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-slate-500"><CalendarDays size={13} /> Hire date <span className="text-danger">*</span></span>
-                  <input required name="hireDate" type="date" value={formData.hireDate} onChange={handleChange} className="input-machined w-full" />
+                  <input required id="employee-hire-date" name="hireDate" type="date" value={formData.hireDate} onChange={handleChange} className="input-machined w-full" {...fieldErrorProps('employee-hire-date', errorFor('hireDate'))} />
+                  <FieldError id="employee-hire-date" message={errorFor('hireDate')} />
                 </label>
                 <StatutoryDeductionsToggle
                   className="sm:col-span-2"

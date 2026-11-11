@@ -1,5 +1,6 @@
 import { Check, WifiOff } from 'lucide-react';
-import { authCopy } from '../../i18n/auth.en';
+import { authCopy } from '../../i18n/auth';
+import LanguageSwitch from '../ui/LanguageSwitch';
 
 const { layout: copy } = authCopy;
 
@@ -22,7 +23,10 @@ export default function AuthLayout({ headerAction, offline = false, children }) 
           <img src="/logo.png" alt="" width="32" height="32" className="size-8 rounded-badge" />
           {authCopy.common.brand}
         </a>
-        {headerAction}
+        <div className="flex items-center gap-3">
+          <LanguageSwitch />
+          {headerAction}
+        </div>
       </header>
 
       {/* One centred card: the form, plus a brand panel beside it on large screens. */}
@@ -39,7 +43,7 @@ export default function AuthLayout({ headerAction, offline = false, children }) 
 
           <aside className="hidden flex-col justify-center bg-brand p-10 text-white lg:flex" aria-label={copy.benefitsLabel}>
             <p className="text-3xl font-bold leading-tight tracking-tight text-white">
-              Every litre.<br />Every cow.<br /><span className="text-brand-200">Every shilling.</span>
+              {copy.tagline[0]}<br />{copy.tagline[1]}<br /><span className="text-brand-200">{copy.tagline[2]}</span>
             </p>
             <ul className="mt-8 space-y-4 text-lg text-brand-50">
               {copy.benefits.map((benefit) => (

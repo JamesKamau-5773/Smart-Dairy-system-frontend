@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Loader2 } from 'lucide-react';
-import { authCopy } from '../../i18n/auth.en';
+import { authCopy } from '../../i18n/auth';
 import { authApi } from '../../lib/backendApi';
 
 // Google's standard "G" mark, which its brand guidelines ask sign-in buttons to show.

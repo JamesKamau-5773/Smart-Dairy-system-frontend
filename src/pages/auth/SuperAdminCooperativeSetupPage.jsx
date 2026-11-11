@@ -4,6 +4,10 @@ import { Building2, Mail, Phone, UserRound, UserRoundPlus } from 'lucide-react';
 import AlertBanner from '../../components/ui/AlertBanner';
 import InviteClaimPreview from '../../components/auth/InviteClaimPreview';
 import { getApiErrorMessage, onboardingApi } from '../../lib/backendApi';
+import { formatKenyanPhoneInput, normalizeKenyanPhone } from '../../lib/phone';
+import { authCopy } from '../../i18n/auth';
+import FieldError from '../../components/ui/FieldError';
+import { fieldErrorProps } from '../../components/ui/fieldErrorProps';
 
 const panelClassName = 'rounded-2xl border border-ink/10 bg-white/90  backdrop-blur';
 const inputClassName = 'mt-2 w-full rounded-lg border border-ink/10 bg-[#fbfcfa] px-4 py-3 text-sm text-ink-strong outline-none transition focus:border-brand focus:ring-2 focus:ring-brand/15';
@@ -55,18 +59,24 @@ export default function SuperAdminCooperativeSetupPage() {
   const [isSendingInvite, setIsSendingInvite] = useState(false);
   const [cooperative, setCooperative] = useState(null);
   const [message, setMessage] = useState({ type: '', text: '' });
+  const [phoneErrors, setPhoneErrors] = useState({});
 
   const cooperativeId = useMemo(() => extractCooperativeId(cooperative), [cooperative]);
 
   const handleCreateCooperative = async (event) => {
     event.preventDefault();
     setMessage({ type: '', text: '' });
+    const contactPhone = normalizeKenyanPhone(cooperativeForm.contact_phone);
+    if (!contactPhone) {
+      setPhoneErrors((current) => ({ ...current, contact: authCopy.fields.phoneInvalid }));
+      return;
+    }
     setIsSavingCooperative(true);
 
     try {
       const payload = {
         cooperative_name: cooperativeForm.cooperative_name.trim(),
-        contact_phone: cooperativeForm.contact_phone.trim(),
+        contact_phone: contactPhone,
       };
       const created = await onboardingApi.createCooperative(payload);
       setCooperative(created);
@@ -87,13 +97,19 @@ export default function SuperAdminCooperativeSetupPage() {
     }
 
     setMessage({ type: '', text: '' });
+    // The admin's phone is optional; when given it must be a Kenyan mobile.
+    const adminPhone = normalizeKenyanPhone(adminForm.phone_number);
+    if (adminForm.phone_number.trim() && !adminPhone) {
+      setPhoneErrors((current) => ({ ...current, admin: authCopy.fields.phoneInvalid }));
+      return;
+    }
     setIsSendingInvite(true);
 
     try {
       const payload = {
         full_name: adminForm.full_name.trim(),
         email: adminForm.email.trim(),
-        phone_number: adminForm.phone_number.trim(),
+        ...(adminPhone ? { phone_number: adminPhone } : {}),
         role: 'COOP_ADMIN',
       };
 
@@ -132,13 +148,22 @@ export default function SuperAdminCooperativeSetupPage() {
               <div className="relative mt-2">
                 <Phone size={15} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-ink-muted" />
                 <input
+                  id="cooperative-contact-phone"
+                  type="tel"
+                  inputMode="tel"
+                  autoComplete="tel"
                   className={`${inputClassName} mt-0 pl-10`}
                   value={cooperativeForm.contact_phone}
-                  onChange={(event) => setCooperativeForm((prev) => ({ ...prev, contact_phone: event.target.value }))}
-                  placeholder="+254712345678"
+                  onChange={(event) => {
+                    setPhoneErrors((current) => ({ ...current, contact: undefined }));
+                    setCooperativeForm((prev) => ({ ...prev, contact_phone: formatKenyanPhoneInput(event.target.value) }));
+                  }}
+                  placeholder={authCopy.fields.phonePlaceholder}
                   required
+                  {...fieldErrorProps('cooperative-contact-phone', phoneErrors.contact)}
                 />
               </div>
+              <FieldError id="cooperative-contact-phone" message={phoneErrors.contact} />
             </FormField>
 
             <button type="submit" className="btn-command w-full" disabled={isSavingCooperative}>
@@ -185,11 +210,20 @@ export default function SuperAdminCooperativeSetupPage() {
 
             <FormField label="Phone">
               <input
+                id="cooperative-admin-phone"
+                type="tel"
+                inputMode="tel"
+                autoComplete="tel"
                 className={inputClassName}
                 value={adminForm.phone_number}
-                onChange={(event) => setAdminForm((prev) => ({ ...prev, phone_number: event.target.value }))}
-                placeholder="+254700111222"
+                onChange={(event) => {
+                  setPhoneErrors((current) => ({ ...current, admin: undefined }));
+                  setAdminForm((prev) => ({ ...prev, phone_number: formatKenyanPhoneInput(event.target.value) }));
+                }}
+                placeholder={authCopy.fields.phonePlaceholder}
+                {...fieldErrorProps('cooperative-admin-phone', phoneErrors.admin)}
               />
+              <FieldError id="cooperative-admin-phone" message={phoneErrors.admin} />
             </FormField>
 
             <InviteClaimPreview

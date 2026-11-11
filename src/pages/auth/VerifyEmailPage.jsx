@@ -9,7 +9,7 @@ import { useOneTimeUrlToken } from '../../hooks/useOneTimeUrlToken';
 import { authApi } from '../../lib/backendApi';
 import { getAuthErrorMessage } from '../../lib/authErrorMessages';
 import SubmitButton from '../../components/auth/SubmitButton';
-import { authCopy } from '../../i18n/auth.en';
+import { authCopy } from '../../i18n/auth';
 
 const { verifyEmail: copy, common } = authCopy;
 

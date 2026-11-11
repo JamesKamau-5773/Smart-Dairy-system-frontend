@@ -12,12 +12,16 @@ import { reportError } from '../../lib/telemetry';
 import AlertBanner from '../../components/ui/AlertBanner';
 import Confirmation, { useConfirmation } from '../ui/Confirmation';
 import offlineQueue from '../../lib/offlineQueue';
-import { QUEUED_OFFLINE_MESSAGE, isQueuedOffline } from '../../lib/offlinePolicy';
+import { queuedOfflineMessage, isQueuedOffline } from '../../lib/offlinePolicy';
 import { useFormDraft } from '../../hooks/useFormDraft';
 import DraftRestoredNotice from '../ui/DraftRestoredNotice';
 import { formatCowIdentity } from '../../lib/cowIdentity';
 import { ArrowLeft, Droplets, CheckCircle2, AlertOctagon, CloudOff, Trash2, X } from 'lucide-react';
 import { todayLocalIso } from '../../lib/localDate';
+import { useServerFieldErrors } from '../../hooks/useServerFieldErrors';
+import FieldError from '../ui/FieldError';
+import { fieldErrorProps } from '../ui/fieldErrorProps';
+import { milkCopy as copy } from '../../i18n/milk';
 
 const todayIso = () => todayLocalIso();
 
@@ -26,13 +30,8 @@ const SESSION_OPTIONS = ['morning', 'midday', 'evening'];
 // How long the "Saved" / "Saved on this phone" screen shows before the form is ready again.
 const OUTCOME_SCREEN_MS = 1400;
 
-const DUPLICATE_MESSAGE = 'Already recorded for this cow and session. Duplicate blocked.';
-const IN_PROGRESS_MESSAGE = 'Still saving your last try. Wait a few seconds, then press Save again.';
-const SIGNED_OUT_MESSAGE = 'You were signed out, so this wasn’t saved. Sign in again, then press Save.';
-const SAVE_FAILED_MESSAGE = 'Couldn’t save. Your entry is still here. Try again.';
-const DELETE_FAILED_MESSAGE = 'Couldn’t delete this record. Try again.';
-const DELETED_MESSAGE = 'Milk record deleted.';
-const DELETE_QUEUED_MESSAGE = 'Will be deleted when you’re back online.';
+// The backend's milk-record fields, by the form's names, for showing its errors per input.
+const SERVER_FIELDS = Object.freeze({ fieldMap: { cow_id: 'cowId', amount: 'volume', milking_date: 'date' } });
 
 /** "Neema · KE-012 · morning · 2026-11-08 · 12.5 L" for the delete dialog; parts the row lacks are left out. */
 const describeMilkRecord = (record) => [
@@ -76,22 +75,23 @@ const FastMilkUI = ({
   mode,
   editCowLabel = '',
   draftNotice = null,
+  errorFor = () => undefined,
 }) => {
   const isEditMode = mode === 'edit';
 
   if (saveStatus === 'success') {
     // 'info' = kept on this phone (not yet on the server); 'warning' = duplicate blocked.
     const outcome = messageType === 'info'
-      ? { Icon: CloudOff, iconClass: 'text-warning-700', title: 'Saved on this phone' }
+      ? { Icon: CloudOff, iconClass: 'text-warning-700', title: copy.outcomeQueued }
       : messageType === 'warning'
-        ? { Icon: AlertOctagon, iconClass: 'text-warning-700', title: 'Already recorded' }
-        : { Icon: CheckCircle2, iconClass: 'text-brand', title: 'Saved!' };
+        ? { Icon: AlertOctagon, iconClass: 'text-warning-700', title: copy.outcomeDuplicate }
+        : { Icon: CheckCircle2, iconClass: 'text-brand', title: copy.outcomeSaved };
     return (
       <div role="status" className="my-auto max-h-[calc(100dvh-2rem)] w-full max-w-md overflow-y-auto overscroll-contain bg-white rounded-3xl p-6 flex flex-col items-center justify-center text-center space-y-4 animate-reveal touch-pan-y sm:p-12 sm:max-h-[90dvh]">
         <outcome.Icon size={64} className={`${outcome.iconClass} scale-150 mb-2`} />
         <h3 className="font-black text-3xl text-ink">{outcome.title}</h3>
         <p className="text-ink-muted font-bold">
-          {messageType === 'success' ? 'Ready for the next cow...' : messageType === 'info' ? 'It will be sent when you’re back online.' : message}
+          {messageType === 'success' ? copy.nextCow : messageType === 'info' ? copy.sentWhenOnline : message}
         </p>
       </div>
     );
@@ -101,12 +101,12 @@ const FastMilkUI = ({
     <div className="my-auto max-h-[calc(100dvh-2rem)] w-full max-w-md overflow-y-auto overscroll-contain bg-white rounded-3xl border border-ink/10 relative animate-reveal touch-pan-y sm:max-h-[90dvh]">
       {message && (
         <div className="fixed top-4 right-4 z-[60] w-[min(92vw,430px)]">
-          <AlertBanner type={messageType} title="Fast Log" message={message} onDismiss={onDismissMessage} autoDismiss={6000} />
+          <AlertBanner type={messageType} title={copy.bannerTitle} message={message} onDismiss={onDismissMessage} autoDismiss={6000} />
         </div>
       )}
 
       {onClose && (
-        <button onClick={onClose} className="absolute top-4 right-4 p-2 text-ink-muted hover:text-danger hover:bg-danger/5 rounded-full transition-colors" aria-label="Close Fast Log">
+        <button onClick={onClose} className="absolute top-4 right-4 p-2 text-ink-muted hover:text-danger hover:bg-danger/5 rounded-full transition-colors" aria-label={copy.close}>
           <X size={20} />
         </button>
       )}
@@ -116,7 +116,7 @@ const FastMilkUI = ({
           type="button"
           onClick={onBack}
           className="btn-ghost absolute left-4 top-4 h-9 w-9 !min-h-0 !p-0"
-          aria-label="Go back"
+          aria-label={copy.back}
         >
           <ArrowLeft size={16} />
         </button>
@@ -127,17 +127,17 @@ const FastMilkUI = ({
           <Droplets size={24} />
         </div>
         <h2 className="font-sans font-black text-3xl text-brand tracking-tight">
-          {isEditMode ? 'Edit Milk Record' : 'Record Milk'}
+          {isEditMode ? copy.titleEdit : copy.titleCreate}
         </h2>
         <p className="text-ink-muted text-sm mt-1 font-medium">
-          {isEditMode ? 'Update the milk entry details' : 'Record the milk in litres'}
+          {isEditMode ? copy.subtitleEdit : copy.subtitleCreate}
         </p>
       </div>
 
       <form onSubmit={onSubmit} className="p-8 space-y-6 bg-surface-warm/30">
         {draftNotice}
         <div className="space-y-2">
-          <label htmlFor="fast-milk-cow" className="text-[11px] font-black text-ink-muted uppercase tracking-widest block">{isEditMode ? 'Cow' : 'Select Cow'}</label>
+          <label htmlFor="fast-milk-cow" className="text-[11px] font-black text-ink-muted uppercase tracking-widest block">{isEditMode ? copy.cow : copy.selectCow}</label>
           {isEditMode ? (
             // Editing changes amount, session and date only; the backend keeps the record's cow.
             <input
@@ -145,7 +145,8 @@ const FastMilkUI = ({
               type="text"
               readOnly
               value={editCowLabel}
-              aria-describedby="fast-milk-cow-hint"
+              aria-describedby={errorFor('cowId') ? 'fast-milk-cow-error fast-milk-cow-hint' : 'fast-milk-cow-hint'}
+              aria-invalid={errorFor('cowId') ? true : undefined}
               className="w-full rounded-xl border-2 border-ink/10 bg-ink/5 p-4 text-lg font-bold text-ink-strong focus:outline-none focus:border-brand focus:ring-4 focus:ring-brand/10"
             />
           ) : (
@@ -154,10 +155,11 @@ const FastMilkUI = ({
                 id="fast-milk-cow"
                 value={formData.cowId}
                 onChange={(e) => setFormData({ ...formData, cowId: e.target.value })}
+                {...fieldErrorProps('fast-milk-cow', errorFor('cowId'))}
                 className="w-full appearance-none bg-white border-2 border-ink/10 rounded-xl p-4 pr-10 text-lg font-bold text-ink-strong focus:outline-none focus:border-brand focus:ring-4 focus:ring-brand/10 transition-all cursor-pointer "
                 required
               >
-                <option value="" disabled>Choose cow...</option>
+                <option value="" disabled>{copy.chooseCow}</option>
                 {displayHerd.map((cow) => (
                   <option key={cow.id} value={cow.id}>
                     {formatCowIdentity(cow)}
@@ -171,9 +173,10 @@ const FastMilkUI = ({
               </div>
             </div>
           )}
+          <FieldError id="fast-milk-cow" message={errorFor('cowId')} />
           {isEditMode && (
             <p id="fast-milk-cow-hint" className="text-xs text-ink-muted">
-              To move this milk to another cow, delete this record and record it again for the right cow.
+              {copy.moveCowHint}
             </p>
           )}
         </div>
@@ -181,20 +184,22 @@ const FastMilkUI = ({
         {/* One column on phones: side by side, the date and three sessions don’t fit at 360px. */}
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <div className="min-w-0 space-y-2">
-            <label htmlFor="fast-milk-date" className="text-[11px] font-black text-ink-muted uppercase tracking-widest block">Date</label>
+            <label htmlFor="fast-milk-date" className="text-[11px] font-black text-ink-muted uppercase tracking-widest block">{copy.date}</label>
             <input
               id="fast-milk-date"
               type="date"
               value={formData.date}
               max={todayIso()}
               onChange={(e) => setFormData({ ...formData, date: e.target.value })}
+              {...fieldErrorProps('fast-milk-date', errorFor('date'))}
               className="w-full bg-white border-2 border-ink/10 rounded-xl p-4 text-sm font-bold text-ink-strong focus:outline-none focus:border-brand focus:ring-4 focus:ring-brand/10 transition-all "
               required
             />
+            <FieldError id="fast-milk-date" message={errorFor('date')} />
           </div>
           <div className="min-w-0 space-y-2">
-            <span id="fast-milk-session" className="text-[11px] font-black text-ink-muted uppercase tracking-widest block">Session</span>
-            <div role="group" aria-labelledby="fast-milk-session" className="grid grid-cols-3 gap-1 rounded-xl border-2 border-ink/10 bg-white p-1">
+            <span id="fast-milk-session" className="text-[11px] font-black text-ink-muted uppercase tracking-widest block">{copy.session}</span>
+            <div role="group" aria-labelledby="fast-milk-session" {...fieldErrorProps('fast-milk-session', errorFor('session'))} className="grid grid-cols-3 gap-1 rounded-xl border-2 border-ink/10 bg-white p-1">
               {SESSION_OPTIONS.map((s) => (
                 <button
                   key={s}
@@ -205,24 +210,27 @@ const FastMilkUI = ({
                     formData.session === s ? 'bg-brand text-surface' : 'text-ink-muted hover:bg-ink/5 hover:text-ink'
                   }`}
                 >
-                  {s}
+                  {copy.sessions[s]}
                 </button>
               ))}
             </div>
+            <FieldError id="fast-milk-session" message={errorFor('session')} />
           </div>
         </div>
 
         {isLocked && (
           <div className="p-3 rounded-lg bg-danger/10 border border-danger flex items-center gap-3 text-danger">
             <AlertOctagon size={20} />
-            <div className="text-sm font-bold">Cow on Medication! Do not mix this milk.</div>
+            <div className="text-sm font-bold">{copy.onMedication}</div>
           </div>
         )}
 
         <div className="space-y-2">
-          <label className="text-[11px] font-black text-ink-muted uppercase tracking-widest block">Volume (Liters)</label>
+          <label htmlFor="fast-milk-volume" className="text-[11px] font-black text-ink-muted uppercase tracking-widest block">{copy.volume}</label>
           <div className="relative">
             <input
+              id="fast-milk-volume"
+              {...fieldErrorProps('fast-milk-volume', errorFor('volume'))}
               inputMode="decimal"
               type="number"
               step="0.1"
@@ -234,13 +242,14 @@ const FastMilkUI = ({
             />
             <span className="absolute right-8 bottom-7 font-sans font-bold text-ink/45 text-xl">L</span>
           </div>
+          <FieldError id="fast-milk-volume" message={errorFor('volume')} />
         </div>
 
         {/* Edit has three actions: on phones, Cancel and Delete share a row and the primary
             action takes the full width below them, within thumb reach. */}
         <div className="pt-4 flex flex-wrap gap-3 sm:flex-nowrap">
           {onClose && (
-            <button type="button" onClick={onClose} className={`px-6 py-4 rounded-xl font-bold text-ink-muted hover:bg-ink/20 hover:text-ink-strong transition-colors ${isEditMode ? 'flex-1 sm:flex-none' : ''}`}>Cancel</button>
+            <button type="button" onClick={onClose} className={`px-6 py-4 rounded-xl font-bold text-ink-muted hover:bg-ink/20 hover:text-ink-strong transition-colors ${isEditMode ? 'flex-1 sm:flex-none' : ''}`}>{copy.cancel}</button>
           )}
           {isEditMode && onDelete && (
             <button
@@ -249,11 +258,11 @@ const FastMilkUI = ({
               disabled={isPending || isDeleting}
               className="inline-flex flex-1 items-center justify-center gap-2 rounded-xl border border-danger/20 px-5 py-4 font-bold text-danger hover:bg-danger/5 disabled:opacity-60 transition-colors sm:flex-none"
             >
-              <Trash2 size={16} /> {isDeleting ? 'Deleting...' : 'Delete Record'}
+              <Trash2 size={16} /> {isDeleting ? copy.deleting : copy.deleteRecord}
             </button>
           )}
           <button type="submit" disabled={!formData.cowId || !formData.volume || !formData.date || isLocked || isPending} className={`flex-1 bg-brand text-surface font-black text-lg py-4 rounded-xl hover:bg-brand-dark disabled:opacity-70 transition-all active:scale-95 ${isEditMode ? 'basis-full sm:basis-auto' : ''}`}>
-            {isPending ? 'Saving...' : isEditMode ? 'Update Record' : 'Save Record'}
+            {isPending ? copy.saving : isEditMode ? copy.update : copy.save}
           </button>
         </div>
       </form>
@@ -359,17 +368,17 @@ export default function FastMilkLog({ onClose, onSaveSuccess, onDeleteSuccess, m
       if (isQueuedOffline(data)) {
         // Queued by apiClient: there is no saved record yet. The milk log lists it under
         // "Not sent yet" from the offline queue until it syncs.
-        settleEntry('info', QUEUED_OFFLINE_MESSAGE);
+        settleEntry('info', queuedOfflineMessage());
         return;
       }
       if (onSaveSuccess) onSaveSuccess(data?.received || data?.updated || data);
-      settleEntry('success', isEditMode ? 'Updated' : 'Saved');
+      settleEntry('success', isEditMode ? copy.updated : copy.saved);
     },
     onError: async (error, { entry, idempotencyKey }) => {
       const code = getApiErrorCode(error);
 
       if (code === 'DUPLICATE_MILK_ENTRY') {
-        settleEntry('warning', DUPLICATE_MESSAGE);
+        settleEntry('warning', copy.duplicate);
         return;
       }
 
@@ -379,7 +388,7 @@ export default function FastMilkLog({ onClose, onSaveSuccess, onDeleteSuccess, m
       if (!error?.response && !isEditMode) {
         try {
           await offlineQueue.enqueue(entry, { idempotencyKey });
-          settleEntry('info', QUEUED_OFFLINE_MESSAGE);
+          settleEntry('info', queuedOfflineMessage());
           return;
         } catch (queueError) {
           reportError(queueError, { where: 'FastMilkLog.queue' });
@@ -389,7 +398,7 @@ export default function FastMilkLog({ onClose, onSaveSuccess, onDeleteSuccess, m
       // The first try is still being saved; keep the key so the next try is matched to it.
       if (code === 'IDEMPOTENCY_IN_PROGRESS') {
         setMessageType('warning');
-        setMessage(IN_PROGRESS_MESSAGE);
+        setMessage(copy.inProgress);
         return;
       }
       // Should not happen (the key follows the content), but never get stuck on a bad key.
@@ -398,13 +407,20 @@ export default function FastMilkLog({ onClose, onSaveSuccess, onDeleteSuccess, m
       reportError(error, { where: 'FastMilkLog.save' });
       setMessageType('danger');
       setMessage(error?.response?.status === 401
-        ? SIGNED_OUT_MESSAGE
-        : getApiErrorMessage(error, SAVE_FAILED_MESSAGE));
+        ? copy.signedOut
+        : getApiErrorMessage(error, copy.saveFailed));
     },
     onSettled: () => {
       submitInFlight.current = false;
     },
   });
+
+  const serverFields = useServerFieldErrors(mutation.error, SERVER_FIELDS);
+  // A server error stays under its field until the farmer changes the form.
+  const editForm = (next) => {
+    if (mutation.isError) mutation.reset();
+    setFormData(next);
+  };
 
   const handleSubmit = (event) => {
     event.preventDefault();
@@ -414,13 +430,13 @@ export default function FastMilkLog({ onClose, onSaveSuccess, onDeleteSuccess, m
     const amount = parseFloat(formData.volume);
     if (Number.isNaN(amount) || amount < 0) {
       setMessageType('danger');
-      setMessage('Enter a valid amount');
+      setMessage(copy.invalidAmount);
       return;
     }
 
     if (formData.date > todayIso()) {
       setMessageType('danger');
-      setMessage('Milking date cannot be in the future');
+      setMessage(copy.futureDate);
       return;
     }
 
@@ -441,11 +457,11 @@ export default function FastMilkLog({ onClose, onSaveSuccess, onDeleteSuccess, m
     if (!isEditMode || isDeleting || submitInFlight.current || mutation.isPending) return;
     const description = describeMilkRecord(record);
     const confirmed = await deleteConfirmation.confirm({
-      title: 'Delete this milk record?',
-      message: `${description ? `${description}. ` : ''}You can’t undo this.`,
+      title: copy.deleteTitle,
+      message: copy.deleteMessage(description),
       type: 'danger',
-      confirmText: 'Delete',
-      cancelText: 'Keep',
+      confirmText: copy.deleteConfirm,
+      cancelText: copy.deleteKeep,
     });
     if (!confirmed) return;
 
@@ -454,16 +470,16 @@ export default function FastMilkLog({ onClose, onSaveSuccess, onDeleteSuccess, m
       const response = await productionApi.deleteYield(record.id);
       // Offline, apiClient queues the delete: the record stays until it is sent.
       if (isQueuedOffline(response?.data)) {
-        toast(DELETE_QUEUED_MESSAGE);
+        toast(copy.deleteQueued);
       } else {
-        toast.success(DELETED_MESSAGE);
+        toast.success(copy.deleted);
       }
       if (onDeleteSuccess) onDeleteSuccess(record);
       if (onClose) onClose();
     } catch (error) {
       reportError(error, { where: 'FastMilkLog.delete' });
       setMessageType('danger');
-      setMessage(getApiErrorMessage(error, DELETE_FAILED_MESSAGE));
+      setMessage(getApiErrorMessage(error, copy.deleteFailed));
     } finally {
       setIsDeleting(false);
     }
@@ -481,7 +497,8 @@ export default function FastMilkLog({ onClose, onSaveSuccess, onDeleteSuccess, m
         displayHerd={displayHerd}
         isLocked={isLocked}
         formData={formData}
-        setFormData={setFormData}
+        setFormData={editForm}
+        errorFor={serverFields.errorFor}
         onSubmit={handleSubmit}
         onDelete={handleDelete}
         saveStatus={saveStatus}

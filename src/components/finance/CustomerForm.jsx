@@ -1,9 +1,17 @@
 import { useState, useEffect } from 'react';
-import { normalizeKenyanPhone } from '../../lib/staffAccessForm';
+import { normalizeKenyanPhone } from '../../lib/phone';
+import { useServerFieldErrors } from '../../hooks/useServerFieldErrors';
+import FieldError from '../ui/FieldError';
+import { fieldErrorProps } from '../ui/fieldErrorProps';
 
 const PHONE_ERROR = 'Enter a Kenyan mobile number, for example 0712 345 678.';
 
-export default function CustomerForm({ customer, onSave, onCancel, isSaving }) {
+/**
+ * Add or edit a customer. `serverError` is the failed save, if any: the backend's per-field
+ * validation shows under each input (useServerFieldErrors).
+ */
+export default function CustomerForm({ customer, onSave, onCancel, isSaving, serverError = null }) {
+  const server = useServerFieldErrors(serverError);
   const [formData, setFormData] = useState({
     id: null,
     name: '',
@@ -66,6 +74,7 @@ export default function CustomerForm({ customer, onSave, onCancel, isSaving }) {
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
+    server.dismiss(name === 'custom_customer_type' ? 'customer_type' : name);
     if (name === 'phone_number' && phoneError && normalizeKenyanPhone(value)) setPhoneError('');
   };
 
@@ -105,6 +114,8 @@ export default function CustomerForm({ customer, onSave, onCancel, isSaving }) {
           <span className="text-sm font-medium text-ink-muted">Full Name / Company</span>
           <input
             type="text"
+            id="customer-name"
+            {...fieldErrorProps('customer-name', server.errorFor('name'))}
             name="name"
             value={formData.name}
             onChange={handleChange}
@@ -112,11 +123,14 @@ export default function CustomerForm({ customer, onSave, onCancel, isSaving }) {
             required
             disabled={isSaving}
           />
+          <FieldError id="customer-name" message={server.errorFor('name')} />
         </label>
         
         <label className="block">
           <span className="text-sm font-medium text-ink-muted">Customer Type</span>
           <select
+            id="customer-customer_type"
+            {...fieldErrorProps('customer-customer_type', server.errorFor('customer_type'))}
             name="customer_type"
             value={formData.customer_type}
             onChange={handleChange}
@@ -128,6 +142,7 @@ export default function CustomerForm({ customer, onSave, onCancel, isSaving }) {
             <option value="company">Company</option>
             <option value="other">Other (Specify)</option>
           </select>
+          <FieldError id="customer-customer_type" message={server.errorFor('customer_type')} />
         </label>
       </div>
 
@@ -154,12 +169,15 @@ export default function CustomerForm({ customer, onSave, onCancel, isSaving }) {
           <span className="text-sm font-medium text-ink-muted">Contact Person (Optional)</span>
           <input
             type="text"
+            id="customer-contact_person"
+            {...fieldErrorProps('customer-contact_person', server.errorFor('contact_person'))}
             name="contact_person"
             value={formData.contact_person}
             onChange={handleChange}
             className="input-machined mt-1"
             disabled={isSaving}
           />
+          <FieldError id="customer-contact_person" message={server.errorFor('contact_person')} />
         </label>
         
         <label className="block">
@@ -176,10 +194,9 @@ export default function CustomerForm({ customer, onSave, onCancel, isSaving }) {
             className="input-machined mt-1"
             required
             disabled={isSaving}
-            aria-invalid={Boolean(phoneError)}
-            aria-describedby={phoneError ? 'customer-phone-error' : undefined}
+            {...fieldErrorProps('customer-phone', phoneError || server.errorFor('phone_number'))}
           />
-          {phoneError && <span id="customer-phone-error" className="mt-1.5 block text-xs text-danger-900">{phoneError}</span>}
+          <FieldError id="customer-phone" message={phoneError || server.errorFor('phone_number')} />
         </label>
       </div>
 
@@ -190,6 +207,8 @@ export default function CustomerForm({ customer, onSave, onCancel, isSaving }) {
           <input
             type="number"
             step="0.01"
+            id="customer-agreed_rate_per_liter"
+            {...fieldErrorProps('customer-agreed_rate_per_liter', server.errorFor('agreed_rate_per_liter'))}
             name="agreed_rate_per_liter"
             value={formData.agreed_rate_per_liter}
             onChange={handleChange}
@@ -198,6 +217,7 @@ export default function CustomerForm({ customer, onSave, onCancel, isSaving }) {
             required
             disabled={isSaving}
           />
+          <FieldError id="customer-agreed_rate_per_liter" message={server.errorFor('agreed_rate_per_liter')} />
         </label>
 
         <label className="block">
@@ -205,6 +225,8 @@ export default function CustomerForm({ customer, onSave, onCancel, isSaving }) {
           <input
             type="number"
             step="0.01"
+            id="customer-account_balance"
+            {...fieldErrorProps('customer-account_balance', server.errorFor('account_balance'))}
             name="account_balance"
             value={formData.account_balance}
             onChange={handleChange}
@@ -212,6 +234,7 @@ export default function CustomerForm({ customer, onSave, onCancel, isSaving }) {
             placeholder="0.00"
             disabled={isSaving || isEditMode} 
           />
+          <FieldError id="customer-account_balance" message={server.errorFor('account_balance')} />
           {isEditMode && (
             <span className="text-xs text-ink-muted mt-1 block">Balance adjustments should be managed through ledgers.</span>
           )}
@@ -224,6 +247,8 @@ export default function CustomerForm({ customer, onSave, onCancel, isSaving }) {
         <input
           type="number"
           step="0.01"
+          id="customer-daily_contract_liters"
+          {...fieldErrorProps('customer-daily_contract_liters', server.errorFor('daily_contract_liters'))}
           name="daily_contract_liters"
           value={formData.daily_contract_liters}
           onChange={handleChange}
@@ -231,6 +256,7 @@ export default function CustomerForm({ customer, onSave, onCancel, isSaving }) {
           placeholder="0.00"
           disabled={isSaving}
         />
+        <FieldError id="customer-daily_contract_liters" message={server.errorFor('daily_contract_liters')} />
         <span className="text-xs text-ink-muted mt-1 block">
           For customers invoiced periodically (e.g. weekly or monthly) rather than per delivery. Leave blank if this customer pays per delivery.
         </span>
@@ -241,17 +267,22 @@ export default function CustomerForm({ customer, onSave, onCancel, isSaving }) {
         <span className="text-sm font-medium text-ink-muted">Email Address (Optional)</span>
         <input 
           type="email" 
+          id="customer-email"
+          {...fieldErrorProps('customer-email', server.errorFor('email'))}
           name="email" 
           value={formData.email} 
           onChange={handleChange} 
           className="input-machined mt-1" 
           disabled={isSaving} 
         />
+        <FieldError id="customer-email" message={server.errorFor('email')} />
       </label>
       
       <label className="block">
         <span className="text-sm font-medium text-ink-muted">Address (Optional)</span>
         <textarea 
+          id="customer-address"
+          {...fieldErrorProps('customer-address', server.errorFor('address'))}
           name="address" 
           value={formData.address} 
           onChange={handleChange} 
@@ -259,6 +290,7 @@ export default function CustomerForm({ customer, onSave, onCancel, isSaving }) {
           rows="2" 
           disabled={isSaving}
         ></textarea>
+        <FieldError id="customer-address" message={server.errorFor('address')} />
       </label>
 
       <div className="flex justify-end gap-3 pt-4 border-t border-ink/10">

@@ -2,8 +2,9 @@ import { useState } from 'react';
 import { AlertTriangle, CloudOff, Loader2 } from 'lucide-react';
 import { useOfflineQueue } from '../../hooks/useOfflineQueue';
 import OfflineQueueInspector from './OfflineQueueInspector';
+import { shellCopy } from '../../i18n/shell';
 
-const changes = (count) => `${count} saved ${count === 1 ? 'change' : 'changes'}`;
+const { offline: copy } = shellCopy;
 
 /** Plain-language connection notice shown above every app page while it matters. */
 export default function OfflineBanner() {
@@ -18,19 +19,19 @@ export default function OfflineBanner() {
     Icon = CloudOff;
     message = (
       <>
-        <strong className="font-semibold">You’re offline.</strong>{' '}
-        Milk records and other daily work are saved on this phone and sent when you’re back online. Payments and payroll need internet.
-        {pendingCount > 0 && <> {changes(pendingCount)} waiting to send.</>}
+        <strong className="font-semibold">{copy.title}</strong>{' '}
+        {copy.body}
+        {pendingCount > 0 && <> {copy.waiting(pendingCount)}</>}
       </>
     );
   } else if (needsAttentionCount > 0) {
     tone = 'border-danger-500/30 bg-danger-50 text-danger-900';
     Icon = AlertTriangle;
-    message = <>{needsAttentionCount === 1 ? '1 saved change' : changes(needsAttentionCount)} couldn’t be sent and {needsAttentionCount === 1 ? 'needs' : 'need'} your attention.</>;
+    message = copy.needsAttention(needsAttentionCount);
   } else if (pendingCount > 0) {
     tone = 'border-brand-200 bg-brand-50 text-brand-900';
     Icon = Loader2;
-    message = <>{flushing ? 'Back online. Sending' : 'Waiting to send'} {changes(pendingCount)}…</>;
+    message = flushing ? copy.sending(pendingCount) : copy.queued(pendingCount);
   } else {
     return null;
   }
@@ -42,7 +43,7 @@ export default function OfflineBanner() {
         <p className="min-w-0 flex-1">{message}</p>
         {pendingCount > 0 && (
           <button type="button" onClick={() => setInspectorOpen(true)} className="shrink-0 text-sm font-semibold text-brand-800 underline-offset-2 hover:underline">
-            Review
+            {copy.review}
           </button>
         )}
       </div>

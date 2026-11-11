@@ -15,7 +15,7 @@ import { displayPhone, normalizeKenyanPhone } from '../../lib/phone';
 import { validatePhone } from '../../lib/authValidation';
 import { formatClock } from '../../lib/countdown';
 import { getAuthErrorMessage } from '../../lib/authErrorMessages';
-import { authCopy } from '../../i18n/auth.en';
+import { authCopy } from '../../i18n/auth';
 
 const { verifyPhone: copy, common } = authCopy;
 

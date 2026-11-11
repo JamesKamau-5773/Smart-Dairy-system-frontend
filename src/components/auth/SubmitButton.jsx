@@ -1,5 +1,5 @@
 import { Loader2 } from 'lucide-react';
-import { authCopy } from '../../i18n/auth.en';
+import { authCopy } from '../../i18n/auth';
 
 /**
  * Primary form button with the three states every auth action needs:

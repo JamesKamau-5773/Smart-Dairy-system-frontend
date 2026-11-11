@@ -9,7 +9,7 @@ import { getFeedErrorMessage } from '../../lib/feedErrors';
 import { feedingGroupLabel } from '../../lib/feedingGroups';
 import { getFeedingReadiness, isValidFeedAmount } from '../../lib/feedingToday';
 import { todayLocalIso } from '../../lib/localDate';
-import { isQueuedOffline, QUEUED_OFFLINE_MESSAGE } from '../../lib/offlinePolicy';
+import { isQueuedOffline, queuedOfflineMessage } from '../../lib/offlinePolicy';
 import LABELS from '../../lib/labels';
 import { useTenant } from '../../hooks/useTenant';
 import { feedCopy } from '../../i18n/feed.en';
@@ -44,7 +44,7 @@ export default function TodayFeedingPage() {
         queryClient.invalidateQueries({ queryKey: ['feeding-today', tenantId, farmId] }),
         queryClient.invalidateQueries({ queryKey: ['nutrition-feed-cost-efficiency', tenantId, farmId] }),
       ]);
-      if (isQueuedOffline(result)) toast(QUEUED_OFFLINE_MESSAGE);
+      if (isQueuedOffline(result)) toast(queuedOfflineMessage());
       else toast.success(copy.recorded(amount, feedingGroupLabel(group)));
     },
     onError: (error) => toast.error(getFeedErrorMessage(error, feedCopy.errors.recordFeeding)),

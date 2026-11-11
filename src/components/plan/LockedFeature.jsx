@@ -2,6 +2,9 @@ import { Lock } from 'lucide-react';
 import { useEntitlements } from '../../hooks/useEntitlements';
 import { isFeatureEnabled } from '../../lib/featureFlags';
 import { SITE } from '../../landing/content';
+import { shellCopy } from '../../i18n/shell';
+
+const { plan: copy } = shellCopy;
 
 /**
  * Shows its children unless the backend says the farm's plan doesn't include `feature`; then it
@@ -25,18 +28,18 @@ export default function LockedFeature({ feature, title, children }) {
       <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-brand-50 text-brand">
         <Lock size={20} aria-hidden="true" />
       </div>
-      <h2 id={`locked-${feature}`} className="text-lg font-bold text-ink">{title} isn’t in your plan</h2>
+      <h2 id={`locked-${feature}`} className="text-lg font-bold text-ink">{copy.lockedTitle(title)}</h2>
       <p className="mt-2 text-sm leading-6 text-ink-muted">
-        {plan?.name ? `Your ${plan.name} plan doesn’t include ${title}.` : `Your plan doesn’t include ${title}.`}{' '}
-        Upgrade to use it. Your records are not affected.
+        {plan?.name ? copy.lockedNamedPlan(plan.name, title) : copy.lockedPlan(title)}{' '}
+        {copy.lockedUpgrade}
       </p>
       {upgradeUrl ? (
         <a href={upgradeUrl} target="_blank" rel="noopener noreferrer" className="btn-command mt-6 inline-flex justify-center">
-          See plans and upgrade
+          {copy.seePlans}
         </a>
       ) : (
         <p className="mt-6 text-sm font-semibold text-ink">
-          To upgrade, call us on <a href={`tel:${String(SITE.phone).replace(/\s/g, '')}`} className="text-brand underline">{SITE.phoneDisplay}</a>.
+          {copy.callToUpgrade} <a href={`tel:${String(SITE.phone).replace(/\s/g, '')}`} className="text-brand underline">{SITE.phoneDisplay}</a>.
         </p>
       )}
     </section>

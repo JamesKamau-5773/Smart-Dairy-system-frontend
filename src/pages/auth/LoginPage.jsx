@@ -13,7 +13,7 @@ import { useCountdown } from '../../hooks/useCountdown';
 import { getDefaultLandingPath } from '../../lib/roles';
 import { getGateRoute } from '../../lib/authState';
 import { forgetLogin, getLastLogin, maskIdentifier, rememberLogin } from '../../lib/lastLogin';
-import { authCopy } from '../../i18n/auth.en';
+import { authCopy } from '../../i18n/auth';
 
 const { login: copy, common } = authCopy;
 

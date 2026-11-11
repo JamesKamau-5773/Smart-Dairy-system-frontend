@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import AlertBanner from '../ui/AlertBanner';
 import { getPhonePrompt } from '../../lib/authState';
-import { authCopy } from '../../i18n/auth.en';
+import { authCopy } from '../../i18n/auth';
 
 const { phoneBanner: copy } = authCopy;
 const DISMISS_KEY = 'maziwa_phone_banner_dismissed';

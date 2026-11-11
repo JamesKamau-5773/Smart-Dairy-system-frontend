@@ -70,6 +70,9 @@ describe('isFeatureEnabled', () => {
     expect(isFeatureEnabled('customerDelete', { VITE_FEATURE_CUSTOMER_DELETE: 'true' })).toBe(true);
     // Off until statement links use private tokens (BR-016).
     expect(isFeatureEnabled('customerPortal', {})).toBe(false);
+    // The language switch is on unless switched off.
+    expect(isFeatureEnabled('kiswahili', {})).toBe(true);
+    expect(isFeatureEnabled('kiswahili', { VITE_FEATURE_KISWAHILI: 'false' })).toBe(false);
   });
 });
 

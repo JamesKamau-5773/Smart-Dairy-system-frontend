@@ -4,7 +4,9 @@ import { MemoryRouter } from 'react-router-dom';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import PageAccessGate from '../PageAccessGate';
 import { useAuth } from '../../contexts/AuthContext';
-import { PAGE_ROUTES, PAGE_TITLES } from '../../lib/pageRoutes';
+import { PAGE_ROUTES } from '../../lib/pageRoutes';
+import { shellCopy as shellEn } from '../../i18n/shell.en';
+import { shellCopy as shellSw } from '../../i18n/shell.sw';
 
 vi.mock('../../contexts/AuthContext', () => ({ useAuth: vi.fn() }));
 afterEach(cleanup);
@@ -43,6 +45,9 @@ describe('PageAccessGate and the farm plan', () => {
   });
 
   it('names every access-controlled area', () => {
-    PAGE_ROUTES.forEach(([, key]) => expect(PAGE_TITLES[key]).toBeTruthy());
+    PAGE_ROUTES.forEach(([, key]) => {
+      expect(shellEn.plan.areas[key]).toBeTruthy();
+      expect(shellSw.plan.areas[key]).toBeTruthy();
+    });
   });
 });

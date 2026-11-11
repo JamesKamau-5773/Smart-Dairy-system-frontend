@@ -12,7 +12,7 @@ import { useAsyncAction } from '../../hooks/useAsyncAction';
 import { useOneTimeUrlToken } from '../../hooks/useOneTimeUrlToken';
 import { authApi } from '../../lib/backendApi';
 import { validateNewPassword } from '../../lib/authValidation';
-import { authCopy } from '../../i18n/auth.en';
+import { authCopy } from '../../i18n/auth';
 
 const { reset: copy, fields, common } = authCopy;
 

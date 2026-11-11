@@ -1,5 +1,8 @@
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Compass } from 'lucide-react';
+import { shellCopy } from '../i18n/shell';
+
+const { notFound: copy } = shellCopy;
 
 /**
  * Shown for an address the app doesn't have, instead of silently sending the farmer elsewhere.
@@ -21,20 +24,20 @@ export default function NotFound({ variant = 'app', homePath = '/app' }) {
       <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-brand-50 text-brand">
         <Compass size={22} aria-hidden="true" />
       </div>
-      <h1 id="not-found-title" className="text-xl font-bold text-ink">We couldn’t find that page</h1>
+      <h1 id="not-found-title" className="text-xl font-bold text-ink">{copy.title}</h1>
       <p className="mt-2 text-sm leading-6 text-ink-muted">
-        The link may be old or mistyped. Nothing on your farm has changed.
+        {copy.message}
       </p>
       <p className="mt-3 break-all font-mono text-xs text-ink-muted">{pathname}</p>
       <div className="mt-6 flex flex-col gap-3">
         {isPublic ? (
-          <Link to="/login" className="btn-command justify-center">Go to log in</Link>
+          <Link to="/login" className="btn-command justify-center">{copy.goToLogin}</Link>
         ) : (
-          <Link to={homePath} className="btn-command justify-center">Go to your dashboard</Link>
+          <Link to={homePath} className="btn-command justify-center">{copy.goToDashboard}</Link>
         )}
         {canGoBack && (
           <button type="button" onClick={() => navigate(-1)} className="btn-secondary inline-flex min-h-11 items-center justify-center gap-2">
-            <ArrowLeft size={16} aria-hidden="true" /> Go back
+            <ArrowLeft size={16} aria-hidden="true" /> {copy.back}
           </button>
         )}
       </div>

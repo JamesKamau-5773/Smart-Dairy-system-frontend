@@ -8,7 +8,7 @@ import {
 import { toast } from 'react-hot-toast';
 import { useTenant } from '../../hooks/useTenant';
 import { financeApi, getApiErrorMessage } from '../../lib/backendApi';
-import { QUEUED_OFFLINE_MESSAGE, isQueuedOffline } from '../../lib/offlinePolicy';
+import { queuedOfflineMessage, isQueuedOffline } from '../../lib/offlinePolicy';
 import { getSearchSuggestions, matchesSearch } from '../../lib/fuzzySearch';
 import SearchSuggestions from '../../components/ui/SearchSuggestions';
 import { Skeleton } from '../../components/ui';
@@ -20,6 +20,7 @@ import { ListLoadNotices, StatValue } from '../../components/ui/ListLoadState';
 import { getListLoadState, hasRowsToShow } from '../../lib/listLoadState';
 import { formatCount } from '../../lib/numberFormat';
 import { SITE } from '../../landing/content';
+import { normalizeKenyanPhone } from '../../lib/phone';
 
 // "KES 1,250.00"; "—" when the backend sent no figure (unknown is never shown as zero).
 const formatKes = formatMoneyText;
@@ -77,11 +78,11 @@ export default function BuyersList() {
 
   // --- Mutations for CUD (Create, Update, Delete) ---
   // We only need 'create' on this page. The full management is on Customers.jsx
-  const { mutate: createCustomer, isPending: isSaving } = useMutation({
+  const { mutate: createCustomer, isPending: isSaving, error: saveError } = useMutation({
     mutationFn: (customerData) => financeApi.createCustomer(customerData),
     onSuccess: (result) => {
       if (isQueuedOffline(result)) {
-        toast(QUEUED_OFFLINE_MESSAGE);
+        toast(queuedOfflineMessage());
       } else {
         toast.success(`Customer created successfully!`);
       }
@@ -177,7 +178,9 @@ export default function BuyersList() {
       '',
       `Open ${SITE.name} to review the full statement.`,
     ].join('\n');
-    const phone = String(customer?.phone_number || customer?.contact || '').replace(/\D/g, '').replace(/^0/, '254');
+    // Straight to the buyer's chat when their number is a valid Kenyan mobile; otherwise
+    // WhatsApp asks who to send it to, rather than opening a chat with a wrong number.
+    const phone = normalizeKenyanPhone(customer?.phone_number || customer?.contact);
     window.open(`https://wa.me/${phone}?text=${encodeURIComponent(message)}`, '_blank', 'noopener,noreferrer');
   };
 
@@ -474,6 +477,7 @@ export default function BuyersList() {
           onSave={createCustomer}
           onCancel={() => setIsAddPanelOpen(false)}
           isSaving={isSaving}
+          serverError={saveError}
         />
       </SlidePanel>
     </div>

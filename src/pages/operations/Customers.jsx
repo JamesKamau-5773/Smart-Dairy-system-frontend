@@ -2,7 +2,7 @@ import { useState, useMemo } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { financeApi, getApiErrorMessage } from '../../lib/backendApi';
-import { QUEUED_OFFLINE_MESSAGE, isQueuedOffline, offlineFailureMessage } from '../../lib/offlinePolicy';
+import { queuedOfflineMessage, isQueuedOffline, offlineFailureMessage } from '../../lib/offlinePolicy';
 import { reportError } from '../../lib/telemetry';
 import { Plus, Pencil, Trash2, Search, Users, MoreVertical } from 'lucide-react';
 import { toast } from 'react-hot-toast';
@@ -55,7 +55,7 @@ export default function CustomersPage() {
   const loadState = getListLoadState(customersQuery);
   const showCustomers = hasRowsToShow(loadState);
 
-  const { mutate: saveCustomer, isPending: isSaving } = useMutation({
+  const { mutate: saveCustomer, isPending: isSaving, error: saveError } = useMutation({
     mutationFn: (customerData) => {
       const { id, ...rest } = customerData;
       return id
@@ -64,7 +64,7 @@ export default function CustomersPage() {
     },
     onSuccess: (result, variables) => {
       if (isQueuedOffline(result)) {
-        toast(QUEUED_OFFLINE_MESSAGE);
+        toast(queuedOfflineMessage());
       } else {
         toast.success(`Customer ${variables.id ? 'updated' : 'created'} successfully!`);
       }
@@ -177,6 +177,7 @@ export default function CustomersPage() {
           onSave={saveCustomer}
           onCancel={() => setIsPanelOpen(false)}
           isSaving={isSaving}
+          serverError={saveError}
         />
       </SlidePanel>
 

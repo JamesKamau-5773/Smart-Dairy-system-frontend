@@ -2,6 +2,9 @@ import React from 'react';
 import { AlertTriangle, RefreshCw } from 'lucide-react';
 import { SITE } from '../../landing/content';
 import { reportError } from '../../lib/telemetry';
+import { shellCopy } from '../../i18n/shell';
+
+const { errorBoundary: copy } = shellCopy;
 
 /**
  * Error Boundary Component
@@ -59,11 +62,10 @@ export default class ErrorBoundary extends React.Component {
             </div>
 
             <h1 className="mb-2 text-center text-xl font-bold text-ink">
-              {isPage ? 'This page stopped working' : 'Maziwa Smart stopped working'}
+              {isPage ? copy.pageTitle : copy.appTitle}
             </h1>
             <p className="mb-6 text-center text-sm text-ink-muted">
-              This is a problem in the app, not something you did. Records you already saved are safe,
-              and anything saved on this phone will still be sent. Try again, or reload the app.
+              {copy.message}
             </p>
 
             {import.meta.env.DEV && this.state.error && (
@@ -86,20 +88,20 @@ export default class ErrorBoundary extends React.Component {
                 className="flex items-center justify-center gap-2 rounded-button bg-brand px-4 py-2.5 font-medium text-white transition-colors hover:bg-brand-dark"
               >
                 <RefreshCw size={18} aria-hidden="true" />
-                Try again
+                {copy.tryAgain}
               </button>
               <button
                 type="button"
                 onClick={() => window.location.reload()}
                 className="rounded-button border border-ink/10 bg-surface px-4 py-2.5 font-medium text-ink transition-colors hover:bg-brand-50"
               >
-                Reload the app
+                {copy.reload}
               </button>
             </div>
 
             {this.state.errorCount > 3 && (
               <p className="mt-4 rounded-input bg-warning-50 p-3 text-sm text-ink">
-                This keeps happening. Reload the app, and if it still doesn’t work, call us on {SITE.phoneDisplay}.
+                {copy.keepsHappening(SITE.phoneDisplay)}
               </p>
             )}
           </div>

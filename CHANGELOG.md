@@ -4,6 +4,24 @@ What changed for farmers and staff using Maziwa Smart. Newest first.
 
 ## Unreleased
 
+### Phase 6 — Kiswahili and clearer form errors (UX audit)
+
+- **Kiswahili.** Choose English or Kiswahili on the sign-in screens (EN / SW, top right) or from
+  your profile menu. The choice is remembered on the phone. Translated so far: the menus, header,
+  bottom bar, connection banner, error and "page not found" screens, plan and demo notices, every
+  sign-in, sign-up and password screen, the milk record form, and server and offline messages.
+  Other pages are still in English for now. The Kiswahili is awaiting review by a native speaker;
+  the switch can be turned off with `VITE_FEATURE_KISWAHILI=false`.
+- **Errors appear next to the field they're about** in the milk, customer, employee and ledger
+  forms, once the server says which field (BR-017). Changing the field clears its error.
+- **Server messages are chosen by their code**, so the same problem reads the same on every page,
+  in your language (for example a duplicate milk record, or not enough stock).
+- **Phone numbers are checked the same way everywhere.** The cooperative and member invite forms
+  now format numbers as you type and send them in the one format the server expects. WhatsApp
+  statements open the buyer's chat only when their number is a valid Kenyan mobile.
+- The account menu button has a name for screen readers on phones.
+- The expense form's cow list belongs to the farm you're in (it was shared across a company's farms).
+
 ### Shared statements and buyer list
 
 - **Shared statement links are switched off for now.** The statement page showed made-up details

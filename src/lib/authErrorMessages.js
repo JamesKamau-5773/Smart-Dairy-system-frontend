@@ -1,5 +1,6 @@
-import { authCopy } from '../i18n/auth.en';
+import { authCopy } from '../i18n/auth';
 import { getApiErrorCode } from './apiErrors';
+import { describeFieldDetail, getServerFieldErrors } from './serverFieldErrors';
 
 // Turns auth API failures into farmer-friendly text. Contract endpoints send a
 // machine-readable `code` (AUTH_API_CONTRACT §1.2); older ones only send a
@@ -33,11 +34,7 @@ function getFieldErrorSummary(data) {
     .slice(0, 4)
     .map(([field, detail]) => {
       const label = copy.fieldLabels[field] ?? field.replaceAll('_', ' ');
-      const detailText = Array.isArray(detail) ? detail[0] : detail;
-      const safeDetail = typeof detailText === 'string' && !TECHNICAL_ERROR.test(detailText)
-        ? detailText.trim()
-        : '';
-      return safeDetail ? `${label}: ${safeDetail}` : copy.checkField(label);
+      return `${label}: ${describeFieldDetail(detail)}`;
     });
 
   return messages.length ? messages.join(' ') : null;
@@ -72,21 +69,15 @@ const CODE_FIELDS = {
   INVALID_BOOTSTRAP_KEY: 'bootstrap_key',
 };
 
-/** `{ field: message }` for showing server validation next to each input. */
+/** `{ field: message }` for showing server validation next to each input (shared reader). */
 export function getFieldErrorsFromError(error) {
-  const fieldErrors = {};
-  const errors = getRawFieldErrors(error?.response?.data);
-  Object.entries(errors ?? {}).forEach(([field, detail]) => {
-    const text = Array.isArray(detail) ? detail[0] : detail;
-    fieldErrors[field] = typeof text === 'string' && !TECHNICAL_ERROR.test(text) ? text : copy.validation;
+  return getServerFieldErrors(error, {
+    codeFields: CODE_FIELDS,
+    codeMessage: (code) => {
+      const violation = getPasswordViolationsFromError(error)[0];
+      return (violation && authCopy.password.errors[violation]) ?? copy.codes[code];
+    },
   });
-
-  const code = getAuthErrorCode(error);
-  if (CODE_FIELDS[code] && !fieldErrors[CODE_FIELDS[code]]) {
-    const violation = getPasswordViolationsFromError(error)[0];
-    fieldErrors[CODE_FIELDS[code]] = (violation && authCopy.password.errors[violation]) ?? copy.codes[code];
-  }
-  return fieldErrors;
 }
 
 function getStatusMessage(status, data, flow) {

@@ -1,4 +1,4 @@
-import { authCopy } from '../i18n/auth.en';
+import { authCopy } from '../i18n/auth';
 import { isEmail } from './identifier';
 import { normalizeKenyanPhone } from './phone';
 import { getPasswordViolations } from './passwordStrength';

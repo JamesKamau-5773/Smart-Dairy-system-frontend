@@ -11,7 +11,7 @@ import { authApi } from '../../lib/backendApi';
 import { getGateRoute, safeNextPath } from '../../lib/authState';
 import { normalizeKenyanPhone } from '../../lib/phone';
 import { validateGoogleSignup } from '../../lib/authValidation';
-import { authCopy } from '../../i18n/auth.en';
+import { authCopy } from '../../i18n/auth';
 
 const { google: copy, fields } = authCopy;
 const FIELD_ORDER = ['name', 'farm_name', 'phone_number'];

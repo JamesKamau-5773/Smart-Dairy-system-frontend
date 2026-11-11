@@ -15,7 +15,7 @@ import { getLastLogin } from '../../lib/lastLogin';
 import { formatKenyanPhoneInput, normalizeKenyanPhone } from '../../lib/phone';
 import { validateEmail, validatePhone } from '../../lib/authValidation';
 import { formatClock } from '../../lib/countdown';
-import { authCopy } from '../../i18n/auth.en';
+import { authCopy } from '../../i18n/auth';
 
 const { forgot: copy, fields, common } = authCopy;
 

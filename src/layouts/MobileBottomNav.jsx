@@ -2,12 +2,15 @@ import { NavLink } from 'react-router-dom';
 import { BookOpen, LayoutDashboard, Users, Wallet } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { canViewAdminControls, getDefaultLandingPath } from '../lib/roles';
+import { shellCopy } from '../i18n/shell';
+
+const { bottomNav: copy } = shellCopy;
 
 const tabs = [
-  { label: 'Dashboard', to: null, icon: LayoutDashboard, visible: () => true },
-  { label: 'Production Log', to: '/operations/yield', icon: BookOpen, visible: () => true },
-  { label: 'Buyer List', to: '/finance/buyers', icon: Users, visible: canViewAdminControls },
-  { label: 'Ledger', to: '/finance/ledger', icon: Wallet, visible: canViewAdminControls },
+  { id: 'dashboard', to: null, icon: LayoutDashboard, visible: () => true },
+  { id: 'production', to: '/operations/yield', icon: BookOpen, visible: () => true },
+  { id: 'buyers', to: '/finance/buyers', icon: Users, visible: canViewAdminControls },
+  { id: 'ledger', to: '/finance/ledger', icon: Wallet, visible: canViewAdminControls },
 ];
 
 export default function MobileBottomNav() {
@@ -15,17 +18,17 @@ export default function MobileBottomNav() {
   const landingPath = getDefaultLandingPath(currentUser);
   const items = tabs
     .filter((tab) => tab.visible(currentUser))
-    .map((tab) => ({ ...tab, to: tab.to ?? landingPath }));
+    .map((tab) => ({ ...tab, label: copy[tab.id], to: tab.to ?? landingPath }));
 
   return (
     <nav
       className="fixed inset-x-0 bottom-0 z-30 border-t border-ink/10 bg-surface/95 pb-[env(safe-area-inset-bottom)] backdrop-blur md:hidden"
-      aria-label="Primary mobile navigation"
+      aria-label={copy.label}
     >
       <div className="grid w-full" style={{ gridTemplateColumns: `repeat(${items.length}, minmax(0, 1fr))` }}>
-        {items.map(({ label, to, icon: Icon }) => (
+        {items.map(({ id, label, to, icon: Icon }) => (
           <NavLink
-            key={label}
+            key={id}
             to={to}
             className={({ isActive }) => `flex min-h-[64px] min-w-0 flex-col items-center justify-center gap-1 border-t-2 px-1 py-2 text-center transition-colors ${
               isActive

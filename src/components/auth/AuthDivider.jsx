@@ -1,4 +1,4 @@
-import { authCopy } from '../../i18n/auth.en';
+import { authCopy } from '../../i18n/auth';
 
 /** "──── or ────" between password sign-in and Google. */
 export default function AuthDivider({ label = authCopy.common.or }) {

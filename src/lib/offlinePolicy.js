@@ -1,3 +1,5 @@
+import { errorsCopy } from '../i18n/errors';
+
 const ONLINE_ONLY_PATHS = [
   /^\/auth\//,
   /\/billing\/stk-push$/,
@@ -40,7 +42,10 @@ const ONLINE_ONLY_DELETES = [
   /^\/inventory\/items\/[^/]+$/,
 ];
 
-export const QUEUED_OFFLINE_MESSAGE = 'Saved on this phone. It will be sent when you’re back online.';
+/** The toast after a change is saved on the phone to send later, in the current language. */
+export function queuedOfflineMessage() {
+  return errorsCopy.offline.queued;
+}
 
 export function isReplayableMutation(config) {
   if (config.skipOfflineQueue || config.offline === 'never') return false;
@@ -66,5 +71,5 @@ export function isQueuedOffline(result) {
  */
 export function offlineFailureMessage(error, whatDidNotHappen) {
   if (error?.response) return null;
-  return `No internet connection. ${whatDidNotHappen} Try again when you’re back online.`;
+  return errorsCopy.offline.failed(whatDidNotHappen);
 }

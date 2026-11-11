@@ -5,6 +5,10 @@ import InviteClaimPreview from '../../components/auth/InviteClaimPreview';
 import { useAuth } from '../../contexts/AuthContext';
 import { getApiErrorMessage, onboardingApi } from '../../lib/backendApi';
 import { getAssignableFarmMemberRoles } from '../../lib/staffOnboarding';
+import { formatKenyanPhoneInput, normalizeKenyanPhone } from '../../lib/phone';
+import { authCopy } from '../../i18n/auth';
+import FieldError from '../../components/ui/FieldError';
+import { fieldErrorProps } from '../../components/ui/fieldErrorProps';
 
 export default function CooperativeAdminOnboardingPage() {
   const { currentUser } = useAuth();
@@ -21,10 +25,16 @@ export default function CooperativeAdminOnboardingPage() {
   const [isInviting, setIsInviting] = useState(false);
   const [isUploadingCsv, setIsUploadingCsv] = useState(false);
   const [message, setMessage] = useState({ type: '', text: '' });
+  const [phoneError, setPhoneError] = useState('');
 
   const handleManualInvite = async (event) => {
     event.preventDefault();
     setMessage({ type: '', text: '' });
+    const phoneNumber = normalizeKenyanPhone(manualInvite.phone_number);
+    if (!phoneNumber) {
+      setPhoneError(authCopy.fields.phoneInvalid);
+      return;
+    }
     setIsInviting(true);
 
     try {
@@ -32,7 +42,7 @@ export default function CooperativeAdminOnboardingPage() {
         ...manualInvite,
         full_name: manualInvite.full_name.trim(),
         email: manualInvite.email.trim(),
-        phone_number: manualInvite.phone_number.trim(),
+        phone_number: phoneNumber,
       });
 
       setCreatedInvite(invite);
@@ -110,12 +120,21 @@ export default function CooperativeAdminOnboardingPage() {
             <label className="block text-xs font-semibold uppercase tracking-[0.12em] text-[#6a3a24]">
               Phone Number
               <input
+                id="member-invite-phone"
+                type="tel"
+                inputMode="tel"
+                autoComplete="tel"
                 className="mt-2 w-full rounded-lg border border-[#7a3e1f]/20 bg-[#fffcfa] px-4 py-3 text-sm text-[#2e160b] outline-none transition focus:border-[#7a3e1f] focus:ring-2 focus:ring-[#7a3e1f]/20"
                 value={manualInvite.phone_number}
-                onChange={(event) => setManualInvite((prev) => ({ ...prev, phone_number: event.target.value }))}
-                placeholder="+254722000000"
+                onChange={(event) => {
+                  setPhoneError('');
+                  setManualInvite((prev) => ({ ...prev, phone_number: formatKenyanPhoneInput(event.target.value) }));
+                }}
+                placeholder={authCopy.fields.phonePlaceholder}
                 required
+                {...fieldErrorProps('member-invite-phone', phoneError)}
               />
+              <FieldError id="member-invite-phone" message={phoneError} />
             </label>
 
             <label className="block text-xs font-semibold uppercase tracking-[0.12em] text-[#6a3a24]">

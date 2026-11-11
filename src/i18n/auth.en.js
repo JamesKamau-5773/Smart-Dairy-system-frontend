@@ -310,6 +310,7 @@ export const authCopy = {
   layout: {
     offline: 'You’re offline. Connect to the internet to continue. Once you’re signed in, the app keeps working without network.',
     benefitsLabel: 'Why farmers use Maziwa Smart',
+    tagline: ['Every litre.', 'Every cow.', 'Every shilling.'],
     benefits: [
       'Record milk per cow in seconds',
       'Never miss a heat or a payment',

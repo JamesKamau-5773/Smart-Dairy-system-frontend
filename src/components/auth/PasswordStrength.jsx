@@ -1,5 +1,5 @@
 import { Check, Circle } from 'lucide-react';
-import { authCopy } from '../../i18n/auth.en';
+import { authCopy } from '../../i18n/auth';
 import { LOCAL_PASSWORD_RULES, getPasswordStrength, getPasswordViolations } from '../../lib/passwordStrength';
 
 const { password: copy } = authCopy;

@@ -1,6 +1,6 @@
 import { forwardRef, useState } from 'react';
 import { Eye, EyeOff } from 'lucide-react';
-import { authCopy } from '../../i18n/auth.en';
+import { authCopy } from '../../i18n/auth';
 import { formatKenyanPhoneInput } from '../../lib/phone';
 
 const describedBy = (id, hint, error) => [error && `${id}-error`, hint && `${id}-hint`].filter(Boolean).join(' ') || undefined;

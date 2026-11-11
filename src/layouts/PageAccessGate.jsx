@@ -1,9 +1,10 @@
 import { useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { hasPageAccess } from '../lib/roles';
-import { getFirstAllowedPath, getPageKeyForPath, PAGE_TITLES } from '../lib/pageRoutes';
+import { getFirstAllowedPath, getPageKeyForPath } from '../lib/pageRoutes';
 import NoPageAccess from '../components/ui/NoPageAccess';
 import LockedFeature from '../components/plan/LockedFeature';
+import { shellCopy } from '../i18n/shell';
 
 /**
  * Gates the current page twice: by the user's page access (role), then by the farm's plan.
@@ -19,5 +20,5 @@ export default function PageAccessGate({ children }) {
     return <NoPageAccess allowedPath={getFirstAllowedPath(currentUser)} />;
   }
   if (!access) return children;
-  return <LockedFeature feature={access} title={PAGE_TITLES[access] ?? 'This page'}>{children}</LockedFeature>;
+  return <LockedFeature feature={access} title={shellCopy.plan.areas[access] ?? access}>{children}</LockedFeature>;
 }

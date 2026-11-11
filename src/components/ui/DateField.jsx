@@ -24,8 +24,9 @@ function dateFieldError(text, iso, { min, max } = {}) {
  * A date typed as dd/mm/yyyy (en-KE), with a calendar to pick from. Never the browser's
  * own date input, whose order follows the phone's locale (often US month-first).
  * `value` and `onChange` use YYYY-MM-DD; '' while the typed date is incomplete or invalid.
+ * `error` shows a message from outside the field (e.g. the server's) when the typed date is fine.
  */
-export default function DateField({ label, value = '', onChange, min, max, required = false, name, className = '', inputClassName = 'input-machined', hideLabel = false }) {
+export default function DateField({ label, value = '', onChange, min, max, required = false, name, className = '', inputClassName = 'input-machined', hideLabel = false, error: externalError }) {
   const id = useId();
   const errorId = `${id}-error`;
   const [text, setText] = useState(() => toInputDate(value));
@@ -38,7 +39,8 @@ export default function DateField({ label, value = '', onChange, min, max, requi
   }
 
   const iso = parseInputDate(text);
-  const error = dateFieldError(text, iso, { min, max });
+  // The field's own check (what was typed) comes first; `error` is one from outside, e.g. the server.
+  const error = dateFieldError(text, iso, { min, max }) || externalError;
 
   const emit = (nextText) => {
     const nextIso = parseInputDate(nextText);

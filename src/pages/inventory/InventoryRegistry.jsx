@@ -18,7 +18,7 @@ import { getFeedErrorMessage } from '../../lib/feedErrors';
 import { getDataWarnings, isArchived } from '../../lib/inventoryItemRules';
 import { buildRestockMovement } from '../../lib/restockForm';
 import { buildStockOutMovement, isWriteOff } from '../../lib/stockChangeForm';
-import { isQueuedOffline, offlineFailureMessage, QUEUED_OFFLINE_MESSAGE } from '../../lib/offlinePolicy';
+import { isQueuedOffline, offlineFailureMessage, queuedOfflineMessage } from '../../lib/offlinePolicy';
 import { reportError } from '../../lib/telemetry';
 import { canManageInventoryItems } from '../../lib/permissions';
 import { useAuth } from '../../contexts/AuthContext';
@@ -133,7 +133,7 @@ export default function InventoryRegistry() {
     mutationFn: ({ item, form }) => inventoryApi.createMovement(buildRestockMovement(item, form)),
     onSuccess: async (result) => {
       await refreshInventory();
-      if (isQueuedOffline(result)) toast(QUEUED_OFFLINE_MESSAGE);
+      if (isQueuedOffline(result)) toast(queuedOfflineMessage());
       else toast.success(result?.ledgerEntryId ? restockCopy.recordedWithExpense : restockCopy.recorded);
     },
   });
@@ -144,7 +144,7 @@ export default function InventoryRegistry() {
     onSuccess: async (result, { item, form }) => {
       await refreshInventory();
       const unit = item.stock?.unit ?? item.unit ?? '';
-      if (isQueuedOffline(result)) toast(QUEUED_OFFLINE_MESSAGE);
+      if (isQueuedOffline(result)) toast(queuedOfflineMessage());
       else if (isWriteOff(form.reason)) toast.success(stockOutCopy.recordedWriteOff(Number(form.quantity), unit, item.name));
       else toast.success(stockOutCopy.recorded(Number(form.quantity), unit, item.name));
     },

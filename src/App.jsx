@@ -4,6 +4,7 @@ import { useAuth } from './contexts/AuthContext';
 import { canAccessCommandCenter, getDefaultLandingPath, hasRole, isSingleTenantUser } from './lib/roles';
 import { AUTH_STATES, getAuthState, getGateRoute } from './lib/authState';
 import { getPageKeyForPath } from './lib/pageRoutes';
+import { useLocale } from './i18n/useLocale';
 
 // Import the StaffProvider to fix the useStaff context error
 import { StaffProvider } from './providers/StaffProvider';
@@ -210,13 +211,16 @@ export const NotFoundRoute = () => {
 };
 
 export default function App() {
+  // Remounting the routes when the language changes re-reads every page's text in the new
+  // language without each page subscribing. Server data stays cached; only screen state resets.
+  const { locale } = useLocale();
   return (
     <BrowserRouter>
       {/* Wrap all routes with StaffProvider.
         Now any page, including Payroll and StaffRegistry, can call useStaff() without crashing.
       */}
       <StaffProvider>
-        <Routes>
+        <Routes key={locale}>
           <Route path="/register" element={renderPublicPage(RegisterPage, 'Loading registration…')} />
           <Route path="/login" element={renderPublicPage(LoginPage, 'Loading login…')} />
           <Route path="/claim-account" element={renderPublicPage(ClaimAccountPage, 'Loading claim account…')} />

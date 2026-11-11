@@ -188,6 +188,18 @@ describe('Buyer statements on WhatsApp', () => {
     const text = decodeURIComponent(new URL(open.mock.calls[0][0]).searchParams.get('text'));
     expect(text).toMatch(/^Maziwa Smart - Customer Statement/);
     expect(text).not.toMatch(/Jivu/);
+    // A valid number opens the buyer's chat directly (phone.js format).
+    expect(new URL(open.mock.calls[0][0]).pathname).toBe('/254712345678');
+    open.mockRestore();
+  });
+
+  it('lets WhatsApp ask who to send to when the buyer’s number isn’t a valid mobile', async () => {
+    const open = vi.spyOn(window, 'open').mockImplementation(() => null);
+    api.finance.listCustomers.mockResolvedValue([{ id: 8, name: 'Rift Coop', phone_number: '020 123', account_balance: 0 }]);
+    renderPage(BuyersList);
+    await screen.findAllByText('Rift Coop');
+    fireEvent.click(screen.getAllByRole('button', { name: /WhatsApp/ }).at(-1));
+    expect(new URL(open.mock.calls[0][0]).pathname).toBe('/');
     open.mockRestore();
   });
 });

@@ -10,7 +10,9 @@ import { toLoginPayload } from './identifier';
 
 import { normalizeNutritionRequestPayload } from './feedUtils';
 import { todayLocalIso } from './localDate';
-import { getPlanErrorMessage } from './apiErrors';
+import { getApiErrorCode, getPlanErrorMessage } from './apiErrors';
+import { errorsCopy } from '../i18n/errors';
+import { getLocale } from '../i18n/locale';
 const HEALTH_BASE_URL = BACKEND_BASE_URL;
 
 const authClient = axios.create({
@@ -398,10 +400,23 @@ export function normalizeInventoryItem(item = {}) {
   };
 }
 
-export function getApiErrorMessage(error, fallback = 'Could not complete this request. Please try again shortly.') {
+/**
+ * A message for a failed request, chosen by the backend's error `code` first, then the HTTP
+ * status. The backend's own `error` text is English, so it is shown only to English readers and
+ * only where the code alone says little (validation, conflicts); Kiswahili readers get the
+ * translated message for the code or status instead.
+ *
+ * @param {unknown} error The failed request.
+ * @param {string} [fallback] What to say when nothing more specific is known.
+ * @returns {string}
+ */
+export function getApiErrorMessage(error, fallback = errorsCopy.fallback) {
   // Plan, subscription and demo refusals read the same on every page.
   const planMessage = getPlanErrorMessage(error);
   if (planMessage) return planMessage;
+  const code = getApiErrorCode(error);
+  if (code && errorsCopy.codes[code]) return errorsCopy.codes[code];
+
   const status = error?.response?.status;
   const responseData = error?.response?.data;
   const explicitMessage = typeof responseData === 'string'
@@ -413,45 +428,45 @@ export function getApiErrorMessage(error, fallback = 'Could not complete this re
       ? explicitMessage.message
       : null;
   const technicalMessage = /sql|database|constraint|integrity|traceback|exception|stack trace|foreign key|not null|unique key|relation .* does not exist|column .* does not exist|sqlalchemy|sqlite|psycopg|request failed with status code|network error/i;
-  const isSafeMessage = (message) => typeof message === 'string'
+  // English free text from the server or the app: only for English readers, and only when safe.
+  const usableText = (message) => getLocale() === 'en'
+    && typeof message === 'string'
     && message.trim().length > 0
     && message.trim().length <= 240
     && !technicalMessage.test(message);
 
   if (!error?.response) {
     if (error?.isAxiosError || error?.code === 'ERR_NETWORK' || error?.code === 'ECONNABORTED') {
-      return 'We couldn’t reach the server. Check your connection and try again.';
+      return errorsCopy.network;
     }
-    if (isSafeMessage(error?.message)) return error.message;
-    return fallback || 'Something went wrong. Please try again.';
+    if (usableText(error?.message)) return error.message;
+    return fallback || errorsCopy.generic;
   }
 
   if (status >= 500) {
-    return fallback || 'The service is temporarily unavailable. Please try again shortly.';
+    return fallback || errorsCopy.server;
   }
 
   if ([400, 422].includes(status)) {
-    if (isSafeMessage(displayMessage)) return displayMessage.trim();
+    if (usableText(displayMessage)) return displayMessage.trim();
     const fieldDetail = explicitMessage && typeof explicitMessage === 'object'
       ? explicitMessage.message
       : null;
-    if (isSafeMessage(fieldDetail)) return fieldDetail.trim();
-    return 'Some information is missing or needs correction. Review the form fields and try again.';
+    if (usableText(fieldDetail)) return fieldDetail.trim();
+    return errorsCopy.validation;
   }
 
   if (status === 409) {
-    return isSafeMessage(displayMessage)
-      ? displayMessage.trim()
-      : 'A record with these details already exists. Check the existing records and try again.';
+    return usableText(displayMessage) ? displayMessage.trim() : errorsCopy.conflict;
   }
 
-  if (status === 401) return 'Your session may have expired. Sign in again, then retry.';
-  if (status === 403) return 'You don’t have access to do that. Check that you’re in the right farm or ask your farm administrator.';
-  if (status === 404) return 'This item may no longer be available. Refresh the page and try again.';
-  if (status === 429) return 'Too many attempts were made. Wait a moment, then try again.';
+  if (status === 401) return errorsCopy.unauthenticated;
+  if (status === 403) return errorsCopy.forbidden;
+  if (status === 404) return errorsCopy.notFound;
+  if (status === 429) return errorsCopy.rateLimited;
 
-  if (isSafeMessage(displayMessage)) return displayMessage.trim();
-  return fallback || 'Something went wrong. Please try again.';
+  if (usableText(displayMessage)) return displayMessage.trim();
+  return fallback || errorsCopy.generic;
 }
 
 export function normalizeMedicalRecord(record = {}) {

@@ -408,3 +408,40 @@ Requested contract:
 
 Also wanted: `DELETE /api/finance/statement-links/<id>` to revoke a link. The frontend will add
 "Share statement link" to the buyer actions once this exists, and turn the portal flag on.
+
+---
+
+## BR-017 — Per-field validation errors, as reason codes
+
+**Status:** Open · **Raised:** 2026-11-09 (UX audit Phase 6) · **Frontend:** `lib/serverFieldErrors.js`, `hooks/useServerFieldErrors.js`, `FastMilkLog`, `CustomerForm`, `AddEmployeeModal`, `LedgerEntryFormModal`
+
+The four main data forms now show the backend's validation under the right input, in English or
+Kiswahili. But their endpoints only return `{ "code": "VALIDATION_ERROR", "error": "amount must be
+greater than 0." }`: one English sentence and no field name. So the farmer sees a general message,
+and a Kiswahili reader gets a generic "check the form" because the English sentence can't be
+translated. Auth already does this right (`fields: { farm_name: "required" }`).
+
+Request: for `VALIDATION_ERROR` (400/422) on these endpoints, add `fields`, mapping each request
+field to a **reason code** (not a sentence):
+
+```json
+{
+  "code": "VALIDATION_ERROR",
+  "error": "amount must be greater than 0.",
+  "fields": { "amount": "must_be_positive", "milking_date": "in_future" }
+}
+```
+
+| Endpoint | Field names (as sent in the request) |
+|---|---|
+| `POST /api/production/yields`, `PATCH /api/production/yields/<id>` | `cow_id`, `amount`, `session`, `milking_date` |
+| `POST /api/customers`, `PATCH /api/customers/<id>` | `name`, `customer_type`, `contact_person`, `phone_number`, `email`, `address`, `agreed_rate_per_liter`, `account_balance`, `daily_contract_liters` |
+| `POST /api/hr/staff` | `full_name`, `role`, `phone_number`, `base_salary`, `hire_date` |
+| `POST /api/finance/transactions`, `POST /api/customers/<id>/payments` | `date`, `amount`, `category`, `payment_method`, `reference_code`, `description`/`note`, `customer_id`, `income_source`, `paid_to`, `item_name`, `quantity`, `cost_class`, `animal_cost_type` |
+
+Reason codes the app already words (`i18n/errors.*.js` `fieldReasons`): `required`, `invalid`,
+`too_long`, `too_short`, `too_large`, `too_small`, `must_be_positive`, `in_future`, `duplicate`,
+`not_found`. New codes are fine; tell us so we can word them. `error` stays for logs and older clients.
+
+Also: `PLAN_LIMIT_REACHED` (BR-014) sends `resource` as an English word ("cows"); a resource
+**code** with the app supplying the words would let Kiswahili readers see it translated.

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Check, Copy, MessageCircle } from 'lucide-react';
-import { authCopy } from '../../i18n/auth.en';
+import { authCopy } from '../../i18n/auth';
 import { displayPhone } from '../../lib/phone';
 
 /**
