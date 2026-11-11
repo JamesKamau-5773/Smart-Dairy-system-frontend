@@ -34,9 +34,9 @@ export const errorsCopy = {
   },
 
   plan: {
-    PLAN_LIMIT_REACHED: 'Kikomo cha mpango wako kwa hili kimefikiwa. Panda mpango ili kuongeza zaidi. Ulichokwisha hifadhi hakiathiriwi.', // REVIEW
-    planLimitFor: (limit, resource) => `Mpango wako unaruhusu ${resource} ${limit}. Panda mpango ili kuongeza zaidi. Ulichokwisha hifadhi hakiathiriwi.`, // REVIEW: resource name arrives in English
-    FEATURE_NOT_IN_PLAN: 'Hili halimo kwenye mpango wako. Panda mpango ili ulitumie.', // REVIEW
+    PLAN_LIMIT_REACHED: 'Kikomo cha mpango wako kwa hili kimefikiwa. Boresha mpango wako ili kuongeza zaidi. Ulichokwisha hifadhi hakiathiriwi.', // REVIEW: "boresha" = upgrade
+    planLimitFor: (limit, resource) => `Mpango wako unaruhusu ${resource} ${limit}. Boresha mpango wako ili kuongeza zaidi. Ulichokwisha hifadhi hakiathiriwi.`, // REVIEW: resource name arrives in English
+    FEATURE_NOT_IN_PLAN: 'Hili halimo kwenye mpango wako. Boresha mpango wako ili ulitumie.', // REVIEW
     SUBSCRIPTION_EXPIRED: 'Usajili wako umeisha, kwa hiyo hili halikuhifadhiwa. Uhuishe ili uendelee kurekodi. Rekodi zako ziko salama.', // REVIEW
     DEMO_READ_ONLY: 'Hili ni shamba la majaribio, kwa hiyo badiliko hili haliwezi kuhifadhiwa. Fungua akaunti ya shamba lako ili kuhifadhi rekodi.',
   },

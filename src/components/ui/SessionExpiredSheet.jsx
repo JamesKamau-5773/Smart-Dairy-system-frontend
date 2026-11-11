@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom';
 import { LockKeyhole } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useOfflineQueue } from '../../hooks/useOfflineQueue';
+import { commonCopy } from '../../i18n/common';
 
 /**
  * Shown over the current page when the server rejects the session. The page underneath stays
@@ -23,7 +24,7 @@ export default function SessionExpiredSheet() {
   const handleSubmit = async (event) => {
     event.preventDefault();
     if (!identifier.trim() || !password) {
-      setError('Enter your username or phone number and your password.');
+      setError(commonCopy.session.missing);
       return;
     }
     setIsSubmitting(true);
@@ -51,15 +52,15 @@ export default function SessionExpiredSheet() {
         <div className="flex items-start gap-3">
           <span className="rounded-full bg-brand-50 p-2.5 text-brand" aria-hidden="true"><LockKeyhole size={20} /></span>
           <div>
-            <h2 id="session-expired-title" className="text-lg font-bold text-ink">Please sign in again</h2>
+            <h2 id="session-expired-title" className="text-lg font-bold text-ink">{commonCopy.session.title}</h2>
             <p className="mt-1 text-sm text-ink-muted">
-              For your security you’ve been signed out. What you typed on this page is kept. Sign in, then press Save again.
+              {commonCopy.session.message}
             </p>
           </div>
         </div>
 
         <label className="block text-sm font-semibold text-ink" htmlFor="session-username">
-          Username or phone number
+          {commonCopy.session.identifier}
           <input
             id="session-username"
             autoComplete="username"
@@ -69,7 +70,7 @@ export default function SessionExpiredSheet() {
           />
         </label>
         <label className="block text-sm font-semibold text-ink" htmlFor="session-password">
-          Password
+          {commonCopy.session.password}
           <input
             id="session-password"
             type="password"
@@ -84,17 +85,16 @@ export default function SessionExpiredSheet() {
         {error && <p role="alert" className="text-sm text-danger-900">{error}</p>}
         {pendingCount > 0 && (
           <p className="rounded-input bg-warning-50 p-3 text-sm text-ink">
-            {pendingCount === 1 ? '1 change is' : `${pendingCount} changes are`} waiting to be sent. Sign in to keep sending them;
-            if you sign out, they stay on this phone until you sign in here again.
+            {commonCopy.session.pending(pendingCount)}
           </p>
         )}
 
         <div className="flex flex-col gap-2">
           <button type="submit" disabled={isSubmitting} className="btn-command w-full justify-center disabled:opacity-60">
-            {isSubmitting ? 'Signing in…' : 'Sign in and continue'}
+            {isSubmitting ? commonCopy.session.signingIn : commonCopy.session.signIn}
           </button>
           <button type="button" onClick={logout} className="w-full rounded-button px-4 py-2 text-sm font-semibold text-ink-muted hover:bg-ink/5">
-            Sign out instead
+            {commonCopy.session.signOut}
           </button>
         </div>
       </form>

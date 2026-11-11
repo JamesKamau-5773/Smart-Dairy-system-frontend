@@ -2,6 +2,7 @@
 import React from 'react';
 import { createPortal } from 'react-dom';
 import { AlertTriangle, CheckCircle2, Info, XCircle } from 'lucide-react';
+import { commonCopy } from '../../i18n/common';
 
 const TYPE_STYLES = {
   warning: {
@@ -30,14 +31,15 @@ const TYPE_STYLES = {
   },
 };
 
-const DEFAULTS = {
-  title: 'Confirm Action',
-  message: 'Are you sure you want to proceed?',
+// Read when a dialog opens, so the defaults follow the current language.
+const defaults = () => ({
+  title: commonCopy.confirm.title,
+  message: commonCopy.confirm.message,
   type: 'warning',
-  confirmText: 'Confirm',
-  cancelText: 'Cancel',
+  confirmText: commonCopy.confirm.confirm,
+  cancelText: commonCopy.confirm.cancel,
   requireText: '',
-};
+});
 
 /**
  * Phone keyboards add capitals, double spaces and curly apostrophes; none of that should stop
@@ -92,7 +94,7 @@ function ConfirmationDialog({
         {needsTyping && (
           <div className="mb-6 space-y-2">
             <label htmlFor={inputId} className="block text-sm font-semibold text-ink">
-              Type <span className="font-mono font-bold">{requireText}</span> to confirm
+              {commonCopy.confirm.typeBefore} <span className="font-mono font-bold">{requireText}</span> {commonCopy.confirm.typeAfter}
             </label>
             <input
               id={inputId}
@@ -126,7 +128,7 @@ function ConfirmationDialog({
             className={`btn-command min-h-11 flex-1 ${config.buttonColor} px-4 py-2.5 text-sm font-semibold text-white disabled:opacity-50`}
             aria-label={confirmText}
           >
-            {isLoading ? 'Please wait...' : confirmText}
+            {isLoading ? commonCopy.confirm.pleaseWait : confirmText}
           </button>
         </div>
 
@@ -164,7 +166,7 @@ function ConfirmationDialog({
  */
 export default function Confirmation({ isOpen = false, ...props }) {
   if (!isOpen) return null;
-  return <ConfirmationDialog {...DEFAULTS} {...props} />;
+  return <ConfirmationDialog {...defaults()} {...props} />;
 }
 
 /**
@@ -174,7 +176,7 @@ export default function Confirmation({ isOpen = false, ...props }) {
  * @returns {object} Props to spread on `<Confirmation />`, plus `confirm`, `close` and `setLoading`.
  */
 export function useConfirmation() {
-  const [state, setState] = React.useState({ ...DEFAULTS, isOpen: false, isLoading: false });
+  const [state, setState] = React.useState(() => ({ ...defaults(), isOpen: false, isLoading: false }));
   const [callbacks, setCallbacks] = React.useState({
     onConfirm: () => {},
     onCancel: () => {},
@@ -185,7 +187,7 @@ export function useConfirmation() {
   }, []);
 
   const confirm = React.useCallback((options = {}) => {
-    setState({ ...DEFAULTS, ...options, isOpen: true, isLoading: false });
+    setState({ ...defaults(), ...options, isOpen: true, isLoading: false });
 
     return new Promise((resolve) => {
       setCallbacks({

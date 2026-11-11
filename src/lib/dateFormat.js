@@ -1,10 +1,22 @@
+import { getLocale } from '../i18n/locale';
+
 // Date display for the whole app: day first, as Kenyan farmers write dates.
 //   display  "03 Nov 2026"     group/day label "Tue 03 Nov"     input "03/11/2026"
 // Month names are fixed here rather than taken from Intl, whose en-GB data differs
-// between runtimes ("Sep" vs "Sept"). Formatting only: no date maths.
-
-const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+// between runtimes ("Sep" vs "Sept"), in each language the app has. Formatting only: no date maths.
+const NAMES = {
+  en: {
+    months: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
+    weekdays: ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'],
+  },
+  // Kiswahili short months as in CLDR. Weekday short forms are not standard; these are the
+  // first letters of Jumapili … Jumamosi as commonly abbreviated. REVIEW
+  sw: {
+    months: ['Jan', 'Feb', 'Mac', 'Apr', 'Mei', 'Jun', 'Jul', 'Ago', 'Sep', 'Okt', 'Nov', 'Des'],
+    weekdays: ['Jpi', 'Jtt', 'Jnn', 'Jtn', 'Alh', 'Iju', 'Jmo'],
+  },
+};
+const names = () => NAMES[getLocale()] ?? NAMES.en;
 const CALENDAR_DATE = /^(\d{4})-(\d{2})-(\d{2})$/;
 const pad = (value) => String(value).padStart(2, '0');
 
@@ -21,14 +33,14 @@ function toDate(value) {
 export function formatDate(value, fallback = 'N/A') {
   const date = toDate(value);
   if (!date) return fallback;
-  return `${pad(date.getDate())} ${MONTHS[date.getMonth()]} ${date.getFullYear()}`;
+  return `${pad(date.getDate())} ${names().months[date.getMonth()]} ${date.getFullYear()}`;
 }
 
 /** "Tue 03 Nov", or "Tue 03 Nov 2026" with `withYear`. For day group headers. */
 export function formatDayLabel(value, { withYear = false } = {}) {
   const date = toDate(value);
   if (!date) return null;
-  const label = `${WEEKDAYS[date.getDay()]} ${pad(date.getDate())} ${MONTHS[date.getMonth()]}`;
+  const label = `${names().weekdays[date.getDay()]} ${pad(date.getDate())} ${names().months[date.getMonth()]}`;
   return withYear ? `${label} ${date.getFullYear()}` : label;
 }
 

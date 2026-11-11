@@ -2,6 +2,7 @@ import { CloudOff, Filter, RefreshCw } from 'lucide-react';
 import { getApiErrorMessage } from '../../lib/backendApi';
 import { formatAsOfTime } from '../../lib/numberFormat';
 import { SURFACE } from '../data/surface';
+import { commonCopy } from '../../i18n/common';
 
 const Block = ({ className }) => <div aria-hidden="true" className={`rounded-badge bg-ink/5 ${className}`} />;
 
@@ -17,7 +18,7 @@ const GRID_COLUMNS = {
 function Retry({ onRetry, size = 12 }) {
   return (
     <button type="button" onClick={() => onRetry?.()} className="inline-flex min-h-11 shrink-0 items-center gap-1 font-semibold text-brand hover:underline">
-      <RefreshCw size={size} aria-hidden="true" /> Try again
+      <RefreshCw size={size} aria-hidden="true" /> {commonCopy.list.tryAgain}
     </button>
   );
 }
@@ -34,7 +35,7 @@ function MetricGrid({ metrics, muted }) {
     <dl className={`grid gap-y-3 ${GRID_COLUMNS[metrics.length] ?? GRID_COLUMNS[5]}`}>
       {metrics.map((metric, index) => (
         <div key={metric.key} className={`min-w-0 border-ink/10 pr-3 ${index % phoneColumns ? 'border-l pl-3' : ''} ${index > 0 ? 'sm:border-l sm:pl-4' : 'sm:border-l-0 sm:pl-0'}`}>
-          <dt className="truncate text-[10px] font-semibold uppercase tracking-wider text-ink-muted">{metric.label}</dt>
+          <dt className="line-clamp-2 break-words text-[10px] font-semibold uppercase leading-tight tracking-wider text-ink-muted">{metric.label}</dt>
           <dd className={`mt-1 truncate text-lg font-semibold sm:text-xl ${metric.mono ? 'font-mono' : ''} ${muted ? 'text-ink-muted' : 'text-ink'}`}>{metric.value}</dd>
           {metric.sub !== undefined && <dd className="mt-0.5 min-h-4 text-xs leading-4 text-ink-muted lg:truncate">{metric.sub}</dd>}
         </div>
@@ -95,13 +96,13 @@ export default function PeriodSummary({
     body = (
       <p role="status" className="flex items-start gap-2 rounded-input border border-ink/10 bg-ink-50 p-3 text-sm text-ink">
         <CloudOff size={16} className="mt-0.5 shrink-0 text-ink-muted" aria-hidden="true" />
-        You’re offline and these totals haven’t been saved on this phone yet. They will load when your connection returns.
+        {commonCopy.period.offline}
       </p>
     );
   } else if (!hasData) {
     body = (
       <div role="alert" className="flex flex-wrap items-center justify-between gap-3 rounded-input border border-ink/10 bg-ink-50 p-3 text-sm text-ink">
-        <span className="min-w-0">Couldn’t load totals. {getApiErrorMessage(error, 'Check your connection and try again.')}</span>
+        <span className="min-w-0">{commonCopy.period.loadFailed} {getApiErrorMessage(error, commonCopy.list.errorDetail)}</span>
         <Retry onRetry={onRetry} size={14} />
       </div>
     );
@@ -114,7 +115,7 @@ export default function PeriodSummary({
         {!isEmpty && chart}
         {loadState === 'stale' && (
           <div role="status" className="flex flex-wrap items-center justify-between gap-2 text-xs text-ink-muted">
-            <span>Couldn’t refresh. {getApiErrorMessage(error, 'Check your connection.')}</span>
+            <span>{commonCopy.period.refreshFailed} {getApiErrorMessage(error, commonCopy.period.checkConnection)}</span>
             <Retry onRetry={onRetry} />
           </div>
         )}
@@ -134,7 +135,7 @@ export default function PeriodSummary({
                 <Filter size={12} aria-hidden="true" className="shrink-0" /><span className="truncate">{scopeNote}</span>
               </span>
             )}
-            {asOfTime && <span className="text-xs text-ink-muted">As of {asOfTime}</span>}
+            {asOfTime && <span className="text-xs text-ink-muted">{commonCopy.period.asOf(asOfTime)}</span>}
           </div>
         )}
         {control}

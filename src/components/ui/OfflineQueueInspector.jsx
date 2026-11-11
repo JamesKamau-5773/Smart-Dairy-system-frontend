@@ -2,17 +2,20 @@ import { useEffect, useState } from 'react';
 import { AlertTriangle, Clock3, RefreshCw, Trash2 } from 'lucide-react';
 import Modal from './Modal';
 import offlineQueue from '../../lib/offlineQueue';
+import { commonCopy } from '../../i18n/common';
 
 function operationLabel(item) {
   const path = String(item.request.url || '').toLowerCase();
-  if (path.includes('production/yield')) return 'Milk production record';
-  if (path.includes('inventory')) return 'Inventory update';
-  if (path.includes('customer') || path.includes('buyer')) return 'Customer record';
-  if (path.includes('payroll') || path.includes('staff')) return 'Staff record';
-  if (path.includes('finance') || path.includes('ledger')) return 'Financial record';
-  return 'Saved change';
+  const { kinds } = commonCopy.queue;
+  if (path.includes('production/yield')) return kinds.milk;
+  if (path.includes('inventory')) return kinds.inventory;
+  if (path.includes('customer') || path.includes('buyer')) return kinds.customer;
+  if (path.includes('payroll') || path.includes('staff')) return kinds.staff;
+  if (path.includes('finance') || path.includes('ledger')) return kinds.finance;
+  return kinds.other;
 }
 
+/** Lists changes saved on this phone that haven't been sent, with Send now and Remove. */
 export default function OfflineQueueInspector({ isOpen, onClose } = {}) {
   const [items, setItems] = useState([]);
   const [working, setWorking] = useState(false);
@@ -50,11 +53,11 @@ export default function OfflineQueueInspector({ isOpen, onClose } = {}) {
   };
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="Synchronization">
+    <Modal isOpen={isOpen} onClose={onClose} title={commonCopy.queue.title}>
       <div className="space-y-4">
-        <p className="text-sm text-ink-muted">Changes saved on this device synchronize automatically when connectivity returns.</p>
+        <p className="text-sm text-ink-muted">{commonCopy.queue.intro}</p>
         <div className="max-h-80 space-y-2 overflow-y-auto">
-          {items.length === 0 && <div className="text-sm text-ink-muted">All changes are synchronized.</div>}
+          {items.length === 0 && <div className="text-sm text-ink-muted">{commonCopy.queue.empty}</div>}
           {items.map((item) => (
             <div key={item.id} className="flex items-start justify-between gap-3 rounded-lg border border-ink/10 bg-surface p-3">
               <div className="min-w-0 text-sm">
@@ -68,17 +71,17 @@ export default function OfflineQueueInspector({ isOpen, onClose } = {}) {
                 {item.lastError ? (
                   <p className="mt-2 text-xs text-danger-900">
                     {item.status === 'NEEDS_ATTENTION'
-                      ? `This change could not be accepted. ${item.lastError.message} Correct the details on the relevant page, then remove this queued copy if it is no longer needed.`
+                      ? commonCopy.queue.rejected(item.lastError.message)
                       : item.lastError.message}
                   </p>
                 ) : null}
               </div>
               {confirmingId === item.id ? (
                 <div className="flex shrink-0 flex-col items-end gap-1.5 text-xs">
-                  <span className="font-semibold text-danger-900">Remove this unsent change?</span>
+                  <span className="font-semibold text-danger-900">{commonCopy.queue.removeQuestion}</span>
                   <div className="flex gap-2">
-                    <button type="button" onClick={() => setConfirmingId(null)} className="btn-secondary h-8 px-3 text-xs">Keep</button>
-                    <button type="button" onClick={() => handleRemove(item.id)} className="h-8 rounded-button bg-danger-500 px-3 text-xs font-semibold text-white hover:bg-danger-900">Remove</button>
+                    <button type="button" onClick={() => setConfirmingId(null)} className="btn-secondary h-8 px-3 text-xs">{commonCopy.queue.keep}</button>
+                    <button type="button" onClick={() => handleRemove(item.id)} className="h-8 rounded-button bg-danger-500 px-3 text-xs font-semibold text-white hover:bg-danger-900">{commonCopy.queue.remove}</button>
                   </div>
                 </div>
               ) : (
@@ -86,8 +89,8 @@ export default function OfflineQueueInspector({ isOpen, onClose } = {}) {
                   type="button"
                   onClick={() => setConfirmingId(item.id)}
                   className="btn-ghost h-9 w-9 shrink-0 !p-0 text-danger-900"
-                  aria-label={`Remove ${operationLabel(item)}`}
-                  title="Remove pending change"
+                  aria-label={commonCopy.queue.removeLabel(operationLabel(item))}
+                  title={commonCopy.queue.removeHint}
                 >
                   <Trash2 size={16} />
                 </button>
@@ -97,10 +100,10 @@ export default function OfflineQueueInspector({ isOpen, onClose } = {}) {
         </div>
 
         <div className="flex justify-end gap-3">
-          <button onClick={onClose} className="btn-secondary">Close</button>
+          <button onClick={onClose} className="btn-secondary">{commonCopy.queue.close}</button>
           <button onClick={handleFlush} disabled={working || items.length === 0} className="btn-command flex items-center gap-2">
             <RefreshCw size={16} className={working ? 'animate-spin' : ''} />
-            {working ? 'Synchronizing' : 'Sync now'}
+            {working ? commonCopy.queue.sending : commonCopy.queue.sendNow}
           </button>
         </div>
       </div>

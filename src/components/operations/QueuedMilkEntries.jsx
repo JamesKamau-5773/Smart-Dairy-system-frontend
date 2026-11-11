@@ -7,7 +7,7 @@ import { herdApi } from '../../lib/backendApi';
 import { formatLitres } from '../../lib/numberFormat';
 import { formatCowIdentity } from '../../lib/cowIdentity';
 import { formatDate } from '../../lib/herdUtils';
-import { toNormalizedSessionLabel } from '../../lib/milkUtils';
+import { productionCopy, sessionLabel } from '../../i18n/production';
 import { toQueuedMilkRows } from '../../lib/queuedMilkRows';
 
 /** Milk entries saved on this phone that haven't reached the server yet. */
@@ -27,36 +27,35 @@ export default function QueuedMilkEntries() {
 
   if (rows.length === 0) return null;
 
-  const statusText = !online
-    ? 'They will be sent automatically when you’re back online.'
-    : flushing ? 'Sending now…' : 'They will be sent automatically in a moment.';
+  const copy = productionCopy.queued;
+  const statusText = !online ? copy.whenOnline : flushing ? copy.sending : copy.soon;
 
   return (
     <section aria-labelledby="queued-milk-title" className="min-w-0 rounded-card border border-ink/10 bg-card">
       <div className="border-b border-ink/10 px-4 py-3 sm:px-6">
         <h2 id="queued-milk-title" className="flex items-center gap-2 text-sm font-bold text-ink">
           <Clock3 size={16} className="text-brand" aria-hidden="true" />
-          Not sent yet ({rows.length})
+          {copy.title(rows.length)}
         </h2>
-        <p className="mt-1 text-xs text-ink-muted">Saved on this phone. {statusText}</p>
+        <p className="mt-1 text-xs text-ink-muted">{copy.savedHere} {statusText}</p>
       </div>
       <ul className="divide-y divide-ink/10">
         {rows.map((row) => (
           <li key={row.id} className="flex min-w-0 flex-wrap items-start justify-between gap-3 px-4 py-3 sm:px-6">
             <div className="min-w-0">
-              <p className="break-words font-semibold text-ink">{formatCowIdentity(row.cow, 'Cow')}</p>
-              <p className="mt-0.5 text-xs text-ink-muted">{formatDate(row.date)} · {toNormalizedSessionLabel(row.session)}</p>
+              <p className="break-words font-semibold text-ink">{formatCowIdentity(row.cow, copy.cow)}</p>
+              <p className="mt-0.5 text-xs text-ink-muted">{formatDate(row.date)} · {sessionLabel(row.session)}</p>
               {row.needsAttention && row.error && <p className="mt-1 text-xs text-danger-900">{row.error}</p>}
             </div>
             <div className="flex shrink-0 items-center gap-3">
               <span className="font-mono text-sm font-semibold tabular-nums text-ink">{formatLitres(row.amount)}</span>
               {row.needsAttention ? (
                 <span className="inline-flex items-center gap-1 rounded-badge border border-danger-500/30 bg-danger-50 px-2 py-1 text-[10px] font-semibold text-danger-900">
-                  <AlertTriangle size={11} aria-hidden="true" /> Needs attention
+                  <AlertTriangle size={11} aria-hidden="true" /> {copy.needsAttention}
                 </span>
               ) : (
                 <span className="inline-flex items-center gap-1 rounded-badge border border-warning-500/40 bg-warning-50 px-2 py-1 text-[10px] font-semibold text-ink">
-                  <Clock3 size={11} aria-hidden="true" /> Not sent yet
+                  <Clock3 size={11} aria-hidden="true" /> {copy.notSent}
                 </span>
               )}
             </div>

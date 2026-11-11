@@ -4,12 +4,9 @@ import { Popover, PopoverContent, PopoverTrigger } from '../ui/popover';
 import DateRangeForm from '../ui/DateRangeForm';
 import { formatDateRange } from '../../lib/dateFormat';
 import { CUSTOM_PERIOD } from '../../lib/periodTotals';
+import { commonCopy } from '../../i18n/common';
 
-const OPTIONS = [
-  { value: 'week', label: 'Week' },
-  { value: 'month', label: 'Month' },
-  { value: 'year', label: 'Year' },
-];
+const OPTIONS = ['week', 'month', 'year'];
 
 const segment = (selected) => `min-h-11 !rounded-badge px-3 text-xs font-semibold sm:min-h-8 ${selected ? 'bg-brand text-white' : 'text-ink-muted hover:text-brand'}`;
 const stepButton = 'inline-flex h-11 w-11 shrink-0 items-center justify-center !rounded-input text-brand hover:bg-ink-50 disabled:text-ink/20 disabled:hover:bg-transparent sm:h-8 sm:w-8';
@@ -29,16 +26,16 @@ export default function PeriodControl({
 
   return (
     <div className="flex w-full min-w-0 flex-wrap items-center gap-x-3 gap-y-2 sm:w-auto">
-      <div role="group" aria-label="Period" className={`grid w-full shrink-0 gap-0.5 rounded-input border border-ink/10 bg-ink-50 p-0.5 sm:inline-flex sm:w-auto ${onCustomRange ? 'grid-cols-4' : 'grid-cols-3'}`}>
+      <div role="group" aria-label={commonCopy.period.label} className={`grid w-full shrink-0 gap-0.5 rounded-input border border-ink/10 bg-ink-50 p-0.5 sm:inline-flex sm:w-auto ${onCustomRange ? 'grid-cols-4' : 'grid-cols-3'}`}>
         {OPTIONS.map((option) => (
-          <button key={option.value} type="button" aria-pressed={option.value === period} onClick={() => onPeriodChange(option.value)} className={segment(option.value === period)}>
-            {option.label}
+          <button key={option} type="button" aria-pressed={option === period} onClick={() => onPeriodChange(option)} className={segment(option === period)}>
+            {commonCopy.period[option]}
           </button>
         ))}
         {onCustomRange && (
           <Popover open={pickerOpen} onOpenChange={setPickerOpen}>
             <PopoverTrigger asChild>
-              <button type="button" aria-pressed={isCustom} aria-haspopup="dialog" className={segment(isCustom)}>Custom</button>
+              <button type="button" aria-pressed={isCustom} aria-haspopup="dialog" className={segment(isCustom)}>{commonCopy.period.custom}</button>
             </PopoverTrigger>
             <PopoverContent align="end" collisionPadding={16} className="w-[min(22rem,calc(100vw-2rem))] rounded-input border-ink/10 bg-card p-3">
               <DateRangeForm
@@ -56,13 +53,13 @@ export default function PeriodControl({
       </div>
       <div className="flex min-w-0 flex-1 items-center justify-center gap-1 sm:flex-none">
         {!isCustom && (
-          <button type="button" onClick={onPrevious} disabled={!canGoPrevious} aria-label="Previous period" className={stepButton}>
+          <button type="button" onClick={onPrevious} disabled={!canGoPrevious} aria-label={commonCopy.period.previous} className={stepButton}>
             <ChevronLeft size={18} aria-hidden="true" />
           </button>
         )}
         <span className="min-w-0 truncate text-center text-sm font-semibold text-ink" aria-live="polite">{shownLabel ?? '—'}</span>
         {!isCustom && (
-          <button type="button" onClick={onNext} disabled={!canGoNext} aria-label="Next period" className={stepButton}>
+          <button type="button" onClick={onNext} disabled={!canGoNext} aria-label={commonCopy.period.next} className={stepButton}>
             <ChevronRight size={18} aria-hidden="true" />
           </button>
         )}

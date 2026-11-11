@@ -4,6 +4,8 @@ import { formatDate, formatDateRange } from '../../lib/dateFormat';
 import { todayLocalIso } from '../../lib/localDate';
 import { previousHasData } from '../../lib/periodTotals';
 import { ChangeValue, CompactChange } from './ChangeIndicator';
+import { commonCopy } from '../../i18n/common';
+import { productionCopy } from '../../i18n/production';
 
 // Per-page configuration for PeriodSummary and GroupedList. Adding a page (e.g. Milk
 // Usage) means adding a config here, not changing the components. Every figure is read
@@ -88,30 +90,33 @@ export const ledgerGroupConfig = {
   describeSummary: (totals) => `net ${signedMoneyText(totals.net)}, in ${formatMoneyText(totals.income)}, out ${formatMoneyText(totals.expenses)}`,
 };
 
-const entriesText = (count) => `${formatCount(count)} ${count === 1 ? 'entry' : 'entries'}`;
+const entriesText = (count) => productionCopy.group.entries(count, formatCount(count));
+const periodName = (period) => commonCopy.period.names[period] ?? commonCopy.period.names.custom;
 
 export const productionSummaryConfig = {
   // Every value comes from the API. A metric whose field the API doesn't send yet is left
   // out (see the backend requests in docs/contracts/period-totals.md), never computed.
   metrics: (summary) => {
     const { current, change, metricChanges = {} } = summary;
-    const vsText = `vs prior ${summary.period ?? 'period'}`;
+    const vsText = commonCopy.period.vsPrior(periodName(summary.period));
+    const copy = productionCopy.summary;
     const metric = (key, label, value, metricChange) => ({
       key, label, value, change: metricChange, mono: true, sub: <CompactChange change={metricChange} vsText={vsText} />,
     });
     return [
-      metric('litres', 'Total milk', formatLitres(current.litres), change),
-      metric('avg', 'Avg per day', formatLitres(current.avgLitresPerDay), metricChanges.avgLitresPerDay),
-      metric('entries', 'Entries', formatCount(current.entries), metricChanges.entries),
-      current.fedToCalvesLitres !== undefined && metric('calves', 'Fed to calves', formatLitres(current.fedToCalvesLitres), metricChanges.fedToCalvesLitres),
-      current.availableLitres !== undefined && metric('available', 'Available', formatLitres(current.availableLitres), metricChanges.availableLitres),
+      metric('litres', copy.totalMilk, formatLitres(current.litres), change),
+      metric('avg', copy.avgPerDay, formatLitres(current.avgLitresPerDay), metricChanges.avgLitresPerDay),
+      metric('entries', copy.entries, formatCount(current.entries), metricChanges.entries),
+      current.fedToCalvesLitres !== undefined && metric('calves', copy.fedToCalves, formatLitres(current.fedToCalvesLitres), metricChanges.fedToCalvesLitres),
+      current.availableLitres !== undefined && metric('available', copy.available, formatLitres(current.availableLitres), metricChanges.availableLitres),
     ].filter(Boolean);
   },
   emptyMessage: (summary) => {
     const today = todayLocalIso();
     const isCurrent = summary.range && summary.range.from <= today && today <= summary.range.to;
-    const what = isCurrent ? `No entries this ${summary.period}` : `No entries in ${summary.label}`;
-    const lastEntry = summary.current.lastEntryDate ? ` · last entry ${formatDate(summary.current.lastEntryDate)}` : '';
+    const copy = productionCopy.summary;
+    const what = isCurrent ? copy.emptyCurrent(periodName(summary.period)) : copy.emptyIn(summary.label);
+    const lastEntry = summary.current.lastEntryDate ? copy.lastEntry(formatDate(summary.current.lastEntryDate)) : '';
     return `${what}${lastEntry}`;
   },
 };
@@ -119,23 +124,23 @@ export const productionSummaryConfig = {
 export const productionGroupConfig = {
   levels: ['year', 'month', 'week', 'day'],
   collapseSingleChild: false,
-  noun: ['entry', 'entries'],
+  get noun() { return productionCopy.group.noun; },
   // Desktop table: litres under the LITRES column, count and rate in the label.
   columnTotals: {
     litres: (totals) => <span className="font-mono text-sm font-semibold tabular-nums text-ink">{formatLitres(totals.litres)}</span>,
   },
   labelMeta: (totals) => (
     <span className="shrink-0 truncate text-xs font-normal text-ink-muted">
-      · {entriesText(totals.entries)} · {formatLitres(totals.avgLitresPerDay, { unit: false })} L/day
+      · {entriesText(totals.entries)} · {formatLitres(totals.avgLitresPerDay, { unit: false })} {productionCopy.group.perDayUnit}
     </span>
   ),
   renderSummary: (totals) => (
     <span className="flex flex-col items-end">
       <span className="font-mono text-sm font-semibold tabular-nums text-ink">{formatLitres(totals.litres)}</span>
       <span className="whitespace-nowrap font-mono text-[11px] font-normal tabular-nums text-ink-muted">
-        {entriesText(totals.entries)} · {formatLitres(totals.avgLitresPerDay, { unit: false })} L/day
+        {entriesText(totals.entries)} · {formatLitres(totals.avgLitresPerDay, { unit: false })} {productionCopy.group.perDayUnit}
       </span>
     </span>
   ),
-  describeSummary: (totals) => `${formatLitres(totals.litres)}, ${formatLitres(totals.avgLitresPerDay)} per day`,
+  describeSummary: (totals) => productionCopy.group.describe(formatLitres(totals.litres), formatLitres(totals.avgLitresPerDay)),
 };

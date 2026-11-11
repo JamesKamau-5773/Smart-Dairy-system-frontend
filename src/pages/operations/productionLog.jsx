@@ -29,7 +29,8 @@ import { toTotalsParams } from "../../lib/periodTotals";
 import { CardSkeletons, ListLoadMessage, SlowLoadingHint, StaleDataNotice, TableSkeletonRows } from "../../components/ui/ListLoadState";
 import { getListLoadState } from "../../lib/listLoadState";
 import toast from "react-hot-toast";
-import { toNormalizedSessionLabel } from "../../lib/milkUtils";
+import { productionCopy as copy, sessionLabel } from "../../i18n/production";
+import { commonCopy } from "../../i18n/common";
 import { formatDate } from "../../lib/herdUtils";
 import { formatCowIdentity } from "../../lib/cowIdentity";
 import { Link } from "react-router-dom";
@@ -93,23 +94,25 @@ const BACKEND_STATUS_MAP = {
   FLAGGED: 'Flagged',
 };
 
+// A record without a status shows "—": the backend decides it, the page never assumes one.
 function normalizeStatus(raw) {
-  if (!raw) return 'Pending';
+  if (!raw) return null;
   return BACKEND_STATUS_MAP[String(raw).toUpperCase()] ?? raw;
 }
 
 const getBucket = (row) => row.bucket;
 
 // One column definition for the header, rows and group rows (litres totals line up).
-const COLUMNS = [
-  { id: 'session', header: 'Session' },
-  { id: 'milker', header: 'Milker' },
-  { id: 'cow', header: 'Cow' },
-  { id: 'litres', header: 'Litres', align: 'right', mono: true },
-  { id: 'status', header: 'Status' },
-  { id: 'actions', header: 'Actions', align: 'right' },
+// Headers are read at render so they follow the language.
+const COLUMN_LAYOUT = [
+  { id: 'session' },
+  { id: 'milker' },
+  { id: 'cow' },
+  { id: 'litres', align: 'right', mono: true },
+  { id: 'status' },
+  { id: 'actions', align: 'right' },
 ];
-const column = Object.fromEntries(COLUMNS.map((entry) => [entry.id, entry]));
+const column = Object.fromEntries(COLUMN_LAYOUT.map((entry) => [entry.id, entry]));
 const EMPTY_FILTERS = { date: "", cowId: "", status: "all", session: "all" };
 
 // Maps a yield record from the API to what the page shows. Display only: the amount
@@ -130,25 +133,26 @@ function normalizeYieldRow(row) {
   return {
     id: row?.id ?? row?.yield_id ?? row?.recordId,
     bucket: row?.bucket ?? null,
-    date: row?.date ?? row?.milkingDate ?? row?.milking_date ?? row?.entry_date ?? (timestamp ? toLocalIsoDate(timestamp) : todayLocalIso()),
+    date: row?.date ?? row?.milkingDate ?? row?.milking_date ?? row?.entry_date ?? (timestamp ? toLocalIsoDate(timestamp) : null),
     time: timestamp ? new Date(timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : (row?.time ?? null),
-    milker: row?.milker_name ?? row?.milker ?? row?.created_by ?? 'SYSTEM',
+    milker: row?.milker_name ?? row?.milker ?? row?.created_by ?? null,
     animalRefId: row?.cow_tag ?? row?.cowTag ?? row?.animal_id ?? row?.animalId ?? row?.cow_id ?? row?.cowId ?? row?.cow ?? null,
     cowId: row?.cow_tag ?? row?.cowTag ?? row?.cowId ?? row?.cow_id ?? row?.animal_id ?? '',
     cowName: row?.cowName ?? row?.cow_name ?? row?.animal_name ?? row?.animalName ?? row?.name ?? '',
     amount: amountCandidate.value,
-    session: row?.session ?? row?.milking_session ?? row?.milkingSession ?? 'morning',
+    session: row?.session ?? row?.milking_session ?? row?.milkingSession ?? null,
     status: normalizeStatus(row?.status),
   };
 }
 
 const formatMilker = (value) => {
-  const milker = String(value || 'SYSTEM');
+  if (!value) return '—';
+  const milker = String(value);
   const digits = milker.replace(/\D/g, '');
   return digits.length === 12 && digits.startsWith('254') ? `+254 ${digits.slice(3, 6)} ${digits.slice(6, 9)} ${digits.slice(9)}` : milker;
 };
 
-const StatusChip = ({ status }) => (
+const StatusChip = ({ status }) => (status ? (
   <span
     className={`inline-flex items-center gap-1 rounded-badge border px-2 py-1 font-sans text-[11px] font-medium ${
       status === 'Verified'
@@ -158,9 +162,9 @@ const StatusChip = ({ status }) => (
           : 'border-brand/20 bg-brand/10 text-brand-dark'
     }`}
   >
-    <ShieldCheck size={10} aria-hidden="true" /> {status}
+    <ShieldCheck size={10} aria-hidden="true" /> {copy.statuses[status] ?? status}
   </span>
-);
+) : <span className="text-xs text-ink-muted">—</span>);
 
 export default function YieldLog() {
   const { tenantId, farmId } = useTenant();
@@ -176,6 +180,7 @@ export default function YieldLog() {
   const confirmation = useConfirmation();
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [filters, setFilters] = useState(EMPTY_FILTERS);
+  const COLUMNS = COLUMN_LAYOUT.map((entry) => ({ ...entry, header: copy.columns[entry.id] }));
 
   // Every filter runs on the server so rows, group headers and period totals agree.
   const serverFilters = useMemo(() => ({
@@ -247,8 +252,8 @@ export default function YieldLog() {
   const activeChips = [
     filters.cowId.trim() && { key: 'cowId', label: `“${filters.cowId.trim()}”`, clear: '' },
     filters.date && { key: 'date', label: formatDate(filters.date), clear: '' },
-    filters.status !== 'all' && { key: 'status', label: filters.status, clear: 'all' },
-    filters.session !== 'all' && { key: 'session', label: filters.session, clear: 'all' },
+    filters.status !== 'all' && { key: 'status', label: copy.statuses[filters.status] ?? filters.status, clear: 'all' },
+    filters.session !== 'all' && { key: 'session', label: sessionLabel(filters.session), clear: 'all' },
   ].filter(Boolean).map((chip) => ({ ...chip, onRemove: () => updateFilter(chip.key, chip.clear) }));
 
   const updateFilter = (name, value) => {
@@ -308,11 +313,11 @@ export default function YieldLog() {
 
   const milkFirstTimeEmpty = (
     <div className="flex flex-col items-center gap-3">
-      <p>No milk recorded yet. Logged milkings will appear here.</p>
-      <button type="button" onClick={() => openCreateLog()} className="btn-command">Record the first milking</button>
+      <p>{copy.emptyFirst}</p>
+      <button type="button" onClick={() => openCreateLog()} className="btn-command">{copy.recordFirst}</button>
     </div>
   );
-  const emptyMessage = hasActiveFilters ? 'No milk log entries match the selected filters.' : milkFirstTimeEmpty;
+  const emptyMessage = hasActiveFilters ? copy.emptyFiltered : milkFirstTimeEmpty;
 
   const openEditLog = (row) => {
     setFastLogMode('edit');
@@ -332,9 +337,9 @@ export default function YieldLog() {
 
   const handleDeleteFromTable = async (row) => {
     const confirmed = await confirmation.confirm({
-      title: 'Delete Milk Record',
-      message: `Delete milk record for ${formatCowIdentity({ cowName: row.cowName, cowTag: row.cowId })}? This action cannot be undone.`,
-      confirmText: 'Delete',
+      title: copy.deleteTitle,
+      message: copy.deleteMessage(formatCowIdentity({ cowName: row.cowName, cowTag: row.cowId })),
+      confirmText: copy.delete,
       type: 'danger',
     });
     if (!confirmed) return;
@@ -342,10 +347,10 @@ export default function YieldLog() {
     try {
       await productionApi.deleteYield(row.id);
       handleFastLogSaved(row.animalRefId);
-      toast.success('Milk record deleted.');
+      toast.success(copy.deleted);
     } catch (error) {
       reportError(error, { where: 'productionLog.delete' });
-      toast.error(getApiErrorMessage(error, 'Couldn’t delete this milk record. Try again.'));
+      toast.error(getApiErrorMessage(error, copy.deleteFailed));
     }
   };
 
@@ -355,18 +360,18 @@ export default function YieldLog() {
       handleFastLogSaved(row.animalRefId);
     } catch (error) {
       reportError(error, { where: 'productionLog.verify' });
-      toast.error(getApiErrorMessage(error, 'Couldn’t verify this milk record. Try again.'));
+      toast.error(getApiErrorMessage(error, copy.verifyFailed));
     }
   };
 
   const actionsMenu = (row, size) => (
     <OverflowMenu
-      label={`Actions for milk record ${formatCowIdentity({ cowName: row.cowName, cowTag: row.cowId })}`}
+      label={copy.actionsFor(formatCowIdentity({ cowName: row.cowName, cowTag: row.cowId }))}
       size={size}
       bordered
       items={[
-        { key: 'edit', label: 'Edit', icon: Pencil, onSelect: () => openEditLog(row) },
-        { key: 'delete', label: 'Delete', icon: Trash2, tone: 'danger', onSelect: () => handleDeleteFromTable(row) },
+        { key: 'edit', label: copy.edit, icon: Pencil, onSelect: () => openEditLog(row) },
+        { key: 'delete', label: copy.delete, icon: Trash2, tone: 'danger', onSelect: () => handleDeleteFromTable(row) },
       ]}
     />
   );
@@ -381,7 +386,7 @@ export default function YieldLog() {
   // Dense desktop row (~40px).
   const renderRow = (row) => (
     <tr key={row.id} className="h-10 border-b border-ink/5 hover:bg-ink-50">
-      <td className={cellClass(column.session, '!py-1 text-xs text-ink')}>{toNormalizedSessionLabel(row.session)}</td>
+      <td className={cellClass(column.session, '!py-1 text-xs text-ink')}>{sessionLabel(row.session)}</td>
       <td className={cellClass(column.milker, '!py-1 text-xs text-ink')}>{formatMilker(row.milker)}</td>
       <td className={cellClass(column.cow, '!py-1 text-sm')}>{cowLink(row, tableLink)}</td>
       <td className={cellClass(column.litres, '!py-1 text-sm text-ink')}>{formatLitres(row.amount)}</td>
@@ -390,7 +395,7 @@ export default function YieldLog() {
         <div className="inline-flex items-center gap-2">
           {canVerify && row.status !== 'Verified' && (
             <button type="button" onClick={() => handleVerifyEntry(row)} className="inline-flex h-8 items-center gap-1 !rounded-input border border-ink/10 px-2.5 text-xs font-semibold text-brand hover:bg-ink-50">
-              <ShieldCheck size={12} aria-hidden="true" /> Verify
+              <ShieldCheck size={12} aria-hidden="true" /> {copy.verify}
             </button>
           )}
           {actionsMenu(row, 'h-8 w-8')}
@@ -405,16 +410,16 @@ export default function YieldLog() {
       <div className="flex min-w-0 items-start gap-3">
         <div className="min-w-0 flex-1">
           {cowLink(row, 'break-words font-semibold text-brand')}
-          <p className="mt-1 text-xs text-ink-muted">{toNormalizedSessionLabel(row.session)}</p>
+          <p className="mt-1 text-xs text-ink-muted">{sessionLabel(row.session)}</p>
         </div>
         <p className="shrink-0 pt-0.5 text-right font-mono text-lg font-bold tabular-nums text-brand">{formatLitres(row.amount)}</p>
         {actionsMenu(row, 'h-11 w-11')}
       </div>
       <div className="flex min-w-0 flex-wrap items-center justify-between gap-x-3 gap-y-2 border-t border-ink/10 pt-2 text-xs">
-        <span className="min-w-0 break-all text-ink-muted">Milker <span className="font-medium text-ink">{formatMilker(row.milker)}</span></span>
+        <span className="min-w-0 break-all text-ink-muted">{copy.milker} <span className="font-medium text-ink">{formatMilker(row.milker)}</span></span>
         <span className="flex items-center gap-2">
           <StatusChip status={row.status} />
-          {canVerify && row.status !== 'Verified' && <button type="button" onClick={() => handleVerifyEntry(row)} className="min-h-11 rounded-lg border border-brand/20 px-3 text-xs font-semibold text-brand">Verify</button>}
+          {canVerify && row.status !== 'Verified' && <button type="button" onClick={() => handleVerifyEntry(row)} className="min-h-11 rounded-lg border border-brand/20 px-3 text-xs font-semibold text-brand">{copy.verify}</button>}
         </span>
       </div>
     </article>
@@ -434,9 +439,9 @@ export default function YieldLog() {
     <div className="space-y-4">
       <Confirmation {...confirmation} />
       <PageHeader
-        title="Production Log"
-        primaryAction={{ label: 'Record milk', icon: Plus, onClick: openCreateLog }}
-        secondaryActions={[{ key: 'calf', label: 'Feed calf', icon: Baby, onClick: () => setShowCalfMilkFeed(true) }]}
+        title={copy.title}
+        primaryAction={{ label: copy.recordMilk, icon: Plus, onClick: openCreateLog }}
+        secondaryActions={[{ key: 'calf', label: copy.feedCalf, icon: Baby, onClick: () => setShowCalfMilkFeed(true) }]}
         secondaryOnMobile="inline"
       />
 
@@ -484,10 +489,8 @@ export default function YieldLog() {
         <div role="status" className={`${SURFACE} flex items-start gap-3 p-3 sm:p-4`}>
           <AlertTriangle size={18} className="mt-0.5 shrink-0 text-brand-dark" aria-hidden="true" />
           <div className="min-w-0">
-            <h3 className="text-sm font-semibold text-ink">Cows on medicine: do not mix their milk</h3>
-            <p className="mt-0.5 text-xs text-ink-muted">
-              <span className="tabular-nums">{hardlocks.length}</span> cows are under withdrawal periods. Their milk entries are restricted to prevent contamination of the batch.
-            </p>
+            <h3 className="text-sm font-semibold text-ink">{copy.medicineTitle}</h3>
+            <p className="mt-0.5 text-xs text-ink-muted">{copy.medicineMessage(hardlocks.length)}</p>
           </div>
         </div>
       )}
@@ -495,11 +498,11 @@ export default function YieldLog() {
       <QueuedMilkEntries />
 
       <DataSection
-        label="Milk entries"
+        label={copy.sectionLabel}
         toolbar={(
           <>
             <Toolbar>
-              <ToolbarSearch label="Search by cow name or ear tag" value={filters.cowId} onChange={(value) => updateFilter('cowId', value)} placeholder="Search cow name or ear tag" />
+              <ToolbarSearch label={copy.searchLabel} value={filters.cowId} onChange={(value) => updateFilter('cowId', value)} placeholder={copy.searchPlaceholder} />
               <button
                 type="button"
                 onClick={() => setFiltersOpen((prev) => !prev)}
@@ -507,29 +510,29 @@ export default function YieldLog() {
                 aria-controls="production-filter-panel"
                 className="inline-flex min-h-11 items-center gap-1.5 !rounded-input border border-ink/15 px-3 text-xs font-semibold text-ink hover:bg-ink-50 sm:min-h-9"
               >
-                <SlidersHorizontal size={14} aria-hidden="true" /> Filters
+                <SlidersHorizontal size={14} aria-hidden="true" /> {commonCopy.filters.filters}
               </button>
               <FilterChips chips={activeChips} onReset={clearFilters} />
             </Toolbar>
             {filtersOpen && (
               <div id="production-filter-panel" className="grid grid-cols-1 gap-3 pb-2 pt-1 sm:grid-cols-3">
-                <DateField label="Date" value={filters.date} onChange={(value) => updateFilter('date', value)} max={todayLocalIso()} inputClassName="input-machined h-10 min-h-0 !py-2 text-sm" />
+                <DateField label={copy.date} value={filters.date} onChange={(value) => updateFilter('date', value)} max={todayLocalIso()} inputClassName="input-machined h-10 min-h-0 !py-2 text-sm" />
                 <label className="space-y-1 text-xs font-semibold text-ink-muted">
-                  Status
+                  {copy.status}
                   <select value={filters.status} onChange={(e) => updateFilter('status', e.target.value)} className="input-machined">
-                    <option value="all">All</option>
-                    <option value="Verified">Verified</option>
-                    <option value="Pending">Pending</option>
-                    <option value="Flagged">Flagged</option>
+                    <option value="all">{commonCopy.filters.all}</option>
+                    <option value="Verified">{copy.statuses.Verified}</option>
+                    <option value="Pending">{copy.statuses.Pending}</option>
+                    <option value="Flagged">{copy.statuses.Flagged}</option>
                   </select>
                 </label>
                 <label className="space-y-1 text-xs font-semibold text-ink-muted">
-                  Session
+                  {copy.session}
                   <select value={filters.session} onChange={(e) => updateFilter('session', e.target.value)} className="input-machined">
-                    <option value="all">All</option>
-                    <option value="Morning">Morning</option>
-                    <option value="Afternoon">Afternoon</option>
-                    <option value="Evening">Evening</option>
+                    <option value="all">{commonCopy.filters.all}</option>
+                    <option value="Morning">{copy.sessions.morning}</option>
+                    <option value="Afternoon">{copy.sessions.afternoon}</option>
+                    <option value="Evening">{copy.sessions.evening}</option>
                   </select>
                 </label>
               </div>
@@ -537,10 +540,10 @@ export default function YieldLog() {
           </>
         )}
       >
-        {milkLoadState === 'loading' && <SlowLoadingHint label="milk records" />}
-        {milkLoadState === 'stale' && <StaleDataNotice label="milk records" error={yieldRowsError} onRetry={refetchYieldRows} />}
+        {milkLoadState === 'loading' && <SlowLoadingHint label={copy.rowsLabel} />}
+        {milkLoadState === 'stale' && <StaleDataNotice label={copy.rowsLabel} error={yieldRowsError} onRetry={refetchYieldRows} />}
         {(milkLoadState === 'offline' || milkLoadState === 'error') && (
-          <ListLoadMessage state={milkLoadState} label="milk records" error={yieldRowsError} onRetry={refetchYieldRows} />
+          <ListLoadMessage state={milkLoadState} label={copy.rowsLabel} error={yieldRowsError} onRetry={refetchYieldRows} />
         )}
         <div className={`hidden ${hasMilkRowsToShow || milkLoadState === 'loading' ? 'xl:block' : ''}`}>
           <table className="w-full border-collapse text-left">

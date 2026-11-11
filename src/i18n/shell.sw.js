@@ -133,9 +133,9 @@ export const shellCopy = {
     lockedTitle: (feature) => `${feature} haimo kwenye mpango wako`,
     lockedNamedPlan: (plan, feature) => `Mpango wako wa ${plan} haujumuishi ${feature}.`,
     lockedPlan: (feature) => `Mpango wako haujumuishi ${feature}.`,
-    lockedUpgrade: 'Panda mpango ili uitumie. Rekodi zako haziathiriwi.', // REVIEW: "upgrade"
-    seePlans: 'Angalia mipango na upande',  // REVIEW
-    callToUpgrade: 'Kupanda mpango, tupigie kwa', // REVIEW
+    lockedUpgrade: 'Boresha mpango wako ili uitumie. Rekodi zako haziathiriwi.', // REVIEW: "boresha" = upgrade
+    seePlans: 'Angalia mipango na uboreshe', // REVIEW
+    callToUpgrade: 'Kuboresha mpango, tupigie kwa', // REVIEW
     areas: {
       dashboard: 'Dashibodi',
       production: 'Rekodi za maziwa',

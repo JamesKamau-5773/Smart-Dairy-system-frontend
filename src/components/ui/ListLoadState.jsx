@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { AlertTriangle, CloudOff, Loader2, RefreshCw } from 'lucide-react';
 import Skeleton from './Skeleton';
 import { getApiErrorMessage } from '../../lib/backendApi';
+import { commonCopy } from '../../i18n/common';
 
 export function TableSkeletonRows({ columns, rows = 5 }) {
   return Array.from({ length: rows }).map((_, rowIndex) => (
@@ -34,12 +35,9 @@ export function CardSkeletons({ rows = 4 }) {
 export function ListLoadMessage({ state, label, error, onRetry }) {
   const isOffline = state === 'offline';
   const Icon = isOffline ? CloudOff : AlertTriangle;
-  const title = isOffline
-    ? `You’re offline, and ${label} haven’t been saved on this phone yet.`
-    : `Couldn’t load ${label}.`;
-  const detail = isOffline
-    ? 'They will load automatically when your connection returns.'
-    : getApiErrorMessage(error, 'Check your connection and try again.');
+  const { list } = commonCopy;
+  const title = isOffline ? list.offlineTitle(label) : list.errorTitle(label);
+  const detail = isOffline ? list.offlineDetail : getApiErrorMessage(error, list.errorDetail);
 
   return (
     <div role={isOffline ? 'status' : 'alert'} className="mx-auto max-w-md space-y-3 p-8 text-center">
@@ -50,7 +48,7 @@ export function ListLoadMessage({ state, label, error, onRetry }) {
       <p className="text-sm leading-6 text-ink-muted">{detail}</p>
       {!isOffline && onRetry && (
         <button type="button" onClick={() => onRetry()} className="btn-command inline-flex items-center gap-2">
-          <RefreshCw size={14} aria-hidden="true" /> Try again
+          <RefreshCw size={14} aria-hidden="true" /> {list.tryAgain}
         </button>
       )}
     </div>
@@ -64,11 +62,11 @@ export function StaleDataNotice({ label, error, onRetry }) {
       <span className="flex min-w-0 items-start gap-2">
         <AlertTriangle size={16} className="mt-0.5 shrink-0 text-warning-700" aria-hidden="true" />
         <span>
-          Showing {label} saved on this phone. Couldn’t refresh: {getApiErrorMessage(error, 'check your connection.')}
+          {commonCopy.list.stale(label)} {getApiErrorMessage(error, commonCopy.list.staleDetail)}
         </span>
       </span>
       <button type="button" onClick={() => onRetry()} className="inline-flex items-center gap-1.5 text-sm font-semibold text-brand hover:underline">
-        <RefreshCw size={14} aria-hidden="true" /> Try again
+        <RefreshCw size={14} aria-hidden="true" /> {commonCopy.list.tryAgain}
       </button>
     </div>
   );
@@ -82,9 +80,9 @@ export function StatValue({ state, label, className, children }) {
   if (state === 'loading') return <Skeleton className="mt-3 h-7 w-20" />;
   if (state === 'offline' || state === 'error') {
     return (
-      <p className="mt-2 text-3xl font-black text-ink-muted" title={`Not available until ${label} load`}>
+      <p className="mt-2 text-3xl font-black text-ink-muted" title={commonCopy.list.statUnavailable(label)}>
         <span aria-hidden="true">—</span>
-        <span className="sr-only">Not available until {label} load</span>
+        <span className="sr-only">{commonCopy.list.statUnavailable(label)}</span>
       </p>
     );
   }
@@ -131,7 +129,7 @@ export function SlowLoadingHint({ label, after = 4000 }) {
   return (
     <p role="status" className="flex items-center gap-2 border-b border-ink/10 bg-brand-50 px-4 py-2.5 text-sm text-brand-900">
       <Loader2 size={14} className="shrink-0 animate-spin motion-reduce:animate-none" aria-hidden="true" />
-      Still loading {label} – your connection seems slow. They’ll appear as soon as they arrive.
+      {commonCopy.list.slow(label)}
     </p>
   );
 }

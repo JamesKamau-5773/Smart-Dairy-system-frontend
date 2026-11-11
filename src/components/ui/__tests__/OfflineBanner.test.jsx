@@ -78,13 +78,13 @@ describe('OfflineQueueInspector removal', () => {
     await offlineQueue.enqueue({ cowId: 'C-1', volume: 4, session: 'morning', milkingDate: '2026-06-02' });
     render(<OfflineQueueInspector isOpen onClose={vi.fn()} />);
 
-    fireEvent.click(await screen.findByRole('button', { name: /remove milk production record/i }));
+    fireEvent.click(await screen.findByRole('button', { name: /remove milk record/i }));
     expect(screen.getByText('Remove this unsent change?')).toBeTruthy();
 
     fireEvent.click(screen.getByRole('button', { name: 'Keep' }));
     expect(await offlineQueue.getAll()).toHaveLength(1);
 
-    fireEvent.click(screen.getByRole('button', { name: /remove milk production record/i }));
+    fireEvent.click(screen.getByRole('button', { name: /remove milk record/i }));
     fireEvent.click(screen.getByRole('button', { name: 'Remove' }));
     await waitFor(async () => expect(await offlineQueue.getAll()).toHaveLength(0));
   });

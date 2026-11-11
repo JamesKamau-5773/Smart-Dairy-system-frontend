@@ -1,5 +1,7 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
+import { commonCopy } from '../../i18n/common';
 
+/** Soft / Dense typography switch in the profile menu; remembered on this device. */
 export default function ThemeToggle() {
   const [tone, setTone] = useState(() => {
     try { return localStorage.getItem('typographyTone') || 'soft'; } catch { return 'soft'; }
@@ -7,7 +9,7 @@ export default function ThemeToggle() {
 
   useEffect(() => {
     document.documentElement.dataset.theme = tone;
-    try { localStorage.setItem('typographyTone', tone); } catch {}
+    try { localStorage.setItem('typographyTone', tone); } catch { /* blocked storage: the choice lasts this visit */ }
   }, [tone]);
 
   return (
@@ -16,14 +18,14 @@ export default function ThemeToggle() {
         onClick={() => setTone('soft')}
         className={`text-sm ${tone === 'soft' ? 'btn-command font-ui' : 'btn-secondary'}`}
         aria-pressed={tone === 'soft'}
-        title="Soft typography"
-      >Soft</button>
+        title={commonCopy.density.softHint}
+      >{commonCopy.density.soft}</button>
       <button
         onClick={() => setTone('dense')}
         className={`text-sm ${tone === 'dense' ? 'btn-command font-ui' : 'btn-secondary'}`}
         aria-pressed={tone === 'dense'}
-        title="Dense typography (higher contrast)"
-      >Dense</button>
+        title={commonCopy.density.denseHint}
+      >{commonCopy.density.dense}</button>
     </div>
   );
 }

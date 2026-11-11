@@ -4,6 +4,21 @@ What changed for farmers and staff using Maziwa Smart. Newest first.
 
 ## Unreleased
 
+### Phase 6 follow-up — more Kiswahili
+
+- **The Production Log is in Kiswahili**, including its totals, filters, the "not sent yet" list
+  and recent calf feedings. Session names (asubuhi / mchana / jioni) and dates use Kiswahili
+  month and day names ("04 Ago 2026").
+- **Shared pieces used on every page are translated:** confirmation dialogs, "couldn't load" and
+  "still loading" notices, filter chips, the Week / Month / Year switch, period totals, the
+  "please sign in again" sheet, restored drafts, the list of changes saved on this phone and the
+  Soft / Dense switch. Pages not yet translated may show these in Kiswahili around English words.
+- "Upgrade" now reads "Boresha mpango" in Kiswahili.
+- **The Production Log no longer makes up details the server didn't send.** A record without a
+  milker, session, date or status shows "—" instead of "SYSTEM", "morning", today's date or
+  "Pending".
+- Totals labels wrap onto two lines instead of being cut off on small phones.
+
 ### Phase 6 — Kiswahili and clearer form errors (UX audit)
 
 - **Kiswahili.** Choose English or Kiswahili on the sign-in screens (EN / SW, top right) or from

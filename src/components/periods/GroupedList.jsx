@@ -5,6 +5,7 @@ import { GROUP_LEVELS } from '../../lib/periodTotals';
 import { todayLocalIso } from '../../lib/localDate';
 import { GroupRowCard, GroupRowTable } from './GroupRow';
 import { LEVEL_STYLES } from './groupLevels';
+import { commonCopy } from '../../i18n/common';
 
 /**
  * Records grouped by date (the page's `config.levels`) using `record.bucket` keys.
@@ -74,13 +75,13 @@ export default function GroupedList({
   const [singular, plural] = config.noun;
   const ariaLabel = (node) => {
     const count = node.totals?.count ?? null;
-    const description = node.totals ? config.describeSummary(node.totals) : 'totals not available';
-    return `${node.label}, ${count == null ? 'count not available' : `${count} ${count === 1 ? singular : plural}`}, ${description}`;
+    const description = node.totals ? config.describeSummary(node.totals) : commonCopy.groups.totalsUnavailable;
+    return `${node.label}, ${count == null ? commonCopy.groups.countUnavailable : `${count} ${count === 1 ? singular : plural}`}, ${description}`;
   };
   const rowProps = (node) => ({ node, config, isOpen: open.has(node.key), onToggle: () => toggle(node.key), ariaLabel: ariaLabel(node) });
 
   const emptyDay = (node) => (node.records.length === 0
-    ? <p className="px-4 py-3 text-xs text-ink-muted">No records loaded for this day.</p>
+    ? <p className="px-4 py-3 text-xs text-ink-muted">{commonCopy.groups.emptyDay}</p>
     : null);
 
   // Offsets match the page scroller's padding (p-4 sm:p-6 md:p-8) so the header meets the app bar.
@@ -106,16 +107,16 @@ export default function GroupedList({
 
   const groupsNotice = groupsUnavailable && (
     <div role="status" className="flex flex-wrap items-center justify-between gap-2 border-b border-ink/10 bg-ink-50 px-4 py-2 text-xs text-ink-muted">
-      <span>Group totals couldn’t load, so headers show —.</span>
+      <span>{commonCopy.groups.totalsFailed}</span>
       {onRetryGroups && (
         <button type="button" onClick={() => onRetryGroups()} className="inline-flex min-h-11 items-center gap-1 font-semibold text-brand hover:underline">
-          <RefreshCw size={12} aria-hidden="true" /> Try again
+          <RefreshCw size={12} aria-hidden="true" /> {commonCopy.list.tryAgain}
         </button>
       )}
     </div>
   );
 
-  const ungroupedLabel = 'Date group not available';
+  const ungroupedLabel = commonCopy.groups.ungrouped;
 
   if (variant === 'table') {
     return (

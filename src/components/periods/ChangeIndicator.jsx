@@ -1,10 +1,11 @@
 import { formatPercentMagnitude } from '../../lib/numberFormat';
+import { commonCopy } from '../../i18n/common';
 
 // The arrow carries the direction; the colour only repeats it.
 const MARKS = {
-  up: { glyph: '▲', word: 'up', className: 'text-money-positive' },
-  down: { glyph: '▼', word: 'down', className: 'text-money-negative' },
-  flat: { glyph: '–', word: 'no change', className: 'text-ink-muted' },
+  up: { glyph: '▲', className: 'text-money-positive' },
+  down: { glyph: '▼', className: 'text-money-negative' },
+  flat: { glyph: '–', className: 'text-ink-muted' },
 };
 
 /** Compact line under a metric: "▲ 4.1% vs prior week". */
@@ -13,7 +14,7 @@ export function CompactChange({ change, vsText }) {
   const percent = change ? formatPercentMagnitude(change.pct) : null;
   if (!mark || !percent) return <span aria-hidden="true">&nbsp;</span>;
   return (
-    <span aria-label={`${mark.word} ${percent} ${vsText}`}>
+    <span aria-label={`${commonCopy.period.change[change.direction]} ${percent} ${vsText}`}>
       <span aria-hidden="true" className={`font-mono tabular-nums ${mark.className}`}>{mark.glyph} {percent}</span>
       <span aria-hidden="true"> {vsText}</span>
     </span>
@@ -29,7 +30,7 @@ export function ChangeValue({ change, vsText }) {
   const percent = change ? formatPercentMagnitude(change.pct) : null;
   if (!mark || !percent) return null;
   return (
-    <span aria-label={`${mark.word} ${percent}${vsText ? ` ${vsText}` : ''}`} className={mark.className}>
+    <span aria-label={`${commonCopy.period.change[change.direction]} ${percent}${vsText ? ` ${vsText}` : ''}`} className={mark.className}>
       <span aria-hidden="true">{mark.glyph} {percent}</span>
     </span>
   );

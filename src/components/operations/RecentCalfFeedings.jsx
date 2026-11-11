@@ -2,6 +2,7 @@ import { Link } from 'react-router-dom';
 import { formatCowIdentity } from '../../lib/cowIdentity';
 import { formatDate } from '../../lib/herdUtils';
 import { formatLitres } from '../../lib/numberFormat';
+import { productionCopy } from '../../i18n/production';
 
 const nameLink = 'text-ink underline-offset-2 hover:text-brand hover:underline focus-visible:text-brand focus-visible:underline focus-visible:outline-none';
 
@@ -10,27 +11,28 @@ const nameLink = 'text-ink underline-offset-2 hover:text-brand hover:underline f
  * Shows records only; the period's "Fed to calves" total belongs to the API.
  */
 export default function RecentCalfFeedings({ records, isLoading, error, viewAllHref }) {
+  const copy = productionCopy.calves;
   return (
     <section aria-labelledby="recent-calf-feedings" className="min-w-0 rounded-card border border-ink/10 bg-card">
       <header className="flex min-h-11 items-center justify-between gap-3 border-b border-ink/10 px-3 sm:px-4">
-        <h3 id="recent-calf-feedings" className="text-sm font-semibold text-ink">Recent calf feedings</h3>
-        {viewAllHref && <Link to={viewAllHref} className="inline-flex min-h-11 items-center text-xs font-semibold text-brand hover:underline">View all</Link>}
+        <h3 id="recent-calf-feedings" className="text-sm font-semibold text-ink">{copy.title}</h3>
+        {viewAllHref && <Link to={viewAllHref} className="inline-flex min-h-11 items-center text-xs font-semibold text-brand hover:underline">{copy.viewAll}</Link>}
       </header>
       {isLoading ? (
-        <p className="px-3 py-3 text-xs text-ink-muted sm:px-4">Loading calf feedings…</p>
+        <p className="px-3 py-3 text-xs text-ink-muted sm:px-4">{copy.loading}</p>
       ) : error ? (
-        <p role="alert" className="px-3 py-3 text-xs text-ink sm:px-4">Couldn’t load calf feedings.</p>
+        <p role="alert" className="px-3 py-3 text-xs text-ink sm:px-4">{copy.failed}</p>
       ) : records.length === 0 ? (
-        <p className="px-3 py-3 text-xs text-ink-muted sm:px-4">No calf feedings recorded.</p>
+        <p className="px-3 py-3 text-xs text-ink-muted sm:px-4">{copy.empty}</p>
       ) : (
         <>
           <table className="hidden w-full text-left text-xs xl:table">
             <thead className="text-[10px] font-semibold uppercase tracking-wider text-ink-muted">
               <tr className="border-b border-ink/10">
-                <th className="px-4 py-2 font-semibold">Date</th>
-                <th className="px-3 py-2 font-semibold">Calf</th>
-                <th className="px-3 py-2 text-right font-semibold">Litres</th>
-                <th className="px-4 py-2 font-semibold">Notes</th>
+                <th className="px-4 py-2 font-semibold">{copy.date}</th>
+                <th className="px-3 py-2 font-semibold">{copy.calf}</th>
+                <th className="px-3 py-2 text-right font-semibold">{copy.litres}</th>
+                <th className="px-4 py-2 font-semibold">{copy.notes}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-ink/5">

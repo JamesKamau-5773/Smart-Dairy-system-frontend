@@ -1,5 +1,6 @@
 import { ChevronDown, RotateCcw, Search, X } from 'lucide-react';
 import { formatCount } from '../../lib/numberFormat';
+import { commonCopy } from '../../i18n/common';
 
 const CONTROL = 'h-9 min-h-0 rounded-input border border-ink/15 bg-card text-sm text-ink focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/20';
 
@@ -46,14 +47,14 @@ export function FilterChips({ chips, onReset }) {
           key={chip.key}
           type="button"
           onClick={chip.onRemove}
-          aria-label={`Remove filter ${chip.label}`}
+          aria-label={commonCopy.filters.remove(chip.label)}
           className="inline-flex min-h-11 max-w-[14rem] items-center gap-1 !rounded-full border border-ink/10 bg-ink-50 px-2.5 text-xs font-medium text-ink hover:border-ink/20 sm:min-h-7"
         >
           <span className="truncate">{chip.label}</span> <X size={12} aria-hidden="true" className="shrink-0" />
         </button>
       ))}
       <button type="button" onClick={onReset} className="inline-flex min-h-11 items-center gap-1 px-1 text-xs font-semibold text-ink-muted hover:text-brand sm:min-h-9">
-        <RotateCcw size={12} aria-hidden="true" /> Reset
+        <RotateCcw size={12} aria-hidden="true" /> {commonCopy.filters.reset}
       </button>
     </>
   );
