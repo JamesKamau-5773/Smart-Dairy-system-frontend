@@ -9,6 +9,7 @@ import {
   normalizeMilkHistorySession,
 } from '../../lib/milkUtils';
 import { useTenant } from '../../hooks/useTenant';
+import { ISO_DATE_FILTER, useUrlFilters } from '../../hooks/useUrlFilters';
 import GroupedDateRows from '../../components/ui/GroupedDateRows';
 import Skeleton from '../../components/ui/Skeleton';
 import { CardSkeletons, ListLoadMessage, SlowLoadingHint, TableSkeletonRows } from '../../components/ui/ListLoadState';
@@ -59,16 +60,22 @@ function MetricCard({ label, value, icon: Icon, tone = 'brand', loading = false 
   );
 }
 
+const HISTORY_FILTERS = { date: '', status: 'all', session: 'all' };
+const HISTORY_FILTER_VALUES = {
+  date: ISO_DATE_FILTER,
+  status: ['all', 'verified', 'pending', 'flagged'],
+  session: ['all', 'morning', 'afternoon', 'evening'],
+};
+
 export default function MilkHistory() {
   const { id } = useParams();
   const { tenantId, farmId } = useTenant();
-  const [filtersOpen, setFiltersOpen] = useState(false);
-  const [filters, setFilters] = useState({
-    search: '',
-    date: '',
-    status: 'all',
-    session: 'all',
-  });
+  // Date, status and session live in the address. The search stays here: it matches the
+  // milker, which can be a phone number, and those never go in a URL.
+  const { filters: urlFilters, setFilters: setUrlFilters, resetFilters: resetUrlFilters, hasActiveFilters } = useUrlFilters(HISTORY_FILTERS, { allowed: HISTORY_FILTER_VALUES });
+  const [search, setSearch] = useState('');
+  const filters = useMemo(() => ({ ...urlFilters, search }), [urlFilters, search]);
+  const [filtersOpen, setFiltersOpen] = useState(hasActiveFilters);
 
   const { data: history, isLoading, error, refetch, status, fetchStatus } = useQuery({
     queryKey: ['milk-history', tenantId, farmId, id],
@@ -120,7 +127,7 @@ export default function MilkHistory() {
   const averageYield = litresText(backendStats.average_yield, 'L/day');
   const peakYield = litresText(backendStats.peak_yield, 'L/day');
 
-  const clearFilters = () => setFilters({ search: '', date: '', status: 'all', session: 'all' });
+  const clearFilters = () => { setSearch(''); resetUrlFilters(); };
 
   const loadState = getListLoadState({ status, fetchStatus, data: history });
 
@@ -253,7 +260,7 @@ export default function MilkHistory() {
                   <input
                     type="text"
                     value={filters.search}
-                    onChange={(e) => setFilters((prev) => ({ ...prev, search: e.target.value }))}
+                    onChange={(e) => setSearch(e.target.value)}
                     placeholder="Search date, session, milker, status..."
                     className="input-machined pl-10"
                   />
@@ -264,7 +271,7 @@ export default function MilkHistory() {
                 <input
                   type="date"
                   value={filters.date}
-                  onChange={(e) => setFilters((prev) => ({ ...prev, date: e.target.value }))}
+                  onChange={(e) => setUrlFilters({ date: e.target.value })}
                   className="input-machined"
                 />
               </label>
@@ -272,7 +279,7 @@ export default function MilkHistory() {
                 Status
                 <select
                   value={filters.status}
-                  onChange={(e) => setFilters((prev) => ({ ...prev, status: e.target.value }))}
+                  onChange={(e) => setUrlFilters({ status: e.target.value })}
                   className="input-machined"
                 >
                   <option value="all">All</option>
@@ -285,7 +292,7 @@ export default function MilkHistory() {
                 Session
                 <select
                   value={filters.session}
-                  onChange={(e) => setFilters((prev) => ({ ...prev, session: e.target.value }))}
+                  onChange={(e) => setUrlFilters({ session: e.target.value })}
                   className="input-machined"
                 >
                   <option value="all">All</option>

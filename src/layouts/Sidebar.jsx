@@ -1,4 +1,6 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
+import { useFocusTrap } from '../hooks/useFocusTrap';
+import { DESKTOP_QUERY, useMediaQuery } from '../hooks/useMediaQuery';
 import { NavLink, useLocation } from 'react-router-dom';
 import {
   LayoutDashboard, Beaker, Pill, Package, Wallet, X,
@@ -7,10 +9,12 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import FarmSwitcher from './FarmSwitcher';
+import { canSeeBuyers, canSeeLedger, canSeeProductionLog, UNIT_HELPER_ROLES } from '../lib/navAccess';
 import { canAccessCommandCenter, canViewAdminControls, isCooperativeAdmin, isSuperAdmin, hasRole, hasPageAccess } from '../lib/roles';
 import { isNavItemActive, navItemHref } from '../lib/navigation';
 import { FEED_CATEGORY } from '../lib/inventoryItemRules';
 import { shellCopy } from '../i18n/shell';
+import { SITE } from '../landing/content';
 
 const { nav: copy } = shellCopy;
 
@@ -37,7 +41,6 @@ export default function Sidebar({ mobileOpen = false, setMobileOpen = () => {} }
 
   const showAdminControls = canViewAdminControls(currentUser);
   const canViewBreeding = true;
-  const canViewBuyers = showAdminControls;
   const canViewStaffRegistry = showAdminControls || hasRole(currentUser, ['FARMER']);
   const canViewPayroll = showAdminControls;
   const canViewHerdsmanView = true;
@@ -73,7 +76,7 @@ export default function Sidebar({ mobileOpen = false, setMobileOpen = () => {} }
     {
       id: 'operations',
       items: [
-        { label: copy.items.production, to: '/operations/yield', icon: Beaker, visible: hasPageAccess(currentUser, 'production') },
+        { label: copy.items.production, to: '/operations/yield', icon: Beaker, visible: canSeeProductionLog(currentUser) },
         { label: copy.items.milkUsage, to: '/operations/milk-usage', icon: Droplets, visible: hasPageAccess(currentUser, 'production') },
         { label: copy.items.dailyRoutine, to: '/operations/routine', icon: Activity, visible: hasPageAccess(currentUser, 'tasks') },
         { label: copy.items.farmTasks, to: '/tasks', icon: Activity, visible: canViewHerdsmanView && hasPageAccess(currentUser, 'tasks') },
@@ -98,16 +101,17 @@ export default function Sidebar({ mobileOpen = false, setMobileOpen = () => {} }
         // Inventory filtered to feed: one page, two ways in (Feeding and Finance & Supply).
         { label: copy.items.ingredients, to: '/operations/inventory', query: { category: FEED_CATEGORY }, icon: Package, visible: showAdminControls && hasPageAccess(currentUser, 'inventory') },
         { label: copy.items.milkLab, to: '/operations/lab', icon: Pill, visible: canViewFeedNutrition && hasPageAccess(currentUser, 'feed') },
-        { label: copy.items.unitHelpers, to: '/settings/unit-conversions', icon: BookOpen, visible: canViewFeedNutrition && hasPageAccess(currentUser, 'feed') },
+        // Straight to the page (not the old /settings redirect), shown only to the roles its route allows.
+        { label: copy.items.unitHelpers, to: '/operations/unit-conversions', icon: BookOpen, visible: hasRole(currentUser, UNIT_HELPER_ROLES) && hasPageAccess(currentUser, 'feed') },
       ],
     },
     {
       id: 'finance',
       items: [
-        { label: copy.items.buyers, to: '/finance/buyers', icon: Users, visible: canViewBuyers && hasPageAccess(currentUser, 'customers') },
+        { label: copy.items.buyers, to: '/finance/buyers', icon: Users, visible: canSeeBuyers(currentUser) },
         { label: copy.items.customers, to: '/operations/customers', icon: Users, visible: canViewCustomers && hasPageAccess(currentUser, 'customers') },
         { label: copy.items.inventory, to: '/operations/inventory', icon: Package, visible: showAdminControls && hasPageAccess(currentUser, 'inventory') },
-        { label: copy.items.ledger, to: '/finance/ledger', icon: Wallet, visible: showAdminControls && hasPageAccess(currentUser, 'finance') },
+        { label: copy.items.ledger, to: '/finance/ledger', icon: Wallet, visible: canSeeLedger(currentUser) },
       ],
     },
     {
@@ -157,6 +161,13 @@ export default function Sidebar({ mobileOpen = false, setMobileOpen = () => {} }
     }));
   };
 
+  // The phone drawer: Escape closes it and Tab stays inside while it's open.
+  const drawerRef = useRef(null);
+  useFocusTrap(drawerRef, mobileOpen, { onEscape: () => setMobileOpen(false) });
+  // On phones the closed drawer is only slid off-screen; inert keeps Tab and screen readers out.
+  const isDesktop = useMediaQuery(DESKTOP_QUERY);
+  const drawerHidden = !mobileOpen && !isDesktop;
+
   return (
     <React.Fragment>
       {/* Mobile Overlay */}
@@ -168,20 +179,20 @@ export default function Sidebar({ mobileOpen = false, setMobileOpen = () => {} }
       )}
 
       {/* Sidebar - Hidden on mobile, visible on md+ */}
-      <aside className={`
+      <aside ref={drawerRef} tabIndex={-1} inert={drawerHidden} aria-hidden={drawerHidden || undefined} className={`
         ${mobileOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}
         transition-transform duration-300
         fixed inset-y-0 bottom-16 md:inset-y-0 md:left-0 md:bottom-0
         w-72 max-w-[85vw] md:w-60 md:max-w-none xl:w-64 h-auto md:h-screen
         border-r border-ink/10 bg-white
-        flex flex-col overflow-hidden
+        flex flex-col overflow-hidden outline-none
         z-[25] md:z-20
       `}>
 
       {/* Logo Block */}
       <div className="flex h-16 shrink-0 items-center justify-between border-b border-ink/10 bg-ink-900 px-4 md:px-6">
         <h1 className="m-0 font-display text-lg font-semibold leading-tight text-white">
-          Smart Dairy
+          {SITE.name}
         </h1>
         <button type="button" onClick={() => setMobileOpen(false)} className="inline-flex h-10 w-10 items-center justify-center rounded-lg text-white hover:bg-white/10 md:hidden" aria-label={copy.closeMenu}><X size={20} /></button>
       </div>

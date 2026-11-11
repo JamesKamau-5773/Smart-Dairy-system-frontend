@@ -23,6 +23,10 @@ export const commonCopy = {
     denseHint: 'Dense typography (higher contrast)',
   },
 
+  modal: {
+    close: 'Close',
+  },
+
   draft: {
     restored: 'Restored what you were typing before the app closed.',
     startOver: 'Start over',

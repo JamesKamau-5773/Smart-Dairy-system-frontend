@@ -30,6 +30,22 @@ export const shellCopy = {
     },
     signOutAnyway: 'Sign out anyway',
     staySignedIn: 'Stay signed in',
+    // The backend's role codes in words, so the header never shows FARM_ADMIN.
+    roles: {
+      SUPER_ADMIN: 'Platform admin',
+      ADMIN: 'Administrator',
+      COOPERATIVE_ADMIN: 'Cooperative admin',
+      COOP_ADMIN: 'Cooperative admin',
+      FARM_ADMIN: 'Farm administrator',
+      FARM_MANAGER: 'Farm manager',
+      FARM_SUPERVISOR: 'Farm supervisor',
+      FARM_HAND: 'Farmhand',
+      FARMER: 'Farmer',
+      CLERK: 'Clerk',
+      HERDSMAN: 'Herdsman',
+      VETERINARY_DOCTOR: 'Vet',
+      VET_ASSISTANT: 'Vet assistant',
+    },
     titles: {
       dashboard: 'Dashboard',
       production: 'Production Log',

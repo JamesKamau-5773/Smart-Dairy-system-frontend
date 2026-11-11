@@ -39,10 +39,6 @@ vi.mock('../../../components/forms/breeding', () => ({
   RestockSemenInventoryForm: () => null,
 }));
 
-vi.mock('../../../components/ui/Modal', () => ({
-  default: ({ isOpen, title, children }) => isOpen ? <div role="dialog" aria-label={title}>{children}</div> : null,
-}));
-
 vi.mock('../../../components/ui/Confirmation', () => ({
   default: () => null,
   useConfirmation: () => ({ confirm: vi.fn(), isOpen: false }),

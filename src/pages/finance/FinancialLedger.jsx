@@ -33,8 +33,12 @@ import { useInvalidateLedger, useLedgerGroupTotals, useLedgerSummary, usePeriodS
 import { CUSTOM_PERIOD, toTotalsParams } from '../../lib/periodTotals';
 import { correctionKind } from '../../lib/ledgerCorrection';
 import { readAttachments } from '../../lib/receiptAttachments';
+import { useUrlFilters } from '../../hooks/useUrlFilters';
 
-const EMPTY_FILTERS = { search: '', type: 'all', category: 'all' };
+// Type and category live in the address. Search stays in the page: it can hold a customer's
+// name or phone number, which never go in a URL.
+const URL_FILTERS = { type: 'all', category: 'all' };
+const URL_FILTER_VALUES = { type: ['all', 'revenue', 'expense'] };
 const TYPE_OPTIONS = [['all', 'All types'], ['revenue', 'Money in'], ['expense', 'Money out']];
 const TYPE_LABELS = Object.fromEntries(TYPE_OPTIONS);
 
@@ -95,7 +99,9 @@ const FinancialLedger = () => {
   const invalidateLedger = useInvalidateLedger();
   const categories = useLedgerCategories(tenantId, farmId);
   const [groupFocus, setGroupFocus] = useState(null);
-  const [ledgerFilters, setLedgerFilters] = useState(EMPTY_FILTERS);
+  const { filters: urlFilters, setFilters: setUrlFilters, resetFilters: resetUrlFilters } = useUrlFilters(URL_FILTERS, { allowed: URL_FILTER_VALUES });
+  const [search, setSearch] = useState('');
+  const ledgerFilters = { ...urlFilters, search };
   const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('');
   const [expandedIds, setExpandedIds] = useState(() => new Set());
   const [modalTransactionType, setModalTransactionType] = useState(null);
@@ -173,7 +179,10 @@ const FinancialLedger = () => {
   }, [categories.income, categories.expense, ledgerFilters.type]);
   const categoryLabel = Object.fromEntries(categoryOptions)[ledgerFilters.category] ?? ledgerFilters.category;
 
-  const setFilter = (name, value) => setLedgerFilters((current) => ({ ...current, [name]: value, ...(name === 'type' ? { category: 'all' } : {}) }));
+  const setFilter = (name, value) => {
+    if (name === 'search') setSearch(value);
+    else setUrlFilters({ [name]: value, ...(name === 'type' ? { category: 'all' } : {}) });
+  };
   const chips = [
     searchQuery && { key: 'search', label: `“${searchQuery}”`, onRemove: () => setFilter('search', '') },
     ledgerFilters.type !== 'all' && { key: 'type', label: TYPE_LABELS[ledgerFilters.type], onRemove: () => setFilter('type', 'all') },
@@ -423,7 +432,7 @@ const FinancialLedger = () => {
             <ToolbarSearch label="Search records" value={ledgerFilters.search} onChange={(value) => setFilter('search', value)} placeholder="Search customer, item, reference…" />
             <ToolbarSelect label="Type" value={ledgerFilters.type} onChange={(value) => setFilter('type', value)} options={TYPE_OPTIONS} />
             <ToolbarSelect label="Category" value={ledgerFilters.category} onChange={(value) => setFilter('category', value)} options={categoryOptions} />
-            <FilterChips chips={chips} onReset={() => setLedgerFilters(EMPTY_FILTERS)} />
+            <FilterChips chips={chips} onReset={() => { setSearch(''); resetUrlFilters(); }} />
           </Toolbar>
         )}
         notices={(

@@ -1,5 +1,6 @@
 import React from 'react';
 import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { MemoryRouter } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import StaffRegistry from '../StaffRegistry';
@@ -17,7 +18,7 @@ vi.mock('../../../lib/backendApi', async (importOriginal) => ({ ...(await import
 vi.mock('react-hot-toast', () => ({ default: toast }));
 
 const member = (overrides) => ({ id: 1, name: 'Peter Otieno', role: 'FARM_HAND', phoneNumber: '0712345678', status: 'ACTIVE', accountStatus: 'ACTIVE', baseSalary: 15000, loanBalance: 0, ...overrides });
-const withQuery = (ui) => <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>{ui}</QueryClientProvider>;
+const withQuery = (ui) => <MemoryRouter><QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>{ui}</QueryClientProvider></MemoryRouter>;
 
 describe('StaffRegistry', () => {
   beforeEach(() => {

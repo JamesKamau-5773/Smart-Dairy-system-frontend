@@ -1,7 +1,7 @@
 // src/components/inventory/RegisterResourceModal.jsx
 import { useState } from 'react';
-import { createPortal } from 'react-dom';
-import { X, Check } from 'lucide-react';
+import { Check } from 'lucide-react';
+import BaseModal from '../ui/BaseModal';
 import { proteinGramsPerKgToInput, proteinInputToGramsPerKg } from '../../lib/feedNutritionUnits';
 import { validateInventoryItem } from '../../lib/inventoryItemRules';
 import { feedCopy } from '../../i18n/feed.en';
@@ -44,115 +44,100 @@ export default function RegisterResourceModal({ isOpen, onClose, onRegister }) {
   const currentFormData = formData;
   const proteinInputValue = proteinGramsPerKgToInput(currentFormData.proteinGramsPerKg, proteinUnit);
 
-  const modalContent = (
-    <div
-      className="fixed inset-0 z-[100] overflow-y-auto overscroll-contain bg-ink-strong/20 backdrop-blur-sm animate-in fade-in duration-200 touch-pan-y"
-      role="dialog"
-      aria-modal="true"
-      onClick={onClose}
+  return (
+    <BaseModal
+      isOpen
+      onClose={onClose}
+      title="Register new resource"
+      size="sm"
+      closeOnBackdrop
     >
-      <div className="flex min-h-full items-start justify-center p-3 sm:items-center sm:p-4">
-        <div
-          className="max-h-[calc(100dvh-1.5rem)] w-full max-w-sm overflow-y-auto overscroll-contain rounded-[24px] bg-white touch-pan-y animate-in zoom-in-95 duration-200"
-          onClick={(e) => e.stopPropagation()}
-        >
-          <div className="p-8">
-          <div className="flex justify-between items-center mb-6">
-            <h3 className="font-black text-ink text-lg tracking-tight">Register New Resource</h3>
-            <button onClick={onClose} className="text-ink-muted hover:text-ink"><X size={20} /></button>
+      <form onSubmit={handleSubmit} className="space-y-4">
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <label className="text-[10px] font-black text-ink-muted uppercase tracking-widest mb-1.5 block">Resource Name</label>
+            <input required name="name" value={formData.name} onChange={handleChange} placeholder="e.g. Sunflower Cake" className="w-full p-3 border border-slate-200 rounded-[12px] text-sm font-bold focus:ring-2 focus:ring-brand/20 outline-none" />
           </div>
-
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="text-[10px] font-black text-ink-muted uppercase tracking-widest mb-1.5 block">Resource Name</label>
-                <input required name="name" value={formData.name} onChange={handleChange} placeholder="e.g. Sunflower Cake" className="w-full p-3 border border-slate-200 rounded-[12px] text-sm font-bold focus:ring-2 focus:ring-brand/20 outline-none" />
-              </div>
-              <div>
-                <label className="text-[10px] font-black text-ink-muted uppercase tracking-widest mb-1.5 block">{feedCopy.item.skuOptional}</label>
-                <input name="sku" value={formData.sku} onChange={handleChange} placeholder="e.g. FD-006" className="w-full p-3 border border-slate-200 rounded-[12px] text-sm font-bold focus:ring-2 focus:ring-brand/20 outline-none" />
-              </div>
-            </div>
-            <div>
-              <label className="text-[10px] font-black text-ink-muted uppercase tracking-widest mb-1.5 block">Category</label>
-              <select name="category" value={formData.category} onChange={handleChange} className="w-full p-3 border border-slate-200 rounded-[12px] text-sm font-bold focus:ring-2 focus:ring-brand/20 outline-none bg-white appearance-none">
-                <option value="Bulk Feed">Bulk Feed</option>
-                <option value="Medical Vault">Medical Vault</option>
-                <option value="Equipment">Equipment</option>
-              </select>
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="text-[10px] font-black text-ink-muted uppercase tracking-widest mb-1.5 block">Current Stock</label>
-                <input required name="currentStock" value={formData.currentStock} onChange={handleChange} type="number" min="0" step="any" inputMode="decimal" className="w-full p-3 border border-slate-200 rounded-[12px] text-sm font-bold focus:ring-2 focus:ring-brand/20 outline-none" />
-              </div>
-              <div>
-                <label className="text-[10px] font-black text-ink-muted uppercase tracking-widest mb-1.5 block">Unit</label>
-                <input required name="unit" value={formData.unit} onChange={handleChange} placeholder="e.g. KG, PCS" className="w-full p-3 border border-slate-200 rounded-[12px] text-sm font-bold focus:ring-2 focus:ring-brand/20 outline-none" />
-              </div>
-            </div>
-            <div>
-              <label className="text-[10px] font-black text-ink-muted uppercase tracking-widest mb-1.5 block">Re-order Level</label>
-              <input required name="reorderLevel" value={formData.reorderLevel} onChange={handleChange} type="number" min="0" placeholder="e.g. 20" className="w-full p-3 border border-slate-200 rounded-[12px] text-sm font-bold focus:ring-2 focus:ring-brand/20 outline-none" />
-              <p className="text-[10px] text-slate-400 mt-1.5 font-semibold">When stock falls to this level, it will be marked as 'CRITICAL'.</p>
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <div className="mb-1.5 flex items-center justify-between gap-2">
-                  <label className="text-[10px] font-black text-ink-muted uppercase tracking-widest">Crude Protein</label>
-                  <select value={proteinUnit} onChange={(e) => setProteinUnit(e.target.value)} className="rounded border border-slate-200 bg-white px-2 py-1 text-[10px] font-bold">
-                    <option value="percent">%</option>
-                    <option value="g_per_kg">g/kg</option>
-                  </select>
-                </div>
-                <input
-                  name="proteinGramsPerKg"
-                  value={proteinInputValue || ''}
-                  onChange={(e) => setFormData((previous) => ({ ...previous, proteinGramsPerKg: proteinInputToGramsPerKg(e.target.value, proteinUnit) }))}
-                  type="number"
-                  min="0"
-                  max={proteinUnit === 'percent' ? 99.999 : 999.99}
-                  step="any"
-                  className="w-full p-3 border border-slate-200 rounded-[12px] text-sm font-bold focus:ring-2 focus:ring-brand/20 outline-none"
-                />
-                <p className="mt-1 text-[10px] font-semibold text-slate-500">
-                  {proteinUnit === 'percent'
-                    ? `${proteinInputValue}% = ${Number(currentFormData.proteinGramsPerKg || 0).toFixed(1)} g/kg`
-                    : `${proteinInputValue} g/kg = ${(Number(currentFormData.proteinGramsPerKg || 0) / 10).toFixed(1)}%`}
-                </p>
-              </div>
-              <div>
-                <label className="text-[10px] font-black text-ink-muted uppercase tracking-widest mb-1.5 block">Energy (MJ/kg)</label>
-                <input name="energyMjPerKg" value={currentFormData.energyMjPerKg || ''} onChange={handleChange} type="number" min="0" max="30" step="any" className="w-full p-3 border border-slate-200 rounded-[12px] text-sm font-bold focus:ring-2 focus:ring-brand/20 outline-none" />
-              </div>
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="text-[10px] font-black text-ink-muted uppercase tracking-widest mb-1.5 block">Fiber (g/kg)</label>
-                <input name="fiberGramsPerKg" value={currentFormData.fiberGramsPerKg || ''} onChange={handleChange} type="number" min="0" max="999.99" step="any" className="w-full p-3 border border-slate-200 rounded-[12px] text-sm font-bold focus:ring-2 focus:ring-brand/20 outline-none" />
-              </div>
-              <div>
-                <label className="text-[10px] font-black text-ink-muted uppercase tracking-widest mb-1.5 block">Cost (KES/kg)</label>
-                <input name="costPerKg" value={currentFormData.costPerKg || ''} onChange={handleChange} type="number" min="0" step="any" className="w-full p-3 border border-slate-200 rounded-[12px] text-sm font-bold focus:ring-2 focus:ring-brand/20 outline-none" />
-              </div>
-            </div>
-
-            {Object.keys(errors).length > 0 && (
-              <ul role="alert" className="space-y-1 rounded-[12px] border border-brand-dark/60 bg-brand-100 p-3 text-xs font-semibold text-ink">
-                {Object.entries(errors).map(([field, message]) => <li key={field}>{message}</li>)}
-              </ul>
-            )}
-
-            <button type="submit" className="w-full py-4 mt-4 bg-brand text-white rounded-[12px] font-black text-xs uppercase tracking-wider flex items-center justify-center gap-2 hover:bg-brand-dark transition-colors">
-              <Check size={16} /> Save Resource
-            </button>
-          </form>
+          <div>
+            <label className="text-[10px] font-black text-ink-muted uppercase tracking-widest mb-1.5 block">{feedCopy.item.skuOptional}</label>
+            <input name="sku" value={formData.sku} onChange={handleChange} placeholder="e.g. FD-006" className="w-full p-3 border border-slate-200 rounded-[12px] text-sm font-bold focus:ring-2 focus:ring-brand/20 outline-none" />
           </div>
         </div>
-      </div>
-    </div>
-  );
+        <div>
+          <label className="text-[10px] font-black text-ink-muted uppercase tracking-widest mb-1.5 block">Category</label>
+          <select name="category" value={formData.category} onChange={handleChange} className="w-full p-3 border border-slate-200 rounded-[12px] text-sm font-bold focus:ring-2 focus:ring-brand/20 outline-none bg-white appearance-none">
+            <option value="Bulk Feed">Bulk Feed</option>
+            <option value="Medical Vault">Medical Vault</option>
+            <option value="Equipment">Equipment</option>
+          </select>
+        </div>
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <label className="text-[10px] font-black text-ink-muted uppercase tracking-widest mb-1.5 block">Current Stock</label>
+            <input required name="currentStock" value={formData.currentStock} onChange={handleChange} type="number" min="0" step="any" inputMode="decimal" className="w-full p-3 border border-slate-200 rounded-[12px] text-sm font-bold focus:ring-2 focus:ring-brand/20 outline-none" />
+          </div>
+          <div>
+            <label className="text-[10px] font-black text-ink-muted uppercase tracking-widest mb-1.5 block">Unit</label>
+            <input required name="unit" value={formData.unit} onChange={handleChange} placeholder="e.g. KG, PCS" className="w-full p-3 border border-slate-200 rounded-[12px] text-sm font-bold focus:ring-2 focus:ring-brand/20 outline-none" />
+          </div>
+        </div>
+        <div>
+          <label className="text-[10px] font-black text-ink-muted uppercase tracking-widest mb-1.5 block">Re-order Level</label>
+          <input required name="reorderLevel" value={formData.reorderLevel} onChange={handleChange} type="number" min="0" placeholder="e.g. 20" className="w-full p-3 border border-slate-200 rounded-[12px] text-sm font-bold focus:ring-2 focus:ring-brand/20 outline-none" />
+          <p className="text-[10px] text-slate-400 mt-1.5 font-semibold">When stock falls to this level, it will be marked as 'CRITICAL'.</p>
+        </div>
 
-  return createPortal(modalContent, document.body);
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <div className="mb-1.5 flex items-center justify-between gap-2">
+              <label className="text-[10px] font-black text-ink-muted uppercase tracking-widest">Crude Protein</label>
+              <select value={proteinUnit} onChange={(e) => setProteinUnit(e.target.value)} className="rounded border border-slate-200 bg-white px-2 py-1 text-[10px] font-bold">
+                <option value="percent">%</option>
+                <option value="g_per_kg">g/kg</option>
+              </select>
+            </div>
+            <input
+              name="proteinGramsPerKg"
+              value={proteinInputValue || ''}
+              onChange={(e) => setFormData((previous) => ({ ...previous, proteinGramsPerKg: proteinInputToGramsPerKg(e.target.value, proteinUnit) }))}
+              type="number"
+              min="0"
+              max={proteinUnit === 'percent' ? 99.999 : 999.99}
+              step="any"
+              className="w-full p-3 border border-slate-200 rounded-[12px] text-sm font-bold focus:ring-2 focus:ring-brand/20 outline-none"
+            />
+            <p className="mt-1 text-[10px] font-semibold text-slate-500">
+              {proteinUnit === 'percent'
+                ? `${proteinInputValue}% = ${Number(currentFormData.proteinGramsPerKg || 0).toFixed(1)} g/kg`
+                : `${proteinInputValue} g/kg = ${(Number(currentFormData.proteinGramsPerKg || 0) / 10).toFixed(1)}%`}
+            </p>
+          </div>
+          <div>
+            <label className="text-[10px] font-black text-ink-muted uppercase tracking-widest mb-1.5 block">Energy (MJ/kg)</label>
+            <input name="energyMjPerKg" value={currentFormData.energyMjPerKg || ''} onChange={handleChange} type="number" min="0" max="30" step="any" className="w-full p-3 border border-slate-200 rounded-[12px] text-sm font-bold focus:ring-2 focus:ring-brand/20 outline-none" />
+          </div>
+        </div>
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <label className="text-[10px] font-black text-ink-muted uppercase tracking-widest mb-1.5 block">Fiber (g/kg)</label>
+            <input name="fiberGramsPerKg" value={currentFormData.fiberGramsPerKg || ''} onChange={handleChange} type="number" min="0" max="999.99" step="any" className="w-full p-3 border border-slate-200 rounded-[12px] text-sm font-bold focus:ring-2 focus:ring-brand/20 outline-none" />
+          </div>
+          <div>
+            <label className="text-[10px] font-black text-ink-muted uppercase tracking-widest mb-1.5 block">Cost (KES/kg)</label>
+            <input name="costPerKg" value={currentFormData.costPerKg || ''} onChange={handleChange} type="number" min="0" step="any" className="w-full p-3 border border-slate-200 rounded-[12px] text-sm font-bold focus:ring-2 focus:ring-brand/20 outline-none" />
+          </div>
+        </div>
+
+        {Object.keys(errors).length > 0 && (
+          <ul role="alert" className="space-y-1 rounded-[12px] border border-brand-dark/60 bg-brand-100 p-3 text-xs font-semibold text-ink">
+            {Object.entries(errors).map(([field, message]) => <li key={field}>{message}</li>)}
+          </ul>
+        )}
+
+        <button type="submit" className="w-full py-4 mt-4 bg-brand text-white rounded-[12px] font-black text-xs uppercase tracking-wider flex items-center justify-center gap-2 hover:bg-brand-dark transition-colors">
+          <Check size={16} /> Save Resource
+        </button>
+      </form>
+    </BaseModal>
+  );
 }

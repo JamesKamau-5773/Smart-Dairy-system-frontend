@@ -12,8 +12,15 @@ import { useDataSaver } from '../hooks/useDataSaver';
 import LanguageSwitch from '../components/ui/LanguageSwitch';
 import { canSwitchLocale } from '../i18n/locale';
 import { shellCopy } from '../i18n/shell';
+import { roleLabel } from '../lib/staffLabels';
 
 const { header: copy } = shellCopy;
+
+/** The user's role in words ("Farm administrator"), never the backend's code. */
+const roleName = (role) => {
+  const code = String(role ?? '').trim().toUpperCase();
+  return copy.roles[code] ?? roleLabel(code);
+};
 
 export default function Header({ onMenuClick = () => {} }) {
   const { activeFarm } = useTenant();
@@ -88,7 +95,7 @@ export default function Header({ onMenuClick = () => {} }) {
             <UserCircle size={20} className="text-brand-400" />
             <span className="hidden min-w-0 sm:block">
               <span className="block max-w-36 truncate text-xs font-bold">{currentUser?.name || copy.userFallback}</span>
-              <span className="block text-[10px] font-semibold uppercase text-ink-600">{currentUser?.role || copy.roleUnknown}</span>
+              <span className="block text-[10px] font-semibold text-ink-600">{roleName(currentUser?.role) || copy.roleUnknown}</span>
             </span>
             <ChevronDown size={14} className="text-ink-500" />
           </button>
@@ -96,7 +103,7 @@ export default function Header({ onMenuClick = () => {} }) {
             <div className="absolute right-0 top-12 w-64 rounded-card border border-ink/10 bg-surface p-2 backdrop-blur" role="menu">
               <div className="border-b border-ink/10 px-3 py-2">
                 <p className="truncate text-sm font-bold text-ink-900">{currentUser?.name || copy.userFallback}</p>
-                <p className="mt-0.5 text-xs text-ink-muted">{currentUser?.role || copy.noRole}</p>
+                <p className="mt-0.5 text-xs text-ink-muted">{roleName(currentUser?.role) || copy.noRole}</p>
               </div>
               {canSwitchLocale() && (
                 <div className="border-b border-ink/10 px-3 py-3">

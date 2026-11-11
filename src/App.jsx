@@ -4,6 +4,7 @@ import { useAuth } from './contexts/AuthContext';
 import { canAccessCommandCenter, getDefaultLandingPath, hasRole, isSingleTenantUser } from './lib/roles';
 import { AUTH_STATES, getAuthState, getGateRoute } from './lib/authState';
 import { getPageKeyForPath } from './lib/pageRoutes';
+import { UNIT_HELPER_ROLES } from './lib/navAccess';
 import { useLocale } from './i18n/useLocale';
 
 // Import the StaffProvider to fix the useStaff context error
@@ -324,7 +325,7 @@ export default function App() {
             <Route
               path="operations/unit-conversions"
               element={(
-                <RoleRoute allowedRoles={['SUPER_ADMIN', 'ADMIN']}>
+                <RoleRoute allowedRoles={UNIT_HELPER_ROLES}>
                   {renderLazyPage(UnitConversions, 'Loading unit helpers…')}
                 </RoleRoute>
               )}

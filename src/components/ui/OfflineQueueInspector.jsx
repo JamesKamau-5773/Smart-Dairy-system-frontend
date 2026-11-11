@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { AlertTriangle, Clock3, RefreshCw, Trash2 } from 'lucide-react';
-import Modal from './Modal';
+import BaseModal from './BaseModal';
 import offlineQueue from '../../lib/offlineQueue';
 import { commonCopy } from '../../i18n/common';
 
@@ -53,7 +53,7 @@ export default function OfflineQueueInspector({ isOpen, onClose } = {}) {
   };
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title={commonCopy.queue.title}>
+    <BaseModal closeOnBackdrop isOpen={isOpen} onClose={onClose} title={commonCopy.queue.title}>
       <div className="space-y-4">
         <p className="text-sm text-ink-muted">{commonCopy.queue.intro}</p>
         <div className="max-h-80 space-y-2 overflow-y-auto">
@@ -107,6 +107,6 @@ export default function OfflineQueueInspector({ isOpen, onClose } = {}) {
           </button>
         </div>
       </div>
-    </Modal>
+    </BaseModal>
   );
 }

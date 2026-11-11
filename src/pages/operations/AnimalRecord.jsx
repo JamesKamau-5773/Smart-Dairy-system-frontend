@@ -8,7 +8,7 @@ import {
 import { Link, useLocation, useParams } from 'react-router-dom';
 import { Skeleton } from '../../components/ui';
 import AlertBanner from '../../components/ui/AlertBanner';
-import Modal from '../../components/ui/Modal';
+import BaseModal from '../../components/ui/BaseModal';
 import Confirmation, { useConfirmation } from '../../components/ui/Confirmation';
 import { validateForm, getFirstErrorMessage } from '../../lib/validation';
 import { formatDateTime, getRelativeTime } from '../../lib/audit';
@@ -355,7 +355,7 @@ export default function AnimalPassport() {
 
       <AnimalSummaryCards animal={animal} isLoading={isLoading} />
 
-      <Modal
+      <BaseModal closeOnBackdrop
         isOpen={Boolean(certificatePreviewUrl)}
         onClose={() => setCertificatePreviewUrl(null)}
         title={`Certified Biological Record: ${animalDisplayName}`}
@@ -373,7 +373,7 @@ export default function AnimalPassport() {
             <Download size={16} /> Download PDF
           </button>
         </div>
-      </Modal>
+      </BaseModal>
 
       <div className="mb-8 flex items-center justify-between gap-4 rounded-2xl border border-ink/10 bg-surface p-4 ">
         <div>
@@ -417,7 +417,7 @@ export default function AnimalPassport() {
       )}
 
       {/* ── LOG ACTION MODAL ── */}
-      <Modal isOpen={isEventOpen} onClose={() => { setIsEventOpen(false); setBreedingCertificateFile(null); }} title="Log Action">
+      <BaseModal closeOnBackdrop isOpen={isEventOpen} onClose={() => { setIsEventOpen(false); setBreedingCertificateFile(null); }} title="Log Action">
         <form
           className="space-y-5"
           onSubmit={handleAddTimelineEvent}
@@ -674,7 +674,7 @@ export default function AnimalPassport() {
             </button>
           </div>
         </form>
-      </Modal>
+      </BaseModal>
     </div>
   );
 }

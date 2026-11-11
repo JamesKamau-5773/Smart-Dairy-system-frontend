@@ -23,6 +23,10 @@ export const commonCopy = {
     denseHint: 'Maandishi yaliyobana (yanaonekana zaidi)', // REVIEW
   },
 
+  modal: {
+    close: 'Funga',
+  },
+
   draft: {
     restored: 'Tumerudisha ulichokuwa ukiandika kabla programu haijafungwa.',
     startOver: 'Anza upya',

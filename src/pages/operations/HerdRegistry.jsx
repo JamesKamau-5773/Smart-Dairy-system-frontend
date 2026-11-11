@@ -20,7 +20,7 @@ import {
   MoreVertical,
 } from 'lucide-react';
 import { Skeleton } from '../../components/ui';
-import Modal from '../../components/ui/Modal';
+import BaseModal from '../../components/ui/BaseModal';
 import AlertBanner from '../../components/ui/AlertBanner';
 import Confirmation, { useConfirmation } from '../../components/ui/Confirmation';
 import { Popover, PopoverContent, PopoverTrigger } from '../../components/ui/popover';
@@ -35,6 +35,7 @@ import CowPhoto from '../../components/ui/CowPhoto';
 import { ANIMAL_PHOTO_ACCEPT, compressAnimalPhoto, formatPhotoSize, getAnimalPhotoSourceError, getAnimalPhotoValidationError } from '../../lib/animalPhoto';
 import { formatCowIdentity } from '../../lib/cowIdentity';
 import { useTenant } from '../../hooks/useTenant';
+import { useUrlFilters } from '../../hooks/useUrlFilters';
 import {
   formatAge,
   formatDate,
@@ -48,6 +49,8 @@ import {
 } from '../../lib/herdUtils';
 
 const statusOptions = ['Calf', 'Heifer', 'Lactating', 'Dry'];
+const HERD_FILTERS = { q: '', status: 'All', sort: 'age' };
+const HERD_FILTER_VALUES = { status: ['All', 'Milking', 'Dry'], sort: ['age', 'breed', 'status', 'name'] };
 
 // ─────────────────────────────────────────────────────────────────────────
 // MAIN COMPONENT
@@ -57,10 +60,14 @@ export default function HerdRegistry() {
   const { tenantId, farmId } = useTenant();
   const queryClient = useQueryClient();
   // State
-  const [sortBy, setSortBy] = useState('age');
-  const [statusFilter, setStatusFilter] = useState('All'); // This filter is for the table, not the form dropdown
-  const [herdSearch, setHerdSearch] = useState('');
-  const [controlsOpen, setControlsOpen] = useState(false);
+  // Table filters live in the address (Back, reload and shared links keep them).
+  const { filters: herdFilters, setFilter: setHerdFilter, setFilters: setHerdFilters, hasActiveFilters: hasUrlFilters } = useUrlFilters(HERD_FILTERS, { allowed: HERD_FILTER_VALUES });
+  const { sort: sortBy, status: statusFilter, q: herdSearch } = herdFilters;
+  const setSortBy = (value) => setHerdFilter('sort', value);
+  const setStatusFilter = (value) => setHerdFilter('status', value);
+  const setHerdSearch = (value) => setHerdFilter('q', value);
+  // Opened when the page loads with filters, so the farmer sees why the list is short.
+  const [controlsOpen, setControlsOpen] = useState(hasUrlFilters);
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [successMessage, setSuccessMessage] = useState('');
@@ -492,8 +499,7 @@ export default function HerdRegistry() {
   };
 
   const handleClearFilters = () => {
-    setStatusFilter('All');
-    setHerdSearch('');
+    setHerdFilters({ status: 'All', q: '' });
   };
 
   // Typo-tolerant "Did you mean…" when a search finds nothing (e.g. "Nema" → Neema, "KE12" → KE-012).
@@ -908,7 +914,7 @@ export default function HerdRegistry() {
       </div>
 
       {/* ── ADD COW MODAL ── */}
-      <Modal
+      <BaseModal closeOnBackdrop
         isOpen={isAddOpen}
         onClose={handleCloseModal}
         title="Add New Animal"
@@ -1089,9 +1095,9 @@ export default function HerdRegistry() {
             </button>
           </div>
         </form>
-      </Modal>
+      </BaseModal>
 
-      <Modal
+      <BaseModal closeOnBackdrop
         isOpen={isEditOpen}
         onClose={handleCloseEditModal}
         title="Edit Animal"
@@ -1324,7 +1330,7 @@ export default function HerdRegistry() {
             </button>
           </div>
         </form>
-      </Modal>
+      </BaseModal>
 
       {/* ── CONFIRMATION DIALOG ── */}
       <Confirmation {...confirmation} />

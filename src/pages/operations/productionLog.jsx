@@ -36,6 +36,7 @@ import { formatCowIdentity } from "../../lib/cowIdentity";
 import { Link } from "react-router-dom";
 import { todayLocalIso, toLocalIsoDate } from '../../lib/localDate';
 import { reportError } from '../../lib/telemetry';
+import { ISO_DATE_FILTER, useUrlFilters } from '../../hooks/useUrlFilters';
 
 const AMOUNT_FIELD_CANDIDATES = [
   'amount',
@@ -113,7 +114,14 @@ const COLUMN_LAYOUT = [
   { id: 'actions', align: 'right' },
 ];
 const column = Object.fromEntries(COLUMN_LAYOUT.map((entry) => [entry.id, entry]));
+// Kept in the address (Back, reload and shared links keep them). The search is a cow's
+// name or tag, which is safe in a URL.
 const EMPTY_FILTERS = { date: "", cowId: "", status: "all", session: "all" };
+const FILTER_VALUES = {
+  date: ISO_DATE_FILTER,
+  status: ["all", "Verified", "Pending", "Flagged"],
+  session: ["all", "Morning", "Afternoon", "Evening"],
+};
 
 // Maps a yield record from the API to what the page shows. Display only: the amount
 // is formatted, never parsed into a total.
@@ -178,8 +186,8 @@ export default function YieldLog() {
   const [fastLogInitialDate, setFastLogInitialDate] = useState('');
   const [fastLogMode, setFastLogMode] = useState('create');
   const confirmation = useConfirmation();
-  const [filtersOpen, setFiltersOpen] = useState(false);
-  const [filters, setFilters] = useState(EMPTY_FILTERS);
+  const { filters, setFilter: updateFilter, resetFilters: clearFilters, hasActiveFilters: hasUrlFilters } = useUrlFilters(EMPTY_FILTERS, { allowed: FILTER_VALUES });
+  const [filtersOpen, setFiltersOpen] = useState(hasUrlFilters);
   const COLUMNS = COLUMN_LAYOUT.map((entry) => ({ ...entry, header: copy.columns[entry.id] }));
 
   // Every filter runs on the server so rows, group headers and period totals agree.
@@ -256,11 +264,6 @@ export default function YieldLog() {
     filters.session !== 'all' && { key: 'session', label: sessionLabel(filters.session), clear: 'all' },
   ].filter(Boolean).map((chip) => ({ ...chip, onRemove: () => updateFilter(chip.key, chip.clear) }));
 
-  const updateFilter = (name, value) => {
-    setFilters((prev) => ({ ...prev, [name]: value }));
-  };
-
-  const clearFilters = () => setFilters(EMPTY_FILTERS);
 
   // Integrated Safety Check: Fetching active medical withdrawals
   const {

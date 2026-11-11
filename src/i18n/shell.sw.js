@@ -31,6 +31,21 @@ export const shellCopy = {
     },
     signOutAnyway: 'Toka hata hivyo',
     staySignedIn: 'Baki ndani',
+    roles: {
+      SUPER_ADMIN: 'Msimamizi wa mfumo',
+      ADMIN: 'Msimamizi',
+      COOPERATIVE_ADMIN: 'Msimamizi wa chama',
+      COOP_ADMIN: 'Msimamizi wa chama',
+      FARM_ADMIN: 'Msimamizi wa shamba',
+      FARM_MANAGER: 'Meneja wa shamba',
+      FARM_SUPERVISOR: 'Msimamizi wa kazi shambani', // REVIEW
+      FARM_HAND: 'Mfanyakazi wa shamba',
+      FARMER: 'Mkulima',
+      CLERK: 'Karani',
+      HERDSMAN: 'Mchungaji', // REVIEW: herdsman
+      VETERINARY_DOCTOR: 'Daktari wa mifugo',
+      VET_ASSISTANT: 'Msaidizi wa daktari wa mifugo',
+    },
     titles: {
       dashboard: 'Dashibodi',
       production: 'Rekodi za Maziwa',

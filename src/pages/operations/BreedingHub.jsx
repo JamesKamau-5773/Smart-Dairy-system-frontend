@@ -6,7 +6,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import toast from 'react-hot-toast';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import AlertBanner from '../../components/ui/AlertBanner';
-import Modal from '../../components/ui/Modal';
+import BaseModal from '../../components/ui/BaseModal';
 import Confirmation, { useConfirmation } from '../../components/ui/Confirmation';
 import {
   LogAIServiceForm,
@@ -724,7 +724,7 @@ export default function BreedingHub() {
 
       </div>
 
-      <Modal
+      <BaseModal closeOnBackdrop
         isOpen={isLogServiceOpen}
         onClose={() => {
           setIsLogServiceOpen(false);
@@ -763,17 +763,17 @@ export default function BreedingHub() {
             Cancel
           </button>
         </div>
-      </Modal>
+      </BaseModal>
 
-      <Modal isOpen={isHeatObservationOpen} onClose={() => setIsHeatObservationOpen(false)} title="Record Heat Observation">
+      <BaseModal closeOnBackdrop isOpen={isHeatObservationOpen} onClose={() => setIsHeatObservationOpen(false)} title="Record Heat Observation">
         <LogHeatObservationForm
           herdOptions={herdOptions}
           onSuccess={handleHeatObservationSuccess}
           onError={(msg) => { setErrorMessage(msg); setShowError(true); }}
         />
-      </Modal>
+      </BaseModal>
 
-      <Modal isOpen={isHistoryOpen} onClose={() => setIsHistoryOpen(false)} title="Historical Checks">
+      <BaseModal closeOnBackdrop isOpen={isHistoryOpen} onClose={() => setIsHistoryOpen(false)} title="Historical Checks">
         <div className="space-y-4">
           <SimpleModalSection title="All Checks">
             <div className="flex flex-col gap-3 border-b border-ink/10 pb-4 md:flex-row md:items-center md:justify-between">
@@ -873,7 +873,36 @@ export default function BreedingHub() {
                     </span>
                   </div>
 
-                  <div className="overflow-hidden rounded-lg border border-ink/10 bg-surface-raised">
+                  {/* Phones: one card per AI record, like the other lists. */}
+                  <ul className="space-y-2 md:hidden">
+                    {entries.map((entry) => (
+                      <li key={entry.id} className="min-w-0 rounded-lg border border-ink/10 bg-surface-raised p-3">
+                        <div className="flex min-w-0 items-start justify-between gap-3">
+                          <div className="min-w-0">
+                            <p className="break-words font-bold text-ink-strong">{formatCowLabel(entry)}</p>
+                            {entry.notes && <p className="mt-1 break-words text-[11px] text-ink-muted">{entry.notes}</p>}
+                          </div>
+                          <HistoryStatusBadge status={entry.status} outcome={entry.outcome} />
+                        </div>
+                        <dl className="mt-3 grid grid-cols-2 gap-x-3 gap-y-2 border-t border-ink/10 pt-2 text-xs">
+                          <div className="min-w-0"><dt className="text-ink-muted">AI Date</dt><dd className="font-medium text-ink">{entry.aiDate || '—'}</dd></div>
+                          <div className="min-w-0"><dt className="text-ink-muted">Bull</dt><dd className="break-words font-medium text-ink">{entry.sireCode || '—'}</dd></div>
+                          <div className="min-w-0"><dt className="text-ink-muted">Expected Calving</dt><dd className="font-medium text-ink">{entry.expectedCalvingDate || '—'}</dd></div>
+                          <div className="min-w-0"><dt className="text-ink-muted">Updated</dt><dd className="font-medium text-ink">{entry.updatedAt || '—'}</dd></div>
+                          <div className="col-span-2 min-w-0">
+                            <dt className="sr-only">Source</dt>
+                            <dd>
+                              <span className={`inline-flex rounded-full border px-2 py-1 text-[10px] font-black uppercase tracking-wider ${getSemenSourceTone(entry.semenSource)}`}>
+                                {formatSemenSource(entry.semenSource)}
+                              </span>
+                            </dd>
+                          </div>
+                        </dl>
+                      </li>
+                    ))}
+                  </ul>
+
+                  <div className="hidden overflow-hidden rounded-lg border border-ink/10 bg-surface-raised md:block">
                     <table className="w-full border-collapse text-left">
                       <thead className="bg-surface/70">
                         <tr>
@@ -893,9 +922,9 @@ export default function BreedingHub() {
                               <div className="font-bold text-ink-strong">{formatCowLabel(entry)}</div>
                               {entry.notes && <div className="mt-1 text-[11px] text-ink-muted">{entry.notes}</div>}
                             </td>
-                            <td className="px-2 py-2 text-sm text-ink-muted">{entry.aiDate || '--'}</td>
-                            <td className="px-2 py-2 text-sm text-ink-muted">{entry.sireCode || '--'}</td>
-                            <td className="px-2 py-2 text-sm text-ink-muted">{entry.expectedCalvingDate || '--'}</td>
+                            <td className="px-2 py-2 text-sm text-ink-muted">{entry.aiDate || '—'}</td>
+                            <td className="px-2 py-2 text-sm text-ink-muted">{entry.sireCode || '—'}</td>
+                            <td className="px-2 py-2 text-sm text-ink-muted">{entry.expectedCalvingDate || '—'}</td>
                             <td className="px-2 py-2">
                               <span className={`inline-flex rounded-full border px-2 py-1 text-[10px] font-black uppercase tracking-wider ${getSemenSourceTone(entry.semenSource)}`}>
                                 {formatSemenSource(entry.semenSource)}
@@ -918,9 +947,9 @@ export default function BreedingHub() {
             <button type="button" onClick={() => setIsHistoryOpen(false)} className="btn-command px-4 py-2 text-sm">Close</button>
           </div>
         </div>
-      </Modal>
+      </BaseModal>
 
-      <Modal isOpen={isInventoryOpen} onClose={() => setIsInventoryOpen(false)} title="Add New Inventory">
+      <BaseModal closeOnBackdrop isOpen={isInventoryOpen} onClose={() => setIsInventoryOpen(false)} title="Add New Inventory">
         <ManageSemenInventoryForm
           onSuccess={handleAddInventorySuccess}
           onError={(msg) => { setErrorMessage(msg); setShowError(true); }}
@@ -937,9 +966,9 @@ export default function BreedingHub() {
             Cancel
           </button>
         </div>
-      </Modal>
+      </BaseModal>
 
-      <Modal
+      <BaseModal closeOnBackdrop
         isOpen={isRestockOpen}
         onClose={() => {
           setIsRestockOpen(false);
@@ -967,7 +996,7 @@ export default function BreedingHub() {
             Cancel
           </button>
         </div>
-      </Modal>
+      </BaseModal>
 
       <Confirmation {...confirmation} />
     </div>

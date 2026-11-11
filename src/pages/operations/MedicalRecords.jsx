@@ -21,7 +21,7 @@ import {
 } from 'lucide-react';
 import LABELS from '../../lib/labels';
 import AlertBanner from '../../components/ui/AlertBanner';
-import Modal from '../../components/ui/Modal';
+import BaseModal from '../../components/ui/BaseModal';
 import { getRelativeTime } from '../../lib/audit';
 import { getFirstErrorMessage, ValidationRules, validateForm } from '../../lib/validation';
 import { herdApi, medicalApi } from '../../lib/backendApi';
@@ -818,7 +818,7 @@ export default function VetRecords() {
         </div>
       </div>
 
-      <Modal isOpen={!!selectedRecord} onClose={() => setSelectedRecord(null)} title="Medical Record Details">
+      <BaseModal closeOnBackdrop isOpen={!!selectedRecord} onClose={() => setSelectedRecord(null)} title="Medical Record Details">
         {selectedRecord && (
           <div className="space-y-6">
             <div className="rounded-2xl border border-ink/10 bg-surface-warm/40 p-4 sm:p-5">
@@ -880,7 +880,7 @@ export default function VetRecords() {
             </div>
           </div>
         )}
-      </Modal>
+      </BaseModal>
     </div>
   );
 }

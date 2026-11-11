@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react';
-import { createPortal } from 'react-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { X, CheckCircle2, Loader, Package, Scale, Percent, AlertTriangle } from 'lucide-react';
+import { CheckCircle2, Loader, Package, Scale, Percent, AlertTriangle } from 'lucide-react';
+import BaseModal from '../ui/BaseModal';
 import { nutritionApi } from '../../lib/backendApi';
 import { getApiErrorMessage } from '../../lib/backendApi';
 import { buildBatchPayload, calculateBatchTotals, resolveMaxBatchKg, resolveSuggestedBatch } from '../../lib/feedBatch';
@@ -141,15 +141,28 @@ export default function CreateBatchModal({
 
   if (!isOpen) return null;
 
-  const modalContent = (
-    <div className="fixed inset-0 z-[100] flex items-start justify-center overflow-y-auto overscroll-contain bg-slate-900/50 p-3 backdrop-blur-sm touch-pan-y sm:items-center sm:p-4">
-      <section role="dialog" aria-modal="true" aria-label="Create new feed batch" className="my-auto flex max-h-[calc(100dvh-1.5rem)] min-h-0 w-full max-w-2xl flex-col overflow-hidden rounded-2xl bg-white shadow-2xl animate-reveal">
-        <div className="flex shrink-0 justify-between items-center p-4 border-b border-slate-100 sm:p-6">
-          <h3 className="font-black text-lg text-slate-800">Create New Feed Batch</h3>
-          <button type="button" onClick={onClose} aria-label="Close batch form" className="text-slate-400 hover:text-slate-600 transition-colors"><X size={20} /></button>
-        </div>
-
-        <div className="min-h-0 flex-1 space-y-6 overflow-y-auto overscroll-contain p-4 touch-pan-y sm:p-8">
+  return (
+    <BaseModal
+      isOpen
+      onClose={onClose}
+      title="Create new feed batch"
+      closeLabel="Close batch form"
+      footerActions={(
+        <>
+          <button type="button" onClick={onClose} className="text-sm font-bold text-slate-500 hover:text-slate-700">Cancel</button>
+          <button
+            type="button"
+            onClick={handleSaveBatch}
+            disabled={createBatchMutation.isPending || isLoadingRecipe || proteinSummaryQuery.isFetching || !proteinSummaryQuery.data || batchIngredients.length === 0 || !hasCompleteFormula || hasInsufficientStock}
+            className="flex items-center gap-2 px-6 py-3 rounded-xl font-black text-xs uppercase bg-brand text-white hover:bg-brand-dark disabled:bg-slate-300"
+          >
+            {createBatchMutation.isPending ? <Loader className="animate-spin" size={16} /> : <CheckCircle2 size={16} />}
+            {createBatchMutation.isPending ? 'Recording Batch...' : `Confirm ${Number(mixSize || 0).toFixed(2)} kg Batch`}
+          </button>
+        </>
+      )}
+    >
+      <div className="space-y-6">
           <div>
             <label htmlFor="batch-total-size" className="block text-sm font-bold text-slate-700 mb-2">Total Batch Size (KG)</label>
             <input
@@ -297,23 +310,7 @@ export default function CreateBatchModal({
               </div>
             </div>
           )}
-        </div>
-
-        <div className="flex shrink-0 items-center justify-between gap-3 p-4 bg-slate-50 border-t border-slate-200 sm:p-6">
-          <button type="button" onClick={onClose} className="text-sm font-bold text-slate-500 hover:text-slate-700">Cancel</button>
-          <button
-            type="button"
-            onClick={handleSaveBatch}
-            disabled={createBatchMutation.isPending || isLoadingRecipe || proteinSummaryQuery.isFetching || !proteinSummaryQuery.data || batchIngredients.length === 0 || !hasCompleteFormula || hasInsufficientStock}
-            className="flex items-center gap-2 px-6 py-3 rounded-xl font-black text-xs uppercase bg-brand text-white hover:bg-brand-dark disabled:bg-slate-300"
-          >
-            {createBatchMutation.isPending ? <Loader className="animate-spin" size={16} /> : <CheckCircle2 size={16} />}
-            {createBatchMutation.isPending ? 'Recording Batch...' : `Confirm ${Number(mixSize || 0).toFixed(2)} kg Batch`}
-          </button>
-        </div>
-      </section>
-    </div>
+      </div>
+    </BaseModal>
   );
-
-  return createPortal(modalContent, document.body);
 }

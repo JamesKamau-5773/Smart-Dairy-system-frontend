@@ -14,6 +14,7 @@ import Confirmation, { useConfirmation } from '../../components/ui/Confirmation'
 import { Popover, PopoverContent, PopoverTrigger } from '../../components/ui/popover';
 import { useStaff } from '../../providers/StaffProvider';
 import { useTenant } from '../../hooks/useTenant';
+import { useUrlFilters } from '../../hooks/useUrlFilters';
 import { getApiErrorMessage, hrApi } from '../../lib/backendApi';
 import { accountLabel, hasAppAccount, roleLabel, staffStatus } from '../../lib/staffLabels';
 import { tone } from '../../components/ui/tones';
@@ -25,6 +26,9 @@ function StatusChip({ status }) {
   return <span className={`inline-flex rounded-badge px-2 py-0.5 text-xs font-semibold ${tone(toneName).chip}`}>{label}</span>;
 }
 
+const STAFF_FILTERS = { former: 'no' };
+const STAFF_FILTER_VALUES = { former: ['no', 'yes'] };
+
 export default function StaffRegistry() {
   const { tenantId } = useTenant();
   const {
@@ -32,7 +36,10 @@ export default function StaffRegistry() {
     issueAdvance, recordRepayment, offboardEmployee, deleteEmployee, editEmployee, verifyReturn,
   } = useStaff();
   const [searchTerm, setSearchTerm] = useState('');
-  const [showFormer, setShowFormer] = useState(false);
+  // "Show former staff" lives in the address; the search stays here (it holds people's names).
+  const { filters: staffFilters, setFilter: setStaffFilter } = useUrlFilters(STAFF_FILTERS, { allowed: STAFF_FILTER_VALUES });
+  const showFormer = staffFilters.former === 'yes';
+  const setShowFormer = (value) => setStaffFilter('former', value ? 'yes' : 'no');
   const [isAddEmployeeModalOpen, setIsAddEmployeeModalOpen] = useState(false);
   // { kind: 'access' | 'edit' | 'verify' | 'offboard', id } for the open dialog.
   const [dialog, setDialog] = useState(null);

@@ -1,5 +1,6 @@
 import React from 'react';
 import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { MemoryRouter } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -40,9 +41,11 @@ const categories = {
 };
 
 const renderLedger = () => render(
-  <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
-    <FinancialLedger />
-  </QueryClientProvider>,
+  <MemoryRouter>
+    <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
+      <FinancialLedger />
+    </QueryClientProvider>
+  </MemoryRouter>,
 );
 // The phone card list repeats each action; the table is the first copy.
 const tableRow = async (text) => (await screen.findAllByText(text))[0].closest('tr');

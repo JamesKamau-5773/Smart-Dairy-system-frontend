@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { AlertTriangle, CheckCircle2, X } from 'lucide-react';
-import Modal from '../ui/Modal';
+import BaseModal from '../ui/BaseModal';
 
 export default function VerifyReturnModal({ isOpen, staff, onClose, onConfirm }) {
   const [returned, setReturned] = useState('YES');
@@ -22,7 +22,7 @@ export default function VerifyReturnModal({ isOpen, staff, onClose, onConfirm })
   };
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title={`Verify Return - ${staff.name}`}>
+    <BaseModal closeOnBackdrop isOpen={isOpen} onClose={onClose} title={`Verify Return - ${staff.name}`}>
       <div className="space-y-5">
         <div className="rounded-md border border-gray-200 bg-gray-50 p-4">
           <p className="text-sm font-semibold text-gray-900">Did {staff.name} return to work today?</p>
@@ -78,6 +78,6 @@ export default function VerifyReturnModal({ isOpen, staff, onClose, onConfirm })
           </button>
         </div>
       </div>
-    </Modal>
+    </BaseModal>
   );
 }

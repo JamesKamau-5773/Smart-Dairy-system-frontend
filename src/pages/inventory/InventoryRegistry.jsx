@@ -1,5 +1,4 @@
 import { useMemo, useState } from 'react';
-import { useSearchParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import toast from 'react-hot-toast';
 import { Search, Plus, Filter, Edit2, Package, Trash2, ChevronDown, MoreVertical, Archive, ArchiveRestore, MinusCircle, ClipboardCheck } from 'lucide-react';
@@ -22,6 +21,7 @@ import { isQueuedOffline, offlineFailureMessage, queuedOfflineMessage } from '..
 import { reportError } from '../../lib/telemetry';
 import { canManageInventoryItems } from '../../lib/permissions';
 import { useAuth } from '../../contexts/AuthContext';
+import { useUrlFilters } from '../../hooks/useUrlFilters';
 import { useTenant } from '../../hooks/useTenant';
 import { useInventoryItemActions } from '../../hooks/useInventoryItemActions';
 import { feedCopy } from '../../i18n/feed.en';
@@ -59,6 +59,8 @@ function StockStatusChip({ status }) {
   return <span className={`inline-flex shrink-0 rounded-badge px-2 py-0.5 text-xs font-semibold ${tone(toneName).chip}`}>{label}</span>;
 }
 
+const STOCK_FILTERS = { q: '', category: 'All' };
+
 export default function InventoryRegistry() {
   const queryClient = useQueryClient();
   const { tenantId, farmId } = useTenant();
@@ -66,17 +68,12 @@ export default function InventoryRegistry() {
   const [isRestockModalOpen, setIsRestockModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [selectedItem, setSelectedItem] = useState(null);
-  const [searchTerm, setSearchTerm] = useState('');
-  // The category filter lives in the address, so Feeding → Ingredients can open it
-  // pre-filtered and the back button, reloads and shared links keep it.
-  const [searchParams, setSearchParams] = useSearchParams();
-  const categoryFilter = searchParams.get('category') || 'All';
-  const setCategoryFilter = (category) => setSearchParams((current) => {
-    const next = new URLSearchParams(current);
-    if (category === 'All') next.delete('category');
-    else next.set('category', category);
-    return next;
-  }, { replace: true });
+  // Search and category live in the address, so Feeding → Ingredients can open the list
+  // pre-filtered and the back button, reloads and shared links keep them.
+  const { filters: stockFilters, setFilter: setStockFilter } = useUrlFilters(STOCK_FILTERS);
+  const { q: searchTerm, category: categoryFilter } = stockFilters;
+  const setSearchTerm = (value) => setStockFilter('q', value);
+  const setCategoryFilter = (category) => setStockFilter('category', category);
   const [showError, setShowError] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
   const [showArchived, setShowArchived] = useState(false);

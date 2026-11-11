@@ -4,6 +4,25 @@ What changed for farmers and staff using Maziwa Smart. Newest first.
 
 ## Unreleased
 
+### Phase 7 — quick wins (UX audit)
+
+- **Filters stay put.** The Production Log, cow register, ledger, staff, buyers, a cow's milk
+  history and stock lists keep their filters in the page address, so Back, a reload or a shared
+  link keeps them. Searches that can hold a person's name or phone number (buyers, staff, ledger,
+  milk history) stay off the address on purpose.
+- **AI history on phones** shows one card per record instead of a squeezed table.
+- **The bottom bar follows the same access rules as the menu**, so Production Log, Buyers and
+  Ledger only appear when you can open them.
+- The menu says **Maziwa Smart**, and the header shows your role in words ("Farm administrator",
+  or in Kiswahili) instead of codes like FARM_ADMIN. The Unit Helpers link now opens the page
+  directly and only for the roles that page allows.
+- **The phone menu** closes with Escape, keeps the keyboard inside while open, and is hidden from
+  keyboards and screen readers while closed.
+- **One kind of dialog everywhere.** Forms for employees, ledger entries, stock, deliveries, feed
+  batches, milk-drop investigations and receipts now share one frame: Escape closes it, the
+  keyboard stays inside, focus returns to where you were, and closing is blocked while saving
+  where it was before. A confirmation opened over a form handles its own keys.
+
 ### Phase 6 follow-up — more Kiswahili
 
 - **The Production Log is in Kiswahili**, including its totals, filters, the "not sent yet" list

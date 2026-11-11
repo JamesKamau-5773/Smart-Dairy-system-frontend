@@ -3,6 +3,7 @@ import React from 'react';
 import { createPortal } from 'react-dom';
 import { AlertTriangle, CheckCircle2, Info, XCircle } from 'lucide-react';
 import { commonCopy } from '../../i18n/common';
+import { useFocusTrap } from '../../hooks/useFocusTrap';
 
 const TYPE_STYLES = {
   warning: {
@@ -64,13 +65,9 @@ function ConfirmationDialog({
   const needsTyping = Boolean(requireText);
   const canConfirm = !isLoading && (!needsTyping || matchesConfirmText(typed, requireText));
 
-  React.useEffect(() => {
-    const onKeyDown = (event) => {
-      if (event.key === 'Escape' && !isLoading) onCancel();
-    };
-    document.addEventListener('keydown', onKeyDown);
-    return () => document.removeEventListener('keydown', onKeyDown);
-  }, [isLoading, onCancel]);
+  // Escape cancels, and Tab stays in the dialog (even when it opens over another one).
+  const formRef = React.useRef(null);
+  useFocusTrap(formRef, true, { onEscape: () => { if (!isLoading) onCancel(); } });
 
   const submit = (event) => {
     event.preventDefault();
@@ -79,7 +76,7 @@ function ConfirmationDialog({
 
   return createPortal(
     <div className="fixed inset-0 z-[100] flex items-start justify-center overflow-y-auto overscroll-contain bg-ink/50 p-3 backdrop-blur-sm touch-pan-y sm:items-center sm:p-6">
-      <form onSubmit={submit} role="dialog" aria-modal="true" aria-label={title} className="my-auto max-h-[calc(100dvh-1.5rem)] w-full max-w-sm overflow-y-auto overscroll-contain rounded-2xl bg-surface p-5 touch-pan-y sm:p-6">
+      <form ref={formRef} tabIndex={-1} onSubmit={submit} role="dialog" aria-modal="true" aria-label={title} className="my-auto max-h-[calc(100dvh-1.5rem)] w-full max-w-sm overflow-y-auto overscroll-contain rounded-2xl bg-surface p-5 outline-none touch-pan-y sm:p-6">
         <div className="mb-4 flex items-start gap-3">
           <div className={`flex-shrink-0 ${config.iconColor}`}>
             <Icon size={24} aria-hidden="true" />

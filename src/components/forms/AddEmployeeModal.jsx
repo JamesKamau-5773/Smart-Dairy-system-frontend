@@ -1,7 +1,7 @@
 import { useState } from 'react';
-import { createPortal } from 'react-dom';
-import { X, UserPlus, Save, BriefcaseBusiness, WalletCards, Phone, CalendarDays, KeyRound, AlertTriangle } from 'lucide-react';
+import { UserPlus, Save, BriefcaseBusiness, WalletCards, Phone, CalendarDays, KeyRound, AlertTriangle } from 'lucide-react';
 import AccessProvisioningFields from './AccessProvisioningFields';
+import BaseModal from '../ui/BaseModal';
 import { FARM_STAFF_ROLE_OPTIONS, getDefaultStaffPageAccess, STAFF_PAGE_ACCESS_OPTIONS } from '../../lib/staffOnboarding';
 import {
   ACCESS_MODES,
@@ -108,124 +108,110 @@ export default function AddEmployeeModal({ isOpen, onClose, onSave }) {
 
   if (!isOpen) return null;
 
-  return createPortal(
-    <div
-      className="fixed inset-0 z-[100] flex items-start justify-center overflow-y-auto bg-slate-950/50 px-3 py-4 backdrop-blur-sm sm:items-center sm:px-6 sm:py-8"
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="add-employee-title"
-      onMouseDown={(event) => {
-        if (event.target === event.currentTarget && !isSaving) onClose();
-      }}
+  return (
+    <BaseModal
+      isOpen
+      onClose={onClose}
+      title="Add employee"
+      subtitle="Create the employee's HR and payroll profile."
+      icon={<UserPlus size={18} />}
+      closeOnBackdrop
+      dismissible={!isSaving}
+      closeLabel="Close add employee dialog"
+      onSubmit={handleSubmit}
+      footerActions={(
+        <>
+          <button type="button" onClick={onClose} disabled={isSaving} className="btn-secondary min-w-28">{employeeCreated ? 'Close' : 'Cancel'}</button>
+          {!employeeCreated && <button type="submit" disabled={isSaving} className="btn-command inline-flex min-w-40 items-center justify-center gap-2 disabled:cursor-not-allowed disabled:opacity-50">
+            <Save size={14} /> {isSaving ? 'Saving employee...' : accessMode === ACCESS_MODES.NONE ? 'Save employee' : 'Save and grant access'}
+          </button>}
+        </>
+      )}
     >
-        <div className="my-auto flex max-h-[calc(100dvh-2rem)] w-full max-w-2xl flex-col overflow-hidden rounded-xl border border-slate-200 bg-white shadow-2xl shadow-slate-950/20 sm:max-h-[calc(100dvh-4rem)]">
-        <div className="flex shrink-0 items-start justify-between border-b border-slate-200 bg-slate-50 px-6 py-5 sm:px-7">
-          <div className="flex items-start gap-3">
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-brand text-white"><UserPlus size={18} /></div>
+      <div className="space-y-6">
+        <section>
+          <div className="mb-4 border-b border-slate-100 pb-3">
+            <h3 className="text-xs font-black uppercase tracking-widest text-slate-700">Employment details</h3>
+            <p className="mt-1 text-xs text-slate-500">Basic information used in the staff register and payroll.</p>
+          </div>
+
+          <div className="grid gap-x-5 gap-y-4 sm:grid-cols-2">
+            <label className="block">
+              <span className="mb-2 flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-slate-500"><UserPlus size={13} /> Full name <span className="text-danger">*</span></span>
+              <input required autoFocus autoComplete="name" id="employee-name" name="name" value={formData.name} onChange={handleChange} placeholder="e.g. Mary Wanjiku" className="input-machined w-full" {...fieldErrorProps('employee-name', errorFor('name'))} />
+              <FieldError id="employee-name" message={errorFor('name')} />
+            </label>
+            <label className="block">
+              <span className="mb-2 flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-slate-500"><BriefcaseBusiness size={13} /> Job role <span className="text-danger">*</span></span>
+              <select required id="employee-role" name="role" value={formData.role} onChange={handleChange} className="input-machined w-full" {...fieldErrorProps('employee-role', errorFor('role'))}>
+                {FARM_STAFF_ROLE_OPTIONS.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
+              </select>
+              <FieldError id="employee-role" message={errorFor('role')} />
+            </label>
+            <label className="block">
+              <span className="mb-2 flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-slate-500"><Phone size={13} /> Phone number <span className="text-danger">*</span></span>
+              <input required id="employee-phone" name="phoneNumber" type="tel" inputMode="tel" autoComplete="tel" value={formData.phoneNumber} onChange={handleChange} placeholder="e.g. 0712 345 678" className="input-machined w-full tabular-nums" {...fieldErrorProps('employee-phone', errorFor('phoneNumber'))} />
+              <FieldError id="employee-phone" message={errorFor('phoneNumber')} />
+            </label>
+            <label className="block">
+              <span className="mb-2 flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-slate-500"><WalletCards size={13} /> Base salary (KES) <span className="text-danger">*</span></span>
+              <input required id="employee-salary" name="baseSalary" type="text" inputMode="numeric" value={formData.baseSalary} onChange={handleChange} placeholder="e.g. 35,000" className="input-machined w-full tabular-nums" {...fieldErrorProps('employee-salary', errorFor('baseSalary'))} />
+              <FieldError id="employee-salary" message={errorFor('baseSalary')} />
+            </label>
+            <label className="block sm:col-span-2 sm:max-w-[calc(50%-0.625rem)]">
+              <span className="mb-2 flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-slate-500"><CalendarDays size={13} /> Hire date <span className="text-danger">*</span></span>
+              <input required id="employee-hire-date" name="hireDate" type="date" value={formData.hireDate} onChange={handleChange} className="input-machined w-full" {...fieldErrorProps('employee-hire-date', errorFor('hireDate'))} />
+              <FieldError id="employee-hire-date" message={errorFor('hireDate')} />
+            </label>
+            <StatutoryDeductionsToggle
+              className="sm:col-span-2"
+              checked={formData.statutoryDeductionsEnabled}
+              onChange={(statutoryDeductionsEnabled) => setFormData((prev) => ({ ...prev, statutoryDeductionsEnabled }))}
+            />
+          </div>
+        </section>
+
+        <section>
+          <div className="mb-4 flex items-start gap-3 border-b border-slate-100 pb-3">
+            <KeyRound size={17} className="mt-0.5 shrink-0 text-brand" />
             <div>
-              <p className="text-[10px] font-black uppercase tracking-widest text-brand">People & payroll</p>
-              <h2 id="add-employee-title" className="mt-1 text-xl font-black tracking-tight text-slate-900">Add employee</h2>
-              <p className="mt-1 text-sm text-slate-500">Create the employee's HR and payroll profile.</p>
+              <h3 className="text-xs font-black uppercase tracking-widest text-slate-700">App access</h3>
+              <p className="mt-1 text-xs text-slate-500">Choose whether this employee needs a linked account now.</p>
             </div>
           </div>
-          <button type="button" onClick={onClose} disabled={isSaving} aria-label="Close add employee dialog" className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-slate-400 transition-colors hover:bg-slate-200 hover:text-slate-700 disabled:opacity-50"><X size={19} /></button>
-        </div>
-        
-        <form onSubmit={handleSubmit} className="flex min-h-0 flex-1 flex-col overflow-hidden">
-          <div className="min-h-0 max-h-[calc(100dvh-16rem)] flex-1 space-y-6 overflow-y-auto overscroll-contain px-4 py-5 touch-pan-y sm:max-h-none sm:px-7 sm:py-6">
-            <section>
-              <div className="mb-4 border-b border-slate-100 pb-3">
-                <h3 className="text-xs font-black uppercase tracking-widest text-slate-700">Employment details</h3>
-                <p className="mt-1 text-xs text-slate-500">Basic information used in the staff register and payroll.</p>
+          <AccessProvisioningFields
+            mode={accessMode}
+            onModeChange={(mode) => { setAccessMode(mode); setErrors({}); }}
+            role={accessRole}
+            onRoleChange={(nextRole) => { setAccessRole(nextRole); setPageAccess(getDefaultStaffPageAccess(nextRole)); }}
+            phoneNumber={formData.phoneNumber}
+            password={temporaryPassword}
+            onPasswordChange={setTemporaryPassword}
+            errors={errors}
+            allowNoAccess
+          />
+          {accessMode !== ACCESS_MODES.NONE && (
+            <div className="mt-4 space-y-2 rounded-lg border border-slate-200 p-4">
+              <p className="text-sm font-bold text-slate-800">Pages this employee can access</p>
+              <div className="grid gap-2 sm:grid-cols-2">
+                {STAFF_PAGE_ACCESS_OPTIONS.map(({ key, label }) => (
+                  <label key={key} className="flex items-center gap-2 text-sm text-slate-700">
+                    <input type="checkbox" checked={pageAccess.includes(key)} onChange={(event) => setPageAccess((current) => event.target.checked ? [...current, key] : current.filter((entry) => entry !== key))} />
+                    {label}
+                  </label>
+                ))}
               </div>
+            </div>
+          )}
+        </section>
 
-              <div className="grid gap-x-5 gap-y-4 sm:grid-cols-2">
-                <label className="block">
-                  <span className="mb-2 flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-slate-500"><UserPlus size={13} /> Full name <span className="text-danger">*</span></span>
-                  <input required autoFocus autoComplete="name" id="employee-name" name="name" value={formData.name} onChange={handleChange} placeholder="e.g. Mary Wanjiku" className="input-machined w-full" {...fieldErrorProps('employee-name', errorFor('name'))} />
-                  <FieldError id="employee-name" message={errorFor('name')} />
-                </label>
-                <label className="block">
-                  <span className="mb-2 flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-slate-500"><BriefcaseBusiness size={13} /> Job role <span className="text-danger">*</span></span>
-                  <select required id="employee-role" name="role" value={formData.role} onChange={handleChange} className="input-machined w-full" {...fieldErrorProps('employee-role', errorFor('role'))}>
-                    {FARM_STAFF_ROLE_OPTIONS.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
-                  </select>
-                  <FieldError id="employee-role" message={errorFor('role')} />
-                </label>
-                <label className="block">
-                  <span className="mb-2 flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-slate-500"><Phone size={13} /> Phone number <span className="text-danger">*</span></span>
-                  <input required id="employee-phone" name="phoneNumber" type="tel" inputMode="tel" autoComplete="tel" value={formData.phoneNumber} onChange={handleChange} placeholder="e.g. 0712 345 678" className="input-machined w-full tabular-nums" {...fieldErrorProps('employee-phone', errorFor('phoneNumber'))} />
-                  <FieldError id="employee-phone" message={errorFor('phoneNumber')} />
-                </label>
-                <label className="block">
-                  <span className="mb-2 flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-slate-500"><WalletCards size={13} /> Base salary (KES) <span className="text-danger">*</span></span>
-                  <input required id="employee-salary" name="baseSalary" type="text" inputMode="numeric" value={formData.baseSalary} onChange={handleChange} placeholder="e.g. 35,000" className="input-machined w-full tabular-nums" {...fieldErrorProps('employee-salary', errorFor('baseSalary'))} />
-                  <FieldError id="employee-salary" message={errorFor('baseSalary')} />
-                </label>
-                <label className="block sm:col-span-2 sm:max-w-[calc(50%-0.625rem)]">
-                  <span className="mb-2 flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-slate-500"><CalendarDays size={13} /> Hire date <span className="text-danger">*</span></span>
-                  <input required id="employee-hire-date" name="hireDate" type="date" value={formData.hireDate} onChange={handleChange} className="input-machined w-full" {...fieldErrorProps('employee-hire-date', errorFor('hireDate'))} />
-                  <FieldError id="employee-hire-date" message={errorFor('hireDate')} />
-                </label>
-                <StatutoryDeductionsToggle
-                  className="sm:col-span-2"
-                  checked={formData.statutoryDeductionsEnabled}
-                  onChange={(statutoryDeductionsEnabled) => setFormData((prev) => ({ ...prev, statutoryDeductionsEnabled }))}
-                />
-              </div>
-            </section>
-
-            <section>
-              <div className="mb-4 flex items-start gap-3 border-b border-slate-100 pb-3">
-                <KeyRound size={17} className="mt-0.5 shrink-0 text-brand" />
-                <div>
-                  <h3 className="text-xs font-black uppercase tracking-widest text-slate-700">App access</h3>
-                  <p className="mt-1 text-xs text-slate-500">Choose whether this employee needs a linked account now.</p>
-                </div>
-              </div>
-              <AccessProvisioningFields
-                mode={accessMode}
-                onModeChange={(mode) => { setAccessMode(mode); setErrors({}); }}
-                role={accessRole}
-                onRoleChange={(nextRole) => { setAccessRole(nextRole); setPageAccess(getDefaultStaffPageAccess(nextRole)); }}
-                phoneNumber={formData.phoneNumber}
-                password={temporaryPassword}
-                onPasswordChange={setTemporaryPassword}
-                errors={errors}
-                allowNoAccess
-              />
-              {accessMode !== ACCESS_MODES.NONE && (
-                <div className="mt-4 space-y-2 rounded-lg border border-slate-200 p-4">
-                  <p className="text-sm font-bold text-slate-800">Pages this employee can access</p>
-                  <div className="grid gap-2 sm:grid-cols-2">
-                    {STAFF_PAGE_ACCESS_OPTIONS.map(({ key, label }) => (
-                      <label key={key} className="flex items-center gap-2 text-sm text-slate-700">
-                        <input type="checkbox" checked={pageAccess.includes(key)} onChange={(event) => setPageAccess((current) => event.target.checked ? [...current, key] : current.filter((entry) => entry !== key))} />
-                        {label}
-                      </label>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </section>
-
-            {partialFailureMessage && (
-              <div className="flex items-start gap-3 rounded-md border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-900" role="alert">
-                <AlertTriangle size={17} className="mt-0.5 shrink-0" />
-                <span>{partialFailureMessage}</span>
-              </div>
-            )}
+        {partialFailureMessage && (
+          <div className="flex items-start gap-3 rounded-md border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-900" role="alert">
+            <AlertTriangle size={17} className="mt-0.5 shrink-0" />
+            <span>{partialFailureMessage}</span>
           </div>
-
-          <div className="flex shrink-0 flex-col-reverse gap-3 border-t border-slate-200 bg-slate-50 px-6 py-4 sm:flex-row sm:justify-end sm:px-7">
-            <button type="button" onClick={onClose} disabled={isSaving} className="btn-secondary min-w-28">{employeeCreated ? 'Close' : 'Cancel'}</button>
-            {!employeeCreated && <button type="submit" disabled={isSaving} className="btn-command inline-flex min-w-40 items-center justify-center gap-2 disabled:cursor-not-allowed disabled:opacity-50">
-              <Save size={14} /> {isSaving ? 'Saving employee...' : accessMode === ACCESS_MODES.NONE ? 'Save employee' : 'Save and grant access'}
-            </button>}
-          </div>
-        </form>
-        </div>
-    </div>,
-    document.body
+        )}
+      </div>
+    </BaseModal>
   );
 }

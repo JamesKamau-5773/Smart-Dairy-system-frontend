@@ -7,6 +7,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { useTenant } from '../../hooks/useTenant';
+import { useUrlFilters } from '../../hooks/useUrlFilters';
 import { financeApi, getApiErrorMessage } from '../../lib/backendApi';
 import { queuedOfflineMessage, isQueuedOffline } from '../../lib/offlinePolicy';
 import { getSearchSuggestions, matchesSearch } from '../../lib/fuzzySearch';
@@ -57,11 +58,18 @@ const KPIWidget = ({ title, value, subtitle, icon: Icon, valueColor = "text-bran
 /**
  * Main Page Component
  */
+const BUYER_FILTERS = { status: 'all' };
+const BUYER_FILTER_VALUES = { status: ['all', 'outstanding', 'settled'] };
+
 export default function BuyersList() {
   const queryClient = useQueryClient();
   const { tenantId, farmId } = useTenant();
   const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState('all');
+  // The status filter lives in the address; the search stays here (names and phone numbers
+  // never go in a URL).
+  const { filters: buyerFilters, setFilter: setBuyerFilter } = useUrlFilters(BUYER_FILTERS, { allowed: BUYER_FILTER_VALUES });
+  const statusFilter = buyerFilters.status;
+  const setStatusFilter = (value) => setBuyerFilter('status', value);
   const [selectedCustomerIds, setSelectedCustomerIds] = useState([]);
   const [isAddPanelOpen, setIsAddPanelOpen] = useState(false);
 

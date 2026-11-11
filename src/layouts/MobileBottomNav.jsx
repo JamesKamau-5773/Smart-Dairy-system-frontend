@@ -1,16 +1,18 @@
 import { NavLink } from 'react-router-dom';
 import { BookOpen, LayoutDashboard, Users, Wallet } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
-import { canViewAdminControls, getDefaultLandingPath } from '../lib/roles';
+import { getDefaultLandingPath } from '../lib/roles';
+import { canSeeBuyers, canSeeLedger, canSeeProductionLog } from '../lib/navAccess';
 import { shellCopy } from '../i18n/shell';
 
 const { bottomNav: copy } = shellCopy;
 
 const tabs = [
   { id: 'dashboard', to: null, icon: LayoutDashboard, visible: () => true },
-  { id: 'production', to: '/operations/yield', icon: BookOpen, visible: () => true },
-  { id: 'buyers', to: '/finance/buyers', icon: Users, visible: canViewAdminControls },
-  { id: 'ledger', to: '/finance/ledger', icon: Wallet, visible: canViewAdminControls },
+  // Same checks as the sidebar (lib/navAccess), so a tab never leads to a locked page.
+  { id: 'production', to: '/operations/yield', icon: BookOpen, visible: canSeeProductionLog },
+  { id: 'buyers', to: '/finance/buyers', icon: Users, visible: canSeeBuyers },
+  { id: 'ledger', to: '/finance/ledger', icon: Wallet, visible: canSeeLedger },
 ];
 
 export default function MobileBottomNav() {

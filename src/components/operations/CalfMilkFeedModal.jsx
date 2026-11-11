@@ -7,7 +7,7 @@ import { formatCowIdentity } from '../../lib/cowIdentity';
 import { isActiveCalf, todayLocalIso, validateCalfMilkFeed } from '../../lib/milkDisposition';
 import { useTenant } from '../../hooks/useTenant';
 import { QUERY_KEYS } from '../../providers/QueryProvider';
-import Modal from '../ui/Modal';
+import BaseModal from '../ui/BaseModal';
 
 const createInitialValues = (date) => ({
   calfId: '',
@@ -67,7 +67,7 @@ function CalfMilkFeedForm({ onClose, initialDate }) {
   };
 
   return (
-    <Modal isOpen onClose={mutation.isPending ? undefined : onClose} title="Record calf milk feeding">
+    <BaseModal closeOnBackdrop isOpen onClose={mutation.isPending ? undefined : onClose} title="Record calf milk feeding">
       <form onSubmit={handleSubmit} className="space-y-5">
         <div className="flex items-center gap-3 border-b border-ink/10 pb-4">
           <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-brand/10 text-brand">
@@ -168,7 +168,7 @@ function CalfMilkFeedForm({ onClose, initialDate }) {
           </button>
         </div>
       </form>
-    </Modal>
+    </BaseModal>
   );
 }
 
