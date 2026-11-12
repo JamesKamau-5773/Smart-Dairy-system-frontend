@@ -36,10 +36,12 @@ import AnimalNutritionPlanner from '../../components/operations/animalRecord/Ani
 import { reportError } from '../../lib/telemetry';
 import { herdCopy } from '../../i18n/herd';
 import { healthCopy } from '../../i18n/health';
+import { breedingCopy } from '../../i18n/breeding';
 
 export default function AnimalPassport() {
   const copy = herdCopy.record;
   const form = copy.form;
+  const service = breedingCopy.service;
   const queryClient = useQueryClient();
   const { tenantId, farmId } = useTenant();
   const [activeFilter, setActiveFilter] = useState('All');
@@ -427,7 +429,7 @@ export default function AnimalPassport() {
           onSubmit={handleAddTimelineEvent}
         >
           <div className="border-b border-ink/10 pb-3">
-            <h4 className="text-sm font-bold uppercase tracking-widest text-brand">{newEvent.type === 'Breeding' ? form.serviceDetails : form.actionDetails}</h4>
+            <h4 className="text-sm font-bold uppercase tracking-widest text-brand">{newEvent.type === 'Breeding' ? service.details : form.actionDetails}</h4>
           </div>
           <div>
             <label className="mb-1 block text-xs font-bold uppercase tracking-wider text-ink-muted">{form.eventType}</label>
@@ -466,7 +468,7 @@ export default function AnimalPassport() {
           <div className={newEvent.type === 'Breeding' ? 'grid gap-4 md:grid-cols-2' : ''}>
             <div>
               <label className="mb-1 block text-xs font-bold uppercase tracking-wider text-ink-muted">
-                {newEvent.type === 'Health' ? form.visitDate : newEvent.type === 'Breeding' ? form.aiDate : newEvent.type === 'Calving' ? form.calvingDate : form.date}
+                {newEvent.type === 'Health' ? form.visitDate : newEvent.type === 'Breeding' ? service.aiDate : newEvent.type === 'Calving' ? form.calvingDate : form.date}
               </label>
               <input
                 type="date"
@@ -477,7 +479,7 @@ export default function AnimalPassport() {
             </div>
             {newEvent.type === 'Breeding' && (
               <div>
-                <label className="mb-1 block text-xs font-bold uppercase tracking-wider text-ink-muted">{form.aiTime}</label>
+                <label className="mb-1 block text-xs font-bold uppercase tracking-wider text-ink-muted">{service.aiTime}</label>
                 <input type="time" className="input-machined w-full" value={newEvent.aiTime} onChange={(event) => setNewEvent((current) => ({ ...current, aiTime: event.target.value }))} />
               </div>
             )}
@@ -566,65 +568,65 @@ export default function AnimalPassport() {
           {newEvent.type === 'Breeding' && (
             <>
               <div>
-                <label className="mb-1 block text-xs font-bold uppercase tracking-wider text-ink-muted">{form.certificateImage}</label>
+                <label className="mb-1 block text-xs font-bold uppercase tracking-wider text-ink-muted">{service.certificateImage}</label>
                 <input type="file" accept="image/*" className="input-machined w-full text-sm" onChange={(event) => setBreedingCertificateFile(event.target.files?.[0] ?? null)} />
-                <p className="mt-1 text-[11px] text-ink-muted">{form.certificateHint}</p>
+                <p className="mt-1 text-[11px] text-ink-muted">{service.certificateHint}</p>
               </div>
               <div className="grid gap-4 md:grid-cols-2">
                 <div>
-                  <label className="mb-1 block text-xs font-bold uppercase tracking-wider text-ink-muted">{form.technician}</label>
-                  <input className="input-machined w-full" value={newEvent.technician} onChange={(event) => setNewEvent((current) => ({ ...current, technician: event.target.value }))} placeholder={form.technicianPlaceholder} />
+                  <label className="mb-1 block text-xs font-bold uppercase tracking-wider text-ink-muted">{service.technician}</label>
+                  <input className="input-machined w-full" value={newEvent.technician} onChange={(event) => setNewEvent((current) => ({ ...current, technician: event.target.value }))} placeholder={service.technicianPlaceholder} />
                 </div>
                 <div>
-                  <label className="mb-1 block text-xs font-bold uppercase tracking-wider text-ink-muted">{form.sireCode}</label>
-                  <input className="input-machined w-full" value={newEvent.sireCode} onChange={(event) => setNewEvent((current) => ({ ...current, sireCode: event.target.value }))} placeholder={form.sireCodePlaceholder} />
-                </div>
-              </div>
-              <div className="grid gap-4 md:grid-cols-2">
-                <div>
-                  <label className="mb-1 block text-xs font-bold uppercase tracking-wider text-ink-muted">{form.ownerName}</label>
-                  <input className="input-machined w-full" value={newEvent.ownerName} onChange={(event) => setNewEvent((current) => ({ ...current, ownerName: event.target.value }))} placeholder={form.ownerNamePlaceholder} />
-                </div>
-                <div>
-                  <label className="mb-1 block text-xs font-bold uppercase tracking-wider text-ink-muted">{form.farmLocation}</label>
-                  <input className="input-machined w-full" value={newEvent.farmLocation} onChange={(event) => setNewEvent((current) => ({ ...current, farmLocation: event.target.value }))} placeholder={form.farmLocationPlaceholder} />
+                  <label className="mb-1 block text-xs font-bold uppercase tracking-wider text-ink-muted">{service.sireCode}</label>
+                  <input className="input-machined w-full" value={newEvent.sireCode} onChange={(event) => setNewEvent((current) => ({ ...current, sireCode: event.target.value }))} placeholder={service.sireCodePlaceholder} />
                 </div>
               </div>
               <div className="grid gap-4 md:grid-cols-2">
                 <div>
-                  <label className="mb-1 block text-xs font-bold uppercase tracking-wider text-ink-muted">{form.certificateNumber}</label>
-                  <input className="input-machined w-full" value={newEvent.certificateNumber} onChange={(event) => setNewEvent((current) => ({ ...current, certificateNumber: event.target.value }))} placeholder={form.certificateNumberPlaceholder} />
+                  <label className="mb-1 block text-xs font-bold uppercase tracking-wider text-ink-muted">{service.ownerName}</label>
+                  <input className="input-machined w-full" value={newEvent.ownerName} onChange={(event) => setNewEvent((current) => ({ ...current, ownerName: event.target.value }))} placeholder={service.ownerNamePlaceholder} />
                 </div>
                 <div>
-                  <label className="mb-1 block text-xs font-bold uppercase tracking-wider text-ink-muted">{form.serviceFee}</label>
+                  <label className="mb-1 block text-xs font-bold uppercase tracking-wider text-ink-muted">{service.farmLocation}</label>
+                  <input className="input-machined w-full" value={newEvent.farmLocation} onChange={(event) => setNewEvent((current) => ({ ...current, farmLocation: event.target.value }))} placeholder={service.farmLocationPlaceholder} />
+                </div>
+              </div>
+              <div className="grid gap-4 md:grid-cols-2">
+                <div>
+                  <label className="mb-1 block text-xs font-bold uppercase tracking-wider text-ink-muted">{service.certificateNumber}</label>
+                  <input className="input-machined w-full" value={newEvent.certificateNumber} onChange={(event) => setNewEvent((current) => ({ ...current, certificateNumber: event.target.value }))} placeholder={service.certificateNumberPlaceholder} />
+                </div>
+                <div>
+                  <label className="mb-1 block text-xs font-bold uppercase tracking-wider text-ink-muted">{service.serviceFee}</label>
                   <input type="number" min="0" step="0.01" className="input-machined w-full" value={newEvent.serviceFee} onChange={(event) => setNewEvent((current) => ({ ...current, serviceFee: event.target.value }))} placeholder="2500" />
                 </div>
               </div>
               <label className="flex cursor-pointer items-center gap-2 rounded-lg border border-ink/10 bg-surface-raised p-3 text-sm font-semibold text-ink-strong">
                 <input type="checkbox" checked={newEvent.isRepeatService} onChange={(event) => setNewEvent((current) => ({ ...current, isRepeatService: event.target.checked }))} />
-                {form.repeatService}
+                {service.repeatService}
               </label>
               <div>
-                <label className="mb-1 block text-xs font-bold uppercase tracking-wider text-ink-muted">{form.notes}</label>
-                <textarea className="input-machined w-full min-h-[96px]" value={newEvent.description} onChange={(event) => setNewEvent((current) => ({ ...current, description: event.target.value }))} placeholder={form.notesPlaceholder} />
+                <label className="mb-1 block text-xs font-bold uppercase tracking-wider text-ink-muted">{service.notes}</label>
+                <textarea className="input-machined w-full min-h-[96px]" value={newEvent.description} onChange={(event) => setNewEvent((current) => ({ ...current, description: event.target.value }))} placeholder={service.notesPlaceholder} />
               </div>
               <div>
-                <label className="mb-2 block text-xs font-bold uppercase tracking-wider text-ink-muted">{form.semenSource}</label>
+                <label className="mb-2 block text-xs font-bold uppercase tracking-wider text-ink-muted">{service.semenSource}</label>
                 <div className="grid grid-cols-1 gap-2 rounded-lg border border-ink/10 bg-surface-raised p-2 md:grid-cols-2">
                   <label className="flex cursor-pointer items-center gap-2 rounded-md border border-ink/10 bg-white px-3 py-2 text-sm font-semibold text-ink-strong hover:border-brand/30">
                     <input type="radio" name="animal-breeding-semen-source" value="farm_stock" checked={newEvent.semenSource === 'farm_stock'} onChange={(event) => setNewEvent((current) => ({ ...current, semenSource: event.target.value }))} />
-                    {form.farmStock}
+                    {breedingCopy.sources.farm_stock}
                   </label>
                   <label className="flex cursor-pointer items-center gap-2 rounded-md border border-ink/10 bg-white px-3 py-2 text-sm font-semibold text-ink-strong hover:border-brand/30">
                     <input type="radio" name="animal-breeding-semen-source" value="vet_provided" checked={newEvent.semenSource === 'vet_provided'} onChange={(event) => setNewEvent((current) => ({ ...current, semenSource: event.target.value }))} />
-                    {form.vetProvided}
+                    {breedingCopy.sources.vet_provided}
                   </label>
                 </div>
               </div>
               {newEvent.semenSource === 'vet_provided' && (
                 <div>
-                  <label className="mb-1 block text-xs font-bold uppercase tracking-wider text-ink-muted">{form.sirePta}</label>
-                  <input type="number" step="0.01" className="input-machined w-full" value={newEvent.milkVolumePta} onChange={(event) => setNewEvent((current) => ({ ...current, milkVolumePta: event.target.value }))} placeholder={form.sirePtaPlaceholder} />
+                  <label className="mb-1 block text-xs font-bold uppercase tracking-wider text-ink-muted">{service.sirePta}</label>
+                  <input type="number" step="0.01" className="input-machined w-full" value={newEvent.milkVolumePta} onChange={(event) => setNewEvent((current) => ({ ...current, milkVolumePta: event.target.value }))} placeholder={service.sirePtaPlaceholder} />
                 </div>
               )}
             </>
