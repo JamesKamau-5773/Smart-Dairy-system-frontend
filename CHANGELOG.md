@@ -4,6 +4,14 @@ What changed for farmers and staff using Maziwa Smart. Newest first.
 
 ## Unreleased
 
+### Phase 7 — clean-up
+
+- Removed pages, forms and helpers nothing used any more: old buyer, stock and milk-history
+  pages, the old buyer form, a second unauthenticated HTTP client (`pages/finance/index.js`), a
+  broken keyboard-shortcut hook, the old `Modal`, seven unused form components and their barrel
+  file, sample billing data, an unused table wrapper, and the phone-only copy of unit helpers
+  with its storage helpers. Nothing a farmer sees changes.
+
 ### Phase 7 — quick wins (UX audit)
 
 - **Filters stay put.** The Production Log, cow register, ledger, staff, buyers, a cow's milk

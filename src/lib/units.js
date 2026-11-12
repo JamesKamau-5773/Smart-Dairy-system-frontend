@@ -33,24 +33,3 @@ export function convertLocalToKg(conversions, itemId, localAmount) {
   if (!conversion || !(Number(conversion.kgEquivalent) > 0)) return Number(localAmount || 0);
   return Number(localAmount) * Number(conversion.kgEquivalent);
 }
-
-const LEGACY_STORAGE_KEY = 'unit_conversions';
-
-/** @deprecated Phone-only copy used by the unrouted pages/settings/UnitConversions.jsx (Phase 7 removes both). */
-export function getAllConversions() {
-  try {
-    const stored = JSON.parse(localStorage.getItem(LEGACY_STORAGE_KEY) ?? '[]');
-    return Array.isArray(stored) ? stored : [];
-  } catch {
-    return [];
-  }
-}
-
-/** @deprecated See getAllConversions. */
-export function saveAllConversions(conversions) {
-  try {
-    localStorage.setItem(LEGACY_STORAGE_KEY, JSON.stringify(conversions));
-  } catch {
-    // ignore
-  }
-}
