@@ -37,6 +37,7 @@ export const milkCopy = {
   saveFailed: 'Couldn’t save. Your entry is still here. Try again.',
   invalidAmount: 'Enter a valid amount',
   futureDate: 'Milking date cannot be in the future',
+  chooseSession: 'Choose the session: morning, midday or evening.',
 
   deleteTitle: 'Delete this milk record?',
   deleteMessage: (description) => `${description ? `${description}. ` : ''}You can’t undo this.`,

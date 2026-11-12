@@ -93,6 +93,7 @@ const BACKEND_STATUS_MAP = {
   PENDING: 'Pending',
   VERIFIED: 'Verified',
   FLAGGED: 'Flagged',
+  ISOLATED: 'Isolated',
 };
 
 // A record without a status shows "—": the backend decides it, the page never assumes one.
@@ -116,11 +117,12 @@ const COLUMN_LAYOUT = [
 const column = Object.fromEntries(COLUMN_LAYOUT.map((entry) => [entry.id, entry]));
 // Kept in the address (Back, reload and shared links keep them). The search is a cow's
 // name or tag, which is safe in a URL.
-const EMPTY_FILTERS = { date: "", cowId: "", status: "all", session: "all" };
+// No status filter: the backend ignores status (except "anomaly") on this list, so it would
+// look like it filtered while showing everything (BACKEND_REQUESTS.md, BR-019).
+const EMPTY_FILTERS = { date: "", cowId: "", session: "all" };
 const FILTER_VALUES = {
   date: ISO_DATE_FILTER,
-  status: ["all", "Verified", "Pending", "Flagged"],
-  session: ["all", "Morning", "Afternoon", "Evening"],
+  session: ["all", "Morning", "Midday", "Evening"],
 };
 
 // Maps a yield record from the API to what the page shows. Display only: the amount
@@ -195,7 +197,6 @@ export default function YieldLog() {
     search: filters.cowId.trim(),
     date_from: filters.date,
     date_to: filters.date,
-    status: filters.status,
     session: filters.session,
   }), [filters]);
 
@@ -254,13 +255,12 @@ export default function YieldLog() {
     });
   }, [hasYieldRowsError, yieldRowsError, tenantId, farmId]);
 
-  const hasActiveFilters = Boolean(filters.date || filters.cowId.trim() || filters.status !== 'all' || filters.session !== 'all');
+  const hasActiveFilters = Boolean(filters.date || filters.cowId.trim() || filters.session !== 'all');
   const groupsUnavailable = groupTotals.loadState === 'error' || groupTotals.loadState === 'offline';
 
   const activeChips = [
     filters.cowId.trim() && { key: 'cowId', label: `“${filters.cowId.trim()}”`, clear: '' },
     filters.date && { key: 'date', label: formatDate(filters.date), clear: '' },
-    filters.status !== 'all' && { key: 'status', label: copy.statuses[filters.status] ?? filters.status, clear: 'all' },
     filters.session !== 'all' && { key: 'session', label: sessionLabel(filters.session), clear: 'all' },
   ].filter(Boolean).map((chip) => ({ ...chip, onRemove: () => updateFilter(chip.key, chip.clear) }));
 
@@ -518,23 +518,14 @@ export default function YieldLog() {
               <FilterChips chips={activeChips} onReset={clearFilters} />
             </Toolbar>
             {filtersOpen && (
-              <div id="production-filter-panel" className="grid grid-cols-1 gap-3 pb-2 pt-1 sm:grid-cols-3">
+              <div id="production-filter-panel" className="grid grid-cols-1 gap-3 pb-2 pt-1 sm:grid-cols-2">
                 <DateField label={copy.date} value={filters.date} onChange={(value) => updateFilter('date', value)} max={todayLocalIso()} inputClassName="input-machined h-10 min-h-0 !py-2 text-sm" />
-                <label className="space-y-1 text-xs font-semibold text-ink-muted">
-                  {copy.status}
-                  <select value={filters.status} onChange={(e) => updateFilter('status', e.target.value)} className="input-machined">
-                    <option value="all">{commonCopy.filters.all}</option>
-                    <option value="Verified">{copy.statuses.Verified}</option>
-                    <option value="Pending">{copy.statuses.Pending}</option>
-                    <option value="Flagged">{copy.statuses.Flagged}</option>
-                  </select>
-                </label>
                 <label className="space-y-1 text-xs font-semibold text-ink-muted">
                   {copy.session}
                   <select value={filters.session} onChange={(e) => updateFilter('session', e.target.value)} className="input-machined">
                     <option value="all">{commonCopy.filters.all}</option>
                     <option value="Morning">{copy.sessions.morning}</option>
-                    <option value="Afternoon">{copy.sessions.afternoon}</option>
+                    <option value="Midday">{copy.sessions.afternoon}</option>
                     <option value="Evening">{copy.sessions.evening}</option>
                   </select>
                 </label>

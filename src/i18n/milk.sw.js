@@ -39,6 +39,7 @@ export const milkCopy = {
   signedOut: 'Ulitolewa nje, kwa hiyo hii haikuhifadhiwa. Ingia tena, kisha ubonyeze Hifadhi.',
   saveFailed: 'Haikuweza kuhifadhiwa. Taarifa zako bado ziko hapa. Jaribu tena.',
   invalidAmount: 'Weka kiasi sahihi',
+  chooseSession: 'Chagua kipindi: asubuhi, mchana au jioni.',
   futureDate: 'Tarehe ya kukamua haiwezi kuwa ya baadaye', // REVIEW: "kukamua" (to milk)
 
   deleteTitle: 'Futa rekodi hii ya maziwa?',

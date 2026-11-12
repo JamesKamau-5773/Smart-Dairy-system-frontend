@@ -44,11 +44,20 @@ const describeMilkRecord = (record) => [
 // A milk draft is worth keeping once a cow or a volume has been entered.
 const isMilkDraftEmpty = (values) => !values?.cowId && !values?.volume;
 
+// The backend sends sessions capitalised ("Evening"). An edited record keeps its own session;
+// if it has none the form recognises, nothing is pre-selected and the farmer must pick one,
+// so a save can never quietly move milk to the morning. New records start on morning.
+const formSession = (record) => {
+  if (!record) return 'morning';
+  const session = String(record.session ?? '').trim().toLowerCase();
+  return SESSION_OPTIONS.includes(session) ? session : '';
+};
+
 const normalizeFormData = (record, fallbackDate = todayIso()) => ({
   cowId: record?.cowId || '',
   volume: record?.volume ?? record?.amount ?? '',
   date: record?.date || record?.milkingDate || record?.milking_date || fallbackDate,
-  session: SESSION_OPTIONS.includes(record?.session) ? record.session : 'morning',
+  session: formSession(record),
 });
 
 /* =========================================================================
@@ -437,6 +446,12 @@ export default function FastMilkLog({ onClose, onSaveSuccess, onDeleteSuccess, m
     if (formData.date > todayIso()) {
       setMessageType('danger');
       setMessage(copy.futureDate);
+      return;
+    }
+
+    if (!formData.session) {
+      setMessageType('danger');
+      setMessage(copy.chooseSession);
       return;
     }
 

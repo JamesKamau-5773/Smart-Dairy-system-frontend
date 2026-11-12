@@ -4,6 +4,17 @@ What changed for farmers and staff using Maziwa Smart. Newest first.
 
 ## Unreleased
 
+### Milk record fixes
+
+- **Editing a milk record no longer moves it to the morning.** The form didn't recognise the
+  session the server sends ("Evening"), so it pre-selected morning; saving without noticing
+  changed the session. It now keeps the record's session, and asks you to choose if there is none.
+- **The Production Log's afternoon filter works.** It asked the server for "afternoon", which the
+  server calls "Midday", so it found nothing.
+- **The Production Log's status filter is gone for now.** The server ignores it, so it showed
+  every record while looking filtered. It comes back once the server supports it (BR-019).
+  Milk kept apart from the batch now shows as "Kept apart" instead of a code.
+
 ### Phase 7 — clean-up
 
 - Removed pages, forms and helpers nothing used any more: old buyer, stock and milk-history

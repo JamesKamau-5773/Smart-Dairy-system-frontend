@@ -11,7 +11,6 @@ export const productionCopy = {
   searchLabel: 'Tafuta kwa jina la ng’ombe au namba ya hereni',
   searchPlaceholder: 'Tafuta jina au namba ya hereni',
   date: 'Tarehe',
-  status: 'Hali',
   session: 'Kipindi',
 
   columns: {
@@ -23,7 +22,7 @@ export const productionCopy = {
     actions: 'Vitendo',
   },
   sessions: { morning: 'Asubuhi', afternoon: 'Mchana', evening: 'Jioni', unknown: 'Haijulikani' },
-  statuses: { Verified: 'Imethibitishwa', Pending: 'Inasubiri', Flagged: 'Imealamishwa' }, // REVIEW: "Flagged"
+  statuses: { Verified: 'Imethibitishwa', Pending: 'Inasubiri', Flagged: 'Imealamishwa', Isolated: 'Yametengwa' }, // REVIEW: "Flagged", "Isolated" (milk kept apart)
 
   milker: 'Mkamuaji',
   verify: 'Thibitisha',

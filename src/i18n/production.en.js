@@ -11,7 +11,6 @@ export const productionCopy = {
   searchLabel: 'Search by cow name or ear tag',
   searchPlaceholder: 'Search cow name or ear tag',
   date: 'Date',
-  status: 'Status',
   session: 'Session',
 
   columns: {
@@ -23,7 +22,7 @@ export const productionCopy = {
     actions: 'Actions',
   },
   sessions: { morning: 'Morning', afternoon: 'Afternoon', evening: 'Evening', unknown: 'Unknown' },
-  statuses: { Verified: 'Verified', Pending: 'Pending', Flagged: 'Flagged' },
+  statuses: { Verified: 'Verified', Pending: 'Pending', Flagged: 'Flagged', Isolated: 'Kept apart' },
 
   milker: 'Milker',
   verify: 'Verify',

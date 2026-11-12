@@ -189,6 +189,27 @@ describe('FastMilkLog editing a record', () => {
     expect(onSaveSuccess).toHaveBeenCalled();
   });
 
+  it('keeps an evening record in the evening (the backend sends "Evening", capitalised)', async () => {
+    productionApi.updateYield.mockResolvedValue({ id: 'milk-1', amount: 15, session: 'Evening' });
+    renderLog({ mode: 'edit', record: { ...EXISTING_RECORD, session: 'Evening' }, onSaveSuccess: vi.fn(), onClose: vi.fn() });
+
+    fireEvent.change(screen.getByPlaceholderText('0.0'), { target: { value: '15' } });
+    fireEvent.click(screen.getByRole('button', { name: /Update Record/i }));
+
+    await screen.findByText('Saved!');
+    expect(productionApi.updateYield).toHaveBeenCalledWith('milk-1', expect.objectContaining({ session: 'evening' }), expect.anything());
+  });
+
+  it('asks for a session instead of guessing when the record has none', async () => {
+    renderLog({ mode: 'edit', record: { ...EXISTING_RECORD, session: null }, onClose: vi.fn() });
+
+    fireEvent.change(screen.getByPlaceholderText('0.0'), { target: { value: '15' } });
+    fireEvent.click(screen.getByRole('button', { name: /Update Record/i }));
+
+    expect(await screen.findByText('Choose the session: morning, midday or evening.')).toBeTruthy();
+    expect(productionApi.updateYield).not.toHaveBeenCalled();
+  });
+
   it('shows the cow read-only, because an edit cannot move milk to another cow', () => {
     renderLog({ mode: 'edit', record: EXISTING_RECORD, onClose: vi.fn() });
 
