@@ -24,7 +24,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { useUrlFilters } from '../../hooks/useUrlFilters';
 import { useTenant } from '../../hooks/useTenant';
 import { useInventoryItemActions } from '../../hooks/useInventoryItemActions';
-import { feedCopy } from '../../i18n/feed.en';
+import { feedCopy } from '../../i18n/feed';
 import { tone } from '../../components/ui/tones';
 import { CardSkeletons, ListLoadNotices, TableSkeletonRows } from '../../components/ui/ListLoadState';
 import { getListLoadState, hasRowsToShow } from '../../lib/listLoadState';

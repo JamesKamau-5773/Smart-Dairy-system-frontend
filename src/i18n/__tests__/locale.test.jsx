@@ -84,16 +84,41 @@ function compareShape(en, sw, path = '') {
   });
 }
 
+// Every <area>.sw.js in src/i18n, found automatically so a new area is checked without editing this test.
+const englishFiles = import.meta.glob('../*.en.js', { eager: true });
+const kiswahiliFiles = import.meta.glob('../*.sw.js', { eager: true });
+const areaOf = (file) => file.match(/\.\.\/(.+)\.(en|sw)\.js$/)[1];
+const translationPairs = Object.entries(kiswahiliFiles).map(([file, sw]) => {
+  const area = areaOf(file);
+  return [area, Object.values(englishFiles[`../${area}.en.js`])[0], Object.values(sw)[0]];
+});
+
 describe('translations', () => {
-  it.each([
-    ['auth', authEn, authSw],
-    ['shell', shellEn, shellSw],
-    ['milk', milkEn, milkSw],
-    ['errors', errorsEn, errorsSw],
-    ['common', commonEn, commonSw],
-    ['production', productionEn, productionSw],
-  ])('%s.sw.js uses only keys that exist in English', (_name, en, sw) => {
+  it('finds the hand-registered areas among the discovered ones', () => {
+    const areas = translationPairs.map(([area]) => area);
+    expect(areas).toEqual(expect.arrayContaining(['auth', 'shell', 'milk', 'errors', 'common', 'production']));
+    expect([authSw, shellSw, milkSw, errorsSw, commonSw, productionSw].every(Boolean)).toBe(true);
+    expect([authEn, shellEn, milkEn, errorsEn, commonEn, productionEn].every(Boolean)).toBe(true);
+  });
+
+  it.each(translationPairs)('%s.sw.js uses only keys that exist in English', (_area, en, sw) => {
     compareShape(en, sw);
+  });
+
+  it('gives every English copy file a Kiswahili file', () => {
+    const missing = Object.keys(englishFiles).map(areaOf).filter((area) => !kiswahiliFiles[`../${area}.sw.js`]);
+    expect(missing).toEqual([]);
+  });
+
+  // Screens must import the language-following wrapper (`i18n/feed`), never `i18n/feed.en`,
+  // or they stay in English whatever language is chosen.
+  it('has no screen importing an English copy file directly', () => {
+    const sources = import.meta.glob(['../../**/*.{js,jsx}', '!../**', '!../../**/__tests__/**'], { eager: true, query: '?raw', import: 'default' });
+    expect(Object.keys(sources).length).toBeGreaterThan(200);
+    const offenders = Object.entries(sources)
+      .filter(([, source]) => /from ['"][^'"]*i18n\/[a-z]+\.en['"]/.test(source))
+      .map(([file]) => file);
+    expect(offenders).toEqual([]);
   });
 });
 

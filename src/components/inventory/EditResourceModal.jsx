@@ -4,7 +4,7 @@ import BaseModal from '../ui/BaseModal';
 import { resolveIngredientStandards } from '../../lib/feedNutritionStandards';
 import { proteinGramsPerKgToInput, proteinInputToGramsPerKg } from '../../lib/feedNutritionUnits';
 import { validateInventoryItem } from '../../lib/inventoryItemRules';
-import { feedCopy } from '../../i18n/feed.en';
+import { feedCopy } from '../../i18n/feed';
 
 export default function EditResourceModal({ isOpen, onClose, item, onSave }) {
   const initialStandards = resolveIngredientStandards({

@@ -1,0 +1,230 @@
+/**
+ * Kiswahili for feed planning and inventory. Same keys as feed.en.js; anything missing falls back
+ * to English. Lines marked REVIEW need checking by a native speaker before release.
+ */
+
+const animals = (count) => `${count === 1 ? 'mnyama' : 'wanyama'} ${count}`;
+
+export const feedCopy = {
+  errors: {
+    codes: {
+      STOCK_CHANGE_REQUIRES_MOVEMENT: 'Akiba haiwezi kubadilishwa hapa. Tumia Ongeza Akiba ili kila badiliko lirekodiwe.',
+      ITEM_IN_USE: 'Bidhaa hii inatumika kwenye michanganyiko, bechi au historia ya akiba, kwa hiyo haiwezi kufutwa. Iweke kando badala yake ili ifichwe na historia yake ibaki.', // REVIEW: "archive" = weka kando
+    },
+    saveMix: 'Imeshindwa kuhifadhi mchanganyiko huu. Angalia asilimia kisha ujaribu tena.',
+    loadToday: 'Imeshindwa kupakia mpango wa ulishaji wa leo.',
+    recordFeeding: 'Imeshindwa kurekodi ulishaji. Angalia kiasi kisha ujaribu tena.',
+    suggestSize: 'Imeshindwa kupendekeza ukubwa wa bechi kwa sasa.',
+    archive: 'Imeshindwa kuweka bidhaa hii kando.',
+    restore: 'Imeshindwa kurudisha bidhaa hii.',
+    dataFix: 'Imeshindwa kufanya marekebisho haya.',
+  },
+
+  item: {
+    skuOptional: 'Namba ya bidhaa (si lazima)',
+    archived: 'Imewekwa kando',
+    showArchived: 'Onyesha bidhaa zilizowekwa kando',
+    archive: 'Weka kando',
+    restore: 'Rudisha',
+    archiveTitle: 'Weka bidhaa hii kando?',
+    archiveMessage: (name) => `${name} itafichwa kwenye orodha na michanganyiko, na haitaweza kuongezwa kwenye michanganyiko mipya. Historia yake itabaki, na unaweza kuirudisha baadaye.`,
+    archivedToast: (name) => `${name} imewekwa kando.`,
+    restoredToast: (name) => `${name} imerudishwa.`,
+    inUseTitle: 'Bidhaa hii inatumika',
+    archiveInstead: 'Weka kando badala yake',
+    nutrientRange: {
+      protein_grams_per_kg: 'Protini lazima iwe kati ya 0 na 999.99 g/kg (0–99.9%).',
+      energy_mj_per_kg: 'Nishati lazima iwe kati ya 0 na 30 MJ/kg.',
+      fiber_grams_per_kg: 'Nyuzinyuzi lazima ziwe kati ya 0 na 999.99 g/kg.', // REVIEW: fiber
+    },
+    feedNeedsValue: 'Weka thamani kwa angalau moja kati ya haya kabla ya kuhifadhi: protini, nishati, nyuzinyuzi, au gharama kwa kilo.',
+    nameRequired: 'Weka jina la bidhaa hii.',
+  },
+
+  dataWarnings: {
+    title: 'Angalia taarifa hizi za lishe',
+    summaryTitle: (count) => (count === 1 ? 'Bidhaa 1 ina thamani za lishe za kuangalia' : `Bidhaa ${count} zina thamani za lishe za kuangalia`),
+    summaryMessage: 'Thamani zinazoonekana kuwa si sahihi hufanya michanganyiko ya chakula ikose lengo lake la protini. Kila moja imewekewa alama hapa chini pamoja na marekebisho yanayopendekezwa.',
+    suspectTitle: 'Viambato hivi huenda vina thamani za lishe zisizo sahihi',
+    suspectHint: 'Rekebisha hivi kwanza: taarifa zisizo sahihi za viambato ndizo sababu kubwa ya lengo la protini kutofikiwa.',
+    suggested: (value) => `Inapendekezwa: ${value}`,
+    apply: 'Rekebisha',
+    applying: 'Inarekebisha…',
+    fixed: (name) => `${name} imerekebishwa.`,
+  },
+
+  restock: {
+    quantityLabel: 'Kiasi kilicholetwa',
+    unitCost: 'Bei uliyolipa kwa kilo (KES, si lazima)',
+    unitCostHint: 'Inasasisha gharama ya bidhaa kwa kilo kwa wastani wa akiba iliyopo na mzigo huu.',
+    supplier: 'Msambazaji (si lazima)',
+    supplierPlaceholder: 'mf. Unga Feeds, Nakuru',
+    recordExpense: 'Pia rekodi ununuzi huu kama gharama ya Ununuzi wa Chakula kwenye daftari la hesabu',
+    recordExpenseNeedsCost: 'Weka bei kwa kilo ili kurekodi gharama.',
+    recordExpenseWarning: 'Usichague hili kama tayari unarekodi ununuzi wa chakula kwenye daftari kwa mkono, la sivyo ununuzi utahesabiwa mara mbili.',
+    quantityInvalid: 'Weka kiasi kikubwa kuliko 0.',
+    costInvalid: 'Weka bei ya 0 au zaidi.',
+    recorded: 'Mzigo umerekodiwa.',
+    recordedWithExpense: 'Mzigo umerekodiwa na kuongezwa kwenye daftari kama Ununuzi wa Chakula.',
+  },
+
+  stockOut: {
+    action: 'Tumia / ondoa',
+    title: 'Toa akiba',
+    subtitle: (name, stock, unit) => `${name} · ${stock} ${unit} stoo`,
+    quantity: 'Kiasi kilichotolewa',
+    reason: 'Sababu',
+    reasons: {
+      USAGE: 'Imetumika (imelishwa au imetolewa)',
+      SPOILAGE: 'Imeharibika',
+      SPILL: 'Imemwagika',
+      EXPIRED: 'Muda wake umeisha',
+      DAMAGE: 'Imeharibiwa',
+      SHRINKAGE: 'Imepotea / imepungua',
+    },
+    writeOffNote: 'Bidhaa zinazoondolewa kama hasara pia hurekodiwa kwenye daftari kama gharama ya Hasara ya Akiba.', // REVIEW: write-off
+    notes: 'Maelezo (si lazima)',
+    notesPlaceholder: 'mf. panya waliingia kwenye magunia mawili',
+    submit: 'Rekodi',
+    submitting: 'Inarekodi…',
+    quantityInvalid: 'Weka kiasi kikubwa kuliko 0.',
+    moreThanStock: (stock) => `Kuna ${stock} tu stoo. Hesabu akiba kama kiasi halisi ni tofauti.`,
+    reasonRequired: 'Chagua sababu.',
+    recorded: (quantity, unit, name) => `${quantity} ${unit} za ${name} zimetolewa.`,
+    recordedWriteOff: (quantity, unit, name) => `${quantity} ${unit} za ${name} zimeondolewa kama hasara na kuongezwa kwenye daftari.`,
+    failed: 'Imeshindwa kurekodi hili. Angalia kiasi kisha ujaribu tena.',
+  },
+
+  stockCount: {
+    action: 'Hesabu akiba',
+    title: 'Hesabu akiba',
+    subtitle: (name, stock, unit) => `${name} · rekodi zinasema ${stock} ${unit}`,
+    counted: 'Kiasi ulichohesabu',
+    countHint: 'Pima au hesabu kilichopo stoo kwa kweli. Tofauti itarekodiwa kwa ajili yako.',
+    countInvalid: 'Weka kiasi ulichohesabu (0 au zaidi).',
+    preview: {
+      match: 'Kinalingana na rekodi. Hakuna kitakachobadilika.',
+      gain: (difference, unit) => `${difference} ${unit} zaidi ya rekodi. Kitaongezwa.`,
+      loss: (difference, unit) => `${difference} ${unit} pungufu ya rekodi. Kitarekodiwa kama hasara.`,
+    },
+    submit: 'Hifadhi hesabu',
+    submitting: 'Inahifadhi…',
+    matched: (name) => `${name}: hesabu inalingana na rekodi.`,
+    reconciled: (name, balance, unit) => `${name} imerekebishwa kuwa ${balance} ${unit}.`,
+    onlineOnly: 'Kuhesabu akiba kunahitaji intaneti, ili kulinganishwa na rekodi za karibuni.',
+    failed: 'Imeshindwa kuhifadhi hesabu. Jaribu tena.',
+  },
+
+  mix: {
+    measuresTitle: 'Jinsi mchanganyiko huu unavyolishwa',
+    basis: 'Kiasi ni cha',
+    basisOptions: {
+      concentrate: 'Chakula cha ziada (dairy meal juu ya majani)', // REVIEW: concentrate
+      total_ration: 'Lishe yote (uzito mkavu)', // REVIEW: total ration (dry matter)
+    },
+    concentrateRate: 'Chakula cha ziada kwa ng’ombe kwa siku (kg)',
+    concentrateRateHint: 'Kinahitajika kabla kiasi cha kulisha hakijaonyeshwa kwa mchanganyiko huu.',
+    bucketTitle: 'Kipimo cha ndoo (si lazima)',
+    bulkDensity: 'Uzito kwa lita (kg/L)',
+    bucketVolume: 'Ukubwa wa ndoo (lita)',
+    bucketPair: 'Weka uzito kwa lita na ukubwa wa ndoo, au acha vyote viwili wazi.',
+    scoopWeight: 'Uzito wa kijiko cha kuchotea (kg, si lazima)', // REVIEW: scoop
+    positiveNumber: 'Weka namba kubwa kuliko 0.',
+    saved: 'Mchanganyiko umehifadhiwa kama mchanganyiko wa sasa.',
+  },
+
+  planner: {
+    shareTotal: (total) => `Asilimia zinajumlisha ${total}%`,
+    feedingGroup: 'Tumia mchanganyiko huu kwa',
+    feedingGroupNone: 'Bado hakuna kundi (hifadhi mchanganyiko tu)',
+    saveError: 'Mchanganyiko haukuhifadhiwa.',
+    reasons: {
+      noIngredients: 'Ongeza vyakula kwenye stoo kwanza, kisha uvipe asilimia.',
+      noShares: 'Kipe angalau chakula kimoja asilimia zaidi ya 0%.',
+      notLinked: 'Vyakula hivi bado havijaunganishwa na stoo, kwa hiyo haviwezi kurekebishwa.',
+      sharesNot100: (total) => `Asilimia zinajumlisha ${total}%. Zibadilishe ziwe 100% kamili kwanza.`,
+      busy: 'Tafadhali subiri uhifadhi unaoendelea umalizike.',
+    },
+  },
+
+  batch: {
+    suggestTitle: 'Ukubwa wa bechi unaopendekezwa',
+    suggestFor: 'Ya kutosha kwa',
+    days: (count) => (count === 1 ? 'siku 1' : `siku ${count}`),
+    suggestButton: 'Pendekeza ukubwa',
+    suggesting: 'Inakokotoa…',
+    suggestion: (kg, days) => `Takriban kg ${kg} zinalisha mifugo yako kwa siku ${days}, baada ya kilichopo stoo tayari.`,
+    useSuggestion: 'Tumia pendekezo',
+    cappedToStock: (kg, ingredient) => `Akiba yako inatosha kg ${kg} tu${ingredient ? ` (${ingredient} itaisha kwanza)` : ''}, kwa hiyo pendekezo limepunguzwa hadi hapo.`,
+  },
+
+  currentMix: {
+    heading: 'Kinacholishwa sasa',
+    types: {
+      dairy_meal: 'Dairy meal',
+      main_meal: 'Chakula kikuu',
+    },
+    mixedOn: 'Kilichanganywa',
+    stockLevel: 'Kilichobaki stoo',
+    daysLeft: (days) => `Takriban siku ${days} zimebaki kwa kasi iliyorekodiwa`,
+    lowStock: (days) => `Kinakaribia kuisha: takriban siku ${days} zimebaki`,
+    pace: (kg) => `Kulingana na matumizi yaliyorekodiwa ya kg ${kg} kwa siku.`,
+    noForecast: 'Bado hakuna makadirio',
+    noForecastHint: 'Rekodi ulishaji unapofanyika ili kukokotoa kiasi cha kila siku na siku zilizobaki.',
+    fedSoFar: 'Kilicholishwa hadi sasa',
+    inStore: 'Bado kiko stoo',
+    feedUsed: 'Chakula kilichotumika leo (kg)',
+    group: 'Kundi la wanyama',
+    selectGroup: 'Chagua kundi la wanyama',
+    upTo: (kg) => `Hadi kg ${kg}`,
+    record: 'Rekodi ulishaji',
+    recording: 'Inarekodi…',
+    mixAgain: 'Changanya bechi mpya',
+    emptyTitle: (type) => `Hakuna bechi ya ${type.toLowerCase()} stoo`,
+    emptyHint: 'Mchanganyiko uliohifadhiwa ni mapishi tu. Changanya bechi kutoka kwake ili kufuatilia kilichopo stoo na kinacholishwa.',
+    emptyAction: (type) => `Changanya ${type.toLowerCase()}`,
+    loading: 'Inapakia kilichopo stoo…',
+    loadOffline: 'Huna mtandao, na kilichopo stoo bado hakijahifadhiwa kwenye simu hii. Kitapakia ukirudi mtandaoni.',
+    loadFailed: 'Imeshindwa kupakia kilichopo stoo, kwa hiyo haiwezi kuonyesha kinacholishwa.',
+    retry: 'Jaribu tena',
+  },
+
+  recordFeeding: {
+    chooseGroup: 'Chagua kundi la wanyama kwanza.',
+    enterAmount: 'Weka kiasi cha chakula kilicholishwa.',
+    onlyLeft: (kg) => `Zimebaki kg ${kg} tu kwenye bechi hii.`,
+  },
+
+  today: {
+    title: 'Ulishaji wa leo',
+    subtitle: 'Kiasi cha kumpa kila kundi leo.',
+    loading: 'Inapakia mpango wa ulishaji wa leo…',
+    empty: 'Bado hakuna kundi la ulishaji lenye wanyama.',
+    headcount: animals,
+    perFeeding: 'Kila ulishaji',
+    perHead: 'Kwa kila mnyama',
+    perDay: 'Kundi lote kwa siku',
+    bucketsPerFeeding: 'Ndoo kila ulishaji',
+    timesPerDay: (count) => (count === 1 ? 'Mara 1 kwa siku' : `Mara ${count} kwa siku`),
+    buckets: (count) => (count === 1 ? 'ndoo 1' : `ndoo ${count}`),
+    notReadyTitle: 'Bado haiwezekani kulisha kwa mpango huu',
+    notReady: {
+      noMix: 'Kundi hili bado halijapewa mchanganyiko. Muombe mwenye shamba akupe mmoja.',
+      noRate: 'Mchanganyiko bado hauna kiasi cha chakula cha ziada kwa ng’ombe. Muombe mwenye shamba akiweke.',
+      noAnimals: 'Kundi hili halina wanyama kwa sasa.',
+      noBatch: 'Hakuna bechi iliyochanganywa ya chakula hiki stoo. Changanya bechi kabla ya kulisha.',
+      unknown: 'Kundi hili bado halijawa tayari.',
+    },
+    recordLabel: 'Chakula kilichotolewa (kg)',
+    record: 'Wamelishwa',
+    recording: 'Inarekodi…',
+    recorded: (kg, group) => `Kg ${kg} zimerekodiwa kwa ${group}.`,
+    queued: 'Imehifadhiwa kwenye simu hii. Itatumwa ukirudi mtandaoni.',
+    amountInvalid: (max) => `Weka kiasi kati ya 0 na kg ${max}.`,
+    batchesTitle: 'Chakula kilichopo stoo',
+    remaining: (kg) => `Zimebaki kg ${kg}`,
+    daysLeft: (days) => `takriban siku ${days}`,
+    totals: (count, kg) => `${animals(count)} · kg ${kg} za chakula zinahitajika leo`,
+    retry: 'Jaribu tena',
+  },
+};

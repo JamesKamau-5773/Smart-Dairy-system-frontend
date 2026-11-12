@@ -4,7 +4,7 @@ import { Check } from 'lucide-react';
 import BaseModal from '../ui/BaseModal';
 import { proteinGramsPerKgToInput, proteinInputToGramsPerKg } from '../../lib/feedNutritionUnits';
 import { validateInventoryItem } from '../../lib/inventoryItemRules';
-import { feedCopy } from '../../i18n/feed.en';
+import { feedCopy } from '../../i18n/feed';
 
 const INITIAL_STATE = {
   name: '',

@@ -3,7 +3,7 @@ import { Calculator, AlertTriangle } from 'lucide-react';
 import { calculateRecipeMetrics, validateRecipe } from '../../services/NutritionalCalculator';
 import DataWarningList from '../../components/inventory/DataWarningList';
 import { getShareTotal, sharesAddUp } from '../../lib/mixPlannerRules';
-import { feedCopy } from '../../i18n/feed.en';
+import { feedCopy } from '../../i18n/feed';
 
 const RECIPE_CONFIG = {
   dairy_meal: {

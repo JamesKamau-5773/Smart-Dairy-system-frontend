@@ -4,7 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import { inventoryApi } from '../../lib/backendApi';
 import { getFeedErrorMessage } from '../../lib/feedErrors';
 import { EMPTY_RESTOCK, validateRestock } from '../../lib/restockForm';
-import { feedCopy } from '../../i18n/feed.en';
+import { feedCopy } from '../../i18n/feed';
 import BaseModal from '../ui/BaseModal';
 
 const { restock: copy } = feedCopy;

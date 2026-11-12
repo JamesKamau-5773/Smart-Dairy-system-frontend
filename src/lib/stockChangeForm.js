@@ -1,4 +1,4 @@
-import { feedCopy } from '../i18n/feed.en';
+import { feedCopy } from '../i18n/feed';
 
 // Taking stock out (use or write-off) and correcting it with a physical count.
 // Stock is never edited directly: each change is a recorded movement with a reason.

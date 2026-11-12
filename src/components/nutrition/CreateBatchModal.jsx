@@ -5,7 +5,7 @@ import BaseModal from '../ui/BaseModal';
 import { nutritionApi } from '../../lib/backendApi';
 import { getApiErrorMessage } from '../../lib/backendApi';
 import { buildBatchPayload, calculateBatchTotals, resolveMaxBatchKg, resolveSuggestedBatch } from '../../lib/feedBatch';
-import { feedCopy } from '../../i18n/feed.en';
+import { feedCopy } from '../../i18n/feed';
 
 const { batch: batchCopy } = feedCopy;
 const SUGGESTION_DAYS = [3, 7, 14];

@@ -1,4 +1,4 @@
-import { feedCopy } from '../i18n/feed.en';
+import { feedCopy } from '../i18n/feed';
 
 // Reading the backend's `GET /nutrition/feeding/today` for the people doing the feeding.
 

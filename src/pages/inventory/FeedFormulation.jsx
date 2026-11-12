@@ -19,7 +19,7 @@ import { canManageInventoryItems } from '../../lib/permissions';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTenant } from '../../hooks/useTenant';
 import { useInventoryItemActions } from '../../hooks/useInventoryItemActions';
-import { feedCopy } from '../../i18n/feed.en';
+import { feedCopy } from '../../i18n/feed';
 import LABELS from '../../lib/labels';
 
 const MEASURES_BY_TYPE = {

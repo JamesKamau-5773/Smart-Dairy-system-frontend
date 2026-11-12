@@ -1,4 +1,4 @@
-import { feedCopy } from '../i18n/feed.en';
+import { feedCopy } from '../i18n/feed';
 
 // Rules for an inventory item definition, shared by the register and edit
 // forms so both reject the same impossible values the backend rejects.

@@ -1,5 +1,5 @@
 import { AlertTriangle, Wrench } from 'lucide-react';
-import { feedCopy } from '../../i18n/feed.en';
+import { feedCopy } from '../../i18n/feed';
 import { tone } from '../ui/tones';
 
 const { dataWarnings: copy } = feedCopy;

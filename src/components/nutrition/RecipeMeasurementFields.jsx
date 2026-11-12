@@ -1,4 +1,4 @@
-import { feedCopy } from '../../i18n/feed.en';
+import { feedCopy } from '../../i18n/feed';
 import { QUANTITY_BASES } from '../../lib/recipeMeasurements';
 
 const { mix: copy } = feedCopy;
