@@ -26,7 +26,7 @@ export default defineConfig({
         name: 'Maziwa Smart',
         short_name: 'Maziwa Smart',
         description: 'Dairy farm management for Kenyan farmers: milk records, breeding, feed, buyers and finances, with offline support.',
-        theme_color: '#0369A1',
+        theme_color: '#0A5F96',
         background_color: '#f9f8f6',
         display: 'standalone',
         start_url: '/app',

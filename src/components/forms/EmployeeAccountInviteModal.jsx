@@ -94,7 +94,7 @@ export default function EmployeeAccountInviteModal({ isOpen, staff, onClose, onI
             <button type="button" onClick={handleSaveAccess} disabled={isSubmitting} className="rounded-md border border-brand px-4 py-2 text-sm font-semibold text-brand disabled:opacity-50">Save page access</button>
           )}
           {!actionComplete && !isActiveAccount && (
-            <button type="submit" form="manage-app-access-form" disabled={isSubmitting} className="inline-flex items-center justify-center gap-2 rounded-md bg-[#0369A1] px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-[#0369A1]/90 disabled:cursor-not-allowed disabled:opacity-50">
+            <button type="submit" form="manage-app-access-form" disabled={isSubmitting} className="inline-flex items-center justify-center gap-2 rounded-md bg-brand px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-brand/90 disabled:cursor-not-allowed disabled:opacity-50">
               {mode === ACCESS_MODES.INVITE ? <KeyRound size={15} /> : <ShieldCheck size={15} />}
               {isSubmitting
                 ? 'Saving access...'

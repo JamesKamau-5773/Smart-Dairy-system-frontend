@@ -9,6 +9,7 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
+    "images": "node scripts/landing-images.js",
     "test": "vitest",
     "test:watch": "vitest --watch",
     "lint": "eslint .",

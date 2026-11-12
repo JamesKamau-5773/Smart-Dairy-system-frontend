@@ -37,8 +37,8 @@ export default defineConfig([
     },
   },
   {
-    // Playwright runs in Node, not the browser.
-    files: ['e2e/**', 'playwright.config.js'],
+    // Playwright and the build scripts run in Node, not the browser.
+    files: ['e2e/**', 'playwright.config.js', 'scripts/**'],
     languageOptions: { globals: globals.node },
   },
   {

@@ -1,3 +1,5 @@
+// The landing page's only script: feature tabs and the page's action buttons.
+
 // App showcase tabs (WAI-ARIA tabs pattern with automatic activation).
 // Without this script every panel stays visible, see landing.css.
 export function initShowcaseTabs(root = document) {
@@ -34,4 +36,24 @@ export function initShowcaseTabs(root = document) {
   });
 }
 
+/**
+ * Click handlers for <button data-action="name">, keyed by name.
+ * The demo flow is a separate task: `demo` is a placeholder until then.
+ */
+export const ACTIONS = {
+  demo: () => {
+    // TODO: start the live demo (separate task).
+  },
+};
+
+/** Routes clicks on [data-action] buttons to their handler. */
+export function initActions(root = document, actions = ACTIONS) {
+  root.addEventListener('click', (event) => {
+    const button = event.target.closest?.('[data-action]');
+    if (!button) return;
+    actions[button.dataset.action]?.(event);
+  });
+}
+
 initShowcaseTabs();
+initActions();

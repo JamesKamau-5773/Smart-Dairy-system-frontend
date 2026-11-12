@@ -104,12 +104,12 @@ export default {
           400: '#38bdf8', // accent
           500: '#0ea5e9',
           600: '#0284c7',
-          700: '#0369a1', // DEFAULT
+          700: '#0a5f96', // DEFAULT
           800: '#075985',
           900: '#0c4a6e', // dark
           950: '#082f49',
           // Backwards compatibility aliases
-          DEFAULT: '#0369A1', 
+          DEFAULT: '#0A5F96',
           dark: '#0C4A6E',
           accent: '#38BDF8',
         },

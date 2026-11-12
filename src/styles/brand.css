@@ -12,7 +12,7 @@
   --surface-warm:   rgba(56, 189, 248, 0.12);
   --surface-raised: rgba(255, 255, 255, 0.90);
   --surface-strong: rgba(255, 255, 255, 0.96);
-  --brand:          #0369A1;
+  --brand:          #0A5F96;
   --brand-dark:     #0C4A6E;
   --accent-sky:     #38BDF8;
   --canvas-warm:    #F9F8F6;
@@ -25,7 +25,7 @@
   --card-foreground: 224 71.4% 4.1%;
   --popover: 0 0% 100%;
   --popover-foreground: 224 71.4% 4.1%;
-  --primary: 201 96% 32%;
+  --primary: 204 88% 31%; /* #0A5F96 */
   --primary-foreground: 210 20% 98%;
   --secondary: 220 14.3% 95.9%;
   --secondary-foreground: 220.9 39.3% 11%;
