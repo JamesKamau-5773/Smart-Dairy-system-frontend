@@ -8,6 +8,26 @@ Status: **Open** (not started) · **Agreed** · **Done** (frontend can drop its 
 
 ---
 
+## Start here (for the backend repo)
+
+Everything below is open. Suggested order:
+
+1. **Security: BR-016.** Statement links use the buyer's phone number as the token, with no
+   login or tenant scope. Fix before anything else.
+2. **Wrong or ignored data the app shows today: BR-019.** The milk list ignores its status
+   filter, and `verified_count` counts unverified records.
+3. **Errors farmers can act on: BR-017** (per-field reason codes) and **BR-001** (milk edit
+   duplicates).
+4. **Plans and access: BR-014, BR-015, BR-020.**
+5. **Data the browser still works out for itself:** BR-002, BR-003, BR-004, BR-008, BR-009,
+   BR-011, BR-012, BR-013, and the open questions in `docs/contracts/period-totals.md`.
+6. **Language: BR-018.**
+7. **Safe saves and missing features:** BR-005, BR-006, BR-007, BR-010.
+
+Each entry names the frontend files waiting on it; search for `TODO(BR-0xx)`.
+
+---
+
 ## BR-001 — Milk record edit (PATCH) should guard duplicates and allow fixing the cow
 
 **Status:** Open · **Raised:** 2026-11-08 (UX audit Phase 1) · **Frontend:** `FastMilkLog.jsx` (edit mode), `productionApi.updateYield`
@@ -434,7 +454,7 @@ field to a **reason code** (not a sentence):
 
 | Endpoint | Field names (as sent in the request) |
 |---|---|
-| `POST /api/production/yields`, `PATCH /api/production/yields/<id>` | `cow_id`, `amount`, `session`, `milking_date` |
+| `POST /api/production/yield`, `PATCH /api/production/yield/<id>` | `cow_id`, `amount`, `session`, `milking_date` |
 | `POST /api/customers`, `PATCH /api/customers/<id>` | `name`, `customer_type`, `contact_person`, `phone_number`, `email`, `address`, `agreed_rate_per_liter`, `account_balance`, `daily_contract_liters` |
 | `POST /api/hr/staff` | `full_name`, `role`, `phone_number`, `base_salary`, `hire_date` |
 | `POST /api/finance/transactions`, `POST /api/customers/<id>/payments` | `date`, `amount`, `category`, `payment_method`, `reference_code`, `description`/`note`, `customer_id`, `income_source`, `paid_to`, `item_name`, `quantity`, `cost_class`, `animal_cost_type` |
@@ -445,3 +465,80 @@ Reason codes the app already words (`i18n/errors.*.js` `fieldReasons`): `require
 
 Also: `PLAN_LIMIT_REACHED` (BR-014) sends `resource` as an English word ("cows"); a resource
 **code** with the app supplying the words would let Kiswahili readers see it translated.
+
+---
+
+## BR-018 — Period and group labels in the farmer's language
+
+**Status:** Open · **Raised:** 2026-11-12 (UX audit Phase 6 follow-up) · **Frontend:** `components/periods/*`, `lib/groupTree.js`, `lib/dateFormat.js`
+
+The app is now in English or Kiswahili, and formats its own dates in both ("04 Ago 2026"). But
+the period and group-total endpoints send ready-made English labels (`"label": "Nov 2026"`,
+`"November"`, `"3 – 9 Nov"`, `"27 Oct – 2 Nov"`), so a Kiswahili page shows English month names
+in its headers and charts.
+
+Affected: `GET /api/ledger/summary`, `GET /api/production/summary`,
+`GET /api/ledger/group-totals`, `GET /api/production/group-totals` (`label` on the period,
+`previous`, `breakdown[]` and `groups[]`).
+
+Either option works; **A is preferred** because the app already formats dates in both languages.
+
+- **A. Send the dates, not words.** Keep `key`, and add `from` / `to` (YYYY-MM-DD, farm-local) on
+  every item that has a `label`. The app builds the label. `label` can stay for older clients.
+
+  ```json
+  { "level": "week", "key": "2026-W45", "parent": "2026-11", "from": "2026-11-03", "to": "2026-11-09", "label": "3 – 9 Nov" }
+  ```
+
+- **B. Honour `Accept-Language`.** The app would send `Accept-Language: sw-KE` or `en-KE`, and
+  `label` would come back in that language (Kiswahili months: Januari … Desemba; short forms Jan,
+  Feb, Mac, Apr, Mei, Jun, Jul, Ago, Sep, Okt, Nov, Des).
+
+No new error codes.
+
+---
+
+## BR-019 — Milk list: status filter, status counts and complete rows
+
+**Status:** Open · **Priority:** High · **Raised:** 2026-11-12 · **Frontend:** `pages/operations/productionLog.jsx` (status filter removed until this ships)
+
+Found while checking `GET /api/production/yield` (`app/api/operations.py`, `production_yield_legacy`;
+`app/schemas/production_filters.py`):
+
+1. **The status filter is ignored.** `ProductionFilters.from_args` only acts on `status=anomaly`;
+   any other value returns every record. The Production Log offered Verified / Pending / Flagged,
+   which looked filtered but wasn't, so the frontend removed it.
+
+   Request: accept `status` = `VERIFIED` | `RECORDED` | `FLAGGED` | `ISOLATED` (case-insensitive),
+   the same values `_milk_log_status` returns, and apply it to the list, the summary and
+   `GET /api/production/group-totals` / `GET /api/production/summary` so they agree. Unknown
+   values → `400 { "code": "VALIDATION_ERROR", "fields": { "status": "invalid" } }`.
+
+2. **`verified_count` counts unverified records.** In `summary`, `verified_count` and
+   `verifiedEntries` are set from `status_counts['recorded']`, and `pending_count` /
+   `pendingEntries` from `isolated`. Verified records aren't counted anywhere. Request: count
+   `VERIFIED` separately and send `verified_count`, `recorded_count`, `flagged_count`,
+   `isolated_count`; drop or correct the aliases.
+
+3. **Rows should always carry what the list shows.** Today `milker_name` is null when
+   `recorded_by` has no user (e.g. WhatsApp entries), and the frontend used to invent
+   "SYSTEM", "morning", today's date and "Pending" for missing values (now it shows "—").
+   Request: every row always sends `session` (`Morning` | `Midday` | `Evening`), `milkingDate`,
+   `status`, and `milker_name`, or a `recorded_via` (`app` | `whatsapp` | `import`) when there is
+   no user, so the app can say "WhatsApp" instead of "—".
+
+4. **Session values.** The domain uses `Midday`; WhatsApp offers "Afternoon" and maps it. Please
+   confirm `Morning` / `Midday` / `Evening` is the only set the API accepts and returns. The
+   session filter compares case-insensitively, which the frontend now relies on.
+
+---
+
+## BR-020 — Who may use unit helpers
+
+**Status:** Open (question) · **Raised:** 2026-11-12 · **Frontend:** `lib/navAccess.js` (`UNIT_HELPER_ROLES`), `App.jsx` route
+
+`GET/POST /api/units/conversions` allow `FARMER`, `FARM_HAND` and `VET`. The frontend only shows
+the page to `SUPER_ADMIN` and `ADMIN`, so farm owners can't reach a page their account may use.
+The backend is the source of truth for access, so please confirm the intended roles. The frontend
+will then match them (one constant), and ideally read them from BR-015 capabilities instead.
+
