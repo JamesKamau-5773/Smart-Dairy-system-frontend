@@ -1,19 +1,19 @@
-import { format, isValid, parseISO } from 'date-fns';
 import CowPhoto from '../../ui/CowPhoto';
 import { Skeleton } from '../../ui';
 import { getAvatarLabel } from './animalRecordUtils';
+import { formatDate } from '../../../lib/dateFormat';
+import { formatAge } from '../../../lib/herdUtils';
+import { herdCopy, herdStatusLabel, pregnancyLabel } from '../../../i18n/herd';
 
 export default function AnimalSummaryCards({ animal, isLoading }) {
+  const copy = herdCopy.record.summary;
   const displayAnimal = animal ?? {};
   const pregnancyStatus = displayAnimal.pregnancyStatus ?? 'Unknown';
   const ageLabel = displayAnimal.age ?? (displayAnimal.ageMonths !== undefined && displayAnimal.ageMonths !== null
-    ? `${Math.floor(Number(displayAnimal.ageMonths) / 12)}y ${Number(displayAnimal.ageMonths) % 12}m`
-    : 'N/A');
+    ? formatAge(Number(displayAnimal.ageMonths))
+    : copy.notApplicable);
   const birthDate = displayAnimal.dateOfBirth ?? displayAnimal.date_of_birth ?? displayAnimal.dob;
-  const parsedBirthDate = birthDate ? parseISO(String(birthDate)) : null;
-  const birthDateLabel = parsedBirthDate && isValid(parsedBirthDate)
-    ? format(parsedBirthDate, 'MMM d, yyyy')
-    : 'Not recorded';
+  const birthDateLabel = formatDate(birthDate, copy.notRecorded);
 
   return (
     <div className="grid grid-cols-1 gap-6 mb-8 md:grid-cols-2 lg:grid-cols-4">
@@ -22,62 +22,62 @@ export default function AnimalSummaryCards({ animal, isLoading }) {
           {isLoading ? (
             <Skeleton className="h-full w-full rounded-full" />
           ) : (
-            <CowPhoto src={displayAnimal.photoUrl} alt="Cow Avatar" size={64} fallback={getAvatarLabel(displayAnimal)} />
+            <CowPhoto src={displayAnimal.photoUrl} alt={copy.avatarAlt} size={64} fallback={getAvatarLabel(displayAnimal)} />
           )}
         </div>
-        <div className="mb-1 text-[10px] font-bold uppercase tracking-widest text-ink-muted">Breed & Parents</div>
+        <div className="mb-1 text-[10px] font-bold uppercase tracking-widest text-ink-muted">{copy.breedParents}</div>
         <div className="mb-2 text-lg font-black text-brand">
           {isLoading ? <Skeleton className="mx-auto h-6 w-32" /> : displayAnimal.breed}
         </div>
         <div className="text-xs font-medium leading-relaxed text-ink-muted">
-          {isLoading ? <Skeleton className="mx-auto h-4 w-40" /> : <>Sire: {displayAnimal.sire} <br /> Dam: {displayAnimal.dam} <br /> Birth weight: {displayAnimal.birthWeightKg ?? 'Not recorded'}{displayAnimal.birthWeightKg !== null && displayAnimal.birthWeightKg !== undefined ? ' kg' : ''}</>}
+          {isLoading ? <Skeleton className="mx-auto h-4 w-40" /> : <>{copy.sire}: {displayAnimal.sire} <br /> {copy.dam}: {displayAnimal.dam} <br /> {copy.birthWeight}: {displayAnimal.birthWeightKg ?? copy.notRecorded}{displayAnimal.birthWeightKg !== null && displayAnimal.birthWeightKg !== undefined ? ' kg' : ''}</>}
         </div>
       </div>
 
       <div className="card-machined flex flex-col justify-between rounded-2xl border border-ink/5 bg-surface p-6 ">
         <div>
-          <div className="mb-4 text-[10px] font-bold uppercase tracking-widest text-brand">Age & Status</div>
+          <div className="mb-4 text-[10px] font-bold uppercase tracking-widest text-brand">{copy.ageStatus}</div>
           <div className="mb-4">
-            <div className="mb-1 text-[10px] font-bold uppercase tracking-wider text-ink-muted">Current Age</div>
+            <div className="mb-1 text-[10px] font-bold uppercase tracking-wider text-ink-muted">{copy.currentAge}</div>
             <div className="text-xl font-black text-ink-strong">{isLoading ? <Skeleton className="h-6 w-24" /> : ageLabel}</div>
           </div>
           <div className="mb-4">
-            <div className="mb-1 text-[10px] font-bold uppercase tracking-wider text-ink-muted">Date of Birth</div>
+            <div className="mb-1 text-[10px] font-bold uppercase tracking-wider text-ink-muted">{copy.dateOfBirth}</div>
             <div className="text-sm font-semibold text-ink-strong">{isLoading ? <Skeleton className="h-4 w-28" /> : birthDateLabel}</div>
           </div>
         </div>
         <div className="border-t border-ink/10 pt-4">
-          <div className="mb-1 text-[10px] font-bold uppercase tracking-wider text-ink-muted">Milking Status</div>
-          <div className="text-sm font-bold text-ink-strong">{isLoading ? <Skeleton className="h-4 w-20" /> : displayAnimal.status}</div>
+          <div className="mb-1 text-[10px] font-bold uppercase tracking-wider text-ink-muted">{copy.milkingStatus}</div>
+          <div className="text-sm font-bold text-ink-strong">{isLoading ? <Skeleton className="h-4 w-20" /> : herdStatusLabel(displayAnimal.status)}</div>
         </div>
       </div>
 
       <div className="card-machined flex flex-col justify-between rounded-2xl border border-ink/5 bg-surface p-6 ">
         <div>
-          <div className="mb-4 text-[10px] font-bold uppercase tracking-widest text-brand">Milk Yield</div>
+          <div className="mb-4 text-[10px] font-bold uppercase tracking-widest text-brand">{copy.milkYield}</div>
           <div className="mb-4">
-            <div className="mb-1 text-[10px] font-bold uppercase tracking-wider text-ink-muted">Days in Milk</div>
+            <div className="mb-1 text-[10px] font-bold uppercase tracking-wider text-ink-muted">{copy.daysInMilk}</div>
             <div className="flex items-baseline gap-2">
               {isLoading ? (
                 <Skeleton className="h-6 w-12" />
               ) : (
-                <span className="text-xl font-black text-ink-strong">{displayAnimal.daysInMilk ?? 'Not recorded'}</span>
+                <span className="text-xl font-black text-ink-strong">{displayAnimal.daysInMilk ?? copy.notRecorded}</span>
               )}
               {!isLoading && displayAnimal.daysInMilk !== null && displayAnimal.daysInMilk !== undefined && (
-                <span className="text-xs font-bold text-ink-muted">Days</span>
+                <span className="text-xs font-bold text-ink-muted">{copy.days}</span>
               )}
             </div>
-            <div className="mt-0.5 text-[11px] font-medium text-ink-muted">Since her last calf</div>
+            <div className="mt-0.5 text-[11px] font-medium text-ink-muted">{copy.sinceLastCalf}</div>
           </div>
         </div>
 
         <div className="grid grid-cols-2 gap-4 border-t border-ink/10 pt-4">
           <div>
-            <div className="mb-1 text-[10px] font-bold uppercase tracking-wider text-ink-muted">Yesterday</div>
+            <div className="mb-1 text-[10px] font-bold uppercase tracking-wider text-ink-muted">{copy.yesterday}</div>
             <div className="text-lg font-black text-ink-strong">{isLoading ? <Skeleton className="h-5 w-16" /> : displayAnimal.yesterdayYield}</div>
           </div>
           <div>
-            <div className="mb-1 text-[10px] font-bold uppercase tracking-wider text-ink-muted">7-Day Avg</div>
+            <div className="mb-1 text-[10px] font-bold uppercase tracking-wider text-ink-muted">{copy.sevenDayAvg}</div>
             <div className="text-lg font-black text-brand">{isLoading ? <Skeleton className="h-5 w-16" /> : displayAnimal.sevenDayAvg}</div>
           </div>
         </div>
@@ -85,26 +85,26 @@ export default function AnimalSummaryCards({ animal, isLoading }) {
 
       <div className="card-machined flex flex-col justify-between rounded-2xl border border-ink/5 bg-surface p-6 ">
         <div>
-          <div className="mb-4 text-[10px] font-bold uppercase tracking-widest text-brand">Breeding Status</div>
+          <div className="mb-4 text-[10px] font-bold uppercase tracking-widest text-brand">{copy.breedingStatus}</div>
           <div className="mb-4">
-            <div className="mb-1 text-[10px] font-bold uppercase tracking-wider text-ink-muted">Pregnancy Status</div>
+            <div className="mb-1 text-[10px] font-bold uppercase tracking-wider text-ink-muted">{copy.pregnancyStatus}</div>
             <div className={`text-xl font-black ${pregnancyStatus === 'Not Pregnant' ? 'text-danger' : 'text-brand'}`}>
-              {isLoading ? <Skeleton className="h-6 w-24" /> : pregnancyStatus}
+              {isLoading ? <Skeleton className="h-6 w-24" /> : pregnancyLabel(pregnancyStatus)}
             </div>
             {!isLoading && pregnancyStatus === 'Not Pregnant' && (
-              <div className="mt-0.5 text-[11px] font-bold text-danger">Needs AI Session</div>
+              <div className="mt-0.5 text-[11px] font-bold text-danger">{copy.needsAi}</div>
             )}
           </div>
         </div>
         <div className="border-t border-ink/10 pt-4">
-          <div className="mb-1 text-[10px] font-bold uppercase tracking-wider text-ink-muted">Days Since Calving</div>
+          <div className="mb-1 text-[10px] font-bold uppercase tracking-wider text-ink-muted">{copy.daysSinceCalving}</div>
           <div className="flex items-baseline gap-2">
             {isLoading ? (
               <Skeleton className="h-4 w-8" />
             ) : (
-              <span className="text-sm font-bold text-ink-strong">{displayAnimal.daysOpen ?? 'N/A'}</span>
+              <span className="text-sm font-bold text-ink-strong">{displayAnimal.daysOpen ?? copy.notApplicable}</span>
             )}
-            {!isLoading && <span className="text-xs font-bold text-ink-muted">Days</span>}
+            {!isLoading && <span className="text-xs font-bold text-ink-muted">{copy.days}</span>}
           </div>
         </div>
       </div>

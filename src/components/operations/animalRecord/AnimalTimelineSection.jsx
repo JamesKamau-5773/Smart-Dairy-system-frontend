@@ -1,5 +1,7 @@
 import { Calendar, FileText, Filter, HeartPulse, Plus, Syringe } from 'lucide-react';
 import { Skeleton } from '../../ui';
+import { herdCopy } from '../../../i18n/herd';
+import { formatDateTime } from '../../../lib/audit';
 
 function getTimelineTheme(type) {
   if (type === 'Health') {
@@ -23,6 +25,7 @@ function getTimelineTheme(type) {
 }
 
 function TimelineEventCard({ event }) {
+  const copy = herdCopy.record;
   const theme = getTimelineTheme(event.type);
   const Icon = event.type === 'Health' ? HeartPulse : event.type === 'Breeding' ? Syringe : FileText;
 
@@ -35,10 +38,10 @@ function TimelineEventCard({ event }) {
       <div className="ml-6 w-full md:ml-4">
         <div className={`rounded-xl border bg-surface p-4 transition-colors hover:bg-surface-raised ${theme.cardClass}`}>
           <div className="mb-2 flex flex-col gap-1 md:flex-row md:items-center md:justify-between">
-            <h4 className="text-sm font-bold text-ink md:text-base">{event.title}</h4>
-            <span className="rounded bg-surface-warm px-2 py-0.5 font-mono text-xs text-ink-muted">{event.date}</span>
+            <h4 className="text-sm font-bold text-ink md:text-base">{event.title ?? copy.eventFallbackTitle(copy.eventTypes[event.type] ?? event.type)}</h4>
+            <span className="rounded bg-surface-warm px-2 py-0.5 font-mono text-xs text-ink-muted">{event.rawDate ? formatDateTime(event.rawDate) : event.date}</span>
           </div>
-          <p className="text-sm leading-relaxed text-ink-muted">{event.description}</p>
+          <p className="text-sm leading-relaxed text-ink-muted">{event.description ?? copy.eventFallbackDescription}</p>
         </div>
       </div>
     </div>
@@ -58,6 +61,7 @@ export default function AnimalTimelineSection({
   onNextPage,
   isPaginating,
 }) {
+  const copy = herdCopy.record;
   return (
     <div className="card-machined bg-surface-warm/30 p-6">
       <div className="mb-8 flex flex-wrap items-center justify-between gap-4 border-b border-ink/10 pb-4">
@@ -72,7 +76,7 @@ export default function AnimalTimelineSection({
                 activeFilter === category ? 'bg-brand text-surface' : 'text-ink-muted hover:bg-ink/5'
               }`}
             >
-              {category}
+              {copy.eventTypes[category]}
             </button>
           ))}
         </div>
@@ -82,7 +86,7 @@ export default function AnimalTimelineSection({
           onClick={onOpenEventModal}
           className="inline-flex items-center gap-1.5 rounded-md border border-brand/20 bg-white px-3 py-1.5 text-xs font-bold text-brand  transition-colors hover:bg-brand/5"
         >
-          <Plus size={14} /> Log Action
+          <Plus size={14} /> {copy.logAction}
         </button>
       </div>
 
@@ -111,7 +115,7 @@ export default function AnimalTimelineSection({
 
       <div className="mt-6 flex items-center justify-between gap-3 border-t border-ink/10 pt-4 text-xs font-semibold text-ink-muted">
         <span>
-          Showing page {timelineMeta.page} of {timelineMeta.pages || 1} · {timelineMeta.total ?? events.length} total events
+          {copy.timelinePage(timelineMeta.page, timelineMeta.pages || 1, timelineMeta.total ?? events.length)}
         </span>
         <div className="flex items-center gap-2">
           <button
@@ -120,7 +124,7 @@ export default function AnimalTimelineSection({
             disabled={timelinePage <= 1 || isPaginating}
             onClick={onPreviousPage}
           >
-            Previous
+            {copy.previous}
           </button>
           <button
             type="button"
@@ -128,7 +132,7 @@ export default function AnimalTimelineSection({
             disabled={timelinePage >= (timelineMeta.pages || 1) || isPaginating}
             onClick={onNextPage}
           >
-            Next
+            {copy.next}
           </button>
         </div>
       </div>

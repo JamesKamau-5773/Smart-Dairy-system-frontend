@@ -1,3 +1,4 @@
+import { formatDate } from './dateFormat';
 const firstDefined = (...values) => values.find((value) => value !== null && value !== undefined && value !== '') ?? null;
 
 /**
@@ -22,6 +23,6 @@ export function normalizeMilkDropReport(report, index = 0) {
 
 /** The alert's date in the phone's format; "—" when the backend sent none. */
 export function formatAlertDate(value) {
-  const date = value ? new Date(value) : null;
-  return date && !Number.isNaN(date.getTime()) ? date.toLocaleDateString() : '—';
+  // The app's day-first date in the chosen language, not the phone's own format.
+  return formatDate(value, '—');
 }

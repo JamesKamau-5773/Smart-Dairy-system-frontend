@@ -30,7 +30,7 @@ function toDate(value) {
 }
 
 /** "03 Nov 2026"; `fallback` when there is no readable date. */
-export function formatDate(value, fallback = 'N/A') {
+export function formatDate(value, fallback = '—') {
   const date = toDate(value);
   if (!date) return fallback;
   return `${pad(date.getDate())} ${names().months[date.getMonth()]} ${date.getFullYear()}`;

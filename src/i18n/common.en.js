@@ -112,4 +112,18 @@ export const commonCopy = {
     ungrouped: 'Date group not available',
     emptyDay: 'No records loaded for this day.',
   },
+
+  // "Updated 3 hours ago" and similar (lib/audit.js).
+  time: {
+    unknown: 'Unknown',
+    justNow: 'Just now',
+    minutesAgo: (count) => `${count} minute${count > 1 ? 's' : ''} ago`,
+    hoursAgo: (count) => `${count} hour${count > 1 ? 's' : ''} ago`,
+    daysAgo: (count) => `${count} day${count > 1 ? 's' : ''} ago`,
+  },
+
+  photo: {
+    dataSaverHint: 'Data saver is on. Tap to load this photo.',
+    show: 'Show photo',
+  },
 };

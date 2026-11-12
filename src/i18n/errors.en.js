@@ -63,4 +63,20 @@ export const errorsCopy = {
     not_found: 'This no longer exists. Choose another.',
   },
   checkField: 'Check this field.',
+
+  // Form checks done on the phone before anything is sent (lib/validation.js).
+  rules: {
+    required: 'This field is required',
+    email: 'Please enter a valid email address',
+    minLength: (min) => `Minimum ${min} characters required`,
+    maxLength: (max) => `Maximum ${max} characters allowed`,
+    numeric: 'Please enter a valid number',
+    positiveNumber: 'Must be a positive number',
+    date: 'Please enter a valid date',
+    futureDate: 'Date must be in the future',
+    pastDate: 'Date must be in the past or today',
+    phoneNumber: 'Please enter a valid phone number',
+    checkForm: 'Please check the form for errors',
+    mpesaCode: 'M-Pesa codes have 10 letters and numbers, for example SBK7X2Y9QZ. Copy it from the M-Pesa SMS.',
+  },
 };

@@ -115,4 +115,17 @@ export const commonCopy = {
     ungrouped: 'Kundi la tarehe halipatikani',
     emptyDay: 'Hakuna rekodi zilizopakiwa kwa siku hii.',
   },
+
+  time: {
+    unknown: 'Haijulikani',
+    justNow: 'Sasa hivi',
+    minutesAgo: (count) => `dakika ${count} zilizopita`,
+    hoursAgo: (count) => `saa ${count} zilizopita`,
+    daysAgo: (count) => (count === 1 ? 'jana' : `siku ${count} zilizopita`),
+  },
+
+  photo: {
+    dataSaverHint: 'Okoa data imewashwa. Gusa ili kupakia picha hii.',
+    show: 'Onyesha picha',
+  },
 };
