@@ -1,11 +1,9 @@
 import { endOfDay, isValid, parseISO, startOfDay, startOfMonth, subDays, subMonths, subWeeks } from 'date-fns';
+import { financeCopy } from '../../../i18n/finance';
 
-export const REPORT_PERIODS = [
-  { key: 'daily', label: 'Daily' },
-  { key: 'weekly', label: 'Weekly' },
-  { key: 'monthly', label: 'Monthly' },
-  { key: 'custom', label: 'Custom' },
-];
+const period = (key) => ({ key, get label() { return financeCopy.reports.periods[key]; } });
+
+export const REPORT_PERIODS = [period('daily'), period('weekly'), period('monthly'), period('custom')];
 
 export function parseDateOnly(value, fallback) {
   if (!value) return fallback;
