@@ -52,7 +52,7 @@ export default function StandardDeliveryModal({ isOpen, onClose, item, onRestock
       await onRestock(selectedItem, form);
       onClose();
     } catch (error) {
-      setSubmitError(getFeedErrorMessage(error, 'Could not record this delivery. Check the quantity and try again.'));
+      setSubmitError(getFeedErrorMessage(error, feedCopy.inventory.delivery.failed));
     } finally {
       setIsSubmitting(false);
     }
@@ -62,13 +62,13 @@ export default function StandardDeliveryModal({ isOpen, onClose, item, onRestock
   const quantity = Number(form.quantity) || 0;
   const increaseAmount = (val) => setField('quantity', String(Math.round((quantity + val) * 1000) / 1000));
   const decreaseAmount = () => setField('quantity', String(Math.max(0, Math.round((quantity - 1) * 1000) / 1000)));
-  const unitLabel = selectedStock.unit ?? selectedItem?.unit ?? 'units';
+  const unitLabel = selectedStock.unit ?? selectedItem?.unit ?? feedCopy.inventory.units;
 
   return (
     <BaseModal
       isOpen
       onClose={onClose}
-      title={item ? 'Restock resource' : 'Log standard batch'}
+      title={item ? feedCopy.inventory.delivery.restockTitle : feedCopy.inventory.delivery.batchTitle}
       icon={<ClipboardList size={20} />}
       closeLabel="Close restock form"
       footerActions={(
@@ -78,7 +78,7 @@ export default function StandardDeliveryModal({ isOpen, onClose, item, onRestock
             onClick={onClose}
             className="text-sm font-bold text-slate-500 hover:text-slate-700 transition-colors"
           >
-            Cancel
+            {feedCopy.inventory.delivery.cancel}
           </button>
           <button 
             type="button"
@@ -87,7 +87,7 @@ export default function StandardDeliveryModal({ isOpen, onClose, item, onRestock
             className="flex items-center gap-2 px-6 py-3 rounded-xl font-black text-xs uppercase transition-all  bg-brand text-white hover:bg-brand-dark disabled:bg-slate-200 disabled:text-slate-400 disabled:cursor-not-allowed"
           >
             <CheckCircle2 size={16} />
-            Confirm Delivery
+            {feedCopy.inventory.delivery.confirm}
           </button>
         </>
       )}
@@ -95,7 +95,7 @@ export default function StandardDeliveryModal({ isOpen, onClose, item, onRestock
       {/* SECTION 1: WHAT ARRIVED */}
       <div className="mb-8">
         <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-4">
-          1. What Arrived?
+          {feedCopy.inventory.delivery.whatArrived}
         </label>
 
         {item ? (
@@ -104,16 +104,16 @@ export default function StandardDeliveryModal({ isOpen, onClose, item, onRestock
             <div>
               <div className="flex items-center gap-2 mb-1">
                 <PackageCheck size={16} className="text-brand" />
-                <span className="font-black text-brand text-lg">{selectedItem?.name ?? 'Selected resource'}</span>
+                <span className="font-black text-brand text-lg">{selectedItem?.name ?? feedCopy.inventory.delivery.selected}</span>
               </div>
               <div className="text-[11px] font-bold text-slate-500 uppercase tracking-wider ml-6">
-                SKU: {selectedItem?.sku || 'Not assigned'}
+                {feedCopy.inventory.delivery.sku(selectedItem?.sku || feedCopy.inventory.delivery.notAssigned)}
               </div>
             </div>
             <div className="text-right">
-              <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Current Stock</div>
+              <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">{feedCopy.inventory.delivery.currentStock}</div>
               <div className="font-black text-slate-700">
-                {selectedStock.value ?? 0} {selectedStock.unit ?? selectedItem?.unit ?? 'units'}
+                {selectedStock.value ?? 0} {unitLabel}
               </div>
             </div>
           </div>
@@ -121,13 +121,13 @@ export default function StandardDeliveryModal({ isOpen, onClose, item, onRestock
           /* GENERAL RESTOCK VIEW (User clicked "Add to Feedstore" at the top) */
           <div className="quick-select-container mb-6">
             <label className="text-[10px] font-black text-ink-muted uppercase tracking-widest mb-2 block">
-              Priority Restock
+              {feedCopy.inventory.delivery.priority}
             </label>
 
             {isLoading ? (
-              <div className="text-sm text-slate-400">Loading priorities...</div>
+              <div className="text-sm text-slate-400">{feedCopy.inventory.delivery.loadingPriorities}</div>
             ) : quickSelectOptions.length === 0 ? (
-              <div className="text-sm text-slate-400">All stock levels are healthy!</div>
+              <div className="text-sm text-slate-400">{feedCopy.inventory.delivery.allHealthy}</div>
             ) : (
               <div className="flex flex-wrap gap-2">
                 {quickSelectOptions.map((option) => {
@@ -158,7 +158,7 @@ export default function StandardDeliveryModal({ isOpen, onClose, item, onRestock
       {/* SECTION 2: HOW MUCH WAS DELIVERED */}
       <div className="border border-slate-100 rounded-2xl p-8 flex flex-col items-center bg-slate-50/50">
         <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-6">
-          2. How Much Was Delivered?
+          {feedCopy.inventory.delivery.howMuch}
         </label>
 
         <div className="flex items-center justify-center gap-8 mb-8">
