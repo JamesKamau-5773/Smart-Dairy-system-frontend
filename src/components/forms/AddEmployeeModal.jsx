@@ -17,6 +17,7 @@ import StatutoryDeductionsToggle from './StatutoryDeductionsToggle';
 import { useServerFieldErrors } from '../../hooks/useServerFieldErrors';
 import FieldError from '../ui/FieldError';
 import { fieldErrorProps } from '../ui/fieldErrorProps';
+import { staffCopy } from '../../i18n/staff';
 
 // The backend's employee fields, by this form's names, for showing its errors per input.
 const SERVER_FIELDS = Object.freeze({
@@ -34,6 +35,7 @@ const INITIAL_STATE = {
 };
 
 export default function AddEmployeeModal({ isOpen, onClose, onSave }) {
+  const copy = staffCopy.addForm;
   const [formData, setFormData] = useState(INITIAL_STATE);
   const [accessMode, setAccessMode] = useState(ACCESS_MODES.NONE);
   const [accessRole, setAccessRole] = useState('FARM_HAND');
@@ -69,7 +71,7 @@ export default function AddEmployeeModal({ isOpen, onClose, onSave }) {
       requiresPasswordReset: true,
     });
     if (accessMode !== ACCESS_MODES.NONE && !normalizeKenyanPhone(formData.phoneNumber)) {
-      employeeErrors.phoneNumber = 'A valid Kenyan mobile number is required for app access.';
+      employeeErrors.phoneNumber = staffCopy.validation.phoneForAccess;
     }
     const nextErrors = { ...employeeErrors, ...provisioningErrors };
     if (Object.keys(nextErrors).length) {
@@ -99,7 +101,7 @@ export default function AddEmployeeModal({ isOpen, onClose, onSave }) {
       if (error?.employeeCreated) {
         setEmployeeCreated(true);
         setTemporaryPassword('');
-        setPartialFailureMessage('The employee profile was saved, but app access could not be created. Close this form and retry from the key action in the employee row.');
+        setPartialFailureMessage(copy.partialFailure);
       }
     } finally {
       setIsSaving(false);
@@ -112,18 +114,18 @@ export default function AddEmployeeModal({ isOpen, onClose, onSave }) {
     <BaseModal
       isOpen
       onClose={onClose}
-      title="Add employee"
-      subtitle="Create the employee's HR and payroll profile."
+      title={copy.title}
+      subtitle={copy.subtitle}
       icon={<UserPlus size={18} />}
       closeOnBackdrop
       dismissible={!isSaving}
-      closeLabel="Close add employee dialog"
+      closeLabel={copy.close}
       onSubmit={handleSubmit}
       footerActions={(
         <>
-          <button type="button" onClick={onClose} disabled={isSaving} className="btn-secondary min-w-28">{employeeCreated ? 'Close' : 'Cancel'}</button>
+          <button type="button" onClick={onClose} disabled={isSaving} className="btn-secondary min-w-28">{employeeCreated ? copy.closeButton : copy.cancel}</button>
           {!employeeCreated && <button type="submit" disabled={isSaving} className="btn-command inline-flex min-w-40 items-center justify-center gap-2 disabled:cursor-not-allowed disabled:opacity-50">
-            <Save size={14} /> {isSaving ? 'Saving employee...' : accessMode === ACCESS_MODES.NONE ? 'Save employee' : 'Save and grant access'}
+            <Save size={14} /> {isSaving ? copy.saving : accessMode === ACCESS_MODES.NONE ? copy.save : copy.saveWithAccess}
           </button>}
         </>
       )}
@@ -131,35 +133,35 @@ export default function AddEmployeeModal({ isOpen, onClose, onSave }) {
       <div className="space-y-6">
         <section>
           <div className="mb-4 border-b border-slate-100 pb-3">
-            <h3 className="text-xs font-black uppercase tracking-widest text-slate-700">Employment details</h3>
-            <p className="mt-1 text-xs text-slate-500">Basic information used in the staff register and payroll.</p>
+            <h3 className="text-xs font-black uppercase tracking-widest text-slate-700">{copy.employment}</h3>
+            <p className="mt-1 text-xs text-slate-500">{copy.employmentHint}</p>
           </div>
 
           <div className="grid gap-x-5 gap-y-4 sm:grid-cols-2">
             <label className="block">
-              <span className="mb-2 flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-slate-500"><UserPlus size={13} /> Full name <span className="text-danger">*</span></span>
-              <input required autoFocus autoComplete="name" id="employee-name" name="name" value={formData.name} onChange={handleChange} placeholder="e.g. Mary Wanjiku" className="input-machined w-full" {...fieldErrorProps('employee-name', errorFor('name'))} />
+              <span className="mb-2 flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-slate-500"><UserPlus size={13} /> {copy.fullName} <span className="text-danger">*</span></span>
+              <input required autoFocus autoComplete="name" id="employee-name" name="name" value={formData.name} onChange={handleChange} placeholder={copy.namePlaceholder} className="input-machined w-full" {...fieldErrorProps('employee-name', errorFor('name'))} />
               <FieldError id="employee-name" message={errorFor('name')} />
             </label>
             <label className="block">
-              <span className="mb-2 flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-slate-500"><BriefcaseBusiness size={13} /> Job role <span className="text-danger">*</span></span>
+              <span className="mb-2 flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-slate-500"><BriefcaseBusiness size={13} /> {copy.jobRole} <span className="text-danger">*</span></span>
               <select required id="employee-role" name="role" value={formData.role} onChange={handleChange} className="input-machined w-full" {...fieldErrorProps('employee-role', errorFor('role'))}>
                 {FARM_STAFF_ROLE_OPTIONS.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
               </select>
               <FieldError id="employee-role" message={errorFor('role')} />
             </label>
             <label className="block">
-              <span className="mb-2 flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-slate-500"><Phone size={13} /> Phone number <span className="text-danger">*</span></span>
-              <input required id="employee-phone" name="phoneNumber" type="tel" inputMode="tel" autoComplete="tel" value={formData.phoneNumber} onChange={handleChange} placeholder="e.g. 0712 345 678" className="input-machined w-full tabular-nums" {...fieldErrorProps('employee-phone', errorFor('phoneNumber'))} />
+              <span className="mb-2 flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-slate-500"><Phone size={13} /> {copy.phone} <span className="text-danger">*</span></span>
+              <input required id="employee-phone" name="phoneNumber" type="tel" inputMode="tel" autoComplete="tel" value={formData.phoneNumber} onChange={handleChange} placeholder={copy.phonePlaceholder} className="input-machined w-full tabular-nums" {...fieldErrorProps('employee-phone', errorFor('phoneNumber'))} />
               <FieldError id="employee-phone" message={errorFor('phoneNumber')} />
             </label>
             <label className="block">
-              <span className="mb-2 flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-slate-500"><WalletCards size={13} /> Base salary (KES) <span className="text-danger">*</span></span>
-              <input required id="employee-salary" name="baseSalary" type="text" inputMode="numeric" value={formData.baseSalary} onChange={handleChange} placeholder="e.g. 35,000" className="input-machined w-full tabular-nums" {...fieldErrorProps('employee-salary', errorFor('baseSalary'))} />
+              <span className="mb-2 flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-slate-500"><WalletCards size={13} /> {copy.salary} <span className="text-danger">*</span></span>
+              <input required id="employee-salary" name="baseSalary" type="text" inputMode="numeric" value={formData.baseSalary} onChange={handleChange} placeholder={copy.salaryPlaceholder} className="input-machined w-full tabular-nums" {...fieldErrorProps('employee-salary', errorFor('baseSalary'))} />
               <FieldError id="employee-salary" message={errorFor('baseSalary')} />
             </label>
             <label className="block sm:col-span-2 sm:max-w-[calc(50%-0.625rem)]">
-              <span className="mb-2 flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-slate-500"><CalendarDays size={13} /> Hire date <span className="text-danger">*</span></span>
+              <span className="mb-2 flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-slate-500"><CalendarDays size={13} /> {copy.hireDate} <span className="text-danger">*</span></span>
               <input required id="employee-hire-date" name="hireDate" type="date" value={formData.hireDate} onChange={handleChange} className="input-machined w-full" {...fieldErrorProps('employee-hire-date', errorFor('hireDate'))} />
               <FieldError id="employee-hire-date" message={errorFor('hireDate')} />
             </label>
@@ -175,8 +177,8 @@ export default function AddEmployeeModal({ isOpen, onClose, onSave }) {
           <div className="mb-4 flex items-start gap-3 border-b border-slate-100 pb-3">
             <KeyRound size={17} className="mt-0.5 shrink-0 text-brand" />
             <div>
-              <h3 className="text-xs font-black uppercase tracking-widest text-slate-700">App access</h3>
-              <p className="mt-1 text-xs text-slate-500">Choose whether this employee needs a linked account now.</p>
+              <h3 className="text-xs font-black uppercase tracking-widest text-slate-700">{copy.appAccess}</h3>
+              <p className="mt-1 text-xs text-slate-500">{copy.appAccessHint}</p>
             </div>
           </div>
           <AccessProvisioningFields
@@ -192,7 +194,7 @@ export default function AddEmployeeModal({ isOpen, onClose, onSave }) {
           />
           {accessMode !== ACCESS_MODES.NONE && (
             <div className="mt-4 space-y-2 rounded-lg border border-slate-200 p-4">
-              <p className="text-sm font-bold text-slate-800">Pages this employee can access</p>
+              <p className="text-sm font-bold text-slate-800">{copy.pages}</p>
               <div className="grid gap-2 sm:grid-cols-2">
                 {STAFF_PAGE_ACCESS_OPTIONS.map(({ key, label }) => (
                   <label key={key} className="flex items-center gap-2 text-sm text-slate-700">

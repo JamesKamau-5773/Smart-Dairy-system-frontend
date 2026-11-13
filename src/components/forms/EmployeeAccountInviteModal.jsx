@@ -7,8 +7,10 @@ import AccessProvisioningFields from './AccessProvisioningFields';
 import { ACCESS_MODES, validateProvisioningFields } from '../../lib/staffAccessForm';
 import { getDefaultStaffPageAccess, STAFF_PAGE_ACCESS_OPTIONS } from '../../lib/staffOnboarding';
 import { getApiErrorMessage } from '../../lib/backendApi';
+import { staffCopy } from '../../i18n/staff';
 
 export default function EmployeeAccountInviteModal({ isOpen, staff, onClose, onInvite, onProvision, onSaveAccess }) {
+  const copy = staffCopy.accessDialog;
   const [mode, setMode] = useState(ACCESS_MODES.INVITE);
   const [role, setRole] = useState('FARM_HAND');
   const [password, setPassword] = useState('');
@@ -38,11 +40,11 @@ export default function EmployeeAccountInviteModal({ isOpen, staff, onClose, onI
 
     const validationErrors = validateProvisioningFields({ mode, password, requiresPasswordReset: true });
     if (mode === ACCESS_MODES.PROVISION && !staff.phoneNumber) {
-      validationErrors.phoneNumber = 'A phone number is required for direct provisioning.';
+      validationErrors.phoneNumber = staffCopy.validation.phoneForProvision;
     }
     if (Object.keys(validationErrors).length) {
       setErrors(validationErrors);
-      setErrorMessage(validationErrors.phoneNumber || 'Review the highlighted account details.');
+      setErrorMessage(validationErrors.phoneNumber || copy.reviewDetails);
       return;
     }
 
@@ -58,7 +60,7 @@ export default function EmployeeAccountInviteModal({ isOpen, staff, onClose, onI
         setProvisioned(true);
       }
     } catch (error) {
-      setErrorMessage(getApiErrorMessage(error, 'Could not create app access for this employee. Review the access details and try again.'));
+      setErrorMessage(getApiErrorMessage(error, copy.createFailed));
     } finally {
       setIsSubmitting(false);
     }
@@ -69,9 +71,9 @@ export default function EmployeeAccountInviteModal({ isOpen, staff, onClose, onI
     setErrorMessage('');
     try {
       await onSaveAccess(staff.id, pageAccess);
-      setSavedMessage('Access settings saved.');
+      setSavedMessage(copy.saved);
     } catch (error) {
-      setErrorMessage(getApiErrorMessage(error, 'Could not save these access settings. Please try again.'));
+      setErrorMessage(getApiErrorMessage(error, copy.saveFailed));
     } finally {
       setIsSubmitting(false);
     }
@@ -85,22 +87,22 @@ export default function EmployeeAccountInviteModal({ isOpen, staff, onClose, onI
     <BaseModal
       isOpen={isOpen}
       onClose={onClose}
-      title="Manage app access"
-      subtitle="The account will be linked to this employee record."
+      title={copy.title}
+      subtitle={copy.subtitle}
       footerActions={(
         <>
-          <button type="button" onClick={onClose} className="btn-secondary">Close</button>
+          <button type="button" onClick={onClose} className="btn-secondary">{copy.close}</button>
           {onSaveAccess && staff.userId && (
-            <button type="button" onClick={handleSaveAccess} disabled={isSubmitting} className="rounded-md border border-brand px-4 py-2 text-sm font-semibold text-brand disabled:opacity-50">Save page access</button>
+            <button type="button" onClick={handleSaveAccess} disabled={isSubmitting} className="rounded-md border border-brand px-4 py-2 text-sm font-semibold text-brand disabled:opacity-50">{copy.savePages}</button>
           )}
           {!actionComplete && !isActiveAccount && (
             <button type="submit" form="manage-app-access-form" disabled={isSubmitting} className="inline-flex items-center justify-center gap-2 rounded-md bg-brand px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-brand/90 disabled:cursor-not-allowed disabled:opacity-50">
               {mode === ACCESS_MODES.INVITE ? <KeyRound size={15} /> : <ShieldCheck size={15} />}
               {isSubmitting
-                ? 'Saving access...'
+                ? copy.saving
                 : mode === ACCESS_MODES.INVITE
-                  ? isReissue ? 'Reissue invitation' : 'Generate link'
-                  : 'Provision account'}
+                  ? isReissue ? copy.reissue : copy.generate
+                  : copy.provision}
             </button>
           )}
         </>
@@ -109,10 +111,10 @@ export default function EmployeeAccountInviteModal({ isOpen, staff, onClose, onI
       <form id="manage-app-access-form" onSubmit={handleSubmit} className="space-y-5">
         <p className="font-semibold text-ink-strong">{staff.name}</p>
 
-        {errorMessage && <AlertBanner type="danger" title="Access update failed" message={errorMessage} onDismiss={() => setErrorMessage('')} />}
-        {savedMessage && <AlertBanner type="success" title="Access updated" message={savedMessage} onDismiss={() => setSavedMessage('')} />}
+        {errorMessage && <AlertBanner type="danger" title={copy.failedTitle} message={errorMessage} onDismiss={() => setErrorMessage('')} />}
+        {savedMessage && <AlertBanner type="success" title={copy.updatedTitle} message={savedMessage} onDismiss={() => setSavedMessage('')} />}
 
-        {isActiveAccount && <p className="text-sm text-slate-600">This employee has an active account. Select the pages they may use, then save.</p>}
+        {isActiveAccount && <p className="text-sm text-slate-600">{copy.activeHint}</p>}
 
         {!actionComplete && !isActiveAccount && (
           <AccessProvisioningFields
@@ -129,8 +131,8 @@ export default function EmployeeAccountInviteModal({ isOpen, staff, onClose, onI
 
         <section className="space-y-2 rounded-lg border border-slate-200 p-4">
           <div>
-            <h3 className="text-sm font-bold text-slate-800">Pages this employee can access</h3>
-            <p className="text-xs text-slate-500">Role defaults are preselected. The farmer can change them at any time.</p>
+            <h3 className="text-sm font-bold text-slate-800">{copy.pages}</h3>
+            <p className="text-xs text-slate-500">{copy.pagesHint}</p>
           </div>
           <div className="grid gap-2 sm:grid-cols-2">
             {STAFF_PAGE_ACCESS_OPTIONS.map(({ key, label }) => (
@@ -145,12 +147,12 @@ export default function EmployeeAccountInviteModal({ isOpen, staff, onClose, onI
         {invitation && (
           <InviteClaimPreview
             invite={invitation}
-            title="Employee claim link"
-            description={`Expires in ${invitation.expires_in_hours ? `${invitation.expires_in_hours} hours` : `${invitation.expires_in_days ?? 2} days`} and can be used once.`}
+            title={copy.linkTitle}
+            description={invitation.expires_in_hours ? copy.expiresHours(invitation.expires_in_hours) : copy.expiresDays(invitation.expires_in_days ?? 2)}
           />
         )}
 
-        {provisioned && <AlertBanner type="success" title="App access is ready" message="The employee must change the temporary password at first sign-in." />}
+        {provisioned && <AlertBanner type="success" title={copy.readyTitle} message={copy.readyMessage} />}
 
       </form>
     </BaseModal>

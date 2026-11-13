@@ -1,11 +1,12 @@
 import { useMemo, useState } from 'react';
 import { Check, Copy, Link2 } from 'lucide-react';
 import { resolveInviteClaimUrl } from '../../lib/staffOnboarding';
+import { staffCopy } from '../../i18n/staff';
 
 export default function InviteClaimPreview({
   invite,
-  title = 'Account claim link',
-  description = 'This link is issued by the server after the invitation is created.',
+  title = staffCopy.claimLink.title,
+  description = staffCopy.claimLink.description,
 }) {
   const [copyState, setCopyState] = useState('idle');
 
@@ -38,23 +39,23 @@ export default function InviteClaimPreview({
         </div>
 
         {claimUrl && (
-          <button type="button" onClick={handleCopy} className="btn-command relative inline-flex items-center gap-2 px-3 py-2 text-xs font-semibold" aria-label="Copy claim link">
+          <button type="button" onClick={handleCopy} className="btn-command relative inline-flex items-center gap-2 px-3 py-2 text-xs font-semibold" aria-label={staffCopy.claimLink.copyLabel}>
             {copyState === 'copied' ? <Check size={14} /> : <Copy size={14} />}
-            {copyState === 'copied' ? 'Copied' : 'Copy link'}
-            {copyState === 'copied' && <span role="status" className="absolute -top-9 right-0 rounded bg-emerald-700 px-2 py-1 text-[10px] text-white shadow">Copied!</span>}
+            {copyState === 'copied' ? staffCopy.claimLink.copied : staffCopy.claimLink.copy}
+            {copyState === 'copied' && <span role="status" className="absolute -top-9 right-0 rounded bg-emerald-700 px-2 py-1 text-[10px] text-white shadow">{staffCopy.claimLink.copiedToast}</span>}
           </button>
         )}
       </div>
 
       <div className="mt-4 rounded-xl border border-ink/10 bg-white px-4 py-3">
-        <div className="text-[10px] font-bold uppercase tracking-widest text-ink-muted">Claim URL</div>
+        <div className="text-[10px] font-bold uppercase tracking-widest text-ink-muted">{staffCopy.claimLink.url}</div>
         <div className="mt-1 break-all font-mono text-sm tabular-nums text-brand">
-          {claimUrl || 'Send the invitation to generate a secure claim link.'}
+          {claimUrl || staffCopy.claimLink.none}
         </div>
       </div>
 
       {copyState === 'error' && (
-        <p className="mt-3 text-xs font-medium text-danger">Copy failed. You can select and copy the link manually.</p>
+        <p className="mt-3 text-xs font-medium text-danger">{staffCopy.claimLink.copyFailed}</p>
       )}
     </section>
   );
