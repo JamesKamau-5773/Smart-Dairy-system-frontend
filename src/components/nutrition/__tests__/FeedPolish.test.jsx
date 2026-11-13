@@ -81,7 +81,7 @@ describe('CreateBatchModal suggested size', () => {
 
     // The backend says Maize germ limits the batch to 40 kg.
     expect(await screen.findByText(/Your stock only covers 40 kg \(Maize germ runs out first\)/)).toBeTruthy();
-    expect(screen.getByLabelText('Total Batch Size (KG)').value).toBe('40');
+    expect(screen.getByLabelText('Total batch size (kg)').value).toBe('40');
     expect(api.suggestedBatchSize).toHaveBeenCalledWith('dairy_meal', 7);
   });
 

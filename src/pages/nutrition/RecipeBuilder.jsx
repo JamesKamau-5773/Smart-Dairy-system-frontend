@@ -5,14 +5,16 @@ import DataWarningList from '../../components/inventory/DataWarningList';
 import { getShareTotal, sharesAddUp } from '../../lib/mixPlannerRules';
 import { feedCopy } from '../../i18n/feed';
 
+const copy = feedCopy.builder;
+
 const RECIPE_CONFIG = {
   dairy_meal: {
-    title: 'Dairy Meal Mixer',
+    get title() { return copy.titles.dairy_meal; },
     defaultBatchSize: 500,
     targetProtein: 16,
   },
   main_meal: {
-    title: 'Main Feed Mixer',
+    get title() { return copy.titles.main_meal; },
     defaultBatchSize: 2000,
     targetProtein: 14,
   },
@@ -28,7 +30,7 @@ const resolveBatchSize = (value, fallback) => {
 function BatchSizeControl({ value, onChange }) {
   return (
     <label className="flex items-center gap-2 rounded-full border border-ink/10 bg-surface-raised px-3 py-1.5 text-xs font-bold text-ink-muted">
-      <span className="shrink-0">Mix Size</span>
+      <span className="shrink-0">{copy.mixSize}</span>
       <input
         type="number"
         min="1"
@@ -36,7 +38,7 @@ function BatchSizeControl({ value, onChange }) {
         value={value}
         onChange={(e) => onChange(e.target.value)}
         className="w-20 bg-transparent text-right font-black text-brand focus:outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-        aria-label="Batch size in kilograms"
+        aria-label={copy.batchSizeLabel}
       />
       <span>kg</span>
     </label>
@@ -62,9 +64,9 @@ function ProteinMeter({ averageProtein, targetProtein }) {
   return (
     <div className="space-y-1.5 mb-8 bg-surface-raised p-4 rounded-lg border border-ink/5">
       <div className="flex justify-between text-xs font-black uppercase text-ink-muted">
-        <span>Protein Goal ({targetProtein}%)</span>
+        <span>{copy.proteinGoal(targetProtein)}</span>
         <span className="text-brand-dark">
-          Current Mix: {averageProtein.toFixed(1)}%
+          {copy.currentMix(averageProtein.toFixed(1))}
         </span>
       </div>
       <div className="h-2.5 w-full bg-white rounded-full overflow-hidden ">
@@ -88,7 +90,7 @@ function IngredientAllocationRow({ item, warnings, onPercentageChange, onApplyFi
         <div className="text-sm font-bold text-ink-strong truncate">{item.name}</div>
         {showStock && (
           <div className="text-[10px] font-bold uppercase tracking-wide text-ink-muted">
-            In stock: {availableStock.toFixed(0)} {item.stockUnit || 'kg'}
+            {copy.inStock(availableStock.toFixed(0), item.stockUnit || 'kg')}
           </div>
         )}
       </div>
@@ -102,7 +104,7 @@ function IngredientAllocationRow({ item, warnings, onPercentageChange, onApplyFi
           className="w-24 rounded-md border border-ink/15 bg-surface-raised px-2 py-1 text-right text-lg font-black text-brand focus:outline-none"
           value={item.percentage}
           onChange={(e) => onPercentageChange(item.id, e.target.value)}
-          aria-label={`${item.name} percentage`}
+          aria-label={copy.percentageLabel(item.name)}
         />
         <span className="text-xs font-bold text-ink-muted">%</span>
       </div>
@@ -130,10 +132,10 @@ function MetricsFooter({ metrics }) {
   return (
     <div className="flex justify-between items-center pt-4 border-t border-ink/5">
       <div className="text-xs text-ink-muted font-medium">
-        Cost: <span className="font-bold text-ink-strong">KES {metrics.totalCost.toFixed(0)}</span> / batch
+        {copy.costPerBatch} <span className="font-bold text-ink-strong">KES {metrics.totalCost.toFixed(0)}</span>{copy.perBatch}
       </div>
       <div className="text-xs text-ink-muted font-medium">
-        Yield: <span className="font-bold text-ink-strong">{metrics.totalWeight.toFixed(0)} kg</span>
+        {copy.yield} <span className="font-bold text-ink-strong">{metrics.totalWeight.toFixed(0)} kg</span>
       </div>
     </div>
   );
@@ -245,13 +247,13 @@ export default function RecipeBuilder({
       {/* Ingredient Inputs */}
       <div className="space-y-2 mb-8">
         <div className="grid grid-cols-12 gap-2 px-3 pb-2 text-[10px] font-black uppercase text-ink-muted border-b border-ink/5">
-          <div className="col-span-4">Feed Item</div>
-          <div className="col-span-4 text-right">Share</div>
-          <div className="col-span-4 text-right">Mix Amount</div>
+          <div className="col-span-4">{copy.feedItem}</div>
+          <div className="col-span-4 text-right">{copy.share}</div>
+          <div className="col-span-4 text-right">{copy.mixAmount}</div>
         </div>
 
         {isLoading ? (
-          <div className="px-3 py-6 text-sm text-ink-muted">Loading feed items...</div>
+          <div className="px-3 py-6 text-sm text-ink-muted">{copy.loading}</div>
         ) : metrics.ingredients.length > 0 ? (
           metrics.ingredients.map((item) => (
             <IngredientAllocationRow
@@ -264,7 +266,7 @@ export default function RecipeBuilder({
             />
           ))
         ) : (
-          <div className="px-3 py-6 text-sm text-ink-muted">No feed items found. Add feed stock in Inventory first.</div>
+          <div className="px-3 py-6 text-sm text-ink-muted">{copy.empty}</div>
         )}
       </div>
       
