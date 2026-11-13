@@ -504,6 +504,7 @@ export const financeCopy = {
   unitEconomics: {
     notAvailable: 'Haipo',
     notRecorded: 'Haijarekodiwa',
+    example: 'mf.',
     benchmarks: {
       unprofitable: 'Hasara (< 1:1)',
       low: 'Faida Ndogo (1:1–2:1)',

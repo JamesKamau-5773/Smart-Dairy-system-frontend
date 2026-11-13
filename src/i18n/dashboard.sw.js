@@ -32,6 +32,7 @@ export const dashboardCopy = {
   },
   chart: {
     noMilk: 'Hakuna maziwa yaliyorekodiwa',
+    noTrend: 'Hakuna data ya mwenendo kwa kipindi hiki',
     dailyProduction: 'Uzalishaji wa siku',
     dailyProductionLegend: 'Uzalishaji wa Siku',
   },

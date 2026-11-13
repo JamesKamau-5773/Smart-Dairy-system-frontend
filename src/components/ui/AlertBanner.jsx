@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { AlertTriangle, Info, XCircle, CheckCircle2, RefreshCw, ArrowRight, X } from 'lucide-react';
 import { INVERSE, tone } from './tones';
 import { useDrawAttention } from '../../hooks/useDrawAttention';
+import { commonCopy } from '../../i18n/common';
 
 // Tones come from the app's palette (./tones): brand blue and ink, with the
 // strength of the blue and the icon carrying the type.
@@ -162,7 +163,7 @@ export default function AlertBanner({
               <button
                 type="button"
                 onClick={() => dismiss()}
-                aria-label="Dismiss"
+                aria-label={commonCopy.ui.dismiss}
                 className={`-m-1.5 flex h-9 w-9 items-center justify-center rounded-button focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/30 ${look.control}`}
               >
                 <X size={16} aria-hidden="true" />

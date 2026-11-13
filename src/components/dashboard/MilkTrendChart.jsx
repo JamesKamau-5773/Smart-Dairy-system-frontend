@@ -8,7 +8,7 @@ export default function MilkTrendChart({ data }) {
   if (!data || data.length === 0) {
     return (
       <div className="flex items-center justify-center h-full text-ink/40 font-bold text-sm">
-        No trend data available for this period
+        {copy.noTrend}
       </div>
     );
   }

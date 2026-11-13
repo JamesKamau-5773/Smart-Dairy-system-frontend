@@ -229,6 +229,12 @@ export const feedCopy = {
   },
 
   // Milk Feeding Planner (MilkLab): herd milk goal → dairy meal plan.
+  costs: {
+    listLabel: 'feed costs',
+    weeklyLabel: 'weekly feed costs',
+    noWeekly: 'No weekly cost data yet. It appears once batches are fed and milk is recorded.',
+  },
+
   milkLab: {
     noSync: 'No sync yet',
     justNow: 'Updated just now',

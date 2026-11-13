@@ -1,5 +1,6 @@
 import { Cloud, CloudOff, Loader2 } from 'lucide-react';
 import { useOfflineQueue } from '../../hooks/useOfflineQueue';
+import { commonCopy } from '../../i18n/common';
 
 export default function OfflineIndicator({ onOpenInspector } = {}) {
   const { online, pendingCount: pending, flushing } = useOfflineQueue();
@@ -9,7 +10,7 @@ export default function OfflineIndicator({ onOpenInspector } = {}) {
       type="button"
       onClick={onOpenInspector}
       className="flex h-10 items-center gap-2 rounded-button border border-brand/20 bg-surface px-3 text-sm font-semibold text-ink hover:border-brand hover:bg-brand-50"
-      title="Open synchronization status"
+      title={commonCopy.ui.syncStatus}
       aria-label={`${online ? 'Online' : 'Offline'}, ${pending} pending changes`}
     >
       {online ? <Cloud size={17} className="text-brand" /> : <CloudOff size={17} className="text-brand-dark" />}

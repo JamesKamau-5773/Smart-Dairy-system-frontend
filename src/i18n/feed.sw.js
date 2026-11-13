@@ -228,6 +228,12 @@ export const feedCopy = {
     retry: 'Jaribu tena',
   },
 
+  costs: {
+    listLabel: 'gharama za chakula',
+    weeklyLabel: 'gharama za chakula za kila wiki',
+    noWeekly: 'Bado hakuna data ya gharama za kila wiki. Itaonekana bechi zikilishwa na maziwa yakirekodiwa.',
+  },
+
   milkLab: {
     noSync: 'Bado haijasasishwa',
     justNow: 'Imesasishwa sasa hivi',

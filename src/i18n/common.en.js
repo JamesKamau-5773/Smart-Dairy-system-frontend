@@ -126,4 +126,13 @@ export const commonCopy = {
     dataSaverHint: 'Data saver is on. Tap to load this photo.',
     show: 'Show photo',
   },
+
+  // Small shared controls.
+  ui: {
+    dismiss: 'Dismiss',
+    close: 'Close',
+    moreActions: 'More actions',
+    didYouMean: 'Did you mean',
+    syncStatus: 'Open synchronization status',
+  },
 };

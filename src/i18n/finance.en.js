@@ -512,6 +512,7 @@ export const financeCopy = {
   unitEconomics: {
     notAvailable: 'N/A',
     notRecorded: 'Not recorded',
+    example: 'e.g.',
     benchmarks: {
       unprofitable: 'Unprofitable (< 1:1)',
       low: 'Low Margin (1:1–2:1)',

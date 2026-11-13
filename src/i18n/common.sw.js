@@ -128,4 +128,12 @@ export const commonCopy = {
     dataSaverHint: 'Okoa data imewashwa. Gusa ili kupakia picha hii.',
     show: 'Onyesha picha',
   },
+
+  ui: {
+    dismiss: 'Funga',
+    close: 'Funga',
+    moreActions: 'Vitendo zaidi',
+    didYouMean: 'Ulimaanisha',
+    syncStatus: 'Fungua hali ya kutuma',
+  },
 };

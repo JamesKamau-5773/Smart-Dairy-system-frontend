@@ -14,6 +14,7 @@ import { readFeedCostPerLitre } from '../../lib/feedCost';
 import { MIX_TYPES, buildDraftFromBatch, selectActiveMixByType } from '../../lib/activeMixes';
 import { getListLoadState } from '../../lib/listLoadState';
 import { ListLoadNotices } from '../../components/ui/ListLoadState';
+import { feedCopy } from '../../i18n/feed';
 
 export default function NutritionDashboard() {
   const navigate = useNavigate();
@@ -128,7 +129,7 @@ export default function NutritionDashboard() {
       {/* ── WHAT'S BEING FED: one card per mix type ── */}
       {costState !== 'loading' && costState !== 'ready' && (
         <div className="overflow-hidden rounded-card border border-ink/10 bg-surface">
-          <ListLoadNotices state={costState} label="feed costs" error={costQuery.error} onRetry={costQuery.refetch} />
+          <ListLoadNotices state={costState} label={feedCopy.costs.listLabel} error={costQuery.error} onRetry={costQuery.refetch} />
         </div>
       )}
       <div className="grid gap-6 lg:grid-cols-2">

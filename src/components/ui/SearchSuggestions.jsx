@@ -1,9 +1,10 @@
+import { commonCopy } from '../../i18n/common';
 /** "Did you mean …" chips for a search that found nothing. */
 export default function SearchSuggestions({ items, getKey, getLabel, onPick }) {
   if (!items.length) return null;
   return (
     <div className="mt-3 flex flex-wrap items-center justify-center gap-2 text-sm">
-      <span className="text-ink-muted">Did you mean</span>
+      <span className="text-ink-muted">{commonCopy.ui.didYouMean}</span>
       {items.map((item) => (
         <button
           key={getKey(item)}

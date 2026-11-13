@@ -753,7 +753,7 @@ export default function DairyUnitEconomicsReport() {
                   type="number"
                   required
                   min="0"
-                  placeholder="e.g. 50000"
+                  placeholder={`${copy.example} 50000`}
                   value={calcForm.sales_marketing_spend_kes}
                   onChange={(e) => setCalcForm((p) => ({ ...p, sales_marketing_spend_kes: e.target.value }))}
                   className="input-machined w-full text-sm py-2"
@@ -768,7 +768,7 @@ export default function DairyUnitEconomicsReport() {
                   type="number"
                   required
                   min="1"
-                  placeholder="e.g. 10"
+                  placeholder={`${copy.example} 10`}
                   value={calcForm.new_customers_acquired}
                   onChange={(e) => setCalcForm((p) => ({ ...p, new_customers_acquired: e.target.value }))}
                   className="input-machined w-full text-sm py-2"
@@ -784,7 +784,7 @@ export default function DairyUnitEconomicsReport() {
                   required
                   min="0"
                   step="0.1"
-                  placeholder="e.g. 120"
+                  placeholder={`${copy.example} 120`}
                   value={calcForm.liters_purchased_per_month}
                   onChange={(e) => setCalcForm((p) => ({ ...p, liters_purchased_per_month: e.target.value }))}
                   className="input-machined w-full text-sm py-2"
@@ -800,7 +800,7 @@ export default function DairyUnitEconomicsReport() {
                   required
                   min="0"
                   step="0.01"
-                  placeholder="e.g. 15.50"
+                  placeholder={`${copy.example} 15.50`}
                   value={calcForm.gross_margin_per_liter_kes}
                   onChange={(e) => setCalcForm((p) => ({ ...p, gross_margin_per_liter_kes: e.target.value }))}
                   className="input-machined w-full text-sm py-2"
@@ -815,7 +815,7 @@ export default function DairyUnitEconomicsReport() {
                   type="number"
                   required
                   min="1"
-                  placeholder="e.g. 12"
+                  placeholder={`${copy.example} 12`}
                   value={calcForm.customer_lifespan_months}
                   onChange={(e) => setCalcForm((p) => ({ ...p, customer_lifespan_months: e.target.value }))}
                   className="input-machined w-full text-sm py-2"

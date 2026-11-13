@@ -29,6 +29,7 @@ export const dashboardCopy = {
   },
   chart: {
     noMilk: 'No milk recorded',
+    noTrend: 'No trend data available for this period',
     dailyProduction: 'Daily production',
     dailyProductionLegend: 'Daily Production',
   },
