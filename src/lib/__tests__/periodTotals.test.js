@@ -173,7 +173,7 @@ describe('ledger grouping', () => {
     const { ledgerSummaryConfig } = await import('../../components/periods/periodConfigs');
     const noPrevious = toLedgerSummary({ label: '2026', current: { income: '100', expenses: '0', net: '100', unpaid: '0', count: 1 }, previous: { key: '2025', label: '2025', count: 0 } });
     const change = ledgerSummaryConfig.metrics(noPrevious).find((metric) => metric.key === 'change');
-    expect(change.value.props.children.join('')).toBe('No 2025 data');
+    expect([].concat(change.value.props.children).join('')).toBe('No 2025 data');
     const labels = ledgerSummaryConfig.secondary(noPrevious, { owed: 370.3, credit: 6.36 }).map((item) => item.label);
     expect(labels).toEqual(['Unpaid in 2026', 'Owed to you (all time)', 'Customer credit (now)', 'Records in 2026']);
   });

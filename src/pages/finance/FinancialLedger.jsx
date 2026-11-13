@@ -34,26 +34,29 @@ import { CUSTOM_PERIOD, toTotalsParams } from '../../lib/periodTotals';
 import { correctionKind } from '../../lib/ledgerCorrection';
 import { readAttachments } from '../../lib/receiptAttachments';
 import { useUrlFilters } from '../../hooks/useUrlFilters';
+import { financeCopy } from '../../i18n/finance';
+
+const copy = financeCopy.ledger;
 
 // Type and category live in the address. Search stays in the page: it can hold a customer's
 // name or phone number, which never go in a URL.
 const URL_FILTERS = { type: 'all', category: 'all' };
 const URL_FILTER_VALUES = { type: ['all', 'revenue', 'expense'] };
-const TYPE_OPTIONS = [['all', 'All types'], ['revenue', 'Money in'], ['expense', 'Money out']];
-const TYPE_LABELS = Object.fromEntries(TYPE_OPTIONS);
+// Labels are read when shown, so they follow the chosen language.
+const typeOptions = () => ['all', 'revenue', 'expense'].map((type) => [type, copy.types[type]]);
 
 // Bank-statement order. Each record fills Money in or Money out, never both.
 // Fixed widths fit nine columns in a 1280px window; Description takes what's left.
 const COLUMNS = [
-  { id: 'date', header: 'Date', width: 'w-[5.75rem]' },
-  { id: 'party', header: 'Customer/Supplier', width: 'w-[8.5rem]' },
-  { id: 'category', header: 'Category', width: 'w-[6.75rem]' },
-  { id: 'description', header: 'Description' },
-  { id: 'ref', header: 'Ref', width: 'w-[5.75rem]' },
-  { id: 'money_in', header: 'Money in', align: 'right', mono: true, width: 'w-[7.5rem]' },
-  { id: 'money_out', header: 'Money out', align: 'right', mono: true, width: 'w-[7.5rem]' },
-  { id: 'status', header: 'Status', width: 'w-[4.75rem]' },
-  { id: 'actions', header: <span className="sr-only">Actions</span>, align: 'right', width: 'w-[5.25rem]' },
+  { id: 'date', get header() { return copy.columns.date; }, width: 'w-[5.75rem]' },
+  { id: 'party', get header() { return copy.columns.party; }, width: 'w-[8.5rem]' },
+  { id: 'category', get header() { return copy.columns.category; }, width: 'w-[6.75rem]' },
+  { id: 'description', get header() { return copy.columns.description; } },
+  { id: 'ref', get header() { return copy.columns.ref; }, width: 'w-[5.75rem]' },
+  { id: 'money_in', get header() { return copy.columns.moneyIn; }, align: 'right', mono: true, width: 'w-[7.5rem]' },
+  { id: 'money_out', get header() { return copy.columns.moneyOut; }, align: 'right', mono: true, width: 'w-[7.5rem]' },
+  { id: 'status', get header() { return copy.columns.status; }, width: 'w-[4.75rem]' },
+  { id: 'actions', get header() { return <span className="sr-only">{copy.columns.actions}</span>; }, align: 'right', width: 'w-[5.25rem]' },
 ];
 const column = Object.fromEntries(COLUMNS.map((entry) => [entry.id, entry]));
 
@@ -74,7 +77,7 @@ const StatusBadge = ({ status }) => {
   const voided = ['voided', 'void', 'cancelled'].includes(text);
   return (
     <span className={`inline-flex max-w-full items-center rounded-badge border border-ink/10 bg-ink-50 px-1.5 py-0.5 text-[11px] font-medium capitalize ${voided ? 'text-ink-muted line-through' : 'text-ink'}`}>
-      <span className="truncate">{text}</span>
+      <span className="truncate">{copy.statuses[text] ?? text}</span>
     </span>
   );
 };
@@ -84,7 +87,7 @@ const StatusBadge = ({ status }) => {
 const ReceiptClip = ({ transaction, canUpload, onOpen, size = 'h-8 w-8' }) => {
   const count = readAttachments(transaction).length;
   if (!count && !canUpload) return <span aria-hidden="true" className={`inline-block ${size}`} />;
-  const label = count ? `Receipt photos (${count})` : 'Add receipt photo';
+  const label = count ? copy.receiptPhotos(count) : copy.addReceiptPhoto;
   return (
     <button type="button" onClick={() => onOpen(transaction)} aria-label={label} title={label} className={`relative inline-flex ${size} shrink-0 items-center justify-center !rounded-input hover:bg-ink-50 ${count ? 'text-ink' : 'text-ink-muted'}`}>
       {count ? <Paperclip size={15} aria-hidden="true" /> : <ImagePlus size={15} aria-hidden="true" />}
@@ -175,8 +178,11 @@ const FinancialLedger = () => {
     const options = ledgerFilters.type === 'revenue' ? categories.income
       : ledgerFilters.type === 'expense' ? categories.expense
         : [...categories.income, ...categories.expense];
-    return [['all', 'All categories'], ...new Map(options).entries()];
+    return [['all', copy.allCategories], ...new Map(options).entries()];
   }, [categories.income, categories.expense, ledgerFilters.type]);
+  const categoryLabels = Object.fromEntries([...categories.income, ...categories.expense]);
+  // A saved category code in the chosen language; one the list doesn't know is shown as saved.
+  const categoryText = (code) => (code ? categoryLabels[code] ?? code : '—');
   const categoryLabel = Object.fromEntries(categoryOptions)[ledgerFilters.category] ?? ledgerFilters.category;
 
   const setFilter = (name, value) => {
@@ -185,7 +191,7 @@ const FinancialLedger = () => {
   };
   const chips = [
     searchQuery && { key: 'search', label: `“${searchQuery}”`, onRemove: () => setFilter('search', '') },
-    ledgerFilters.type !== 'all' && { key: 'type', label: TYPE_LABELS[ledgerFilters.type], onRemove: () => setFilter('type', 'all') },
+    ledgerFilters.type !== 'all' && { key: 'type', label: copy.types[ledgerFilters.type], onRemove: () => setFilter('type', 'all') },
     ledgerFilters.category !== 'all' && { key: 'category', label: categoryLabel, onRemove: () => setFilter('category', 'all') },
   ].filter(Boolean);
   const hasActiveFilters = chips.length > 0;
@@ -196,13 +202,13 @@ const FinancialLedger = () => {
       invalidateLedger();
       setTransactionToCorrect(null);
       toast.success(kind === 'income'
-        ? 'Income corrected. The original entry and its receipt are voided.'
-        : 'Expense corrected. The original entry is now voided.');
+        ? copy.incomeCorrected
+        : copy.expenseCorrected);
     },
     // Shown inside the form, which stays open so the owner can adjust and retry.
   });
   const correctionError = correctionMutation.isError
-    ? (offlineFailureMessage(correctionMutation.error, 'Nothing was changed.') || getApiErrorMessage(correctionMutation.error, 'Nothing was changed. Try again.'))
+    ? (offlineFailureMessage(correctionMutation.error, copy.nothingChanged) || getApiErrorMessage(correctionMutation.error, copy.nothingChangedRetry))
     : null;
   const openCorrection = (tx) => {
     correctionMutation.reset();
@@ -230,9 +236,9 @@ const FinancialLedger = () => {
   const handleShareReceipt = async () => {
     try {
       await shareReceiptText(selectedReceipt);
-      toast.success(navigator.share ? 'Receipt shared.' : 'Receipt copied.');
+      toast.success(navigator.share ? copy.receiptShared : copy.receiptCopied);
     } catch (receiptError) {
-      if (receiptError?.name !== 'AbortError') toast.error('Could not share receipt.');
+      if (receiptError?.name !== 'AbortError') toast.error(copy.shareFailed);
     }
   };
 
@@ -246,12 +252,12 @@ const FinancialLedger = () => {
     const photoCount = readAttachments(tx).length;
     return (
       <OverflowMenu
-        label={`Actions for ${partyOf(tx)}, ${formatDate(tx.date, 'no date')}`}
+        label={copy.actionsFor(partyOf(tx), formatDate(tx.date, copy.noDate))}
         size={size}
         items={[
-          tx.receipt_available && tx.receipt?.id && { key: 'receipt', label: 'View receipt', icon: ReceiptText, onSelect: () => openReceipt(tx) },
-          (photoCount || canUploadReceipts) && { key: 'photos', label: photoCount ? `Photos (${photoCount})` : 'Add photo', icon: Paperclip, onSelect: () => setPhotosFor(tx) },
-          correctableAs(tx) && { key: 'correct', label: 'Correct', icon: PencilLine, onSelect: () => openCorrection(tx) },
+          tx.receipt_available && tx.receipt?.id && { key: 'receipt', label: copy.viewReceipt, icon: ReceiptText, onSelect: () => openReceipt(tx) },
+          (photoCount || canUploadReceipts) && { key: 'photos', label: photoCount ? copy.photos(photoCount) : copy.addPhoto, icon: Paperclip, onSelect: () => setPhotosFor(tx) },
+          correctableAs(tx) && { key: 'correct', label: copy.correct, icon: PencilLine, onSelect: () => openCorrection(tx) },
         ]}
       />
     );
@@ -270,7 +276,7 @@ const FinancialLedger = () => {
       <tr key={tx.id} className="h-11 border-b border-ink/5 hover:bg-ink-50/60">
         <td className={cellClass(column.date, '!py-0 whitespace-nowrap')}><span className="text-xs text-ink-muted">{formatDate(tx.date, '—')}</span></td>
         <td className={cellClass(column.party, '!py-0')}><span className="block truncate text-sm font-medium text-ink" title={partyOf(tx)}>{partyOf(tx)}</span></td>
-        <td className={cellClass(column.category, '!py-0')}><span className="block truncate text-xs text-ink-muted" title={tx.category || undefined}>{tx.category || '—'}</span></td>
+        <td className={cellClass(column.category, '!py-0')}><span className="block truncate text-xs text-ink-muted" title={tx.category ? categoryText(tx.category) : undefined}>{categoryText(tx.category)}</span></td>
         <td className={cellClass(column.description, '!py-0')}>
           <button
             type="button"
@@ -303,9 +309,9 @@ const FinancialLedger = () => {
         <tr key={`${tx.id}-detail`} id={detailId} className="border-b border-ink/5 bg-ink-50/60">
           <td colSpan={COLUMNS.length} className="px-4 !py-3 !font-sans">
             <dl className="grid gap-x-6 gap-y-2 text-sm sm:grid-cols-[minmax(0,2fr)_minmax(0,1fr)_minmax(0,1fr)]">
-              <div className="min-w-0"><dt className="text-xs text-ink-muted">Description</dt><dd className="mt-0.5 whitespace-pre-wrap break-words text-ink">{description || '—'}</dd></div>
-              <div className="min-w-0"><dt className="text-xs text-ink-muted">Reference</dt><dd className="mt-0.5 break-all text-ink">{tx.reference_code || '—'}</dd></div>
-              <div className="min-w-0"><dt className="text-xs text-ink-muted">Category</dt><dd className="mt-0.5 break-words text-ink">{tx.category || '—'}</dd></div>
+              <div className="min-w-0"><dt className="text-xs text-ink-muted">{copy.description}</dt><dd className="mt-0.5 whitespace-pre-wrap break-words text-ink">{description || '—'}</dd></div>
+              <div className="min-w-0"><dt className="text-xs text-ink-muted">{copy.reference}</dt><dd className="mt-0.5 break-all text-ink">{tx.reference_code || '—'}</dd></div>
+              <div className="min-w-0"><dt className="text-xs text-ink-muted">{copy.category}</dt><dd className="mt-0.5 break-words text-ink">{categoryText(tx.category)}</dd></div>
             </dl>
           </td>
         </tr>
@@ -324,11 +330,11 @@ const FinancialLedger = () => {
           <div className="min-w-0 flex-1 pt-1">
             <p className="truncate text-sm font-semibold text-ink">{partyOf(tx)}</p>
             <p className="truncate text-xs text-ink-muted">
-              {tx.category || '—'}{tx.reference_code ? <> · <span>{tx.reference_code}</span></> : null}
+              {categoryText(tx.category)}{tx.reference_code ? <> · <span>{tx.reference_code}</span></> : null}
             </p>
           </div>
           <div className="shrink-0 pt-1 text-right">
-            <p className="text-[10px] font-semibold uppercase tracking-wider text-ink-muted">{direction === 'in' ? 'Money in' : direction === 'out' ? 'Money out' : 'Amount'}</p>
+            <p className="text-[10px] font-semibold uppercase tracking-wider text-ink-muted">{direction === 'in' ? copy.columns.moneyIn : direction === 'out' ? copy.columns.moneyOut : copy.amount}</p>
             <Money amount={tx.amount} size="sm" className="font-semibold text-ink" />
           </div>
           <div className="flex shrink-0 items-center">
@@ -351,15 +357,15 @@ const FinancialLedger = () => {
   const openForm = (type) => setModalTransactionType(type);
   const addActions = (
     <div className="flex flex-wrap gap-2">
-      <button type="button" onClick={() => openForm('income')} className="btn-command min-h-11 gap-2 px-4 text-sm"><Plus size={16} aria-hidden="true" /> Log income</button>
-      <button type="button" onClick={() => openForm('expense')} className="btn-secondary min-h-11 gap-2 px-4 text-sm"><Minus size={16} aria-hidden="true" /> Log expense</button>
+      <button type="button" onClick={() => openForm('income')} className="btn-command min-h-11 gap-2 px-4 text-sm"><Plus size={16} aria-hidden="true" /> {copy.logIncome}</button>
+      <button type="button" onClick={() => openForm('expense')} className="btn-secondary min-h-11 gap-2 px-4 text-sm"><Minus size={16} aria-hidden="true" /> {copy.logExpense}</button>
     </div>
   );
   const emptyMessage = hasActiveFilters
-    ? 'No records match these filters for this period.'
+    ? copy.noMatches
     : (
       <div className="flex flex-col items-center gap-3">
-        <p>No records for this period. Record milk sales, payments and costs to see your profit.</p>
+        <p>{copy.empty}</p>
         {addActions}
       </div>
     );
@@ -374,18 +380,18 @@ const FinancialLedger = () => {
     focus: groupFocus,
   };
 
-  const scopeNote = hasActiveFilters ? `Filtered: ${chips.map((chip) => chip.label).join(' · ')}` : null;
+  const scopeNote = hasActiveFilters ? copy.filtered(chips.map((chip) => chip.label).join(' · ')) : null;
 
   return (
     <div className="mx-auto max-w-7xl animate-reveal space-y-4">
       <PageHeader
-        title="Ledger"
-        primaryAction={{ label: 'Log income', icon: Plus, onClick: () => openForm('income') }}
-        secondaryActions={[{ key: 'expense', label: 'Log expense', icon: Minus, onClick: () => openForm('expense') }]}
+        title={copy.title}
+        primaryAction={{ label: copy.logIncome, icon: Plus, onClick: () => openForm('income') }}
+        secondaryActions={[{ key: 'expense', label: copy.logExpense, icon: Minus, onClick: () => openForm('expense') }]}
       />
 
       <PeriodSummary
-        title="Money in and out"
+        title={copy.summaryTitle}
         control={(
           <PeriodControl
             period={period}
@@ -417,7 +423,7 @@ const FinancialLedger = () => {
         )}
         chart={summary && (
           <PeriodChart
-            label={`Money in and out by sub-period, ${summary.label ?? ''}`}
+            label={copy.chartLabel(summary.label ?? '')}
             items={summary.breakdown}
             {...ledgerSummaryConfig.chart}
             onSelect={(key) => setGroupFocus({ key, nonce: Date.now() })}
@@ -426,29 +432,29 @@ const FinancialLedger = () => {
       />
 
       <DataSection
-        label="Ledger records"
+        label={copy.recordsLabel}
         toolbar={(
-          <Toolbar end={<ResultCount count={resultCount} noun={['record', 'records']} />}>
-            <ToolbarSearch label="Search records" value={ledgerFilters.search} onChange={(value) => setFilter('search', value)} placeholder="Search customer, item, reference…" />
-            <ToolbarSelect label="Type" value={ledgerFilters.type} onChange={(value) => setFilter('type', value)} options={TYPE_OPTIONS} />
-            <ToolbarSelect label="Category" value={ledgerFilters.category} onChange={(value) => setFilter('category', value)} options={categoryOptions} />
+          <Toolbar end={<ResultCount count={resultCount} noun={copy.noun} />}>
+            <ToolbarSearch label={copy.search} value={ledgerFilters.search} onChange={(value) => setFilter('search', value)} placeholder={copy.searchPlaceholder} />
+            <ToolbarSelect label={copy.type} value={ledgerFilters.type} onChange={(value) => setFilter('type', value)} options={typeOptions()} />
+            <ToolbarSelect label={copy.category} value={ledgerFilters.category} onChange={(value) => setFilter('category', value)} options={categoryOptions} />
             <FilterChips chips={chips} onReset={() => { setSearch(''); resetUrlFilters(); }} />
           </Toolbar>
         )}
         notices={(
           <>
-            {isLoading && <SlowLoadingHint label="transactions" />}
+            {isLoading && <SlowLoadingHint label={copy.listLabel} />}
             {periodUnavailable && (
               <p role="status" className="border-b border-ink/10 bg-ink-50 px-4 py-2 text-xs text-ink-muted">
-                The period couldn’t load, so this list shows every date.
+                {copy.periodUnavailable}
               </p>
             )}
             {data?.summary_scope?.typo_matched && (
               <p role="status" className="border-b border-ink/10 bg-ink-50 px-4 py-2 text-sm text-ink">
-                No exact match for “{data.summary_scope.search_query}”. Showing results for {data.summary_scope.matched_names?.join(', ')}.
+                {copy.typoMatch(data.summary_scope.search_query, data.summary_scope.matched_names?.join(', '))}
               </p>
             )}
-            {ledgerLoadState === 'stale' && <StaleDataNotice label="transactions" error={error} onRetry={refetch} />}
+            {ledgerLoadState === 'stale' && <StaleDataNotice label={copy.listLabel} error={error} onRetry={refetch} />}
           </>
         )}
       >
@@ -459,7 +465,7 @@ const FinancialLedger = () => {
               {isLoading ? (
                 <TableSkeletonRows columns={COLUMNS.length} />
               ) : isListUnavailable ? (
-                <tr><td colSpan={COLUMNS.length}><ListLoadMessage state={ledgerLoadState} label="transactions" error={error} onRetry={refetch} /></td></tr>
+                <tr><td colSpan={COLUMNS.length}><ListLoadMessage state={ledgerLoadState} label={copy.listLabel} error={error} onRetry={refetch} /></td></tr>
               ) : transactions.length > 0 ? (
                 <GroupedList {...groupedListProps} variant="table" columns={COLUMNS} renderRecord={renderRow} />
               ) : (
@@ -470,7 +476,7 @@ const FinancialLedger = () => {
         </div>
         <div className="xl:hidden">
           {isLoading ? <div className="divide-y divide-ink/10"><CardSkeletons /></div>
-            : isListUnavailable ? <ListLoadMessage state={ledgerLoadState} label="transactions" error={error} onRetry={refetch} />
+            : isListUnavailable ? <ListLoadMessage state={ledgerLoadState} label={copy.listLabel} error={error} onRetry={refetch} />
               : transactions.length > 0 ? <GroupedList {...groupedListProps} variant="cards" renderRecord={renderCard} />
                 : <div className="p-6 text-center text-sm text-ink-muted">{emptyMessage}</div>}
         </div>

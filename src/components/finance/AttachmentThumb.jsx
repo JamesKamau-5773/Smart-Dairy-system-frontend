@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { FileText, ImageOff } from 'lucide-react';
 import { financeApi } from '../../lib/backendApi';
 import { isPdfAttachment } from '../../lib/receiptAttachments';
+import { financeCopy } from '../../i18n/finance';
 
 /**
  * One receipt attachment, fetched with the user's login (the file is private to the
@@ -19,7 +20,8 @@ export default function AttachmentThumb({ attachment }) {
   const objectUrl = useMemo(() => (file.data ? URL.createObjectURL(file.data) : null), [file.data]);
   useEffect(() => () => { if (objectUrl) URL.revokeObjectURL(objectUrl); }, [objectUrl]);
 
-  const label = attachment.filename || (isPdf ? 'Receipt PDF' : 'Receipt photo');
+  const copy = financeCopy.receiptPhotos;
+  const label = attachment.filename || (isPdf ? copy.pdf : copy.photo);
   const open = () => { if (objectUrl) window.open(objectUrl, '_blank', 'noopener'); };
 
   return (
@@ -27,11 +29,11 @@ export default function AttachmentThumb({ attachment }) {
       type="button"
       onClick={open}
       disabled={!objectUrl}
-      aria-label={`Open ${label}`}
+      aria-label={copy.open(label)}
       className="group flex aspect-square w-full flex-col items-center justify-center overflow-hidden rounded-md border border-ink/15 bg-ink-50 text-ink-muted transition-colors hover:border-brand focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/30 disabled:cursor-default"
     >
       {file.isError ? (
-        <><ImageOff size={20} aria-hidden="true" /><span className="mt-1 px-1 text-[11px]">Couldn’t load</span></>
+        <><ImageOff size={20} aria-hidden="true" /><span className="mt-1 px-1 text-[11px]">{copy.loadFailed}</span></>
       ) : !objectUrl ? (
         <span className="h-full w-full animate-pulse bg-ink-100" aria-hidden="true" />
       ) : isPdf ? (
