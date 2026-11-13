@@ -4,8 +4,10 @@ import { AlertTriangle, Settings } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { safetyApi } from '../../lib/backendApi';
 import { useTenant } from '../../hooks/useTenant';
+import { dashboardCopy } from '../../i18n/dashboard';
 
 export default function ManagerInboxWidget() {
+  const copy = dashboardCopy.inbox;
   const { tenantId, farmId } = useTenant();
   const { data } = useQuery({
     queryKey: ['safety-dashboard', tenantId, farmId],
@@ -22,13 +24,14 @@ export default function ManagerInboxWidget() {
 
     return alerts.map((alert, index) => ({
       id: alert.id ?? alert.alert_id ?? index,
-      title: alert.title ?? alert.name ?? 'Operational alert',
+      // Alert text comes from the backend; only the fallbacks are worded here.
+      title: alert.title ?? alert.name ?? null,
       message: alert.message ?? alert.description ?? '',
-      time: alert.time ?? alert.createdAt ?? alert.updatedAt ?? 'Recent',
+      time: alert.time ?? alert.createdAt ?? alert.updatedAt ?? null,
       actionLink: alert.actionLink ?? alert.link ?? '/operations/safety',
-      actionText: alert.actionText ?? 'Review',
+      actionText: alert.actionText ?? null,
       icon: AlertTriangle,
-      status: alert.status ?? 'Attention required',
+      status: alert.status ?? null,
     }));
   }, [data]);
 
@@ -39,9 +42,9 @@ export default function ManagerInboxWidget() {
       {/* Header Section */}
       <div className="flex items-center gap-3">
         <AlertTriangle className="text-danger" size={24} />
-        <h2 className="text-xl font-bold text-ink">Needs Attention</h2>
+        <h2 className="text-xl font-bold text-ink">{copy.title}</h2>
         <span className="bg-danger text-surface text-xs font-bold px-3 py-1 rounded-full">
-          {activeAlerts.length} {activeAlerts.length === 1 ? 'alert' : 'alerts'}
+          {copy.count(activeAlerts.length)}
         </span>
       </div>
 
@@ -63,9 +66,9 @@ export default function ManagerInboxWidget() {
             {/* Content */}
             <div className="flex-1">
               <div className="flex justify-between items-start">
-                <h4 className="font-bold text-brand text-base">{alert.title}</h4>
+                <h4 className="font-bold text-brand text-base">{alert.title ?? copy.fallbackTitle}</h4>
                 <span className="text-[10px] font-bold uppercase tracking-widest text-ink/40 bg-brand/5 px-2 py-1 rounded-md">
-                  {alert.time}
+                  {alert.time ?? copy.fallbackTime}
                 </span>
               </div>
               <p className="text-sm text-ink-muted mt-1 leading-relaxed max-w-lg">
@@ -78,7 +81,7 @@ export default function ManagerInboxWidget() {
                   to={alert.actionLink}
                   className="inline-flex items-center gap-1.5 px-4 py-2 bg-brand text-surface text-xs font-bold rounded-lg hover:bg-brand/90 transition-colors "
                 >
-                  <Settings size={14} /> {alert.actionText}
+                  <Settings size={14} /> {alert.actionText ?? copy.fallbackAction}
                 </Link>
               </div>
             </div>
@@ -86,7 +89,7 @@ export default function ManagerInboxWidget() {
             {/* High-Contrast Status Badge */}
             <div className="flex flex-col items-end">
               <span className="text-[10px] font-bold uppercase tracking-widest text-danger-dark bg-danger/10 border border-danger/20 px-2 py-1 rounded-md">
-                {alert.status}
+                {alert.status ?? copy.fallbackStatus}
               </span>
             </div>
           </div>

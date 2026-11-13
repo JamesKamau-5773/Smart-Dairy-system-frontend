@@ -8,10 +8,9 @@ import { useRoutinePlans, useSaveRoutinePlans } from '../../hooks/useRoutinePlan
 import { useFormDraft } from '../../hooks/useFormDraft';
 import { CardSkeletons, ListLoadNotices } from '../../components/ui/ListLoadState';
 import DraftRestoredNotice from '../../components/ui/DraftRestoredNotice';
+import { dashboardCopy } from '../../i18n/dashboard';
 
 const DRAFT_KEY = 'routine-plan';
-const LIST_LABEL = 'routine tasks';
-const SAVE_FAILED = 'Couldn’t save the routine. Your changes are still here. Try again.';
 
 // Unsaved edits are checklist texts keyed by time block id.
 const hasNoEdits = (edits) => !edits || Object.keys(edits).length === 0;
@@ -23,6 +22,7 @@ const countSteps = (text) => String(text ?? '').split('\n').map((step) => step.t
  * stay as an unsaved draft on this phone (per user and farm) until "Save Routine".
  */
 export default function DailyRoutinePlanner() {
+  const copy = dashboardCopy.routine;
   const plansQuery = useRoutinePlans();
   const saveRoutine = useSaveRoutinePlans();
   const loadState = getListLoadState(plansQuery);
@@ -58,10 +58,10 @@ export default function DailyRoutinePlanner() {
         draft.clearDraft();
         setEdits({});
         setLastSavedAt(new Date());
-        toast.success('Routine saved. The herdsman will see it in the Farm Task View.');
+        toast.success(copy.saved);
       },
       onError: (error) => {
-        setSaveError(offlineFailureMessage(error, 'The routine wasn’t saved.') ?? getApiErrorMessage(error, SAVE_FAILED));
+        setSaveError(offlineFailureMessage(error, copy.notSaved) ?? getApiErrorMessage(error, copy.saveFailed));
       },
     });
   };
@@ -73,24 +73,24 @@ export default function DailyRoutinePlanner() {
       <div className="rounded-[28px] border border-ink/10 bg-[linear-gradient(135deg,rgba(223,249,255,0.94),rgba(255,255,255,0.98))] p-5 sm:p-6 ">
         <div className="flex flex-col gap-4 border-b border-ink/10 pb-5 lg:flex-row lg:items-end lg:justify-between">
           <div>
-            <h2 className="font-sans text-3xl font-black tracking-tight text-brand">Daily Routine Planner</h2>
+            <h2 className="font-sans text-3xl font-black tracking-tight text-brand">{copy.title}</h2>
             <p className="mt-2 max-w-2xl text-sm leading-6 text-ink">
-              Set the daily schedule. The notes you type here will appear as a checklist on the herdsman&apos;s phone.
+              {copy.subtitle}
             </p>
           </div>
 
           {showPlans && plans.length > 0 && (
             <div className="flex flex-wrap items-center gap-2 text-[10px] font-bold uppercase tracking-widest text-ink-muted">
-              <span className="rounded-full border border-ink/10 bg-surface/90 px-3 py-1">{tasks.length} blocks</span>
-              <span className="rounded-full border border-ink/10 bg-surface/90 px-3 py-1">{tasks.filter((task) => countSteps(task.checklist) > 0).length} with notes</span>
-              <span className="rounded-full border border-ink/10 bg-surface/90 px-3 py-1">{countSteps(activeTask?.checklist)} active steps</span>
+              <span className="rounded-full border border-ink/10 bg-surface/90 px-3 py-1">{copy.blocks(tasks.length)}</span>
+              <span className="rounded-full border border-ink/10 bg-surface/90 px-3 py-1">{copy.withNotes(tasks.filter((task) => countSteps(task.checklist) > 0).length)}</span>
+              <span className="rounded-full border border-ink/10 bg-surface/90 px-3 py-1">{copy.activeSteps(countSteps(activeTask?.checklist))}</span>
               {changedCount > 0 ? (
                 <span className="rounded-full border border-warning-500/40 bg-warning-50 px-3 py-1 text-warning-700">
-                  Unsaved changes ({changedCount})
+                  {copy.unsaved(changedCount)}
                 </span>
               ) : lastSavedAt && (
                 <span className="rounded-full border border-brand/15 bg-brand/5 px-3 py-1 text-brand">
-                  Saved {lastSavedAt.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                  {copy.savedAt(lastSavedAt.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }))}
                 </span>
               )}
             </div>
@@ -104,14 +104,14 @@ export default function DailyRoutinePlanner() {
 
       {loadState !== 'ready' && (
         <div className="overflow-hidden rounded-card border border-ink/10 bg-surface">
-          <ListLoadNotices state={loadState} label={LIST_LABEL} error={plansQuery.error} onRetry={plansQuery.refetch} />
+          <ListLoadNotices state={loadState} label={copy.listLabel} error={plansQuery.error} onRetry={plansQuery.refetch} />
           {loadState === 'loading' && <div className="divide-y divide-ink/10" aria-busy="true"><CardSkeletons rows={3} /></div>}
         </div>
       )}
 
       {showPlans && plans.length === 0 && (
         <div className="rounded-xl border border-dashed border-ink/10 bg-surface-warm/60 p-5 text-sm text-ink-muted">
-          No daily routine is set up for this farm yet. Time blocks can’t be added from this screen yet.
+          {copy.empty}
         </div>
       )}
 
@@ -121,7 +121,7 @@ export default function DailyRoutinePlanner() {
           <div className="lg:col-span-2 card-machined bg-surface p-6  border border-ink/10">
             <div className="flex items-center justify-between mb-4 border-b border-ink/5 pb-4">
               <h3 className="text-xs font-bold uppercase tracking-widest text-ink-muted flex items-center gap-2">
-                <Clock size={16} /> Daily Tasks
+                <Clock size={16} /> {copy.dailyTasks}
               </h3>
             </div>
 
@@ -154,7 +154,7 @@ export default function DailyRoutinePlanner() {
 
                     {countSteps(task.checklist) > 0 && (
                       <div className="hidden md:flex items-center gap-1 text-[10px] font-bold text-ink-muted bg-surface-warm px-2 py-1 rounded">
-                        <CheckSquare size={12} /> Notes Added
+                        <CheckSquare size={12} /> {copy.notesAdded}
                       </div>
                     )}
                   </div>
@@ -170,7 +170,7 @@ export default function DailyRoutinePlanner() {
                 disabled={saveRoutine.isPending || changedCount === 0}
                 className="btn-command bg-brand text-surface flex items-center gap-2 px-6 disabled:opacity-60"
               >
-                <Save size={16} /> {saveRoutine.isPending ? 'Saving…' : 'Save Routine'}
+                <Save size={16} /> {saveRoutine.isPending ? copy.saving : copy.save}
               </button>
             </div>
           </div>
@@ -179,26 +179,26 @@ export default function DailyRoutinePlanner() {
           <div className="lg:col-span-1 sticky top-6">
             <div className="card-machined bg-surface-warm/40 p-6 border border-brand/15  rounded-2xl">
               <h3 className="text-[10px] font-bold uppercase tracking-widest text-brand mb-1">
-                Herdsman Instructions For:
+                {copy.instructionsFor}
               </h3>
               <p className="font-bold text-ink-strong text-lg mb-4 border-b border-ink/10 pb-4">
-                {activeTask?.title || 'Daily Routine'}
+                {activeTask?.title || copy.defaultTitle}
               </p>
 
               <label htmlFor="routine-checklist" className="block text-xs font-semibold text-ink-muted mb-2">
-                Type one action per line to create a checklist:
+                {copy.checklistLabel}
               </label>
 
               <textarea
                 id="routine-checklist"
                 value={activeTask?.checklist ?? ''}
                 onChange={(event) => handleChecklistChange(event.target.value)}
-                placeholder={'e.g. Sweep the floor\nCheck the water'}
+                placeholder={copy.checklistPlaceholder}
                 className="w-full h-64 p-4 rounded-xl border border-ink/20 focus:border-brand focus:ring-1 focus:ring-brand bg-white text-sm text-ink-strong leading-relaxed resize-none transition-colors"
               />
 
               <p className="text-[10px] text-ink-muted mt-3 italic text-center">
-                Changes are kept on this phone as an unsaved draft until you tap “Save Routine”.
+                {copy.draftHint}
               </p>
             </div>
           </div>

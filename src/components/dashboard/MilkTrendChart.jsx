@@ -1,7 +1,9 @@
 import React from 'react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import { dashboardCopy } from '../../i18n/dashboard';
 
 export default function MilkTrendChart({ data }) {
+  const copy = dashboardCopy.chart;
   // If no data or empty array, show a friendly placeholder instead of a blank box
   if (!data || data.length === 0) {
     return (
@@ -19,7 +21,7 @@ export default function MilkTrendChart({ data }) {
         <YAxis tick={{ fontSize: 12 }} unit=" L" />
         <Tooltip
           // A day with no milk recorded is a gap (null), not 0 L.
-          formatter={(value) => [value === null || value === undefined ? 'No milk recorded' : `${Number(value).toFixed(1)} L`, 'Daily production']}
+          formatter={(value) => [value === null || value === undefined ? copy.noMilk : `${Number(value).toFixed(1)} L`, copy.dailyProduction]}
           contentStyle={{
             backgroundColor: 'rgba(255, 255, 255, 0.8)',
             backdropFilter: 'blur(4px)',
@@ -28,7 +30,7 @@ export default function MilkTrendChart({ data }) {
           }}
         />
         <Legend />
-        <Line type="monotone" dataKey="value" name="Daily Production" stroke="#38BDF8" strokeWidth={2} />
+        <Line type="monotone" dataKey="value" name={copy.dailyProductionLegend} stroke="#38BDF8" strokeWidth={2} />
       </LineChart>
     </ResponsiveContainer>
   );
