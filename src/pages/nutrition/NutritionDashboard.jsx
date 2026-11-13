@@ -72,10 +72,10 @@ export default function NutritionDashboard() {
         queryClient.invalidateQueries({ queryKey: ['nutrition-active-batch-roi-trend-weekly', tenantId, farmId] }),
         queryClient.invalidateQueries({ queryKey: ['feeding-today', tenantId, farmId] }),
       ]);
-      toast.success('Feeding recorded.');
+      toast.success(feedCopy.today.feedingRecorded);
     },
     onError: (error) => {
-      toast.error(getApiErrorMessage(error, 'Could not record feeding. Check the details and try again.'));
+      toast.error(getApiErrorMessage(error, feedCopy.errors.recordFeeding));
     },
   });
 

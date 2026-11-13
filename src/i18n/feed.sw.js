@@ -196,6 +196,7 @@ export const feedCopy = {
   },
 
   today: {
+    feedingRecorded: 'Ulishaji umerekodiwa.',
     title: 'Ulishaji wa leo',
     subtitle: 'Kiasi cha kumpa kila kundi leo.',
     loading: 'Inapakia mpango wa ulishaji wa leo…',

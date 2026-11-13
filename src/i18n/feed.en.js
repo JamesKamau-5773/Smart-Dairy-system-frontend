@@ -196,6 +196,7 @@ export const feedCopy = {
   },
 
   today: {
+    feedingRecorded: 'Feeding recorded.',
     title: 'Today’s feeding',
     subtitle: 'How much to give each group today.',
     loading: 'Loading today’s feeding plan…',

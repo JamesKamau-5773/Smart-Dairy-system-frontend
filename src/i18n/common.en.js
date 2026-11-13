@@ -135,4 +135,12 @@ export const commonCopy = {
     didYouMean: 'Did you mean',
     syncStatus: 'Open synchronization status',
   },
+  dateRange: {
+    label: 'Custom date range',
+    from: 'From',
+    to: 'To',
+    reversed: 'The From date must be on or before the To date.',
+    cancel: 'Cancel',
+    apply: 'Apply',
+  },
 };

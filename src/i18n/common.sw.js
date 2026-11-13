@@ -136,4 +136,12 @@ export const commonCopy = {
     didYouMean: 'Ulimaanisha',
     syncStatus: 'Fungua hali ya kutuma',
   },
+  dateRange: {
+    label: 'Chagua tarehe',
+    from: 'Kuanzia',
+    to: 'Hadi',
+    reversed: 'Tarehe ya Kuanzia lazima iwe sawa au kabla ya tarehe ya Hadi.',
+    cancel: 'Ghairi',
+    apply: 'Tumia',
+  },
 };
