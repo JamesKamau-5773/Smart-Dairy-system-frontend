@@ -38,6 +38,13 @@ export function formatDate(value, fallback = '—') {
   return `${pad(date.getDate())} ${names().months[date.getMonth()]} ${date.getFullYear()}`;
 }
 
+/** "03 Nov" without the year, for chart labels; `fallback` when there is no readable date. */
+export function formatShortDate(value, fallback = '—') {
+  const date = toDate(value);
+  if (!date) return fallback;
+  return `${pad(date.getDate())} ${names().months[date.getMonth()]}`;
+}
+
 /** "November 2026" ("Novemba 2026"); `fallback` when there is no readable date. For month group headers. */
 export function formatMonthYear(value, fallback = '—') {
   const date = toDate(value);
