@@ -1,6 +1,7 @@
-// The farm's plan, limits and demo status, as the backend reports them on the session
+// The farm's plan and limits, as the backend reports them on the session
 // (`entitlements`, BACKEND_REQUESTS.md BR-014). Nothing here assumes a plan: when the backend
 // hasn't sent something, it is unknown, nothing is locked, and the backend still enforces access.
+// Demo status is not here: it is top-level on the session (see hooks/useDemoSession.js).
 
 const toNumberOrNull = (value) => (value === null || value === undefined || value === '' || !Number.isFinite(Number(value)) ? null : Number(value));
 
@@ -8,7 +9,6 @@ const toNumberOrNull = (value) => (value === null || value === undefined || valu
  * @typedef {object} Entitlements
  * @property {boolean} known  True when the backend sent entitlements at all.
  * @property {{ id: string, name: string }|null} plan
- * @property {boolean|null} isDemo  null = unknown (treated as not demo for display only).
  * @property {Set<string>|null} features  Feature keys in the plan; null = unknown.
  * @property {Record<string, number|null>} limits
  * @property {Record<string, number|null>} usage
@@ -18,7 +18,7 @@ const toNumberOrNull = (value) => (value === null || value === undefined || valu
 /** @returns {Entitlements} */
 export function normalizeEntitlements(raw) {
   if (!raw || typeof raw !== 'object') {
-    return { known: false, plan: null, isDemo: null, features: null, limits: {}, usage: {}, upgradeUrl: null };
+    return { known: false, plan: null, features: null, limits: {}, usage: {}, upgradeUrl: null };
   }
   const plan = raw.plan && typeof raw.plan === 'object'
     ? { id: String(raw.plan.id ?? ''), name: String(raw.plan.name ?? raw.plan.id ?? '') }
@@ -29,7 +29,6 @@ export function normalizeEntitlements(raw) {
   return {
     known: true,
     plan,
-    isDemo: typeof raw.is_demo === 'boolean' ? raw.is_demo : null,
     features: Array.isArray(raw.features) ? new Set(raw.features.map(String)) : null,
     limits: mapNumbers(raw.limits),
     usage: mapNumbers(raw.usage),

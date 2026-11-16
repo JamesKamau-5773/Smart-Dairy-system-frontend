@@ -142,9 +142,21 @@ export const shellCopy = {
     back: 'Rudi',
   },
 
+  demo: {
+    banner: 'Unatazama shamba la majaribio lenye data za mfano. Mabadiliko hayahifadhiwi.', // REVIEW
+    endsIn: (time) => `Majaribio yanaisha baada ya ${time}`, // REVIEW
+    minutes: (count) => `dak ${count}`, // REVIEW
+    endingSoon: (minutes) => `Majaribio yako yanaisha baada ya dakika ${minutes}. Fungua shamba lako bure ili kuhifadhi rekodi zako.`, // REVIEW
+    createFarm: 'Fungua shamba lako bure', // REVIEW
+    logIn: 'Ingia',
+    expiredTitle: 'Muda wa shamba la majaribio umeisha', // REVIEW
+    expiredMessage: 'Vipindi vya majaribio ni vifupi. Anzisha majaribio tena, au fungua shamba lako bure ili kuhifadhi rekodi zako.', // REVIEW
+    restart: 'Anzisha majaribio tena', // REVIEW
+    restarting: 'Inaanzisha…', // REVIEW
+    backHome: 'Rudi mwanzo', // REVIEW
+  },
+
   plan: {
-    demoTitle: 'Shamba la majaribio.',
-    demoMessage: 'Hizi ni data za mfano za kujaribu Maziwa Smart. Baadhi ya mabadiliko yamezimwa na data zinaweza kufutwa upya.', // REVIEW
     lockedTitle: (feature) => `${feature} haimo kwenye mpango wako`,
     lockedNamedPlan: (plan, feature) => `Mpango wako wa ${plan} haujumuishi ${feature}.`,
     lockedPlan: (feature) => `Mpango wako haujumuishi ${feature}.`,

@@ -221,6 +221,16 @@ export const authCopy = {
     continueApp: 'Endelea kwenye shamba lako',
   },
 
+  demo: {
+    starting: 'Tunaanzisha shamba lako la majaribio…', // REVIEW
+    ready: 'Shamba lako la majaribio liko tayari.', // REVIEW
+    readyFor: (minutes) => `Shamba lako la majaribio liko tayari. Una dakika ${minutes} za kulitazama.`, // REVIEW
+    failedTitle: 'Shamba la majaribio halikuanza', // REVIEW
+    retry: 'Jaribu tena',
+    createFarm: 'Fungua shamba lako bure', // REVIEW
+    backHome: 'Rudi mwanzo', // REVIEW
+  },
+
   errors: {
     network: 'Hatukuweza kuunganisha. Angalia mtandao wako ujaribu tena.',
     offline: 'Huna mtandao. Unganisha kwenye intaneti kuendelea.',
@@ -247,6 +257,7 @@ export const authCopy = {
       VERIFICATION_TOKEN_INVALID: 'Kiungo hiki cha kuthibitisha si sahihi au kimeisha muda.',
       NOT_FOUND: 'Hatukupata ombi hilo. Tafadhali anza tena.',
       UNAUTHENTICATED: 'Muda wako wa kuingia umeisha. Tafadhali ingia tena.',
+      DEMO_UNAVAILABLE: 'Shamba la majaribio linaandaliwa. Tafadhali jaribu tena baada ya dakika moja.', // REVIEW
     },
     byFlow: {
       login: {
@@ -279,6 +290,11 @@ export const authCopy = {
       },
       googleSignup: {
         fallback: 'Hatukuweza kufungua akaunti yako. Angalia sehemu zote ujaribu tena.',
+      },
+      demo: {
+        unavailable: 'Shamba la majaribio halipatikani sasa hivi. Unaweza kufungua shamba lako bure badala yake.', // REVIEW
+        server: 'Hatukuweza kuanzisha shamba la majaribio sasa hivi. Tafadhali jaribu tena baadaye kidogo.', // REVIEW
+        fallback: 'Hatukuweza kuanzisha shamba la majaribio. Tafadhali jaribu tena.', // REVIEW
       },
       default: {
         fallback: 'Hatukuweza kukamilisha ombi hilo. Tafadhali jaribu tena.',

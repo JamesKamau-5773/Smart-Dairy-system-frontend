@@ -19,7 +19,6 @@ describe('normalizeEntitlements', () => {
     const entitlements = normalizeEntitlements(raw);
     expect(entitlements.known).toBe(true);
     expect(entitlements.plan).toEqual({ id: 'starter', name: 'Starter' });
-    expect(entitlements.isDemo).toBe(false);
     expect([...entitlements.features]).toEqual(['milk_records', 'herd']);
     expect(entitlements.limits).toEqual({ cows: 50, receipt_upload_max_bytes: 2097152, staff_accounts: null });
     expect(entitlements.usage).toEqual({ cows: 42 });
@@ -28,7 +27,7 @@ describe('normalizeEntitlements', () => {
 
   it('assumes nothing when the backend sends nothing', () => {
     expect(normalizeEntitlements(undefined)).toEqual({
-      known: false, plan: null, isDemo: null, features: null, limits: {}, usage: {}, upgradeUrl: null,
+      known: false, plan: null, features: null, limits: {}, usage: {}, upgradeUrl: null,
     });
   });
 
@@ -82,7 +81,8 @@ describe('plan and demo error messages', () => {
   it.each([
     [402, 'FEATURE_NOT_IN_PLAN', /isn’t included in your plan/],
     [402, 'SUBSCRIPTION_EXPIRED', /subscription has ended/],
-    [403, 'DEMO_READ_ONLY', /demo farm/],
+    [403, 'DEMO_READ_ONLY', /This is a demo\. Create a free farm/],
+    [403, 'DEMO_FEATURE_UNAVAILABLE', /isn’t available in the demo/],
     [402, 'PLAN_LIMIT_REACHED', /limit for this has been reached/],
   ])('%s %s → a clear message', (status, code, expected) => {
     expect(getPlanErrorMessage(refusal(status, code))).toMatch(expected);

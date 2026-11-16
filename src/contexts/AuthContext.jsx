@@ -70,6 +70,12 @@ export function AuthProvider({ children }) {
             }
 
             console.warn('Saved session was rejected by the server.', error);
+            if (restoredUser.is_demo === true && error?.response?.status === 401) {
+              // An ended demo session gets the demo's own "session ended" sheet (restart or sign up)
+              // instead of a silent trip to the log-in page.
+              setSessionExpired(true);
+              return;
+            }
             setCurrentUser(null);
             await clearSession();
             tenantRef.tenantId = null;
@@ -121,20 +127,28 @@ export function AuthProvider({ children }) {
     };
   }, []);
 
-  const login = async (credentials) => {
+  // The one way a sign-in becomes the current session: password login and the public demo both
+  // end here, so the app treats them the same after this point.
+  const signIn = async (request, flow) => {
     try {
-      const user = await authApi.login(credentials);
-      
+      const user = await request();
+
       setCurrentUser(user);
       await saveSession(user);
       setSessionExpired(false);
-      
+
       return { success: true, user };
     } catch (error) {
-      const details = describeAuthError(error, 'login');
+      const details = describeAuthError(error, flow);
       return { success: false, error: details.message, details };
     }
   };
+
+  const login = (credentials) => signIn(() => authApi.login(credentials), 'login');
+
+  // "Try the live demo": the backend creates the session; whether it is a demo comes from its
+  // answer (`is_demo`), never from here.
+  const startDemo = () => signIn(() => authApi.demo(), 'demo');
 
   const register = async (payload) => {
     try {
@@ -212,7 +226,7 @@ export function AuthProvider({ children }) {
 
   return React.createElement(
     AuthContext.Provider,
-    { value: { currentUser, login, register, claimAccount, completeRequiredPasswordReset, logout, updateSession, refreshUser, isLoading, sessionExpired } },
+    { value: { currentUser, login, startDemo, register, claimAccount, completeRequiredPasswordReset, logout, updateSession, refreshUser, isLoading, sessionExpired } },
     children,
   );
 }

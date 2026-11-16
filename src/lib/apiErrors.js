@@ -17,7 +17,13 @@ export function getApiErrorBody(error) {
 
 // Plan, subscription and demo refusals (BACKEND_REQUESTS.md, BR-014), by `code`. The backend
 // decides when they apply; errorsCopy.plan holds only the words the farmer sees.
-const PLAN_CODES = new Set(['PLAN_LIMIT_REACHED', 'FEATURE_NOT_IN_PLAN', 'SUBSCRIPTION_EXPIRED', 'DEMO_READ_ONLY']);
+const DEMO_CODES = new Set(['DEMO_READ_ONLY', 'DEMO_FEATURE_UNAVAILABLE']);
+const PLAN_CODES = new Set(['PLAN_LIMIT_REACHED', 'FEATURE_NOT_IN_PLAN', 'SUBSCRIPTION_EXPIRED', ...DEMO_CODES]);
+
+/** True when the backend refused a request because this is the public demo (403 + demo code). */
+export function isDemoRefusal(error) {
+  return error?.response?.status === 403 && DEMO_CODES.has(getApiErrorCode(error));
+}
 
 /**
  * A clear message for a plan, subscription or demo refusal (402/403 with one of the codes

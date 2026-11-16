@@ -142,9 +142,23 @@ export const shellCopy = {
     back: 'Go back',
   },
 
+  // The public demo: banner, the sign-up prompt after a refused change, and the ended-session sheet.
+  demo: {
+    banner: 'You are exploring a demo farm with sample data. Changes are not saved.',
+    // `time` is "12 min" or, in the last minutes, "4:59".
+    endsIn: (time) => `Demo ends in ${time}`,
+    minutes: (count) => `${count} min`,
+    endingSoon: (minutes) => `Your demo ends in ${minutes === 1 ? '1 minute' : `${minutes} minutes`}. Create a free farm to keep your own records.`,
+    createFarm: 'Create your free farm',
+    logIn: 'Log in',
+    expiredTitle: 'Your demo has ended',
+    expiredMessage: 'Demo sessions are short. Start the demo again, or create your own free farm to keep your records.',
+    restart: 'Restart demo',
+    restarting: 'Starting…',
+    backHome: 'Back to home',
+  },
+
   plan: {
-    demoTitle: 'Demo farm.',
-    demoMessage: 'This is example data to try Maziwa Smart. Some changes are switched off and the data may be reset.',
     lockedTitle: (feature) => `${feature} isn’t in your plan`,
     lockedNamedPlan: (plan, feature) => `Your ${plan} plan doesn’t include ${feature}.`,
     lockedPlan: (feature) => `Your plan doesn’t include ${feature}.`,

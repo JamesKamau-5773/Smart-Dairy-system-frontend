@@ -3,7 +3,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { featureAccess, limitFor, normalizeEntitlements } from '../lib/entitlements';
 
 /**
- * The signed-in farm's plan, limits and demo status from the backend session. Returns safe
+ * The signed-in farm's plan and limits from the backend session. Returns safe
  * "unknown" values when the backend hasn't sent them; it never assumes a plan.
  *
  * @returns {import('../lib/entitlements').Entitlements & {
@@ -12,7 +12,7 @@ import { featureAccess, limitFor, normalizeEntitlements } from '../lib/entitleme
  * }}
  *
  * @example
- * const { isDemo, access } = useEntitlements();
+ * const { access } = useEntitlements();
  * if (access('payroll') === 'locked') { … }
  */
 export function useEntitlements() {

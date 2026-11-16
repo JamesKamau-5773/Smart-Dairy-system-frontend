@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { DEMO_BUTTON, SHOWCASE } from '../content.js';
-import { initActions, initShowcaseTabs } from '../landing.js';
+import { ACTIONS, DEMO_PATH, initActions, initShowcaseTabs, resetBusyActions, startDemo } from '../landing.js';
 import { demoButton } from '../parts/demoButton.js';
 import { showcaseTabs } from '../sections/showcase.js';
 
@@ -62,5 +62,37 @@ describe('action buttons', () => {
     container.querySelector('p').click();
     container.querySelector('button').click();
     expect(demo).not.toHaveBeenCalled();
+  });
+});
+
+describe('Try the live demo', () => {
+  const render = () => {
+    const container = document.createElement('div');
+    container.innerHTML = demoButton(DEMO_BUTTON, { className: 'btn', withIcon: true });
+    return container.querySelector('button');
+  };
+
+  it('is wired to the demo action', () => {
+    expect(ACTIONS[DEMO_BUTTON.action]).toBeTypeOf('function');
+  });
+
+  it('marks the button busy and opens the app’s demo route', () => {
+    const button = render();
+    const go = vi.fn();
+    startDemo({ target: button.querySelector('svg') }, go);
+
+    expect(go).toHaveBeenCalledWith(DEMO_PATH);
+    expect(DEMO_PATH).toBe('/demo');
+    expect(button.disabled).toBe(true);
+    expect(button.getAttribute('aria-busy')).toBe('true');
+  });
+
+  it('makes the button usable again when the page is restored with Back', () => {
+    const button = render();
+    startDemo({ target: button }, vi.fn());
+    resetBusyActions(button.parentElement);
+
+    expect(button.disabled).toBe(false);
+    expect(button.hasAttribute('aria-busy')).toBe(false);
   });
 });

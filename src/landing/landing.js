@@ -36,15 +36,38 @@ export function initShowcaseTabs(root = document) {
   });
 }
 
+// The app route that starts a demo session. This static page has no API client or session, so
+// the app does the sign-in and shows its progress, failures and rate limits.
+export const DEMO_PATH = '/demo';
+
 /**
- * Click handlers for <button data-action="name">, keyed by name.
- * The demo flow is a separate task: `demo` is a placeholder until then.
+ * "Try the live demo": marks the clicked button busy (so a second tap doesn't queue another
+ * start) and opens the app's demo route.
+ * @param {Event} event
+ * @param {(url: string) => void} [go] For tests; defaults to a full page navigation.
  */
+export function startDemo(event, go = (url) => window.location.assign(url)) {
+  const button = event?.target?.closest?.('[data-action]');
+  if (button) {
+    button.disabled = true;
+    button.setAttribute('aria-busy', 'true');
+  }
+  go(DEMO_PATH);
+}
+
+/** Click handlers for <button data-action="name">, keyed by name. */
 export const ACTIONS = {
-  demo: () => {
-    // TODO: start the live demo (separate task).
-  },
+  demo: (event) => startDemo(event),
 };
+
+// Coming back with the browser's Back button can restore this page as it was left, busy button
+// included; make the demo buttons usable again.
+export function resetBusyActions(root = document) {
+  root.querySelectorAll('[data-action][aria-busy="true"]').forEach((button) => {
+    button.disabled = false;
+    button.removeAttribute('aria-busy');
+  });
+}
 
 /** Routes clicks on [data-action] buttons to their handler. */
 export function initActions(root = document, actions = ACTIONS) {
@@ -57,3 +80,6 @@ export function initActions(root = document, actions = ACTIONS) {
 
 initShowcaseTabs();
 initActions();
+window.addEventListener('pageshow', (event) => {
+  if (event.persisted) resetBusyActions();
+});

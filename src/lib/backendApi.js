@@ -11,6 +11,7 @@ import { toLoginPayload } from './identifier';
 import { normalizeNutritionRequestPayload } from './feedUtils';
 import { todayLocalIso } from './localDate';
 import { getApiErrorCode, getPlanErrorMessage } from './apiErrors';
+import { notifyDemoRefusal } from './demoRefusal';
 import { errorsCopy } from '../i18n/errors';
 import { getLocale } from '../i18n/locale';
 const HEALTH_BASE_URL = BACKEND_BASE_URL;
@@ -43,6 +44,13 @@ authClient.interceptors.request.use((config) => {
 
   return config;
 }, (error) => Promise.reject(error));
+
+// Demo refusals on auth routes (switching farm, phone verification, profile edits) get the same
+// prompt as everywhere else.
+authClient.interceptors.response.use((response) => response, (error) => {
+  notifyDemoRefusal(error);
+  return Promise.reject(error);
+});
 
 const healthClient = axios.create({
   baseURL: HEALTH_BASE_URL,
@@ -806,6 +814,11 @@ export const authApi = {
     if (credentials?.farm_id) payload.farm_id = credentials.farm_id;
 
     return authClient.post('/auth/login', payload).then((response) => normalizeSessionUser(response.data));
+  },
+  // The public demo (backend docs/demo-account.md): no body, no credentials; answers with the
+  // same session shape as login, including the backend's `is_demo` and `read_only`.
+  demo() {
+    return authClient.post('/auth/demo').then((response) => normalizeSessionUser(response.data));
   },
   register(payload) {
     const requestBody = {

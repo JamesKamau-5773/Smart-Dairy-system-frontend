@@ -5,7 +5,7 @@
  *
  * | Flag              | Env variable                    | Default | What it controls |
  * |-------------------|---------------------------------|---------|------------------|
- * | planIndicators    | VITE_FEATURE_PLAN_INDICATORS    | on      | Demo banner, locked-feature cards |
+ * | planIndicators    | VITE_FEATURE_PLAN_INDICATORS    | on      | Locked-feature cards |
  * | customerDelete    | VITE_FEATURE_CUSTOMER_DELETE    | off     | Delete on the Customers page; turn on once the backend route exists (BR-007) |
  * | customerPortal    | VITE_FEATURE_CUSTOMER_PORTAL    | off     | Shared buyer statement page; turn on only once links use private tokens (BR-016) |
  * | kiswahili         | VITE_FEATURE_KISWAHILI          | on      | The English / Kiswahili switch; off keeps the app in English |

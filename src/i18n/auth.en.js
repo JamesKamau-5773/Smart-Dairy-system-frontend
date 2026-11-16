@@ -225,6 +225,17 @@ export const authCopy = {
     continueApp: 'Continue to your farm',
   },
 
+  // The "Try the live demo" start screen (/demo).
+  demo: {
+    starting: 'Starting your demo farm…',
+    ready: 'Your demo farm is ready.',
+    readyFor: (minutes) => `Your demo farm is ready. You have ${minutes} minutes to explore.`,
+    failedTitle: 'The demo didn’t start',
+    retry: 'Try again',
+    createFarm: 'Create your free farm',
+    backHome: 'Back to home',
+  },
+
   errors: {
     network: 'We couldn’t connect. Check your internet connection and try again.',
     offline: 'You’re offline. Connect to the internet to continue.',
@@ -253,6 +264,7 @@ export const authCopy = {
       VERIFICATION_TOKEN_INVALID: 'This verification link is invalid or has expired.',
       NOT_FOUND: 'We couldn’t find that request. Please start again.',
       UNAUTHENTICATED: 'Your session has ended. Please log in again.',
+      DEMO_UNAVAILABLE: 'The demo farm is being prepared. Please try again in a minute.',
     },
     byFlow: {
       login: {
@@ -285,6 +297,11 @@ export const authCopy = {
       },
       googleSignup: {
         fallback: 'We couldn’t create your account. Review the fields and try again.',
+      },
+      demo: {
+        unavailable: 'The live demo isn’t available right now. You can create your own free farm instead.',
+        server: 'We couldn’t start the demo right now. Please try again shortly.',
+        fallback: 'We couldn’t start the demo. Please try again.',
       },
       default: {
         fallback: 'We couldn’t complete that request. Please try again.',

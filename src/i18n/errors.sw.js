@@ -38,7 +38,8 @@ export const errorsCopy = {
     planLimitFor: (limit, resource) => `Mpango wako unaruhusu ${resource} ${limit}. Boresha mpango wako ili kuongeza zaidi. Ulichokwisha hifadhi hakiathiriwi.`, // REVIEW: resource name arrives in English
     FEATURE_NOT_IN_PLAN: 'Hili halimo kwenye mpango wako. Boresha mpango wako ili ulitumie.', // REVIEW
     SUBSCRIPTION_EXPIRED: 'Usajili wako umeisha, kwa hiyo hili halikuhifadhiwa. Uhuishe ili uendelee kurekodi. Rekodi zako ziko salama.', // REVIEW
-    DEMO_READ_ONLY: 'Hili ni shamba la majaribio, kwa hiyo badiliko hili haliwezi kuhifadhiwa. Fungua akaunti ya shamba lako ili kuhifadhi rekodi.',
+    DEMO_READ_ONLY: 'Hili ni shamba la majaribio. Fungua shamba lako bure ili kuhifadhi rekodi zako.', // REVIEW
+    DEMO_FEATURE_UNAVAILABLE: 'Hili halipatikani kwenye shamba la majaribio. Fungua shamba lako bure ili ulitumie.', // REVIEW
   },
 
   offline: {

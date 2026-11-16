@@ -1,6 +1,5 @@
 import { cleanup, render, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import DemoBanner from '../DemoBanner';
 import LockedFeature from '../LockedFeature';
 import { useAuth } from '../../../contexts/AuthContext';
 
@@ -8,23 +7,6 @@ vi.mock('../../../contexts/AuthContext', () => ({ useAuth: vi.fn() }));
 afterEach(cleanup);
 
 const signedInWith = (entitlements) => useAuth.mockReturnValue({ currentUser: { id: 1, entitlements } });
-
-describe('DemoBanner', () => {
-  it('marks the demo farm when the backend says it is the demo', () => {
-    signedInWith({ is_demo: true });
-    render(<DemoBanner />);
-    expect(screen.getByRole('status').textContent).toMatch(/Demo farm\./);
-  });
-
-  it('shows nothing for a real farm or when it isn’t known', () => {
-    signedInWith({ is_demo: false });
-    const { container, rerender } = render(<DemoBanner />);
-    expect(container.textContent).toBe('');
-    signedInWith(undefined);
-    rerender(<DemoBanner />);
-    expect(container.textContent).toBe('');
-  });
-});
 
 describe('LockedFeature', () => {
   const page = <p>Payroll page</p>;

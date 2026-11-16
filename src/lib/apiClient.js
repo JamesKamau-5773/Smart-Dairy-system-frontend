@@ -5,6 +5,7 @@ import { tenantRef } from './tenantRef';
 import { httpClientConfig } from './httpClientConfig';
 import { API_BASE_URL } from './apiBaseUrl';
 import { SESSION_EXPIRED_EVENT } from './sessionEvents';
+import { notifyDemoRefusal } from './demoRefusal';
 
 export function resolveBackendAssetUrl(value) {
   if (!value || typeof value !== 'string') return null;
@@ -97,6 +98,7 @@ apiClient.interceptors.response.use(
       // The page stays mounted (keeping anything typed) while AuthProvider asks the farmer to sign in again.
       window.dispatchEvent(new CustomEvent(SESSION_EXPIRED_EVENT));
     }
+    notifyDemoRefusal(error);
     if (!config || !isNetworkFailure(error) || !isReplayableMutation(config)) {
       return Promise.reject(error);
     }

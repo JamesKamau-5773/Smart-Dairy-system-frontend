@@ -87,6 +87,8 @@ function getStatusMessage(status, data, flow) {
   if (flow === 'bootstrap' && [401, 403].includes(status)) return flowCopy.unauthorized;
   if (flow === 'bootstrap' && [404, 409, 410].includes(status)) return flowCopy.unavailable;
   if (flow === 'register' && status === 409) return flowCopy.conflict;
+  // The backend answers 404 when the demo is switched off (docs/demo-account.md).
+  if (flow === 'demo' && status === 404) return flowCopy.unavailable;
 
   if ([400, 422].includes(status)) {
     return getFieldErrorSummary(data) ?? getSafeServerMessage(data) ?? copy.validation;

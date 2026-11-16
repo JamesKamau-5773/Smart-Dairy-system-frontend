@@ -26,6 +26,7 @@ const ResetPasswordPage = lazy(() => import('./pages/auth/ResetPasswordPage.jsx'
 const VerifyPhonePage = lazy(() => import('./pages/auth/VerifyPhonePage.jsx'));
 const VerifyEmailPage = lazy(() => import('./pages/auth/VerifyEmailPage.jsx'));
 const GoogleCompletePage = lazy(() => import('./pages/auth/GoogleCompletePage.jsx'));
+const DemoStartPage = lazy(() => import('./pages/auth/DemoStartPage.jsx'));
 const SystemAdminDashboardPage = lazy(() => import('./pages/auth/SystemAdminDashboardPage.jsx'));
 const SuperAdminCooperativeSetupPage = lazy(() => import('./pages/auth/SuperAdminCooperativeSetupPage.jsx'));
 const CooperativeAdminOnboardingPage = lazy(() => import('./pages/auth/CooperativeAdminOnboardingPage.jsx'));
@@ -224,6 +225,7 @@ export default function App() {
         <Routes key={locale}>
           <Route path="/register" element={renderPublicPage(RegisterPage, 'Loading registration…')} />
           <Route path="/login" element={renderPublicPage(LoginPage, 'Loading login…')} />
+          <Route path="/demo" element={renderPublicPage(DemoStartPage, 'Starting the demo…')} />
           <Route path="/claim-account" element={renderPublicPage(ClaimAccountPage, 'Loading claim account…')} />
           <Route path="/forgot-password" element={renderPublicPage(ForgotPasswordPage, 'Loading password reset…')} />
           <Route path="/reset-password" element={renderPublicPage(ResetPasswordPage, 'Loading password reset…')} />

@@ -41,7 +41,8 @@ export const errorsCopy = {
     planLimitFor: (limit, resource) => `Your plan allows ${limit} ${resource}. Upgrade your plan to add more. Nothing you already saved is affected.`,
     FEATURE_NOT_IN_PLAN: 'This isn’t included in your plan. Upgrade your plan to use it.',
     SUBSCRIPTION_EXPIRED: 'Your subscription has ended, so this wasn’t saved. Renew it to keep recording. Your records are safe.',
-    DEMO_READ_ONLY: 'This is the demo farm, so this change can’t be saved. Create your own farm account to keep records.',
+    DEMO_READ_ONLY: 'This is a demo. Create a free farm to save your own records.',
+    DEMO_FEATURE_UNAVAILABLE: 'This isn’t available in the demo. Create a free farm to use it.',
   },
 
   offline: {

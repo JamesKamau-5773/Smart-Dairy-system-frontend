@@ -6,6 +6,7 @@ import DebugBar from './DebugBar';
 import OfflineBanner from '../components/ui/OfflineBanner';
 import PhoneVerificationBanner from '../components/auth/PhoneVerificationBanner';
 import DemoBanner from '../components/plan/DemoBanner';
+import DemoRefusalNotice from '../components/plan/DemoRefusalNotice';
 import ErrorBoundary from '../components/errors/ErrorBoundary';
 import SessionExpiredSheet from '../components/ui/SessionExpiredSheet';
 import { usePrefetchOfflineEssentials } from '../hooks/usePrefetchOfflineEssentials';
@@ -91,6 +92,7 @@ export default function DashboardLayout({ children = null }) {
 
       <MobileBottomNav />
       <SessionExpiredSheet />
+      <DemoRefusalNotice />
       <DebugBar />
 
       </div>
