@@ -9,11 +9,12 @@ import ProfileStatusTab from './employeeDrawer/ProfileStatusTab';
 import FinancialsTab from './employeeDrawer/FinancialsTab';
 import MedicalCertificationsTab from './employeeDrawer/MedicalCertificationsTab';
 import { formatKenyanPhoneInput, normalizeEmployeeRole, normalizeKenyanPhone } from '../../lib/staffAccessForm';
+import { staffCopy } from '../../i18n/staff';
 
 const tabs = [
-  { id: 'profile', label: 'Profile & Status', icon: User },
-  { id: 'financials', label: 'Financials', icon: BadgeDollarSign },
-  { id: 'medical', label: 'Medical / Certifications', icon: HeartPulse },
+  { id: 'profile', icon: User },
+  { id: 'financials', icon: BadgeDollarSign },
+  { id: 'medical', icon: HeartPulse },
 ];
 
 function toNumber(value) {
@@ -73,9 +74,9 @@ export default function EmployeeDrawer({
 
     const phoneNumber = normalizeKenyanPhone(profileData.phoneNumber);
     const errors = {};
-    if (!profileData.name.trim()) errors.name = 'Enter the employee’s full name.';
-    if (!profileData.role) errors.role = 'Select a job role.';
-    if (!phoneNumber) errors.phoneNumber = 'Enter a valid Kenyan mobile number, for example 0712 345 678.';
+    if (!profileData.name.trim()) errors.name = staffCopy.validation.name;
+    if (!profileData.role) errors.role = staffCopy.validation.role;
+    if (!phoneNumber) errors.phoneNumber = staffCopy.validation.phone;
     if (Object.keys(errors).length) {
       setProfileErrors(errors);
       return;
@@ -121,7 +122,7 @@ export default function EmployeeDrawer({
       isOpen={isOpen}
       onClose={onClose}
       title={staff.name}
-      subtitle="Manage profile, payroll inputs, and credentials without leaving the registry context."
+      subtitle={staffCopy.drawer.subtitle}
     >
       <div className="space-y-5 text-gray-900">
         <div className="flex gap-4 border-b border-gray-200">
@@ -139,7 +140,7 @@ export default function EmployeeDrawer({
                     : 'border-transparent text-gray-500 hover:text-gray-700'
                 }`}
               >
-                <Icon size={12} /> {tab.label}
+                <Icon size={12} /> {staffCopy.drawer.tabs[tab.id]}
               </button>
             );
           })}

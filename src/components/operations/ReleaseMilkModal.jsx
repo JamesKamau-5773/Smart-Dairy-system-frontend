@@ -2,7 +2,7 @@ import { useState } from 'react';
 import BaseModal from '../ui/BaseModal';
 import SubmitButton from '../auth/SubmitButton';
 import { formatLockExpiry } from '../../lib/milkSafety';
-import { safetyCopy as copy } from '../../i18n/safety.en';
+import { safetyCopy as copy } from '../../i18n/safety';
 
 /**
  * Releasing milk the backend says isn't safe yet (withdrawal running or a failed

@@ -4,6 +4,9 @@ import { formatDateRange } from '../../lib/dateFormat';
 import { TABLE_GROUP_LEVELS } from '../../lib/periodTotals';
 import { productionCopy } from '../../i18n/production';
 import { commonCopy } from '../../i18n/common';
+import { financeCopy } from '../../i18n/finance';
+
+const ledgerWords = financeCopy.ledgerPeriods;
 
 // Per-page configuration for SummaryStrip and GroupedDataTable. Adding a page means adding a
 // config here, not changing the components. Every figure is read from the API view model;
@@ -24,18 +27,18 @@ export const summaryIsEmpty = (summary) => summary?.current?.count === 0;
 
 export const ledgerSummaryConfig = {
   items: ({ current }) => [
-    { key: 'in', label: 'Money in', value: moneyOrDash(current.income, { size: 'md' }) },
-    { key: 'out', label: 'Money out', value: moneyOrDash(current.expenses, { size: 'md' }) },
-    { key: 'net', label: 'Net', value: moneyOrDash(current.net, { size: 'md', tone: 'net' }) },
-    { key: 'unpaid', label: 'Unpaid', value: moneyOrDash(current.unpaid, { size: 'md' }) },
+    { key: 'in', label: ledgerWords.moneyIn, value: moneyOrDash(current.income, { size: 'md' }) },
+    { key: 'out', label: ledgerWords.moneyOut, value: moneyOrDash(current.expenses, { size: 'md' }) },
+    { key: 'net', label: ledgerWords.net, value: moneyOrDash(current.net, { size: 'md', tone: 'net' }) },
+    { key: 'unpaid', label: ledgerWords.unpaid, value: moneyOrDash(current.unpaid, { size: 'md' }) },
   ],
 };
 
-const recordsText = (count) => (count == null ? '—' : `${formatCount(count)} ${count === 1 ? 'record' : 'records'}`);
+const recordsText = (count) => (count == null ? '—' : ledgerWords.records(count, formatCount(count)));
 
 export const ledgerGroupConfig = {
   levels: TABLE_GROUP_LEVELS,
-  noun: ['record', 'records'],
+  get noun() { return financeCopy.ledger.noun; },
   // Desktop table: the group's net (from the API) in the Amount column, signed like the rows:
   // a negative in the negative colour, a positive plain. The header names the currency.
   columnTotals: {
@@ -44,7 +47,7 @@ export const ledgerGroupConfig = {
   labelMeta: (totals) => <span className="shrink-0 text-xs font-normal text-ink-muted">· {recordsText(totals.count)}</span>,
   // Phones have no column header, so the net keeps its currency.
   renderSummary: (totals) => moneyOrDash(totals.net, { size: 'sm', tone: 'signed', className: 'font-semibold' }),
-  describeSummary: (totals) => `net ${signedMoneyText(totals.net)}, in ${formatMoneyText(totals.income)}, out ${formatMoneyText(totals.expenses)}`,
+  describeSummary: (totals) => ledgerWords.describeTotals(signedMoneyText(totals.net), formatMoneyText(totals.income), formatMoneyText(totals.expenses)),
 };
 
 const entriesText = (count) => (count == null ? '—' : productionCopy.group.entries(count, formatCount(count)));

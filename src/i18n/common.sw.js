@@ -106,4 +106,33 @@ export const commonCopy = {
     ungrouped: 'Kundi la tarehe halipatikani',
     emptyDay: 'Hakuna rekodi zilizopakiwa kwa siku hii.',
   },
+
+  time: {
+    unknown: 'Haijulikani',
+    justNow: 'Sasa hivi',
+    minutesAgo: (count) => `dakika ${count} zilizopita`,
+    hoursAgo: (count) => `saa ${count} zilizopita`,
+    daysAgo: (count) => (count === 1 ? 'jana' : `siku ${count} zilizopita`),
+  },
+
+  photo: {
+    dataSaverHint: 'Okoa data imewashwa. Gusa ili kupakia picha hii.',
+    show: 'Onyesha picha',
+  },
+
+  ui: {
+    dismiss: 'Funga',
+    close: 'Funga',
+    moreActions: 'Vitendo zaidi',
+    didYouMean: 'Ulimaanisha',
+    syncStatus: 'Fungua hali ya kutuma',
+  },
+  dateRange: {
+    label: 'Chagua tarehe',
+    from: 'Kuanzia',
+    to: 'Hadi',
+    reversed: 'Tarehe ya Kuanzia lazima iwe sawa au kabla ya tarehe ya Hadi.',
+    cancel: 'Ghairi',
+    apply: 'Tumia',
+  },
 };

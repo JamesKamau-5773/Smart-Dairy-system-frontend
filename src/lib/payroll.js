@@ -1,3 +1,5 @@
+import { formatMonthYear } from './dateFormat';
+import { staffCopy } from '../i18n/staff';
 // Payroll runs as the backend sends them (`/hr/payroll/runs`, normalised by
 // normalizePayrollRun). Pure helpers for ordering, wording and export.
 
@@ -36,25 +38,25 @@ export function nextPayrollPeriod(runs, backendNext, now = new Date()) {
 
 /** "November 2026" for a year/month, in the device's language. */
 export function periodLabel({ payroll_year: year, payroll_month: month }) {
-  return new Date(year, month - 1, 1).toLocaleString(undefined, { month: 'long', year: 'numeric' });
+  return formatMonthYear(new Date(year, month - 1, 1));
 }
 
 /** The last day of the period, when salaries are usually paid. */
 export function periodPayDate(period) {
-  return new Date(period.payroll_year, period.payroll_month, 0).toLocaleDateString(undefined, { day: 'numeric', month: 'long', year: 'numeric' });
+  const lastDay = new Date(period.payroll_year, period.payroll_month, 0);
+  return `${lastDay.getDate()} ${formatMonthYear(lastDay)}`;
 }
 
 export const RUN_STATUS = Object.freeze({
   // `tone` names a TONES entry (components/ui/tones), drawn by the status chip.
-  DRAFT: { label: 'Draft – check before finalizing', tone: 'neutral' },
-  FINALIZED: { label: 'Finalized – ready to pay', tone: 'attention' },
-  PAID: { label: 'Paid', tone: 'info' },
+  DRAFT: { get label() { return staffCopy.payroll.runStatuses.DRAFT; }, tone: 'neutral' },
+  FINALIZED: { get label() { return staffCopy.payroll.runStatuses.FINALIZED; }, tone: 'attention' },
+  PAID: { get label() { return staffCopy.payroll.runStatuses.PAID; }, tone: 'info' },
 });
 
 export const runStatus = (status) => RUN_STATUS[String(status ?? '').toUpperCase()] ?? { label: String(status ?? ''), tone: 'neutral' };
 
-const LINE_STATUS = { PAID: 'Paid', PENDING: 'Not paid yet', DRAFT: 'Not paid yet' };
-export const lineStatusLabel = (status) => LINE_STATUS[String(status ?? '').toUpperCase()] ?? String(status ?? '');
+export const lineStatusLabel = (status) => staffCopy.payroll.lineStatuses[String(status ?? '').toUpperCase()] ?? String(status ?? '');
 
 const csvCell = (value) => {
   const text = String(value ?? '');
@@ -73,7 +75,7 @@ export const STATUTORY_PARTS = Object.freeze([
 export function statutoryBreakdown(line) {
   return STATUTORY_PARTS
     .filter(([key]) => line?.[key] !== null && line?.[key] !== undefined)
-    .map(([key, label]) => `${label} ${Number(line[key]).toLocaleString()}`)
+    .map(([key, label]) => `${key === 'housingLevyEmployee' ? staffCopy.payroll.housingLevy : label} ${Number(line[key]).toLocaleString()}`)
     .join(' · ');
 }
 

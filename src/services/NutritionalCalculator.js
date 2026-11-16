@@ -1,3 +1,5 @@
+import { feedCopy } from '../i18n/feed';
+
 export const calculateRecipeMetrics = (ingredients, batchSizeKg) => {
   const safeBatchSize = Math.max(0, Number(batchSizeKg) || 0);
 
@@ -46,14 +48,14 @@ export const validateRecipe = (metrics, batchSizeKg, targetProtein = 16, maxCost
   if (metrics.averageProtein < targetProtein) {
     alerts.push({
       type: 'warning',
-      message: `Low Protein (${metrics.averageProtein.toFixed(1)}%). Target is ${targetProtein}%.`
+      message: feedCopy.builder.lowProtein(metrics.averageProtein.toFixed(1), targetProtein)
     });
   }
 
   if (costPerKg > maxCostPerKg) {
     alerts.push({
       type: 'danger',
-      message: `High Cost (KES ${costPerKg.toFixed(2)}/kg). Max budget is KES ${maxCostPerKg}/kg.`
+      message: feedCopy.builder.highCost(costPerKg.toFixed(2), maxCostPerKg)
     });
   }
 

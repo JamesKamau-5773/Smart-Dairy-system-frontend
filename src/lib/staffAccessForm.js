@@ -1,5 +1,6 @@
 import { FARM_STAFF_ROLE_OPTIONS } from './staffOnboarding';
 import { normalizeKenyanPhone } from './phone';
+import { staffCopy } from '../i18n/staff';
 
 // Phone helpers moved to ./phone; re-exported so existing staff forms keep working.
 export { formatKenyanPhoneInput, normalizeKenyanPhone } from './phone';
@@ -34,16 +35,16 @@ export function parseSalaryInput(value) {
 
 export function validateEmployeeFields({ name, role, phoneNumber, baseSalary }) {
   const errors = {};
-  if (!String(name ?? '').trim()) errors.name = 'Enter the employee’s full name.';
-  if (!role) errors.role = 'Select a job role.';
-  if (!normalizeKenyanPhone(phoneNumber)) errors.phoneNumber = 'Enter a valid Kenyan mobile number, for example 0712 345 678.';
-  if (parseSalaryInput(baseSalary) <= 0) errors.baseSalary = 'Enter a salary greater than KES 0.';
+  if (!String(name ?? '').trim()) errors.name = staffCopy.validation.name;
+  if (!role) errors.role = staffCopy.validation.role;
+  if (!normalizeKenyanPhone(phoneNumber)) errors.phoneNumber = staffCopy.validation.phone;
+  if (parseSalaryInput(baseSalary) <= 0) errors.baseSalary = staffCopy.validation.salary;
   return errors;
 }
 
 export function generateSecurePassword(length = 16, cryptoProvider = globalThis.crypto) {
   if (!cryptoProvider?.getRandomValues) {
-    throw new Error('Secure password generation is unavailable in this browser.');
+    throw new Error(staffCopy.validation.noSecureRandom);
   }
 
   const size = Math.max(16, Number(length) || 16);
@@ -55,7 +56,7 @@ export function generateSecurePassword(length = 16, cryptoProvider = globalThis.
 export function validateProvisioningFields({ mode, password, requiresPasswordReset }) {
   if (mode !== ACCESS_MODES.PROVISION) return {};
   const errors = {};
-  if (String(password ?? '').length < 12) errors.password = 'Use at least 12 characters or generate a secure password.';
-  if (requiresPasswordReset !== true) errors.requiresPasswordReset = 'A password reset is required for farmer-provisioned accounts.';
+  if (String(password ?? '').length < 12) errors.password = staffCopy.validation.password;
+  if (requiresPasswordReset !== true) errors.requiresPasswordReset = staffCopy.validation.passwordReset;
   return errors;
 }

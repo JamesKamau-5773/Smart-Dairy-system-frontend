@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import BaseModal from '../ui/BaseModal';
 import SubmitButton from '../auth/SubmitButton';
-import { feedCopy } from '../../i18n/feed.en';
+import { feedCopy } from '../../i18n/feed';
 import { getFeedErrorMessage } from '../../lib/feedErrors';
 import { EMPTY_STOCK_OUT, STOCK_OUT_REASONS, isWriteOff, validateStockOut } from '../../lib/stockChangeForm';
 

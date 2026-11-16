@@ -2,18 +2,20 @@ import { Baby, Droplets, Plus } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { formatCowIdentity } from '../../lib/cowIdentity';
 import { formatDate } from '../../lib/herdUtils';
+import { milkCopy } from '../../i18n/milk';
 
 export default function MilkDispositionHistory({
   records,
   isLoading,
   error,
   onRecord,
-  title = 'Calf milk allocations',
+  title = milkCopy.calfHistory.title,
   totalCount = records.length,
   totalLiters = records.reduce((total, record) => total + record.liters, 0),
   viewAllHref,
   footer,
 }) {
+  const copy = milkCopy.calfHistory;
 
   return (
     <section className="card-machined overflow-hidden !p-0" aria-labelledby="calf-milk-heading">
@@ -25,33 +27,33 @@ export default function MilkDispositionHistory({
           <div>
             <h3 id="calf-milk-heading" className="font-semibold text-ink">{title}</h3>
             <p className="mt-0.5 text-xs text-ink-muted">
-              {totalCount} {totalCount === 1 ? 'feeding' : 'feedings'} · {Number(totalLiters).toFixed(2)} L allocated
+              {copy.summary(totalCount, Number(totalLiters).toFixed(2))}
             </p>
           </div>
         </div>
         <div className="flex flex-col gap-2 sm:flex-row">
           {viewAllHref && (
-            <Link to={viewAllHref} className="btn-ghost justify-center px-4 py-2 text-xs">View all</Link>
+            <Link to={viewAllHref} className="btn-ghost justify-center px-4 py-2 text-xs">{copy.viewAll}</Link>
           )}
           {onRecord && (
             <button type="button" onClick={onRecord} className="btn-secondary justify-center gap-2 px-4 py-2 text-xs">
-              <Plus size={14} /> Feed calf
+              <Plus size={14} /> {copy.feedCalf}
             </button>
           )}
         </div>
       </header>
 
       {isLoading ? (
-        <div className="px-5 py-8 text-center text-sm text-ink-muted">Loading calf feedings...</div>
+        <div className="px-5 py-8 text-center text-sm text-ink-muted">{copy.loading}</div>
       ) : error ? (
         <div role="alert" className="border-l-4 border-brand bg-brand-50 px-5 py-4 text-sm font-semibold text-brand-dark">
-          Unable to load calf milk allocations.
+          {copy.failed}
         </div>
       ) : records.length === 0 ? (
         <div className="flex flex-col items-center px-5 py-10 text-center">
           <Droplets size={24} className="text-ink/25" />
-          <p className="mt-3 text-sm font-semibold text-ink">No calf feedings recorded</p>
-          <p className="mt-1 text-xs text-ink-muted">Milk allocated to calves will appear here.</p>
+          <p className="mt-3 text-sm font-semibold text-ink">{copy.emptyTitle}</p>
+          <p className="mt-1 text-xs text-ink-muted">{copy.emptyHint}</p>
         </div>
       ) : (
         <>
@@ -59,10 +61,10 @@ export default function MilkDispositionHistory({
             <table className="w-full min-w-[680px] text-left">
               <thead className="bg-surface-raised text-[10px] font-bold uppercase tracking-widest text-ink-muted">
                 <tr>
-                  <th className="px-5 py-3">Date</th>
-                  <th className="px-5 py-3">Calf</th>
-                  <th className="px-5 py-3 text-right">Milk consumed</th>
-                  <th className="px-5 py-3">Notes</th>
+                  <th className="px-5 py-3">{copy.columns.date}</th>
+                  <th className="px-5 py-3">{copy.columns.calf}</th>
+                  <th className="px-5 py-3 text-right">{copy.columns.consumed}</th>
+                  <th className="px-5 py-3">{copy.columns.notes}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-ink/10 bg-surface">
@@ -92,7 +94,7 @@ export default function MilkDispositionHistory({
                 </div>
                 <div className="flex min-w-0 flex-wrap justify-between gap-x-3 gap-y-1 text-xs text-ink-muted">
                   <time>{formatDate(record.date)}</time>
-                  <span className="break-words text-right">{record.notes || 'No notes'}</span>
+                  <span className="break-words text-right">{record.notes || copy.noNotes}</span>
                 </div>
               </article>
             ))}

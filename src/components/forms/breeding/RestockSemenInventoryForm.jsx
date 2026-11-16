@@ -3,6 +3,7 @@ import toast from 'react-hot-toast';
 import { normalizeSemenInventory } from '../../../lib/breedingUtils';
 import { breedingApi, getApiErrorMessage } from '../../../lib/backendApi';
 import { reportError } from '../../../lib/telemetry';
+import { breedingCopy } from '../../../i18n/breeding';
 
 /**
  * RestockSemenInventoryForm
@@ -20,6 +21,7 @@ export default function RestockSemenInventoryForm({
   isSaving = false,
   onSavingChange,
 }) {
+  const copy = breedingCopy.inventory.restockForm;
   const [restockForm, setRestockForm] = useState({ amount: '' });
   const [formErrors, setFormErrors] = useState({});
 
@@ -29,12 +31,12 @@ export default function RestockSemenInventoryForm({
 
     const amount = Number(restockForm.amount);
     if (!Number.isFinite(amount) || amount <= 0) {
-      setFormErrors((current) => ({ ...current, restockAmount: 'Enter a quantity greater than 0.' }));
+      setFormErrors((current) => ({ ...current, restockAmount: copy.amountInvalid }));
       return;
     }
 
     if (!inventoryItem) {
-      const errorMsg = 'Select an inventory item before restocking.';
+      const errorMsg = copy.noItem;
       onError?.(errorMsg);
       toast.error(errorMsg);
       return;
@@ -59,7 +61,7 @@ export default function RestockSemenInventoryForm({
         strawsLeft: nextStrawCount,
       });
 
-      const successMsg = `Restocked ${updated.name} by ${amount} straws.`;
+      const successMsg = copy.done(updated.name, amount);
       onSuccess?.(updated, successMsg);
       toast.success(successMsg);
 
@@ -67,7 +69,7 @@ export default function RestockSemenInventoryForm({
       setRestockForm({ amount: '' });
     } catch (error) {
       reportError(error, { where: 'RestockSemenInventoryForm.save' });
-      const errorMsg = getApiErrorMessage(error, 'Could not restock this semen inventory. Check the quantity and try again.');
+      const errorMsg = getApiErrorMessage(error, copy.failed);
       onError?.(errorMsg);
       toast.error(errorMsg);
     } finally {
@@ -79,22 +81,22 @@ export default function RestockSemenInventoryForm({
     <form className="space-y-4" onSubmit={handleSubmit}>
       <div className="space-y-4">
         <div className="border-b border-ink/10 pb-3">
-          <h4 className="text-sm font-bold uppercase tracking-widest text-brand">Restock Details</h4>
+          <h4 className="text-sm font-bold uppercase tracking-widest text-brand">{copy.section}</h4>
         </div>
 
         {/* Selected Item Info */}
         <div className="rounded-lg border border-brand/10 bg-brand/5 p-3 text-sm text-ink-strong">
-          <div className="font-bold">{inventoryItem?.name || 'Selected Item'}</div>
-          <div className="text-xs text-ink-muted">Code: {inventoryItem?.code || 'N/A'}</div>
+          <div className="font-bold">{inventoryItem?.name || copy.selected}</div>
+          <div className="text-xs text-ink-muted">{copy.code(inventoryItem?.code || copy.noCode)}</div>
           <div className="text-xs text-ink-muted">
-            Current stock: {inventoryItem?.strawsLeft ?? 0} straws
+            {copy.current(inventoryItem?.strawsLeft ?? 0)}
           </div>
         </div>
 
         {/* Add Straws */}
         <div>
           <label className="mb-1 block text-xs font-bold uppercase tracking-wider text-ink-muted">
-            Add Straws *
+            {copy.add}
           </label>
           <input
             type="number"
@@ -109,7 +111,7 @@ export default function RestockSemenInventoryForm({
                 setFormErrors((current) => ({ ...current, restockAmount: null }));
               }
             }}
-            placeholder="e.g. 20"
+            placeholder={copy.placeholder}
             aria-invalid={!!formErrors.restockAmount}
           />
           {formErrors.restockAmount && (
@@ -125,7 +127,7 @@ export default function RestockSemenInventoryForm({
           disabled={isSaving}
           className="btn-command px-4 py-2 text-sm"
         >
-          {isSaving ? 'Saving...' : 'Restock'}
+          {isSaving ? copy.saving : copy.submit}
         </button>
       </div>
     </form>

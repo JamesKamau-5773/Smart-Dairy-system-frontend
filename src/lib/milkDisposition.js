@@ -1,4 +1,5 @@
 import { todayLocalIso } from './localDate';
+import { milkCopy } from '../i18n/milk';
 
 export const CALF_FEED_TYPE = 'CALF_FEED';
 
@@ -24,10 +25,11 @@ export function buildCalfMilkFeedPayload(values = {}) {
 }
 
 export function validateCalfMilkFeed(values = {}) {
-  if (!values.calfId) return 'Select a calf.';
-  if (!Number.isFinite(Number(values.liters)) || Number(values.liters) <= 0) return 'Enter a milk amount greater than zero.';
-  if (!values.date) return 'Select a feeding date.';
-  if (values.date > todayLocalIso()) return 'Feeding date cannot be in the future.';
+  const messages = milkCopy.calfFeed.validation;
+  if (!values.calfId) return messages.calf;
+  if (!Number.isFinite(Number(values.liters)) || Number(values.liters) <= 0) return messages.liters;
+  if (!values.date) return messages.date;
+  if (values.date > todayLocalIso()) return messages.futureDate;
   return '';
 }
 

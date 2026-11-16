@@ -1,4 +1,5 @@
-import LABELS from '../lib/labels';
+// The raw English labels: this file is the English source, so it must not follow the language.
+import { labelsCopy as LABELS } from './labels.en';
 
 /**
  * Text for the signed-in app shell: header, menu, bottom navigation, connection banner and the

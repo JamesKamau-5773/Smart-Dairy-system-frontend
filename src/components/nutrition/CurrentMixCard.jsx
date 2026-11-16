@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { AlertCircle, Beaker, Clock, Plus, RefreshCw, Tractor, Utensils } from 'lucide-react';
 import Skeleton from '../ui/Skeleton';
 import { FEEDING_GROUPS } from '../../lib/feedingGroups';
-import { feedCopy } from '../../i18n/feed.en';
+import { feedCopy } from '../../i18n/feed';
 import { tone } from '../ui/tones';
 
 const { currentMix: copy } = feedCopy;

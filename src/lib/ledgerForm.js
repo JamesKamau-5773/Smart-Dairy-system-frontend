@@ -1,7 +1,10 @@
 // The ledger's income and expense form: the categories the backend accepts, a
 // sensible starting cost class for each, and what's still missing before saving.
 
-// Backend transaction categories (finance API). Labels are what farmers see.
+import { financeCopy } from '../i18n/finance';
+
+// Backend transaction categories (finance API). These English labels are the fallback list;
+// screens show labels in the chosen language (useLedgerCategories).
 export const INCOME_CATEGORIES = Object.freeze([
   ['Milk Sale', 'Milk sales'],
   ['Livestock Sale', 'Livestock sales'],
@@ -25,13 +28,6 @@ export const COST_CLASSES = Object.freeze([
   ['capital_expenditure', 'Major purchases (assets)'],
 ]);
 
-export const COST_CLASS_DEFINITIONS = Object.freeze([
-  ['production_cost', 'Money spent directly on the cows and milk production, such as feeds, supplements, AI services, and veterinary bills.'],
-  ['operating_cost', 'Day-to-day farm overhead not directly tied to a specific cow, like electricity, water, fuel, and permanent staff wages.'],
-  ['customer_acquisition', 'Costs related to getting your milk to the buyer, including transport, packaging, marketing, and vendor fees.'],
-  ['capital_expenditure', 'Big, long-term investments for the farm, such as buying new machinery, building sheds, or purchasing new livestock.'],
-]);
-
 // A starting point so farmers don't have to know accounting classes; they can
 // change it, and the backend validates whatever is sent.
 const DEFAULT_COST_CLASS = Object.freeze({
@@ -53,21 +49,22 @@ const isBlank = (value) => !String(value ?? '').trim();
  * Save button can say why. Empty when the form can be sent.
  */
 export function missingLedgerFields(form, transactionType, { mpesaCodeError } = {}) {
+  const words = financeCopy.ledgerForm.missing;
   const missing = [];
-  if (!form.date) missing.push('the date');
-  if (!(Number(form.amount) > 0)) missing.push('the amount');
+  if (!form.date) missing.push(words.date);
+  if (!(Number(form.amount) > 0)) missing.push(words.amount);
 
   if (transactionType === 'income') {
-    if (form.incomePayerType === 'customer' ? !form.customer_id : isBlank(form.income_source)) missing.push(form.incomePayerType === 'customer' ? 'the customer' : 'who paid');
-    if (form.incomePayerType === 'customer' && form.paymentMethod !== 'Cash' && isBlank(form.reference_code)) missing.push('the payment reference');
-    if (mpesaCodeError) missing.push('a valid M-Pesa code');
+    if (form.incomePayerType === 'customer' ? !form.customer_id : isBlank(form.income_source)) missing.push(form.incomePayerType === 'customer' ? words.customer : words.payer);
+    if (form.incomePayerType === 'customer' && form.paymentMethod !== 'Cash' && isBlank(form.reference_code)) missing.push(words.reference);
+    if (mpesaCodeError) missing.push(words.mpesaCode);
     return missing;
   }
 
-  if (isBlank(form.party)) missing.push('the supplier or payee');
-  if (isBlank(form.item_name)) missing.push('what was bought');
-  if (form.category === 'Feed Purchase' && !(Number(form.quantity) > 0)) missing.push('the quantity');
+  if (isBlank(form.party)) missing.push(words.payee);
+  if (isBlank(form.item_name)) missing.push(words.item);
+  if (form.category === 'Feed Purchase' && !(Number(form.quantity) > 0)) missing.push(words.quantity);
   // Animals are optional; if some are chosen, the backend needs the cost type too.
-  if (form.animal_ids?.length > 0 && !form.animal_cost_type) missing.push('how the cost applies to the chosen animals');
+  if (form.animal_ids?.length > 0 && !form.animal_cost_type) missing.push(words.costType);
   return missing;
 }

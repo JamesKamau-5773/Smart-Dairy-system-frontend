@@ -48,7 +48,7 @@ describe('FeedFormulation save', () => {
     renderPlanner();
     fireEvent.change(await shareInput('Maize germ'), { target: { value: '50' } });
 
-    const save = screen.getByRole('button', { name: /Save As Current Feed Mix/ });
+    const save = screen.getByRole('button', { name: /Save as current feed mix/ });
     expect(save.disabled).toBe(true);
     expect(screen.getAllByText('Shares add up to 90%. Change them to exactly 100% first.').length).toBeGreaterThan(0);
     expect(nutrition.autoSaveRecipe).not.toHaveBeenCalled();
@@ -59,7 +59,7 @@ describe('FeedFormulation save', () => {
     await shareInput('Maize germ');
     fireEvent.change(screen.getByLabelText('Use this mix for'), { target: { value: 'lactating' } });
     fireEvent.change(screen.getByLabelText('Concentrate per cow per day (kg)'), { target: { value: '4' } });
-    fireEvent.click(screen.getByRole('button', { name: /Save As Current Feed Mix/ }));
+    fireEvent.click(screen.getByRole('button', { name: /Save as current feed mix/ }));
 
     await waitFor(() => expect(nutrition.autoSaveRecipe).toHaveBeenCalledWith(expect.objectContaining({
       feeding_group: 'lactating',
@@ -76,7 +76,7 @@ describe('FeedFormulation save', () => {
     }));
     renderPlanner();
     await shareInput('Maize germ');
-    fireEvent.click(screen.getByRole('button', { name: /Save As Current Feed Mix/ }));
+    fireEvent.click(screen.getByRole('button', { name: /Save as current feed mix/ }));
 
     expect(await screen.findByText(/The mix was not saved\. Send both bulk_density/)).toBeTruthy();
   });
@@ -95,7 +95,7 @@ describe('FeedFormulation save', () => {
     inventory.applyDataFix.mockResolvedValue({ id: 2 });
     renderPlanner();
     await shareInput('Maize germ');
-    fireEvent.click(screen.getByRole('button', { name: /Auto-Adjust Feed Shares/ }));
+    fireEvent.click(screen.getByRole('button', { name: /Auto-adjust feed shares/ }));
 
     expect(await screen.findByText('These ingredients may have wrong nutrition values')).toBeTruthy();
     fireEvent.click(screen.getByRole('button', { name: /Apply fix/ }));

@@ -12,6 +12,10 @@ import { offlineFailureMessage } from '../../lib/offlinePolicy';
 import { canDownloadPayslips, lineStatusLabel, nextPayrollPeriod, payrollRunToCsv, periodLabel, periodPayDate, runStatus, sortRunsNewestFirst, statutoryBreakdown } from '../../lib/payroll';
 import { roleLabel } from '../../lib/staffLabels';
 import { tone } from '../../components/ui/tones';
+import { formatDate } from '../../lib/dateFormat';
+import { staffCopy } from '../../i18n/staff';
+
+const copy = staffCopy.payroll;
 
 const money = (value) => Number(value || 0).toLocaleString();
 
@@ -40,22 +44,22 @@ function RunTotals({ summary, statutoryTotals }) {
     <>
     <dl className="grid grid-cols-2 gap-x-4 gap-y-2 border-t border-ink/10 px-5 py-4 text-sm sm:grid-cols-5">
       {[
-        ['Base', summary.totalBase],
-        ['Leave adjustments', -summary.totalLeave],
-        ['Gross', summary.totalGross],
-        ['Deductions', -summary.totalDeductions],
-        ['Net pay', summary.totalNet],
-      ].map(([label, value]) => (
-        <div key={label}>
-          <dt className="text-[11px] font-semibold uppercase tracking-wider text-ink-muted">{label}</dt>
-          <dd className={`tabular-nums ${label === 'Net pay' ? 'text-base font-bold text-ink' : 'text-ink'}`}>KES {money(value)}</dd>
+        ['base', summary.totalBase],
+        ['leave', -summary.totalLeave],
+        ['gross', summary.totalGross],
+        ['deductions', -summary.totalDeductions],
+        ['net', summary.totalNet],
+      ].map(([key, value]) => (
+        <div key={key}>
+          <dt className="text-[11px] font-semibold uppercase tracking-wider text-ink-muted">{copy.totals[key]}</dt>
+          <dd className={`tabular-nums ${key === 'net' ? 'text-base font-bold text-ink' : 'text-ink'}`}>KES {money(value)}</dd>
         </div>
       ))}
     </dl>
     {statutoryTotals?.paye !== null && statutoryTotals?.paye !== undefined && (
       <p className="border-t border-ink/10 px-5 py-3 text-xs text-ink-muted">
-        Deductions include PAYE KES {money(statutoryTotals.paye)}, NSSF KES {money(statutoryTotals.nssf)}, SHIF KES {money(statutoryTotals.shif)} and Housing Levy KES {money(statutoryTotals.housingLevy)}.
-        {employer !== null && employer !== undefined && <> The farm also pays KES {money(employer)} in employer NSSF and Housing Levy.</>}
+        {copy.statutoryNote(money(statutoryTotals.paye), money(statutoryTotals.nssf), money(statutoryTotals.shif), money(statutoryTotals.housingLevy))}
+        {employer !== null && employer !== undefined && copy.employerNote(money(employer))}
       </p>
     )}
     </>
@@ -66,9 +70,9 @@ function LeaveNote({ line }) {
   if (!(line.approvedLeaveDays > 0 || line.overduePenaltyDays > 0)) return null;
   return (
     <span className="block text-xs text-ink-muted">
-      {line.approvedLeaveDays > 0 ? `${line.approvedLeaveDays} leave days` : ''}
+      {line.approvedLeaveDays > 0 ? copy.leaveDays(line.approvedLeaveDays) : ''}
       {line.approvedLeaveDays > 0 && line.overduePenaltyDays > 0 ? ' · ' : ''}
-      {line.overduePenaltyDays > 0 ? `${line.overduePenaltyDays} days overdue` : ''}
+      {line.overduePenaltyDays > 0 ? copy.overdueDays(line.overduePenaltyDays) : ''}
     </span>
   );
 }
@@ -87,7 +91,7 @@ function PayslipButton({ line, run, onDownload, pending }) {
   if (!canDownloadPayslips(run.status)) return null;
   return (
     <button type="button" onClick={() => onDownload(line)} disabled={pending} className="inline-flex min-h-9 items-center gap-1 text-xs font-semibold text-brand underline-offset-4 hover:underline disabled:opacity-50">
-      <FileText size={14} aria-hidden="true" /> {pending ? 'Preparing…' : 'Payslip'}
+      <FileText size={14} aria-hidden="true" /> {pending ? copy.preparing : copy.payslip}
     </button>
   );
 }
@@ -100,14 +104,14 @@ function PayrollLines({ run, onPayslip, payslipPending }) {
         <table className="w-full min-w-[960px] text-left">
           <thead className="border-b border-ink/10 text-[11px] font-semibold uppercase tracking-wider text-ink-muted">
             <tr>
-              <th scope="col" className="px-5 py-3">Employee</th>
-              <th scope="col" className="px-5 py-3 text-right">Base</th>
-              <th scope="col" className="px-5 py-3 text-right">Leave</th>
-              <th scope="col" className="px-5 py-3 text-right">Gross</th>
-              <th scope="col" className="px-5 py-3 text-right">Statutory</th>
-              <th scope="col" className="px-5 py-3 text-right">Advances</th>
-              <th scope="col" className="px-5 py-3 text-right">Net pay</th>
-              <th scope="col" className="px-5 py-3">Status</th>
+              <th scope="col" className="px-5 py-3">{copy.columns.employee}</th>
+              <th scope="col" className="px-5 py-3 text-right">{copy.columns.base}</th>
+              <th scope="col" className="px-5 py-3 text-right">{copy.columns.leave}</th>
+              <th scope="col" className="px-5 py-3 text-right">{copy.columns.gross}</th>
+              <th scope="col" className="px-5 py-3 text-right">{copy.columns.statutory}</th>
+              <th scope="col" className="px-5 py-3 text-right">{copy.columns.advances}</th>
+              <th scope="col" className="px-5 py-3 text-right">{copy.columns.net}</th>
+              <th scope="col" className="px-5 py-3">{copy.columns.status}</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-ink/10">
@@ -124,7 +128,7 @@ function PayrollLines({ run, onPayslip, payslipPending }) {
                 </td>
                 <td className="px-5 py-3.5 text-right text-sm tabular-nums text-ink">
                   {money(line.grossPay)}
-                  {line.daysPaid !== null && <span className="block text-xs text-ink-muted">{line.daysPaid} days paid</span>}
+                  {line.daysPaid !== null && <span className="block text-xs text-ink-muted">{copy.daysPaid(line.daysPaid)}</span>}
                 </td>
                 <td className="px-5 py-3.5 text-right text-sm tabular-nums text-ink"><StatutoryCell line={line} /></td>
                 <td className="px-5 py-3.5 text-right text-sm tabular-nums text-ink">{line.advanceDeduction > 0 ? `−${money(line.advanceDeduction)}` : '0'}</td>
@@ -149,12 +153,12 @@ function PayrollLines({ run, onPayslip, payslipPending }) {
               <span className="text-xs text-ink-muted">{lineStatusLabel(line.status)}</span>
             </div>
             <dl className="mt-3 grid grid-cols-2 gap-3 text-xs">
-              <div><dt className="text-ink-muted">Base</dt><dd className="font-semibold tabular-nums text-ink">KES {money(line.base)}</dd></div>
-              <div><dt className="text-ink-muted">Leave</dt><dd className="font-semibold tabular-nums text-ink">KES {money(line.leaveDeduction)}</dd><LeaveNote line={line} /></div>
-              <div><dt className="text-ink-muted">Gross</dt><dd className="font-semibold tabular-nums text-ink">KES {money(line.grossPay)}</dd>{line.daysPaid !== null && <dd className="text-ink-muted">{line.daysPaid} days paid</dd>}</div>
-              <div><dt className="text-ink-muted">Advances</dt><dd className="font-semibold tabular-nums text-ink">KES {money(line.advanceDeduction)}</dd></div>
-              <div className="col-span-2"><dt className="text-ink-muted">Statutory deductions</dt><dd className="font-semibold tabular-nums text-ink"><StatutoryCell line={line} /></dd></div>
-              <div className="col-span-2 border-t border-ink/10 pt-2"><dt className="text-ink-muted">Net pay</dt><dd className="text-base font-bold tabular-nums text-ink">KES {money(line.net)}</dd></div>
+              <div><dt className="text-ink-muted">{copy.columns.base}</dt><dd className="font-semibold tabular-nums text-ink">KES {money(line.base)}</dd></div>
+              <div><dt className="text-ink-muted">{copy.columns.leave}</dt><dd className="font-semibold tabular-nums text-ink">KES {money(line.leaveDeduction)}</dd><LeaveNote line={line} /></div>
+              <div><dt className="text-ink-muted">{copy.columns.gross}</dt><dd className="font-semibold tabular-nums text-ink">KES {money(line.grossPay)}</dd>{line.daysPaid !== null && <dd className="text-ink-muted">{copy.daysPaid(line.daysPaid)}</dd>}</div>
+              <div><dt className="text-ink-muted">{copy.columns.advances}</dt><dd className="font-semibold tabular-nums text-ink">KES {money(line.advanceDeduction)}</dd></div>
+              <div className="col-span-2"><dt className="text-ink-muted">{copy.statutoryDeductions}</dt><dd className="font-semibold tabular-nums text-ink"><StatutoryCell line={line} /></dd></div>
+              <div className="col-span-2 border-t border-ink/10 pt-2"><dt className="text-ink-muted">{copy.columns.net}</dt><dd className="text-base font-bold tabular-nums text-ink">KES {money(line.net)}</dd></div>
             </dl>
             <div className="mt-2"><PayslipButton line={line} run={run} onDownload={onPayslip} pending={payslipPending === line.staffId} /></div>
           </article>
@@ -197,7 +201,7 @@ export default function Payroll() {
       })
       .catch((error) => {
         if (cancelled) return;
-        setLoadError(getApiErrorMessage(error, 'Payroll runs could not be loaded.'));
+        setLoadError(getApiErrorMessage(error, copy.loadFailed));
         setStatus('error');
       });
     return () => {
@@ -210,7 +214,7 @@ export default function Payroll() {
     let cancelled = false;
     hrApi.getPayrollRun(activeRunId)
       .then((run) => { if (!cancelled) setDetails((current) => ({ ...current, [run.id]: run })); })
-      .catch((error) => { if (!cancelled) setDetailError(getApiErrorMessage(error, 'This payroll run could not be loaded.')); });
+      .catch((error) => { if (!cancelled) setDetailError(getApiErrorMessage(error, copy.runLoadFailed)); });
     return () => {
       cancelled = true;
     };
@@ -241,7 +245,7 @@ export default function Payroll() {
       const pdf = await hrApi.downloadPayslip(activeRun.id, line.staffId);
       downloadBlob(pdf, `payslip-${activeRun.id}-${line.name.replace(/\s+/g, '-').toLowerCase()}.pdf`);
     } catch (error) {
-      toast.error(getApiErrorMessage(error, `${line.name}'s payslip could not be downloaded.`));
+      toast.error(getApiErrorMessage(error, copy.payslipFailed(line.name)));
     } finally {
       setPayslipPending(null);
     }
@@ -253,9 +257,9 @@ export default function Payroll() {
       return;
     }
     const confirmed = await confirmation.confirm({
-      title: `Create the ${nextLabel} payroll?`,
-      message: 'It works out pay from current salaries, approved leave, statutory deductions (PAYE, NSSF, SHIF, Housing Levy) and advance repayments. Nothing is paid until you finalize it and record the payment.',
-      confirmText: 'Create payroll',
+      title: copy.createTitle(nextLabel),
+      message: copy.createMessage,
+      confirmText: copy.createConfirm,
       type: 'info',
     });
     if (!confirmed) return;
@@ -264,9 +268,9 @@ export default function Payroll() {
       const created = await hrApi.runPayroll(nextPeriod);
       replaceRun(created);
       setActiveRunId(created.id);
-      toast.success(created.message || `${nextLabel} payroll created as a draft.`);
+      toast.success(created.message || copy.created(nextLabel));
     } catch (error) {
-      toast.error(offlineFailureMessage(error, 'The payroll run was not created.') || getApiErrorMessage(error, 'The payroll run was not created.'));
+      toast.error(offlineFailureMessage(error, copy.notCreated) || getApiErrorMessage(error, copy.notCreated));
     } finally {
       setBusy(null);
     }
@@ -274,18 +278,18 @@ export default function Payroll() {
 
   const finalize = async () => {
     const confirmed = await confirmation.confirm({
-      title: `Finalize ${activeRun.period} payroll?`,
-      message: `${activeRun.employees} employees, KES ${money(activeRun.totalDisbursed)} net pay. After this the amounts can’t change.`,
-      confirmText: 'Finalize',
+      title: copy.finalizeTitle(activeRun.period),
+      message: copy.finalizeMessage(activeRun.employees, money(activeRun.totalDisbursed)),
+      confirmText: copy.finalizeConfirm,
       type: 'warning',
     });
     if (!confirmed) return;
     setBusy('finalize');
     try {
       replaceRun(await hrApi.finalizePayrollRun(activeRun.id));
-      toast.success('Payroll finalized. Pay staff, then record the payment.');
+      toast.success(copy.finalized);
     } catch (error) {
-      toast.error(offlineFailureMessage(error, 'The payroll run was not finalized.') || getApiErrorMessage(error, 'The payroll run was not finalized.'));
+      toast.error(offlineFailureMessage(error, copy.notFinalized) || getApiErrorMessage(error, copy.notFinalized));
     } finally {
       setBusy(null);
     }
@@ -296,9 +300,9 @@ export default function Payroll() {
     try {
       replaceRun(await hrApi.payPayrollRun(activeRun.id, payload));
       setPayOpen(false);
-      toast.success(`${activeRun.period} payroll recorded as paid.`);
+      toast.success(copy.paid(activeRun.period));
     } catch (error) {
-      toast.error(offlineFailureMessage(error, 'Nothing was recorded as paid.') || getApiErrorMessage(error, 'The payment was not recorded.'));
+      toast.error(offlineFailureMessage(error, copy.nothingPaid) || getApiErrorMessage(error, copy.paymentNotRecorded));
     } finally {
       setBusy(null);
     }
@@ -316,12 +320,12 @@ export default function Payroll() {
 
       <header className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <p className="text-[11px] font-semibold uppercase tracking-wider text-ink-muted">People</p>
-          <h1 className="text-2xl font-black tracking-tight text-ink sm:text-3xl">Payroll</h1>
-          <p className="mt-1 text-sm text-ink-muted">Monthly pay, statutory deductions, leave and advance repayments.</p>
+          <p className="text-[11px] font-semibold uppercase tracking-wider text-ink-muted">{copy.eyebrow}</p>
+          <h1 className="text-2xl font-black tracking-tight text-ink sm:text-3xl">{copy.title}</h1>
+          <p className="mt-1 text-sm text-ink-muted">{copy.subtitle}</p>
         </div>
         <button type="button" onClick={runPayroll} disabled={busy !== null || status !== 'ready'} className="btn-command gap-2 self-start text-sm">
-          <Banknote size={16} aria-hidden="true" /> {busy === 'run' ? 'Creating…' : nextDraftId ? `Open ${nextLabel} draft` : `Create ${nextLabel} payroll`}
+          <Banknote size={16} aria-hidden="true" /> {busy === 'run' ? copy.creating : nextDraftId ? copy.openDraft(nextLabel) : copy.create(nextLabel)}
         </button>
       </header>
 
@@ -330,8 +334,8 @@ export default function Payroll() {
 
       {status === 'ready' && !activeSummary && (
         <section className="card-machined p-6">
-          <p className="text-base font-bold text-ink">No payroll yet</p>
-          <p className="mt-1 text-sm text-ink-muted">Create the {nextLabel} payroll to work out each employee’s pay. You can check it before anything is paid.</p>
+          <p className="text-base font-bold text-ink">{copy.emptyTitle}</p>
+          <p className="mt-1 text-sm text-ink-muted">{copy.emptyHint(nextLabel)}</p>
         </section>
       )}
 
@@ -344,30 +348,30 @@ export default function Payroll() {
       {status === 'ready' && activeRun && (
         <>
           <div className="grid gap-3 md:grid-cols-3">
-            <Kpi title={`Net pay · ${activeRun.period}`} value={`KES ${money(activeRun.totalDisbursed)}`} Icon={Banknote} />
-            <Kpi title="Employees in this run" value={activeRun.employees} Icon={Users} />
-            <Kpi title={`Next payroll · ${nextLabel}`} value={periodPayDate(nextPeriod)} Icon={CalendarClock} />
+            <Kpi title={copy.netPay(activeRun.period)} value={`KES ${money(activeRun.totalDisbursed)}`} Icon={Banknote} />
+            <Kpi title={copy.employees} value={activeRun.employees} Icon={Users} />
+            <Kpi title={copy.nextPayroll(nextLabel)} value={periodPayDate(nextPeriod)} Icon={CalendarClock} />
           </div>
 
           <section className="card-machined overflow-hidden" aria-labelledby="active-run-title">
             <div className="flex flex-col gap-3 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
               <div>
-                <h2 id="active-run-title" className="text-base font-bold text-ink">{activeRun.period} payroll</h2>
+                <h2 id="active-run-title" className="text-base font-bold text-ink">{copy.runTitle(activeRun.period)}</h2>
                 <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-ink-muted">
                   <StatusChip status={activeRun.status} />
-                  {activeRun.paidAt && <span>Paid {new Date(activeRun.paidAt).toLocaleDateString()}</span>}
+                  {activeRun.paidAt && <span>{copy.paidOn(formatDate(activeRun.paidAt))}</span>}
                 </div>
               </div>
               <div className="flex flex-wrap gap-2">
                 {runStatusCode === 'DRAFT' && (
-                  <button type="button" onClick={finalize} disabled={busy !== null} className="btn-command text-sm">{busy === 'finalize' ? 'Finalizing…' : 'Finalize'}</button>
+                  <button type="button" onClick={finalize} disabled={busy !== null} className="btn-command text-sm">{busy === 'finalize' ? copy.finalizing : copy.finalize}</button>
                 )}
                 {runStatusCode === 'FINALIZED' && (
-                  <button type="button" onClick={() => setPayOpen(true)} disabled={busy !== null} className="btn-command text-sm">Record payment</button>
+                  <button type="button" onClick={() => setPayOpen(true)} disabled={busy !== null} className="btn-command text-sm">{copy.recordPayment}</button>
                 )}
-                <button type="button" onClick={exportCsv} className="btn-secondary gap-2 text-sm"><Download size={15} aria-hidden="true" /> Export CSV</button>
+                <button type="button" onClick={exportCsv} className="btn-secondary gap-2 text-sm"><Download size={15} aria-hidden="true" /> {copy.exportCsv}</button>
                 {runs.length > 1 && (
-                  <button type="button" onClick={() => setHistoryOpen(true)} className="btn-ghost gap-2 text-sm"><History size={15} aria-hidden="true" /> Earlier runs ({runs.length - 1})</button>
+                  <button type="button" onClick={() => setHistoryOpen(true)} className="btn-ghost gap-2 text-sm"><History size={15} aria-hidden="true" /> {copy.earlierRuns(runs.length - 1)}</button>
                 )}
               </div>
             </div>
@@ -381,7 +385,7 @@ export default function Payroll() {
         <PayPayrollModal run={activeRun} onClose={() => setPayOpen(false)} onConfirm={recordPayment} isPending={busy === 'pay'} />
       )}
 
-      <SlidePanel isOpen={historyOpen} onClose={() => setHistoryOpen(false)} title="Payroll history" subtitle="Open an earlier run to review or export it.">
+      <SlidePanel isOpen={historyOpen} onClose={() => setHistoryOpen(false)} title={copy.historyTitle} subtitle={copy.historyHint}>
         <ul className="space-y-2">
           {runs.map((run) => (
             <li key={run.id}>

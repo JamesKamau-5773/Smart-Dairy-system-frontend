@@ -18,7 +18,7 @@ import { hasRole } from '../../lib/roles';
 import { QUERY_KEYS } from '../../providers/QueryProvider';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTenant } from '../../hooks/useTenant';
-import { safetyCopy as copy } from '../../i18n/safety.en';
+import { safetyCopy as copy } from '../../i18n/safety';
 import { tone } from '../../components/ui/tones';
 
 // Risk is the strength of the app's blue (./tones), with the label in words.

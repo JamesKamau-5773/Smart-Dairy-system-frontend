@@ -4,6 +4,7 @@ import { validateForm, ValidationRules, getFirstErrorMessage } from '../../../li
 import { normalizeSemenInventory } from '../../../lib/breedingUtils';
 import { breedingApi, getApiErrorMessage } from '../../../lib/backendApi';
 import { reportError } from '../../../lib/telemetry';
+import { breedingCopy } from '../../../i18n/breeding';
 
 /**
  * ManageSemenInventoryForm
@@ -21,6 +22,7 @@ export default function ManageSemenInventoryForm({
   onSavingChange,
   initialData = {},
 }) {
+  const copy = breedingCopy.inventory.form;
   const [inventoryForm, setInventoryForm] = useState({
     name: initialData.name || '',
     code: initialData.code || '',
@@ -77,7 +79,7 @@ export default function ManageSemenInventoryForm({
           ?? inventoryPayload.improves,
       });
 
-      const successMsg = `Added ${nextInventory.name} to inventory.`;
+      const successMsg = copy.added(nextInventory.name);
       onSuccess?.(nextInventory, successMsg);
       toast.success(successMsg);
 
@@ -90,7 +92,7 @@ export default function ManageSemenInventoryForm({
       });
     } catch (error) {
       reportError(error, { where: 'ManageSemenInventoryForm.save' });
-      const errorMsg = getApiErrorMessage(error, 'Could not add this semen inventory item. Check the details and try again.');
+      const errorMsg = getApiErrorMessage(error, copy.failed);
       onError?.(errorMsg);
       toast.error(errorMsg);
     } finally {
@@ -102,12 +104,12 @@ export default function ManageSemenInventoryForm({
     <form className="space-y-4" onSubmit={handleSubmit}>
       <div className="space-y-4">
         <div className="border-b border-ink/10 pb-3">
-          <h4 className="text-sm font-bold uppercase tracking-widest text-brand">Inventory Item</h4>
+          <h4 className="text-sm font-bold uppercase tracking-widest text-brand">{copy.section}</h4>
         </div>
 
         {/* Name */}
         <div>
-          <label className="mb-1 block text-xs font-bold uppercase tracking-wider text-ink-muted">Name *</label>
+          <label className="mb-1 block text-xs font-bold uppercase tracking-wider text-ink-muted">{copy.name}</label>
           <input
             className={`input-machined w-full ${formErrors.name ? 'border-rose-300 bg-rose-50' : ''}`}
             value={inventoryForm.name}
@@ -115,7 +117,7 @@ export default function ManageSemenInventoryForm({
               setInventoryForm((current) => ({ ...current, name: event.target.value }));
               if (formErrors.name) setFormErrors({ ...formErrors, name: null });
             }}
-            placeholder="e.g. Jersey Bull"
+            placeholder={copy.namePlaceholder}
             aria-invalid={!!formErrors.name}
           />
           {formErrors.name && <p className="mt-1 text-xs text-rose-600">{formErrors.name}</p>}
@@ -124,7 +126,7 @@ export default function ManageSemenInventoryForm({
         {/* Code & Straws */}
         <div className="grid gap-4 md:grid-cols-2">
           <div>
-            <label className="mb-1 block text-xs font-bold uppercase tracking-wider text-ink-muted">Code *</label>
+            <label className="mb-1 block text-xs font-bold uppercase tracking-wider text-ink-muted">{copy.code}</label>
             <input
               className={`input-machined w-full ${formErrors.code ? 'border-rose-300 bg-rose-50' : ''}`}
               value={inventoryForm.code}
@@ -132,13 +134,13 @@ export default function ManageSemenInventoryForm({
                 setInventoryForm((current) => ({ ...current, code: event.target.value }));
                 if (formErrors.code) setFormErrors({ ...formErrors, code: null });
               }}
-              placeholder="e.g. JY-312"
+              placeholder={copy.codePlaceholder}
               aria-invalid={!!formErrors.code}
             />
             {formErrors.code && <p className="mt-1 text-xs text-rose-600">{formErrors.code}</p>}
           </div>
           <div>
-            <label className="mb-1 block text-xs font-bold uppercase tracking-wider text-ink-muted">Straws Left *</label>
+            <label className="mb-1 block text-xs font-bold uppercase tracking-wider text-ink-muted">{copy.straws}</label>
             <input
               type="number"
               min="0"
@@ -148,7 +150,7 @@ export default function ManageSemenInventoryForm({
                 setInventoryForm((current) => ({ ...current, strawsLeft: event.target.value }));
                 if (formErrors.strawsLeft) setFormErrors({ ...formErrors, strawsLeft: null });
               }}
-              placeholder="e.g. 6"
+              placeholder={copy.strawsPlaceholder}
               aria-invalid={!!formErrors.strawsLeft}
             />
             {formErrors.strawsLeft && <p className="mt-1 text-xs text-rose-600">{formErrors.strawsLeft}</p>}
@@ -157,7 +159,7 @@ export default function ManageSemenInventoryForm({
 
         {/* Breed Improvement */}
         <div>
-          <label className="mb-1 block text-xs font-bold uppercase tracking-wider text-ink-muted">Breed Improvement *</label>
+          <label className="mb-1 block text-xs font-bold uppercase tracking-wider text-ink-muted">{copy.improves}</label>
           <input
             className={`input-machined w-full ${formErrors.improves ? 'border-rose-300 bg-rose-50' : ''}`}
             value={inventoryForm.improves}
@@ -165,7 +167,7 @@ export default function ManageSemenInventoryForm({
               setInventoryForm((current) => ({ ...current, improves: event.target.value }));
               if (formErrors.improves) setFormErrors({ ...formErrors, improves: null });
             }}
-            placeholder="e.g. Friesian"
+            placeholder={copy.improvesPlaceholder}
             aria-invalid={!!formErrors.improves}
           />
           {formErrors.improves && <p className="mt-1 text-xs text-rose-600">{formErrors.improves}</p>}
@@ -179,7 +181,7 @@ export default function ManageSemenInventoryForm({
           disabled={isSaving}
           className="btn-command px-4 py-2 text-sm"
         >
-          {isSaving ? 'Saving...' : 'Add Inventory'}
+          {isSaving ? copy.saving : copy.submit}
         </button>
       </div>
     </form>

@@ -4,6 +4,9 @@ import { Eye, EyeOff, KeyRound, ShieldCheck } from 'lucide-react';
 import AlertBanner from '../../components/ui/AlertBanner';
 import { useAuth } from '../../contexts/AuthContext';
 import { getDefaultLandingPath } from '../../lib/roles';
+import { adminCopy } from '../../i18n/admin';
+
+const copy = adminCopy.claim;
 
 export default function ClaimAccountPage() {
   const [searchParams] = useSearchParams();
@@ -25,23 +28,23 @@ export default function ClaimAccountPage() {
     setMessage({ type: '', text: '' });
 
     if (!token) {
-      setMessage({ type: 'danger', text: 'Missing invite token. Use a valid claim link.' });
+      setMessage({ type: 'danger', text: copy.missingToken });
       return;
     }
 
     const normalizedUsername = username.trim().toLowerCase();
     if (!/^[a-z0-9._-]{3,32}$/.test(normalizedUsername)) {
-      setMessage({ type: 'danger', text: 'Choose a username with 3 to 32 letters, numbers, periods, underscores, or hyphens.' });
+      setMessage({ type: 'danger', text: copy.badUsername });
       return;
     }
 
     if (password.length < 8) {
-      setMessage({ type: 'danger', text: 'Password must be at least 8 characters.' });
+      setMessage({ type: 'danger', text: copy.shortPassword });
       return;
     }
 
     if (password !== confirmPassword) {
-      setMessage({ type: 'danger', text: 'Password confirmation does not match.' });
+      setMessage({ type: 'danger', text: copy.mismatch });
       return;
     }
 
@@ -58,7 +61,7 @@ export default function ClaimAccountPage() {
       return;
     }
 
-    setMessage({ type: 'danger', text: result.error || 'Unable to claim account.' });
+    setMessage({ type: 'danger', text: result.error || copy.failed });
     setIsSubmitting(false);
   };
 
@@ -68,34 +71,34 @@ export default function ClaimAccountPage() {
         <section className="w-full rounded-2xl border border-[#5a3b8d]/20 bg-white/90 p-8 ">
           <header className="mb-7 text-center">
             <p className="inline-flex items-center gap-2 rounded-full bg-[#5a3b8d]/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.14em] text-[#4d3276]">
-              <ShieldCheck size={14} /> Secure Claim
+              <ShieldCheck size={14} /> {copy.badge}
             </p>
-            <h1 className="mt-4 text-3xl font-black tracking-tight text-[#372257]">Claim Your Account</h1>
-            <p className="mt-2 text-sm text-[#563f79]">Choose your login username and set a password to activate this invited account.</p>
+            <h1 className="mt-4 text-3xl font-black tracking-tight text-[#372257]">{copy.title}</h1>
+            <p className="mt-2 text-sm text-[#563f79]">{copy.subtitle}</p>
           </header>
 
           {message.text && (
             <div className="mb-4">
-              <AlertBanner type={message.type || 'info'} title="Claim status" message={message.text} onDismiss={() => setMessage({ type: '', text: '' })} />
+              <AlertBanner type={message.type || 'info'} title={copy.statusTitle} message={message.text} onDismiss={() => setMessage({ type: '', text: '' })} />
             </div>
           )}
 
           {claimedAccount ? (
             <div className="space-y-5">
-              <AlertBanner type="success" title="Account activated" message="Your login username is shown below. You can also sign in with your registered phone number." />
+              <AlertBanner type="success" title={copy.activatedTitle} message={copy.activatedText} />
               <div className="rounded-lg border border-[#5a3b8d]/20 bg-[#faf7ff] p-4 text-sm text-[#2f1d4d]">
-                <p className="text-xs font-semibold uppercase tracking-wider text-[#5f4a82]">Username</p>
+                <p className="text-xs font-semibold uppercase tracking-wider text-[#5f4a82]">{copy.username}</p>
                 <p className="mt-1 select-all font-mono text-lg font-bold">{claimedAccount.username}</p>
-                {claimedAccount.phoneNumber && <p className="mt-2 text-xs text-[#563f79]">Registered phone: {claimedAccount.phoneNumber}</p>}
+                {claimedAccount.phoneNumber && <p className="mt-2 text-xs text-[#563f79]">{copy.registeredPhone(claimedAccount.phoneNumber)}</p>}
               </div>
               <button type="button" className="btn-command w-full" onClick={() => navigate(getDefaultLandingPath(claimedAccount.user), { replace: true })}>
-                Continue to your farm
+                {copy.continue}
               </button>
             </div>
           ) : (
           <form onSubmit={handleClaim} className="space-y-4">
             <label className="block text-xs font-semibold uppercase tracking-[0.12em] text-[#5f4a82]">
-              Invite Token
+              {copy.inviteToken}
               <input
                 className="mt-2 w-full rounded-lg border border-[#5a3b8d]/20 bg-[#faf7ff] px-4 py-3 text-sm text-[#2f1d4d] outline-none"
                 value={token}
@@ -104,7 +107,7 @@ export default function ClaimAccountPage() {
             </label>
 
             <label className="block text-xs font-semibold uppercase tracking-[0.12em] text-[#5f4a82]">
-              Choose a Username
+              {copy.chooseUsername}
               <input
                 className="mt-2 w-full rounded-lg border border-[#5a3b8d]/20 bg-[#faf7ff] px-4 py-3 text-sm text-[#2f1d4d] outline-none focus:border-[#5a3b8d] focus:ring-2 focus:ring-[#5a3b8d]/20"
                 value={username}
@@ -114,13 +117,13 @@ export default function ClaimAccountPage() {
                 pattern="[a-z0-9._-]{3,32}"
                 autoComplete="username"
                 required
-                title="Use 3 to 32 letters, numbers, periods, underscores, or hyphens."
+                title={copy.usernameRule}
               />
-              <span className="mt-1 block text-[11px] font-normal normal-case tracking-normal text-[#6b5b86]">Use this username and your new password the next time you sign in. Your registered phone number also works.</span>
+              <span className="mt-1 block text-[11px] font-normal normal-case tracking-normal text-[#6b5b86]">{copy.usernameHint}</span>
             </label>
 
             <label className="block text-xs font-semibold uppercase tracking-[0.12em] text-[#5f4a82]">
-              New Password
+              {copy.newPassword}
               <div className="relative mt-2">
                 <KeyRound size={15} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[#6b5b86]" />
                 <input
@@ -135,7 +138,7 @@ export default function ClaimAccountPage() {
                   type="button"
                   onClick={() => setShowPassword((visible) => !visible)}
                   className="absolute right-2 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded text-[#6b5b86] hover:bg-[#5a3b8d]/10 focus:outline-none focus:ring-2 focus:ring-[#5a3b8d]/30"
-                  aria-label={showPassword ? 'Hide password' : 'Show password'}
+                  aria-label={showPassword ? copy.hidePassword : copy.showPassword}
                   aria-pressed={showPassword}
                 >
                   {showPassword ? <EyeOff size={17} /> : <Eye size={17} />}
@@ -144,7 +147,7 @@ export default function ClaimAccountPage() {
             </label>
 
             <label className="block text-xs font-semibold uppercase tracking-[0.12em] text-[#5f4a82]">
-              Confirm Password
+              {copy.confirmPassword}
               <div className="relative mt-2">
                 <input
                   type={showConfirmPassword ? 'text' : 'password'}
@@ -158,7 +161,7 @@ export default function ClaimAccountPage() {
                   type="button"
                   onClick={() => setShowConfirmPassword((visible) => !visible)}
                   className="absolute right-2 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded text-[#6b5b86] hover:bg-[#5a3b8d]/10 focus:outline-none focus:ring-2 focus:ring-[#5a3b8d]/30"
-                  aria-label={showConfirmPassword ? 'Hide confirmation password' : 'Show confirmation password'}
+                  aria-label={showConfirmPassword ? copy.hideConfirm : copy.showConfirm}
                   aria-pressed={showConfirmPassword}
                 >
                   {showConfirmPassword ? <EyeOff size={17} /> : <Eye size={17} />}
@@ -167,7 +170,7 @@ export default function ClaimAccountPage() {
             </label>
 
             <button type="submit" className="btn-command w-full" disabled={isSubmitting}>
-              {isSubmitting ? 'Claiming account…' : 'Claim account'}
+              {isSubmitting ? copy.claiming : copy.submit}
             </button>
           </form>
           )}

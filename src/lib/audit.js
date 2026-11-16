@@ -2,6 +2,8 @@
  * Timestamp and change-description helpers for display. There is no client-side audit
  * log: who changed what is recorded by the backend (BACKEND_REQUESTS.md, BR-006).
  */
+import { commonCopy } from '../i18n/common';
+import { formatDate } from './dateFormat';
 
 /**
  * Format a date/time for display
@@ -13,21 +15,14 @@ export function formatDateTime(date, includeTime = true) {
   const dateObj = typeof date === 'string' ? new Date(date) : date;
 
   if (!dateObj || typeof dateObj.getTime !== 'function' || Number.isNaN(dateObj.getTime())) {
-    return 'Unknown';
+    return commonCopy.time.unknown;
   }
 
-  const options = {
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric',
-  };
-
-  if (includeTime) {
-    options.hour = '2-digit';
-    options.minute = '2-digit';
-  }
-
-  return dateObj.toLocaleDateString('en-US', options);
+  // Day first in both languages ("03 Nov 2026 14:05"), from the app's one date formatter.
+  const day = formatDate(dateObj);
+  if (!includeTime) return day;
+  const pad = (value) => String(value).padStart(2, '0');
+  return `${day} ${pad(dateObj.getHours())}:${pad(dateObj.getMinutes())}`;
 }
 
 /**
@@ -39,7 +34,7 @@ export function getRelativeTime(date) {
   const dateObj = typeof date === 'string' ? new Date(date) : date;
 
   if (!dateObj || typeof dateObj.getTime !== 'function' || Number.isNaN(dateObj.getTime())) {
-    return 'Unknown';
+    return commonCopy.time.unknown;
   }
 
   const now = new Date();
@@ -49,10 +44,10 @@ export function getRelativeTime(date) {
   const diffHours = Math.floor(diffMins / 60);
   const diffDays = Math.floor(diffHours / 24);
 
-  if (diffSecs < 60) return 'Just now';
-  if (diffMins < 60) return `${diffMins} minute${diffMins > 1 ? 's' : ''} ago`;
-  if (diffHours < 24) return `${diffHours} hour${diffHours > 1 ? 's' : ''} ago`;
-  if (diffDays < 7) return `${diffDays} day${diffDays > 1 ? 's' : ''} ago`;
+  if (diffSecs < 60) return commonCopy.time.justNow;
+  if (diffMins < 60) return commonCopy.time.minutesAgo(diffMins);
+  if (diffHours < 24) return commonCopy.time.hoursAgo(diffHours);
+  if (diffDays < 7) return commonCopy.time.daysAgo(diffDays);
 
   return formatDateTime(date, false);
 }

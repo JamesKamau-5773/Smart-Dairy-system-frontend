@@ -7,12 +7,14 @@ import { getLocale } from '../i18n/locale';
 const NAMES = {
   en: {
     months: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
+    monthsLong: ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'],
     weekdays: ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'],
   },
   // Kiswahili short months as in CLDR. Weekday short forms are not standard; these are the
   // first letters of Jumapili … Jumamosi as commonly abbreviated. REVIEW
   sw: {
     months: ['Jan', 'Feb', 'Mac', 'Apr', 'Mei', 'Jun', 'Jul', 'Ago', 'Sep', 'Okt', 'Nov', 'Des'],
+    monthsLong: ['Januari', 'Februari', 'Machi', 'Aprili', 'Mei', 'Juni', 'Julai', 'Agosti', 'Septemba', 'Oktoba', 'Novemba', 'Desemba'],
     weekdays: ['Jpi', 'Jtt', 'Jnn', 'Jtn', 'Alh', 'Iju', 'Jmo'],
   },
 };
@@ -30,10 +32,24 @@ function toDate(value) {
 }
 
 /** "03 Nov 2026"; `fallback` when there is no readable date. */
-export function formatDate(value, fallback = 'N/A') {
+export function formatDate(value, fallback = '—') {
   const date = toDate(value);
   if (!date) return fallback;
   return `${pad(date.getDate())} ${names().months[date.getMonth()]} ${date.getFullYear()}`;
+}
+
+/** "03 Nov" without the year, for chart labels; `fallback` when there is no readable date. */
+export function formatShortDate(value, fallback = '—') {
+  const date = toDate(value);
+  if (!date) return fallback;
+  return `${pad(date.getDate())} ${names().months[date.getMonth()]}`;
+}
+
+/** "November 2026" ("Novemba 2026"); `fallback` when there is no readable date. For month group headers. */
+export function formatMonthYear(value, fallback = '—') {
+  const date = toDate(value);
+  if (!date) return fallback;
+  return `${names().monthsLong[date.getMonth()]} ${date.getFullYear()}`;
 }
 
 /** "Tue 03 Nov", or "Tue 03 Nov 2026" with `withYear`. For day group headers. */

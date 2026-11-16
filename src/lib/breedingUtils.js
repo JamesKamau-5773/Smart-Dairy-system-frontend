@@ -159,7 +159,8 @@ export function filterBreedingHistory(history, filter = 'All', searchTerm = '') 
     .filter((entry) => !normalizedSearch || [entry.cowName, entry.cowTag, entry.cowId]
       .some((value) => String(value ?? '').toLowerCase().includes(normalizedSearch)))
     .slice()
-    .sort((left, right) => new Date(right.updatedAt) - new Date(left.updatedAt));
+    // Newest AI service first. Breeding logs have no update time from the backend.
+    .sort((left, right) => new Date(right.aiDate) - new Date(left.aiDate));
 }
 
 export function normalizeHerdOption(cow = {}) {

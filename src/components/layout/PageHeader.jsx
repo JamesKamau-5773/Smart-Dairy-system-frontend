@@ -1,4 +1,5 @@
 import OverflowMenu from '../ui/OverflowMenu';
+import { commonCopy } from '../../i18n/common';
 
 const ActionButton = ({ action, variant, className = '' }) => {
   const Icon = action.icon;
@@ -37,7 +38,7 @@ export default function PageHeader({ title, description, primaryAction, secondar
         {collapse && (
           <div className="md:hidden">
             <OverflowMenu
-              label="More actions"
+              label={commonCopy.ui.moreActions}
               size="h-11 w-11"
               bordered
               items={secondaryActions.map((action) => ({ key: action.key, label: action.label, icon: action.icon, onSelect: action.onClick }))}

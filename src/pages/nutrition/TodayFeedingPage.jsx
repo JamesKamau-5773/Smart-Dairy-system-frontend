@@ -12,7 +12,7 @@ import { todayLocalIso } from '../../lib/localDate';
 import { isQueuedOffline, queuedOfflineMessage } from '../../lib/offlinePolicy';
 import LABELS from '../../lib/labels';
 import { useTenant } from '../../hooks/useTenant';
-import { feedCopy } from '../../i18n/feed.en';
+import { feedCopy } from '../../i18n/feed';
 
 const { today: copy } = feedCopy;
 

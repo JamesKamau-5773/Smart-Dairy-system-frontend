@@ -3,6 +3,7 @@ import { formatCostPerLitre } from '../../lib/feedCost';
 import { hasRowsToShow } from '../../lib/listLoadState';
 import { ListLoadNotices } from '../ui/ListLoadState';
 import Skeleton from '../ui/Skeleton';
+import { feedCopy } from '../../i18n/feed';
 
 const TITLE = 'Feed cost per litre of milk';
 const SUBTITLE = 'How much of your milk money goes to buying feed. Lower is better.';
@@ -32,7 +33,7 @@ export default function ProfitabilityChart({ trends, state = 'ready', error, onR
 
       {state !== 'ready' && (
         <div className="-mx-5 mt-3 sm:-mx-6">
-          <ListLoadNotices state={state} label="weekly feed costs" error={error} onRetry={onRetry} />
+          <ListLoadNotices state={state} label={feedCopy.costs.weeklyLabel} error={error} onRetry={onRetry} />
         </div>
       )}
       {state === 'loading' && (
@@ -41,7 +42,7 @@ export default function ProfitabilityChart({ trends, state = 'ready', error, onR
         </div>
       )}
       {!hasRowsToShow(state) ? null : points.length === 0 ? (
-        <p className="mt-2 text-sm text-ink-muted">No weekly cost data yet. It appears once batches are fed and milk is recorded.</p>
+        <p className="mt-2 text-sm text-ink-muted">{feedCopy.costs.noWeekly}</p>
       ) : (
         <>
           <p className="mt-1 border-b border-ink/10 pb-4 text-xs text-ink-muted">{SUBTITLE}</p>

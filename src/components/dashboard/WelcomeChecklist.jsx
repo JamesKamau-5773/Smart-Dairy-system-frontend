@@ -4,6 +4,7 @@ import { Link } from 'react-router-dom';
 import { ArrowRight, Beef, CheckCircle2, Milk, PartyPopper, Users, X } from 'lucide-react';
 import { financeApi, herdApi } from '../../lib/backendApi';
 import { checklistKey, checklistView, readFlag, writeFlag } from '../../lib/welcomeProgress';
+import { dashboardCopy } from '../../i18n/dashboard';
 
 const toList = (value) => (Array.isArray(value) ? value : []);
 
@@ -21,6 +22,7 @@ const toList = (value) => (Array.isArray(value) ? value : []);
  * backend; today they are worked out from the farm's lists and remembered on this phone only.
  */
 export default function WelcomeChecklist({ tenantId, farmId, milkRecordCount, milkLoaded }) {
+  const copy = dashboardCopy.welcome;
   const storageKey = checklistKey(tenantId, farmId);
   const [stored, setStored] = useState(() => readFlag(storageKey));
   const finished = stored === 'done' || stored === 'dismissed';
@@ -40,24 +42,24 @@ export default function WelcomeChecklist({ tenantId, farmId, milkRecordCount, mi
   const steps = [
     {
       id: 'cow',
-      title: 'Add your first cow',
-      description: 'Her name or tag is enough to start.',
+      title: copy.steps.cow.title,
+      description: copy.steps.cow.description,
       to: '/operations/herd',
       icon: Beef,
       done: toList(herdQuery.data).length > 0,
     },
     {
       id: 'milk',
-      title: 'Record a milking',
-      description: 'Log the litres from your next milking.',
+      title: copy.steps.milk.title,
+      description: copy.steps.milk.description,
       to: '/operations/yield',
       icon: Milk,
       done: Number(milkRecordCount) > 0,
     },
     {
       id: 'buyer',
-      title: 'Add a buyer',
-      description: 'Anyone you sell milk to, with their rate.',
+      title: copy.steps.buyer.title,
+      description: copy.steps.buyer.description,
       to: '/finance/buyers',
       icon: Users,
       done: toList(buyersQuery.data).length > 0,
@@ -82,11 +84,11 @@ export default function WelcomeChecklist({ tenantId, farmId, milkRecordCount, mi
             <PartyPopper size={22} aria-hidden="true" />
           </span>
           <div>
-            <h2 id="welcome-done-title" className="text-xl font-bold text-ink-900">Hongera! Your farm is set up.</h2>
-            <p className="mt-1 text-sm text-ink-muted">Cows, milk and buyers are all in. Record every milking and your trends will grow from here.</p>
+            <h2 id="welcome-done-title" className="text-xl font-bold text-ink-900">{copy.doneTitle}</h2>
+            <p className="mt-1 text-sm text-ink-muted">{copy.doneMessage}</p>
           </div>
         </div>
-        <button type="button" onClick={() => setStored('done')} className="btn-command shrink-0">Done</button>
+        <button type="button" onClick={() => setStored('done')} className="btn-command shrink-0">{copy.done}</button>
       </section>
     );
   }
@@ -100,14 +102,14 @@ export default function WelcomeChecklist({ tenantId, farmId, milkRecordCount, mi
     <section aria-labelledby="welcome-title" className="card-machined p-6">
       <div className="flex items-start justify-between gap-4">
         <div>
-          <h2 id="welcome-title" className="text-xl font-bold text-ink-900">Get your farm set up</h2>
-          <p className="mt-1 text-sm text-ink-muted">{doneCount} of {steps.length} done. Each step takes a minute or two.</p>
+          <h2 id="welcome-title" className="text-xl font-bold text-ink-900">{copy.title}</h2>
+          <p className="mt-1 text-sm text-ink-muted">{copy.progress(doneCount, steps.length)}</p>
         </div>
         <button
           type="button"
           onClick={() => setStored('dismissed')}
           className="btn-ghost h-11 w-11 shrink-0 border-transparent !p-0"
-          aria-label="Hide the setup checklist"
+          aria-label={copy.hide}
         >
           <X size={18} aria-hidden="true" />
         </button>
@@ -115,7 +117,7 @@ export default function WelcomeChecklist({ tenantId, farmId, milkRecordCount, mi
 
       <div
         role="progressbar"
-        aria-label="Farm setup progress"
+        aria-label={copy.progressLabel}
         aria-valuemin={0}
         aria-valuemax={100}
         aria-valuenow={percent}
@@ -134,7 +136,7 @@ export default function WelcomeChecklist({ tenantId, farmId, milkRecordCount, mi
                 <div className="flex items-center gap-4 rounded-card border border-ink/10 bg-surface p-4">
                   <CheckCircle2 size={24} className="shrink-0 text-brand" aria-hidden="true" />
                   <p className="flex-1 font-semibold text-ink-muted">
-                    <span className="sr-only">Done: </span>{step.title}
+                    <span className="sr-only">{copy.doneStep}</span>{step.title}
                   </p>
                 </div>
               ) : (
@@ -149,7 +151,7 @@ export default function WelcomeChecklist({ tenantId, farmId, milkRecordCount, mi
                   </span>
                   <span className="min-w-0 flex-1">
                     <span className="block font-semibold text-ink-900">
-                      <span className="sr-only">Step {index + 1}: </span>{step.title}
+                      <span className="sr-only">{copy.step(index + 1)}</span>{step.title}
                     </span>
                     <span className="block text-sm text-ink-muted">{step.description}</span>
                   </span>

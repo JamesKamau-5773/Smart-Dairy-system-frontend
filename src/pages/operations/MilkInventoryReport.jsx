@@ -1,6 +1,8 @@
 import React, { useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { format, subDays } from 'date-fns';
+import { formatDate, formatShortDate } from '@/lib/dateFormat';
+import { milkCopy } from '@/i18n/milk';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { Droplets, Filter, Calendar as CalendarIcon, Table } from 'lucide-react';
 import { reportsApi } from '@/lib/backendApi';
@@ -54,21 +56,22 @@ export default function MilkInventoryReport() {
 
   const chartData = useMemo(() => dailyRecords.map((record) => ({
     ...record,
-    label: format(new Date(`${record.date}T00:00:00`), 'MMM d'),
+    label: formatShortDate(record.date),
   })), [dailyRecords]);
 
+  const copy = milkCopy.inventoryReport;
   return (
     <div className="animate-reveal space-y-6 max-w-7xl mx-auto">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-end border-b border-ink/10 pb-6 gap-4">
         <div>
           <div className="inline-flex items-center gap-2 px-3 py-1 bg-brand/5 text-brand border border-brand/10 text-[10px] font-bold uppercase tracking-widest rounded-full mb-3">
-            <Droplets size={12} /> Reports
+            <Droplets size={12} /> {copy.eyebrow}
           </div>
           <h1 className="font-sans font-black text-3xl tracking-tight text-ink m-0">
-            Milk Inventory Report
+            {copy.title}
           </h1>
           <p className="text-sm font-medium text-ink-muted mt-2 max-w-xl">
-            Visualize the flow of milk from production to sales over time.
+            {copy.subtitle}
           </p>
         </div>
       </div>
@@ -76,7 +79,7 @@ export default function MilkInventoryReport() {
       <div className="card-machined p-6">
         <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-4 border-b border-ink/10 pb-4">
           <h3 className="font-sans font-bold text-xl text-brand flex items-center gap-2">
-            <Droplets size={20} className="text-accent" /> Milk Inventory Trend
+            <Droplets size={20} className="text-accent" /> {copy.trend}
           </h3>
           <Popover>
             <PopoverTrigger asChild>
@@ -92,14 +95,14 @@ export default function MilkInventoryReport() {
                 {date?.from ? (
                   date.to ? (
                     <>
-                      {format(date.from, "LLL dd, y")} -{" "}
-                      {format(date.to, "LLL dd, y")}
+                      {formatDate(date.from)} -{" "}
+                      {formatDate(date.to)}
                     </>
                   ) : (
-                    format(date.from, "LLL dd, y")
+                    formatDate(date.from)
                   )
                 ) : (
-                  <span>Pick a date</span>
+                  <span>{copy.pickDate}</span>
                 )}
               </Button>
             </PopoverTrigger>
@@ -124,7 +127,7 @@ export default function MilkInventoryReport() {
                 onChange={() => handleToggleLine(lineKey)}
                 className="h-4 w-4 rounded border-gray-300 text-brand focus:ring-brand"
               />
-              <span className="capitalize">{lineKey}</span>
+              <span>{copy.lines[lineKey]}</span>
             </label>
           ))}
         </div>
@@ -133,7 +136,7 @@ export default function MilkInventoryReport() {
             <Skeleton className="h-full w-full" />
           ) : isError ? (
             <div className="flex items-center justify-center h-full text-brand">
-              Error loading report data.
+              {copy.loadFailed}
             </div>
           ) : chartData.length > 0 ? (
             <ResponsiveContainer width="100%" height="100%">
@@ -150,14 +153,14 @@ export default function MilkInventoryReport() {
                   }}
                 />
                 <Legend />
-                {visibleLines.produced && <Line type="monotone" dataKey="produced" name="Total Produced" stroke="#38BDF8" strokeWidth={2} />}
-                {visibleLines.sold && <Line type="monotone" dataKey="sold" name="Total Sold" stroke="#16a34a" strokeWidth={2} />}
-                {visibleLines.unsold && <Line type="monotone" dataKey="unsold" name="Total Unsold" stroke="#ef4444" strokeWidth={2} />}
+                {visibleLines.produced && <Line type="monotone" dataKey="produced" name={copy.legend.produced} stroke="#38BDF8" strokeWidth={2} />}
+                {visibleLines.sold && <Line type="monotone" dataKey="sold" name={copy.legend.sold} stroke="#16a34a" strokeWidth={2} />}
+                {visibleLines.unsold && <Line type="monotone" dataKey="unsold" name={copy.legend.unsold} stroke="#ef4444" strokeWidth={2} />}
               </LineChart>
             </ResponsiveContainer>
           ) : (
             <div className="flex items-center justify-center h-full text-ink-muted">
-              No data available for the selected date range.
+              {copy.noData}
             </div>
           )}
         </div>
@@ -166,16 +169,16 @@ export default function MilkInventoryReport() {
       <div className="card-machined overflow-hidden !p-0">
         <div className="p-6 border-b border-ink/10 flex items-center gap-2">
           <Table size={18} className="text-brand" />
-          <h3 className="font-bold text-lg text-ink">Daily Records</h3>
+          <h3 className="font-bold text-lg text-ink">{copy.dailyRecords}</h3>
         </div>
         <div className="hidden overflow-x-auto md:block">
           <table className="w-full text-left">
             <thead className="bg-surface-raised">
               <tr>
-                <th className="p-4 font-sans text-xs font-semibold uppercase tracking-wider text-ink-muted">Date</th>
-                <th className="p-4 font-sans text-xs font-semibold uppercase tracking-wider text-ink-muted text-right">Produced (L)</th>
-                <th className="p-4 font-sans text-xs font-semibold uppercase tracking-wider text-ink-muted text-right">Sold (L)</th>
-                <th className="p-4 font-sans text-xs font-semibold uppercase tracking-wider text-ink-muted text-right">Unsold (L)</th>
+                <th className="p-4 font-sans text-xs font-semibold uppercase tracking-wider text-ink-muted">{copy.columns.date}</th>
+                <th className="p-4 font-sans text-xs font-semibold uppercase tracking-wider text-ink-muted text-right">{copy.columns.produced}</th>
+                <th className="p-4 font-sans text-xs font-semibold uppercase tracking-wider text-ink-muted text-right">{copy.columns.sold}</th>
+                <th className="p-4 font-sans text-xs font-semibold uppercase tracking-wider text-ink-muted text-right">{copy.columns.unsold}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-ink/5">
@@ -184,7 +187,7 @@ export default function MilkInventoryReport() {
                   <tr key={i}><td colSpan="4" className="p-4"><Skeleton className="h-6 w-full" /></td></tr>
                 ))
               ) : isError ? (
-                <tr><td colSpan="4" className="p-6 text-center text-brand">Error loading report data.</td></tr>
+                <tr><td colSpan="4" className="p-6 text-center text-brand">{copy.loadFailed}</td></tr>
               ) : chartData.length > 0 ? (
                 <GroupedDateRows
                   items={dailyRecords}
@@ -196,11 +199,11 @@ export default function MilkInventoryReport() {
                       sold: sum.sold + Number(item.sold || 0),
                       unsold: sum.unsold + Number(item.unsold || 0),
                     }), { produced: 0, sold: 0, unsold: 0 });
-                    return `${totals.produced.toFixed(1)} L produced / ${totals.sold.toFixed(1)} L sold / ${totals.unsold.toFixed(1)} L unsold`;
+                    return copy.dayMeta(totals.produced.toFixed(1), totals.sold.toFixed(1), totals.unsold.toFixed(1));
                   }}
                   renderItem={(record) => (
                   <tr key={record.date} className="hover:bg-surface-raised transition-colors">
-                    <td className="p-4 text-sm font-medium text-ink">{format(new Date(`${record.date}T00:00:00`), 'MMM d, yyyy')}</td>
+                    <td className="p-4 text-sm font-medium text-ink">{formatDate(record.date)}</td>
                     <td className="p-4 text-sm font-semibold text-ink text-right tabular-nums">{record.produced.toFixed(1)}</td>
                     <td className="p-4 text-sm font-semibold text-brand text-right tabular-nums">{record.sold.toFixed(1)}</td>
                     <td className="p-4 text-sm font-semibold text-brand-dark text-right tabular-nums">{record.unsold.toFixed(1)}</td>
@@ -208,23 +211,23 @@ export default function MilkInventoryReport() {
                   )}
                 />
               ) : (
-                <tr><td colSpan="4" className="p-6 text-center text-ink-muted">No data available for the selected date range.</td></tr>
+                <tr><td colSpan="4" className="p-6 text-center text-ink-muted">{copy.noData}</td></tr>
               )}
             </tbody>
           </table>
         </div>
         <div className="divide-y divide-ink/10 md:hidden">
           {isLoading ? Array.from({ length: 5 }).map((_, i) => <div key={i} className="p-4"><Skeleton className="h-20 w-full" /></div>)
-            : isError ? <p className="p-5 text-center text-sm text-brand">Error loading report data.</p>
+            : isError ? <p className="p-5 text-center text-sm text-brand">{copy.loadFailed}</p>
               : dailyRecords.map((record) => (
                 <article key={record.date} className="grid grid-cols-2 gap-3 p-4 text-sm">
-                  <div className="col-span-2 font-semibold text-ink">{format(new Date(`${record.date}T00:00:00`), 'MMM d, yyyy')}</div>
-                  <div><p className="text-xs text-ink-muted">Produced</p><p className="mt-1 font-semibold tabular-nums text-ink">{Number(record.produced || 0).toFixed(1)} L</p></div>
-                  <div><p className="text-xs text-ink-muted">Sold</p><p className="mt-1 font-semibold tabular-nums text-brand">{Number(record.sold || 0).toFixed(1)} L</p></div>
-                  <div className="col-span-2"><p className="text-xs text-ink-muted">Unsold</p><p className="mt-1 font-semibold tabular-nums text-ink">{Number(record.unsold || 0).toFixed(1)} L</p></div>
+                  <div className="col-span-2 font-semibold text-ink">{formatDate(record.date)}</div>
+                  <div><p className="text-xs text-ink-muted">{copy.lines.produced}</p><p className="mt-1 font-semibold tabular-nums text-ink">{Number(record.produced || 0).toFixed(1)} L</p></div>
+                  <div><p className="text-xs text-ink-muted">{copy.lines.sold}</p><p className="mt-1 font-semibold tabular-nums text-brand">{Number(record.sold || 0).toFixed(1)} L</p></div>
+                  <div className="col-span-2"><p className="text-xs text-ink-muted">{copy.lines.unsold}</p><p className="mt-1 font-semibold tabular-nums text-ink">{Number(record.unsold || 0).toFixed(1)} L</p></div>
                 </article>
               ))}
-          {!isLoading && !isError && dailyRecords.length === 0 && <p className="p-5 text-center text-sm text-ink-muted">No data available for the selected date range.</p>}
+          {!isLoading && !isError && dailyRecords.length === 0 && <p className="p-5 text-center text-sm text-ink-muted">{copy.noData}</p>}
         </div>
       </div>
     </div>

@@ -4,7 +4,7 @@ import BaseModal from '../ui/BaseModal';
 import { resolveIngredientStandards } from '../../lib/feedNutritionStandards';
 import { proteinGramsPerKgToInput, proteinInputToGramsPerKg } from '../../lib/feedNutritionUnits';
 import { validateInventoryItem } from '../../lib/inventoryItemRules';
-import { feedCopy } from '../../i18n/feed.en';
+import { feedCopy } from '../../i18n/feed';
 
 export default function EditResourceModal({ isOpen, onClose, item, onSave }) {
   const initialStandards = resolveIngredientStandards({
@@ -68,8 +68,8 @@ export default function EditResourceModal({ isOpen, onClose, item, onSave }) {
     <BaseModal
       isOpen
       onClose={onClose}
-      title="Edit resource"
-      subtitle="Modify definition"
+      title={feedCopy.inventory.form.editTitle}
+      subtitle={feedCopy.inventory.form.editSubtitle}
       icon={<Edit2 size={18} strokeWidth={2.5} />}
       size="lg"
       onSubmit={handleSubmit}
@@ -80,13 +80,13 @@ export default function EditResourceModal({ isOpen, onClose, item, onSave }) {
             onClick={onClose}
             className="flex-1 py-3 rounded-lg font-black text-xs uppercase tracking-widest text-slate-500 hover:bg-slate-200 hover:text-ink transition-colors"
           >
-            Cancel
+            {feedCopy.inventory.form.cancel}
           </button>
           <button
             type="submit"
             className="flex-[2] py-3 px-6 rounded-lg font-black text-xs uppercase tracking-widest bg-ink text-white hover:bg-ink-strong transition-all  flex items-center justify-center gap-2"
           >
-            <Save size={16} strokeWidth={3} /> Save Changes
+            <Save size={16} strokeWidth={3} /> {feedCopy.inventory.form.saveChanges}
           </button>
         </>
       )}
@@ -94,7 +94,7 @@ export default function EditResourceModal({ isOpen, onClose, item, onSave }) {
       <div className="space-y-5">
         <div className="grid grid-cols-2 gap-5">
           <div>
-            <label className="block text-[10px] font-black text-ink-muted uppercase tracking-widest mb-2">Resource Name</label>
+            <label className="block text-[10px] font-black text-ink-muted uppercase tracking-widest mb-2">{feedCopy.inventory.form.name}</label>
             <input
               required
               value={formData.name}
@@ -114,19 +114,17 @@ export default function EditResourceModal({ isOpen, onClose, item, onSave }) {
 
         <div className="grid grid-cols-2 gap-5">
           <div>
-            <label className="block text-[10px] font-black text-ink-muted uppercase tracking-widest mb-2">Category</label>
+            <label className="block text-[10px] font-black text-ink-muted uppercase tracking-widest mb-2">{feedCopy.inventory.form.category}</label>
             <select
               value={formData.category}
               onChange={(e) => handleFieldChange('category', e.target.value)}
               className="w-full p-3 border border-slate-200 rounded-lg text-sm font-bold focus:ring-2 focus:ring-brand/20 focus:border-brand outline-none transition-all bg-white"
             >
-              <option value="Bulk Feed">Bulk Feed</option>
-              <option value="Medical Vault">Medical Vault</option>
-              <option value="Equipment">Equipment</option>
+              {Object.entries(feedCopy.inventory.categories).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
             </select>
           </div>
           <div>
-            <label className="block text-[10px] font-black text-ink-muted uppercase tracking-widest mb-2">Re-order Level</label>
+            <label className="block text-[10px] font-black text-ink-muted uppercase tracking-widest mb-2">{feedCopy.inventory.form.reorderLevel}</label>
             <input
               required
               type="number"
@@ -141,7 +139,7 @@ export default function EditResourceModal({ isOpen, onClose, item, onSave }) {
         <div className="grid grid-cols-2 gap-5">
           <div>
             <div className="mb-2 flex items-center justify-between gap-2">
-              <label className="block text-[10px] font-black text-ink-muted uppercase tracking-widest">Crude Protein</label>
+              <label className="block text-[10px] font-black text-ink-muted uppercase tracking-widest">{feedCopy.inventory.form.protein}</label>
               <select value={proteinUnit} onChange={(e) => setProteinUnit(e.target.value)} className="rounded border border-slate-200 bg-white px-2 py-1 text-[10px] font-bold">
                 <option value="percent">%</option>
                 <option value="g_per_kg">g/kg</option>
@@ -163,7 +161,7 @@ export default function EditResourceModal({ isOpen, onClose, item, onSave }) {
             </p>
           </div>
           <div>
-            <label className="block text-[10px] font-black text-ink-muted uppercase tracking-widest mb-2">Energy (MJ/kg)</label>
+            <label className="block text-[10px] font-black text-ink-muted uppercase tracking-widest mb-2">{feedCopy.inventory.form.energy}</label>
             <input
               type="number"
               min="0"
@@ -178,7 +176,7 @@ export default function EditResourceModal({ isOpen, onClose, item, onSave }) {
 
         <div className="grid grid-cols-2 gap-5">
           <div>
-            <label className="block text-[10px] font-black text-ink-muted uppercase tracking-widest mb-2">Fiber (g/kg)</label>
+            <label className="block text-[10px] font-black text-ink-muted uppercase tracking-widest mb-2">{feedCopy.inventory.form.fiber}</label>
             <input
               type="number"
               min="0"
@@ -190,7 +188,7 @@ export default function EditResourceModal({ isOpen, onClose, item, onSave }) {
             />
           </div>
           <div>
-            <label className="block text-[10px] font-black text-ink-muted uppercase tracking-widest mb-2">Cost (KES/kg)</label>
+            <label className="block text-[10px] font-black text-ink-muted uppercase tracking-widest mb-2">{feedCopy.inventory.form.cost}</label>
             <input
               type="number"
               min="0"
@@ -217,7 +215,7 @@ export default function EditResourceModal({ isOpen, onClose, item, onSave }) {
         {/* Note about stock */}
         <div className="bg-blue-50 border border-blue-100 rounded-lg p-4 mt-2">
           <p className="text-xs font-bold text-blue-800">
-            Note: Stock is read-only here. Use <span className="font-black">Restock</span> to add stock, so every change is recorded. This form only changes the item's definition.
+            {feedCopy.inventory.form.stockNoteBefore}<span className="font-black">{feedCopy.inventory.restock}</span>{feedCopy.inventory.form.stockNoteAfter}
           </p>
         </div>
       </div>

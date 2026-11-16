@@ -13,8 +13,10 @@ import { getListLoadState, hasRowsToShow } from '../../lib/listLoadState';
 import { CardSkeletons, ListLoadNotices } from '../../components/ui/ListLoadState';
 import AlertBanner from '../../components/ui/AlertBanner';
 import { reportError } from '../../lib/telemetry';
+import { dashboardCopy } from '../../i18n/dashboard';
 
 export default function HerdsmanView() {
+  const copy = dashboardCopy.herdsman;
   // Calf form moved to Herd Registry to keep barn-floor UI focused.
   const [successMessage, setSuccessMessage] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
@@ -30,18 +32,18 @@ export default function HerdsmanView() {
   const getContextForFeed = (feed) => {
     const id = (feed.inventory_item_id || '').toString().toLowerCase();
     const conc = (feed.concentrate || '').toString().toLowerCase();
-    if (id.includes('dairymeal') || conc.includes('dairy')) return 'Dairy Meal';
-    return 'Feed';
+    if (id.includes('dairymeal') || conc.includes('dairy')) return copy.dairyMeal;
+    return copy.feed;
   };
 
   const getFeedInstructionLabel = (feed) => {
     const context = getContextForFeed(feed);
     const conv = convertKgToLocal(unitConversions, feed.inventory_item_id, feed.numeric_quantity);
     if (conv.wasConverted) {
-      return `Give ${conv.value} ${conv.unit} of ${context}`;
+      return copy.give(conv.value, conv.unit, context);
     }
 
-    return `Give ${feed.numeric_quantity} kg of ${context}`;
+    return copy.give(feed.numeric_quantity, 'kg', context);
   };
 
   // Alerts from the farm system (Barn Floor Language)
@@ -76,7 +78,7 @@ export default function HerdsmanView() {
         onError: (error) => {
           setPriorityAlerts((prev) => [alert, ...prev]);
           reportError(error, { where: 'HerdsmanView.dismissAlert' });
-          setErrorMessage('Could not persist action. The item was restored.');
+          setErrorMessage(copy.dismissFailed);
         },
       }
     );
@@ -109,15 +111,15 @@ export default function HerdsmanView() {
       setFeedInstructions((prev) => prev.filter((f) => f.cow !== feedTask.cow));
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.UNIT_COST(tenantId, farmId) });
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.DASHBOARD_SUMMARY(tenantId, farmId) });
-      setSuccessMessage(`Logged feed task for ${feedTask.cow}. Inventory has been updated.`);
+      setSuccessMessage(copy.feedLogged(feedTask.cow));
 
       if (response?.reorder_alert) {
-        setErrorMessage(`Low stock: ${feedTask.concentrate} is below its reorder level, with ${response.new_balance} ${response.unit} remaining.`);
+        setErrorMessage(copy.lowStock(feedTask.concentrate, response.new_balance, response.unit));
       }
     },
     onError: (error) => {
       reportError(error, { where: 'HerdsmanView.logFeeding' });
-        setErrorMessage('The feeding task was not recorded, and stock was not deducted. Check the connection and ask your manager to review the stock before trying again.');
+        setErrorMessage(copy.feedFailed);
     },
   });
 
@@ -127,7 +129,7 @@ export default function HerdsmanView() {
         <div className="fixed top-4 right-4 z-[60] w-[min(92vw,430px)]">
           <AlertBanner
             type="success"
-            title="Task Logged"
+            title={copy.taskLogged}
             message={successMessage}
             autoDismiss={2400}
             onDismiss={() => setSuccessMessage('')}
@@ -138,7 +140,7 @@ export default function HerdsmanView() {
         <div className="fixed top-4 right-4 z-[60] w-[min(92vw,430px)]">
           <AlertBanner
             type="danger"
-            title="Action Failed"
+            title={copy.actionFailed}
             message={errorMessage}
             autoDismiss={4000}
             onDismiss={() => setErrorMessage('')}
@@ -149,18 +151,18 @@ export default function HerdsmanView() {
       <div className="flex flex-col md:flex-row justify-between items-start md:items-end border-b border-ink/10 pb-6 gap-4">
         <div>
           <div className="inline-flex items-center gap-2 px-3 py-1 bg-accent/10 text-accent-dark text-[10px] font-bold uppercase tracking-widest rounded-full mb-3">
-            <Activity size={12} /> My Animals
+            <Activity size={12} /> {copy.eyebrow}
           </div>
           <h2 className="font-sans font-bold text-3xl tracking-tight text-brand m-0">
-            My <span className="text-ink-muted">Herd</span>
+            {copy.titleStart} <span className="text-ink-muted">{copy.titleEnd}</span>
           </h2>
-          <p className="font-mono text-xs text-ink-muted mt-2">Today's action plan for the barn floor.</p>
+          <p className="font-mono text-xs text-ink-muted mt-2">{copy.subtitle}</p>
         </div>
         <div className="flex flex-col items-end gap-3">
           
-          <div className="text-[10px] uppercase font-bold text-ink-muted">Current Shift</div>
+          <div className="text-[10px] uppercase font-bold text-ink-muted">{copy.currentShift}</div>
           <div className="text-lg font-bold text-brand flex items-center gap-2">
-            <Clock size={16} /> Morning Milking
+            <Clock size={16} /> {copy.morningMilking}
           </div>
           {/* Herd registry link removed to keep barn-floor UI focused */}
         </div>
@@ -170,7 +172,7 @@ export default function HerdsmanView() {
         <div className="rounded-2xl border border-ink/10 bg-surface/90 p-4 ">
           <div className="flex items-start justify-between gap-3">
             <div>
-              <p className="text-[10px] font-bold uppercase tracking-widest text-ink-muted">Active alerts</p>
+              <p className="text-[10px] font-bold uppercase tracking-widest text-ink-muted">{copy.activeAlerts}</p>
               <p className="mt-2 text-3xl font-black text-ink">{priorityAlerts.length}</p>
             </div>
             <div className="rounded-2xl border border-slate-200 bg-white/90 p-3 text-danger"><AlertTriangle size={18} /></div>
@@ -179,7 +181,7 @@ export default function HerdsmanView() {
         <div className="rounded-2xl border border-ink/10 bg-surface/90 p-4 ">
           <div className="flex items-start justify-between gap-3">
             <div>
-              <p className="text-[10px] font-bold uppercase tracking-widest text-ink-muted">Feed tasks</p>
+              <p className="text-[10px] font-bold uppercase tracking-widest text-ink-muted">{copy.feedTasks}</p>
               <p className="mt-2 text-3xl font-black text-ink">{feedInstructions.length}</p>
             </div>
             <div className="rounded-2xl border border-slate-200 bg-white/90 p-3 text-brand-400"><Wheat size={18} /></div>
@@ -188,7 +190,7 @@ export default function HerdsmanView() {
         <div className="rounded-2xl border border-ink/10 bg-surface/90 p-4 ">
           <div className="flex items-start justify-between gap-3">
             <div>
-              <p className="text-[10px] font-bold uppercase tracking-widest text-ink-muted">Undo queue</p>
+              <p className="text-[10px] font-bold uppercase tracking-widest text-ink-muted">{copy.undoQueue}</p>
               <p className="mt-2 text-3xl font-black text-ink">{pendingDismissals.length}</p>
             </div>
             <div className="rounded-2xl border border-slate-200 bg-white/90 p-3 text-brand-400"><CheckCircle2 size={18} /></div>
@@ -202,22 +204,22 @@ export default function HerdsmanView() {
             {/* ── Today's Plan Module ── */}
 
             <h3 className="font-bold text-brand text-xl flex items-center gap-2 mb-4 tracking-tight">
-              <ClipboardList size={20} className="text-accent" /> Today's Plan
+              <ClipboardList size={20} className="text-accent" /> {copy.todaysPlan}
             </h3>
             {/* OPTIMIZED: High-contrast slate weights, cleaner tracking, and crisp line spacing */}
             <p className="max-w-prose text-sm leading-7 font-semibold text-ink mb-6">
-              Shift instructions from the manager. Review these objectives before starting and complete tasks in chronological order.
+              {copy.planHint}
             </p>
             <div className="space-y-4 max-h-[600px] overflow-y-auto pr-2">
               {routineLoadState !== 'ready' && (
                 <div className="overflow-hidden rounded-lg border border-ink/10">
-                  <ListLoadNotices state={routineLoadState} label="routine tasks" error={routineQuery.error} onRetry={routineQuery.refetch} />
+                  <ListLoadNotices state={routineLoadState} label={copy.routineLabel} error={routineQuery.error} onRetry={routineQuery.refetch} />
                   {routineLoadState === 'loading' && <div aria-busy="true"><CardSkeletons rows={2} /></div>}
                 </div>
               )}
               {hasRowsToShow(routineLoadState) && readOnlySchedule.length === 0 && (
                 <div className="rounded-lg border border-dashed border-ink/10 bg-surface-warm p-4 text-sm text-ink-muted">
-                  No routine has been set yet. Your manager sets it in the Daily Routine Planner.
+                  {copy.noRoutine}
                 </div>
               )}
               {readOnlySchedule.map((task) => (
@@ -248,14 +250,14 @@ export default function HerdsmanView() {
             <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between mb-8">
               <div className="max-w-2xl">
                 <h3 className="font-bold text-brand text-xl flex items-center gap-2 tracking-tight">
-                  <Wheat size={22} className="text-accent" /> Today's Feed Mix
+                  <Wheat size={22} className="text-accent" /> {copy.feedMix}
                 </h3>
                 <p className="mt-2 max-w-prose text-sm leading-7 font-semibold text-ink">
-                  Dairy meal amounts based on yesterday's milk. Use these numbers to load each cow's ration accurately.
+                  {copy.feedMixHint}
                 </p>
               </div>
               <span className="inline-flex items-center rounded-full border border-brand/15 bg-brand/5 px-4 py-2 text-[11px] font-bold uppercase tracking-widest text-brand whitespace-nowrap">
-                {feedInstructions.length} cow{feedInstructions.length !== 1 ? 's' : ''}
+                {copy.cowCount(feedInstructions.length)}
               </span>
             </div>
 
@@ -274,7 +276,7 @@ export default function HerdsmanView() {
                     </div>
                     <div className="space-y-4">
                       <div className="space-y-2">
-                        <span className="block text-[10px] text-ink/50 uppercase font-semibold">Dairy Meal</span>
+                        <span className="block text-[10px] text-ink/50 uppercase font-semibold">{copy.dairyMeal}</span>
                         <div className="text-sm font-bold text-ink-muted mb-2">{getFeedInstructionLabel(feed)}</div>
                         <div className="flex items-baseline gap-2">
                           <div className="text-3xl font-black text-brand leading-none">{conv.value}</div>
@@ -283,7 +285,7 @@ export default function HerdsmanView() {
                         <div className="text-xs text-ink-muted mt-1">({feed.numeric_quantity} kg)</div>
                       </div>
                       <div className="border-t border-ink/5 pt-4 space-y-2">
-                        <span className="block text-[10px] text-ink/50 uppercase font-semibold">Base Feed</span>
+                        <span className="block text-[10px] text-ink/50 uppercase font-semibold">{copy.baseFeed}</span>
                         <strong className="block text-ink text-sm leading-relaxed">{feed.forage}</strong>
                       </div>
                     </div>
@@ -297,10 +299,10 @@ export default function HerdsmanView() {
         <div className="space-y-7">
           <div className="flex items-center justify-between gap-4">
             <h3 className="font-bold text-brand text-lg flex items-center gap-2">
-              <AlertTriangle size={22} className="text-danger" /> Needs Attention
+              <AlertTriangle size={22} className="text-danger" /> {copy.needsAttention}
             </h3>
             <span className="bg-danger text-white text-xs font-bold px-3 py-1.5 rounded-full whitespace-nowrap">
-              {priorityAlerts.length} alert{priorityAlerts.length !== 1 ? 's' : ''}
+              {copy.alertCount(priorityAlerts.length)}
             </span>
           </div>
 
@@ -329,7 +331,7 @@ export default function HerdsmanView() {
                     disabled={feedTaskMutation.isPending}
                     className="flex items-center gap-1.5 text-xs font-bold text-brand hover:text-brand-dark transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
                   >
-                    {feedTaskMutation.isPending ? <Loader2 size={14} className="animate-spin" /> : <CheckCircle2 size={14} />} Done
+                    {feedTaskMutation.isPending ? <Loader2 size={14} className="animate-spin" /> : <CheckCircle2 size={14} />} {copy.done}
                   </button>
                 </div>
               </div>
@@ -343,10 +345,10 @@ export default function HerdsmanView() {
                 key={p.id}
                 type="info"
                 compact
-                title={`Logged ${p.alert.cow}`}
-                message="You can undo this action for a few seconds before it syncs."
+                title={copy.logged(p.alert.cow)}
+                message={copy.undoHint}
                 action={{
-                  label: 'Undo',
+                  label: copy.undo,
                   onClick: () => handleUndoDismissal(p.id, p.alert),
                 }}
                 onAutoDismiss={() => handleFinalizeDismissal(p.id, p.alert)}
@@ -358,11 +360,11 @@ export default function HerdsmanView() {
 
           <div className="mt-10 p-6 bg-brand/8 border border-brand/25 rounded-xl flex flex-col gap-4 ">
             <div>
-              <h4 className="font-bold text-brand text-base">Ready to Milk?</h4>
-              <p className="text-sm text-ink-muted mt-1.5">Check the alerts above, then enter the milk amounts.</p>
+              <h4 className="font-bold text-brand text-base">{copy.readyToMilk}</h4>
+              <p className="text-sm text-ink-muted mt-1.5">{copy.readyHint}</p>
             </div>
             <Link to="/operations/clerk" className="btn-command flex items-center justify-center gap-2 py-2.5">
-              Record Milk <ArrowRight size={18} />
+              {copy.recordMilk} <ArrowRight size={18} />
             </Link>
           </div>
         </div>

@@ -1,4 +1,4 @@
-import { feedCopy } from '../i18n/feed.en';
+import { feedCopy } from '../i18n/feed';
 
 // How a saved mix is measured out at feeding time (optional auto-save fields,
 // FEED_INVENTORY_API_CHANGES §2). Kept apart from the shares so the formulation

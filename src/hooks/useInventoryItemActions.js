@@ -2,7 +2,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import toast from 'react-hot-toast';
 import { inventoryApi } from '../lib/backendApi';
 import { getFeedErrorMessage } from '../lib/feedErrors';
-import { feedCopy } from '../i18n/feed.en';
+import { feedCopy } from '../i18n/feed';
 import { useTenant } from './useTenant';
 
 /**

@@ -24,7 +24,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { useUrlFilters } from '../../hooks/useUrlFilters';
 import { useTenant } from '../../hooks/useTenant';
 import { useInventoryItemActions } from '../../hooks/useInventoryItemActions';
-import { feedCopy } from '../../i18n/feed.en';
+import { feedCopy } from '../../i18n/feed';
 import { tone } from '../../components/ui/tones';
 import { CardSkeletons, ListLoadNotices, TableSkeletonRows } from '../../components/ui/ListLoadState';
 import { getListLoadState, hasRowsToShow } from '../../lib/listLoadState';
@@ -36,7 +36,7 @@ const TABLE_COLUMNS = 5;
 /** "220 kg"; "—" when the backend sent no stock figure (never shown as 0). */
 const isKnown = (value) => value !== null && value !== undefined && value !== '';
 
-const formatStock = (stock) => (isKnown(stock?.value) ? `${stock.value} ${stock.unit || 'units'}` : '—');
+const formatStock = (stock) => (isKnown(stock?.value) ? `${stock.value} ${stock.unit || feedCopy.inventory.units}` : '—');
 
 /**
  * 'LOW' | 'OK' from the backend's flag; null (no chip) when the status can't be known.
@@ -49,8 +49,8 @@ const getItemStatus = (item) => {
 };
 
 const STOCK_STATUS = {
-  LOW: { label: 'Low – reorder', tone: 'attention' },
-  OK: { label: 'In stock', tone: 'neutral' },
+  LOW: { get label() { return feedCopy.inventory.stockStatus.LOW; }, tone: 'attention' },
+  OK: { get label() { return feedCopy.inventory.stockStatus.OK; }, tone: 'neutral' },
 };
 
 function StockStatusChip({ status }) {
@@ -111,18 +111,18 @@ export default function InventoryRegistry() {
     mutationFn: (payload) => inventoryApi.createItem(payload),
     onSuccess: async (item) => {
       await refreshInventory();
-      toast.success(`${item?.name || 'Item'} added.`);
+      toast.success(feedCopy.inventory.added(item?.name || feedCopy.inventory.item));
     },
-    onError: (error) => showFailure(error, 'Failed to add inventory item. Please try again.'),
+    onError: (error) => showFailure(error, feedCopy.inventory.addFailed),
   });
 
   const updateItemMutation = useMutation({
     mutationFn: ({ itemId, payload }) => inventoryApi.updateItem(itemId, payload),
     onSuccess: async (item) => {
       await refreshInventory();
-      toast.success(`${item?.name || 'Item'} saved.`);
+      toast.success(feedCopy.inventory.saved(item?.name || feedCopy.inventory.item));
     },
-    onError: (error) => showFailure(error, 'Failed to save inventory item. Please try again.'),
+    onError: (error) => showFailure(error, feedCopy.inventory.saveFailed),
   });
 
   // Errors are shown inside the restock dialog, which stays open so nothing is retyped.
@@ -195,17 +195,17 @@ export default function InventoryRegistry() {
         setShowError(true);
         return;
       }
-      showFailure(error, `Couldn’t delete ${item.name}. Try again.`);
+      showFailure(error, feedCopy.inventory.deleteFailed(item.name));
     },
   });
 
   const handleDelete = async (item) => {
     const identifier = item.sku ? ` (${item.sku})` : '';
     const confirmed = await confirmation.confirm({
-      title: `Delete ${item.name}?`,
-      message: `${item.name}${identifier} will be removed from your stock list. You can’t undo this. Items with stock history can be archived instead.`,
-      confirmText: 'Delete',
-      cancelText: 'Keep',
+      title: feedCopy.inventory.deleteTitle(item.name),
+      message: feedCopy.inventory.deleteMessage(`${item.name}${identifier}`),
+      confirmText: feedCopy.inventory.deleteConfirm,
+      cancelText: feedCopy.inventory.deleteKeep,
       type: 'danger',
       requireText: item.name,
     });
@@ -266,12 +266,12 @@ export default function InventoryRegistry() {
       return canManageItems ? [{ key: 'restore', label: itemCopy.restore, Icon: ArchiveRestore, onClick: () => itemActions.restore.mutate({ item }) }] : [];
     }
     return [
-      { key: 'restock', label: 'Restock', Icon: Plus, onClick: () => handleRestock(item) },
+      { key: 'restock', label: feedCopy.inventory.restock, Icon: Plus, onClick: () => handleRestock(item) },
       { key: 'stock-out', label: stockOutCopy.action, Icon: MinusCircle, onClick: () => setStockDialog({ kind: 'out', item }) },
       ...(canManageItems ? [{ key: 'stock-count', label: stockCountCopy.action, Icon: ClipboardCheck, onClick: () => setStockDialog({ kind: 'count', item }) }] : []),
-      { key: 'edit', label: 'Edit', Icon: Edit2, onClick: () => handleEdit(item) },
+      { key: 'edit', label: feedCopy.inventory.edit, Icon: Edit2, onClick: () => handleEdit(item) },
       ...(canManageItems ? [{ key: 'archive', label: itemCopy.archive, Icon: Archive, onClick: () => archiveItem(item) }] : []),
-      { key: 'delete', label: 'Delete', Icon: Trash2, onClick: () => handleDelete(item), danger: true },
+      { key: 'delete', label: feedCopy.inventory.delete, Icon: Trash2, onClick: () => handleDelete(item), danger: true },
     ];
   };
 
@@ -323,7 +323,7 @@ export default function InventoryRegistry() {
         <div className="mb-6">
           <AlertBanner
             type="danger"
-            title="Inventory update failed"
+            title={feedCopy.inventory.updateFailed}
             message={errorMessage}
             onDismiss={() => setShowError(false)}
           />
@@ -335,8 +335,8 @@ export default function InventoryRegistry() {
         <div className="flex min-w-0 items-center gap-4">
           <div className="p-3 bg-white text-brand-700 rounded-lg border border-brand-100"><Package size={20} /></div>
           <div>
-            <h2 className="font-sans font-bold text-2xl tracking-tight text-brand-900 m-0">Stock Registry</h2>
-            <p className="text-sm text-brand-700/80 mt-1">Manage stock levels, new receipts, and resource definitions.</p>
+            <h2 className="font-sans font-bold text-2xl tracking-tight text-brand-900 m-0">{feedCopy.inventory.title}</h2>
+            <p className="text-sm text-brand-700/80 mt-1">{feedCopy.inventory.subtitle}</p>
           </div>
         </div>
         <button
@@ -344,7 +344,7 @@ export default function InventoryRegistry() {
           type="button"
           className="flex w-full shrink-0 items-center justify-center gap-2 whitespace-nowrap rounded-button bg-brand-800 px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-brand-900 sm:w-auto"
         >
-          <Plus size={16} /> Add to Feedstore
+          <Plus size={16} /> {feedCopy.inventory.add}
         </button>
       </div>
 
@@ -359,7 +359,7 @@ export default function InventoryRegistry() {
         <div className="relative min-w-0 flex-1">
             <Search size={16} className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-brand" />
             <input
-                placeholder="Search items by name or SKU..."
+                placeholder={feedCopy.inventory.searchPlaceholder}
                 className="w-full rounded-lg border border-ink/20 py-3 pl-10 pr-4 text-xs font-bold outline-none focus:border-brand/50"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
@@ -373,7 +373,7 @@ export default function InventoryRegistry() {
                 onChange={(e) => setCategoryFilter(e.target.value)}
             >
                 {categories.map(cat => (
-                    <option key={cat} value={cat}>{cat === 'All' ? 'All Categories' : cat}</option>
+                    <option key={cat} value={cat}>{cat === 'All' ? feedCopy.inventory.allCategories : feedCopy.inventory.categories[cat] ?? cat}</option>
                 ))}
             </select>
             <ChevronDown size={16} className="absolute right-4 top-1/2 -translate-y-1/2 text-ink-muted pointer-events-none" />
@@ -386,7 +386,7 @@ export default function InventoryRegistry() {
 
       {/* STOCK TABLE */}
       <div className="min-w-0 overflow-hidden rounded-xl border border-ink/10 bg-white">
-        <ListLoadNotices state={inventoryLoadState} label="stock items" error={inventoryQuery.error} onRetry={inventoryQuery.refetch} />
+        <ListLoadNotices state={inventoryLoadState} label={feedCopy.inventory.listLabel} error={inventoryQuery.error} onRetry={inventoryQuery.refetch} />
         {inventoryLoadState === 'loading' && (
           <div aria-busy="true">
             <table className="hidden w-full border-collapse md:table"><tbody><TableSkeletonRows columns={TABLE_COLUMNS} /></tbody></table>
@@ -397,13 +397,13 @@ export default function InventoryRegistry() {
           <div className="flex flex-col items-center gap-3 p-8 text-center text-sm text-ink-muted">
             {(backendInventory || []).length === 0 ? (
               <>
-                <p>No inventory items yet. Register your feed, medicines and supplies to track stock.</p>
-                <button type="button" onClick={() => setIsRegisterModalOpen(true)} className="btn-command">Register your first item</button>
+                <p>{feedCopy.inventory.empty}</p>
+                <button type="button" onClick={() => setIsRegisterModalOpen(true)} className="btn-command">{feedCopy.inventory.registerFirst}</button>
               </>
             ) : (
               <>
-                <p>No items match your search or category.</p>
-                <button type="button" onClick={() => { setSearchTerm(''); setCategoryFilter('All'); }} className="text-xs font-bold text-brand hover:underline">Clear filters</button>
+                <p>{feedCopy.inventory.noMatches}</p>
+                <button type="button" onClick={() => { setSearchTerm(''); setCategoryFilter('All'); }} className="text-xs font-bold text-brand hover:underline">{feedCopy.inventory.clearFilters}</button>
               </>
             )}
           </div>
@@ -412,11 +412,11 @@ export default function InventoryRegistry() {
         <table className="hidden w-full min-w-[680px] border-collapse text-left md:table">
           <thead className="bg-brand-800 text-[10px] uppercase font-bold text-white">
             <tr>
-              <th className="px-6 py-4">Item Details</th>
-              <th className="px-6 py-4">Category</th>
-              <th className="px-6 py-4">Current Stock</th>
-              <th className="px-6 py-4">Status</th>
-              <th className="px-6 py-4 text-right">Actions</th>
+              <th className="px-6 py-4">{feedCopy.inventory.columns.item}</th>
+              <th className="px-6 py-4">{feedCopy.inventory.columns.category}</th>
+              <th className="px-6 py-4">{feedCopy.inventory.columns.stock}</th>
+              <th className="px-6 py-4">{feedCopy.inventory.columns.status}</th>
+              <th className="px-6 py-4 text-right">{feedCopy.inventory.columns.actions}</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-ink/10">
@@ -427,7 +427,7 @@ export default function InventoryRegistry() {
                   {item.sku && <div className="text-[11px] font-bold text-ink-muted font-mono">{item.sku}</div>}
                   {renderItemDetails(item)}
                 </td>
-                <td className="px-6 py-4 text-xs font-semibold text-ink-muted">{item.category}</td>
+                <td className="px-6 py-4 text-xs font-semibold text-ink-muted">{feedCopy.inventory.categories[item.category] ?? item.category}</td>
                 <td className="px-6 py-4 text-xs font-black text-ink font-mono">
                   {formatStock(item.stock)}
                 </td>
@@ -437,7 +437,7 @@ export default function InventoryRegistry() {
                 <td className="px-6 py-4 text-right">
                   <Popover>
                     <PopoverTrigger asChild>
-                      <button type="button" className="inline-flex h-8 w-8 items-center justify-center rounded-button border border-ink/15 text-ink-muted hover:border-brand-400 hover:text-brand-700" aria-label={`Actions for ${item.name}`}>
+                      <button type="button" className="inline-flex h-8 w-8 items-center justify-center rounded-button border border-ink/15 text-ink-muted hover:border-brand-400 hover:text-brand-700" aria-label={feedCopy.inventory.actionsFor(item.name)}>
                         <MoreVertical size={16} />
                       </button>
                     </PopoverTrigger>
@@ -462,8 +462,8 @@ export default function InventoryRegistry() {
                   <StockStatusChip status={status} />
                 </div>
                 <dl className="grid grid-cols-2 gap-3 border-t border-ink/10 pt-3 text-xs">
-                  <div className="min-w-0"><dt className="text-ink-muted">Category</dt><dd className="mt-1 break-words font-semibold text-ink">{item.category}</dd></div>
-                  <div className="min-w-0"><dt className="text-ink-muted">Current stock</dt><dd className="mt-1 break-words font-mono font-bold tabular-nums text-brand">{formatStock(item.stock)}</dd></div>
+                  <div className="min-w-0"><dt className="text-ink-muted">{feedCopy.inventory.category}</dt><dd className="mt-1 break-words font-semibold text-ink">{feedCopy.inventory.categories[item.category] ?? item.category}</dd></div>
+                  <div className="min-w-0"><dt className="text-ink-muted">{feedCopy.inventory.currentStock}</dt><dd className="mt-1 break-words font-mono font-bold tabular-nums text-brand">{formatStock(item.stock)}</dd></div>
                 </dl>
                 <div className="flex flex-wrap justify-end gap-2 border-t border-ink/10 pt-3">
                   {getRowActions(item).map(({ key, label, onClick, danger }) => (

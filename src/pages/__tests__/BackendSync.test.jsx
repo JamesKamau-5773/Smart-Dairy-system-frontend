@@ -116,7 +116,7 @@ describe('Unit Helpers', () => {
     fireEvent.change(screen.getByLabelText('Feed or stock item'), { target: { value: '34' } });
     fireEvent.change(screen.getByLabelText('Local unit name'), { target: { value: ' Kasuku ' } });
     fireEvent.change(screen.getByLabelText(/holds \(kg\)/), { target: { value: '2' } });
-    fireEvent.click(screen.getByRole('button', { name: /Save Unit Helper/ }));
+    fireEvent.click(screen.getByRole('button', { name: /Save unit helper/ }));
 
     await waitFor(() => expect(api.nutrition.saveConversion).toHaveBeenCalledWith({ itemId: 34, unitName: 'Kasuku', kgEquivalent: 2 }));
   });
@@ -138,7 +138,7 @@ describe('Unit Helpers', () => {
     fireEvent.change(screen.getByLabelText('Feed or stock item'), { target: { value: '34' } });
     fireEvent.change(screen.getByLabelText('Local unit name'), { target: { value: 'kasuku' } });
     fireEvent.change(screen.getByLabelText(/holds \(kg\)/), { target: { value: '2' } });
-    fireEvent.click(screen.getByRole('button', { name: /Save Unit Helper/ }));
+    fireEvent.click(screen.getByRole('button', { name: /Save unit helper/ }));
 
     const alert = await screen.findByRole('alert');
     expect(within(alert).getByText(/No internet connection. The unit helper wasn’t saved/)).toBeTruthy();

@@ -1,6 +1,8 @@
 import React from 'react';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { format, subDays } from 'date-fns';
+import { formatDate } from '@/lib/dateFormat';
+import { financeCopy } from '@/i18n/finance';
 import {
   TrendingUp,
   DollarSign,
@@ -15,7 +17,7 @@ import {
   AlertTriangle,
   CheckCircle2
 } from 'lucide-react';
-import { reportsApi } from '@/lib/backendApi';
+import { getApiErrorMessage, reportsApi } from '@/lib/backendApi';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Button } from '@/components/ui/button';
 import { Calendar } from '@/components/ui/calendar';
@@ -29,6 +31,7 @@ import { ListLoadNotices } from '@/components/ui/ListLoadState';
 import Skeleton from '@/components/ui/Skeleton';
 
 const KPI_CARDS = 4;
+const copy = financeCopy.unitEconomics;
 
 // Figures the backend didn't send are shown as "—", never as zero.
 const isUnknown = (value) => value === null || value === undefined || value === '' || !Number.isFinite(Number(value));
@@ -50,40 +53,40 @@ function getStatusBadge(status) {
   switch (status) {
     case 'under 1:1':
       return {
-        label: 'Unprofitable (< 1:1)',
+        label: copy.benchmarks.unprofitable,
         color: 'bg-rose-50 text-rose-700 border-rose-200',
         icon: AlertTriangle,
       };
     case '1:1–2:1':
     case '1:1-2:1':
       return {
-        label: 'Low Margin (1:1–2:1)',
+        label: copy.benchmarks.low,
         color: 'bg-amber-50 text-amber-700 border-amber-200',
         icon: AlertTriangle,
       };
     case '2:1–3:1':
     case '2:1-3:1':
       return {
-        label: 'Healthy (2:1–3:1)',
+        label: copy.benchmarks.healthy,
         color: 'bg-blue-50 text-blue-700 border-blue-200',
         icon: CheckCircle2,
       };
     case '3:1–4:1':
     case '3:1-4:1':
       return {
-        label: 'Strong (3:1–4:1)',
+        label: copy.benchmarks.strong,
         color: 'bg-emerald-50 text-emerald-700 border-emerald-200',
         icon: CheckCircle2,
       };
     case 'above 4:1':
       return {
-        label: 'Excellent (> 4:1)',
+        label: copy.benchmarks.excellent,
         color: 'bg-emerald-100 text-emerald-800 border-emerald-300 font-bold',
         icon: ShieldCheck,
       };
     default:
       return {
-        label: status || 'N/A',
+        label: status || copy.notAvailable,
         color: 'bg-gray-50 text-gray-700 border-gray-200',
         icon: HelpCircle,
       };
@@ -93,22 +96,21 @@ function getStatusBadge(status) {
 function CustomerSummary({ customerCount }) {
   const known = !isUnknown(customerCount);
   const count = Number(customerCount);
-  const customerWord = count === 1 ? 'customer' : 'customers';
 
   return (
     <section
-      aria-label="Customer summary"
+      aria-label={copy.summaryLabel}
       className="flex flex-col gap-3 border-l-4 border-brand bg-brand/5 px-4 py-4 text-ink sm:flex-row sm:items-center sm:justify-between sm:px-5"
     >
       <div>
-        <p className="text-xs font-bold uppercase text-brand">This period at a glance</p>
+        <p className="text-xs font-bold uppercase text-brand">{copy.glance}</p>
         <p className="mt-1 text-base font-bold sm:text-lg">
           {known
-            ? <>You gained <span className="font-mono tabular-nums text-brand">{formatCount(count)}</span> new {customerWord} this period!</>
-            : <>New customers for this period aren’t recorded yet.</>}
+            ? <>{copy.gainedBefore}<span className="font-mono tabular-nums text-brand">{formatCount(count)}</span>{copy.gainedAfter(count)}</>
+            : <>{copy.gainedUnknown}</>}
         </p>
       </div>
-      <p className="text-sm font-medium text-ink-muted">Use the figures below to see what each customer costs and earns.</p>
+      <p className="text-sm font-medium text-ink-muted">{copy.summaryHint}</p>
     </section>
   );
 }
@@ -201,11 +203,10 @@ export default function DairyUnitEconomicsReport() {
     mutationFn: (payload) => reportsApi.calculateDairyUnitEconomics(payload),
     onSuccess: (data) => {
       setCalcResult(normalizeDairyUnitEconomics(data));
-      toast.success('Customer profit calculated successfully!');
+      toast.success(copy.calculated);
     },
     onError: (err) => {
-      const msg = err?.response?.data?.error || err?.message || 'Calculation failed';
-      toast.error(msg);
+      toast.error(getApiErrorMessage(err, copy.calculationFailed));
     },
   });
 
@@ -232,13 +233,13 @@ export default function DairyUnitEconomicsReport() {
       <div className="flex flex-col md:flex-row justify-between items-start md:items-end border-b border-ink/10 pb-6 gap-4">
         <div>
           <div className="inline-flex items-center gap-2 px-3 py-1 bg-brand/5 text-brand border border-brand/10 text-[10px] font-bold uppercase tracking-widest rounded-full mb-3">
-            <TrendingUp size={12} /> Financial Analytics
+            <TrendingUp size={12} /> {copy.eyebrow}
           </div>
           <h1 className="font-sans font-black text-3xl tracking-tight text-ink m-0">
-            Customer Value & Profit
+            {copy.title}
           </h1>
           <p className="text-sm font-medium text-ink-muted mt-2 max-w-2xl">
-            See how much it costs to gain customers, how much profit they bring, and whether growth is paying off.
+            {copy.subtitle}
           </p>
         </div>
 
@@ -251,7 +252,7 @@ export default function DairyUnitEconomicsReport() {
               activeTab === 'tenant' ? 'bg-surface-warm  text-brand font-bold' : 'text-ink-muted hover:text-ink'
             )}
           >
-            Tenant Overview
+            {copy.tabs.tenant}
           </button>
           <button
             onClick={() => setActiveTab('by-farm')}
@@ -260,7 +261,7 @@ export default function DairyUnitEconomicsReport() {
               activeTab === 'by-farm' ? 'bg-surface-warm  text-brand font-bold' : 'text-ink-muted hover:text-ink'
             )}
           >
-            By Farm View
+            {copy.tabs.byFarm}
           </button>
           <button
             onClick={() => setActiveTab('calculator')}
@@ -269,7 +270,7 @@ export default function DairyUnitEconomicsReport() {
               activeTab === 'calculator' ? 'bg-surface-warm  text-brand font-bold' : 'text-ink-muted hover:text-ink'
             )}
           >
-            <Calculator size={14} /> Calculator
+            <Calculator size={14} /> {copy.tabs.calculator}
           </button>
         </div>
       </div>
@@ -284,7 +285,7 @@ export default function DairyUnitEconomicsReport() {
           <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
             <div className="flex items-center gap-3">
               <span className="text-xs font-bold uppercase tracking-wider text-ink-muted flex items-center gap-1.5">
-                <Filter size={14} /> Period:
+                <Filter size={14} /> {copy.period}
               </span>
               <Popover>
                 <PopoverTrigger asChild>
@@ -300,13 +301,13 @@ export default function DairyUnitEconomicsReport() {
                     {date?.from ? (
                       date.to ? (
                         <>
-                          {format(date.from, 'LLL dd, y')} - {format(date.to, 'LLL dd, y')}
+                          {formatDate(date.from)} - {formatDate(date.to)}
                         </>
                       ) : (
-                        format(date.from, 'LLL dd, y')
+                        formatDate(date.from)
                       )
                     ) : (
-                      <span>Pick a date range</span>
+                      <span>{copy.pickRange}</span>
                     )}
                   </Button>
                 </PopoverTrigger>
@@ -327,11 +328,11 @@ export default function DairyUnitEconomicsReport() {
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
               <div>
                 <label className="block text-[10px] font-bold text-ink-muted uppercase mb-1">
-                  Marketing Spend (KES)
+                  {copy.marketingSpend}
                 </label>
                 <input
                   type="number"
-                  placeholder="Auto (from ledger)"
+                  placeholder={copy.autoLedger}
                   value={overrides.marketing_spend_kes}
                   onChange={(e) => setOverrides((prev) => ({ ...prev, marketing_spend_kes: e.target.value }))}
                   className="input-machined w-full text-xs py-1.5"
@@ -339,11 +340,11 @@ export default function DairyUnitEconomicsReport() {
               </div>
               <div>
                 <label className="block text-[10px] font-bold text-ink-muted uppercase mb-1">
-                  New Customers
+                  {copy.newCustomers}
                 </label>
                 <input
                   type="number"
-                  placeholder="Auto (from sales)"
+                  placeholder={copy.autoSales}
                   value={overrides.new_customers_acquired}
                   onChange={(e) => setOverrides((prev) => ({ ...prev, new_customers_acquired: e.target.value }))}
                   className="input-machined w-full text-xs py-1.5"
@@ -351,11 +352,11 @@ export default function DairyUnitEconomicsReport() {
               </div>
               <div>
                 <label className="block text-[10px] font-bold text-ink-muted uppercase mb-1">
-                  Lifespan (Months)
+                  {copy.lifespan}
                 </label>
                 <input
                   type="number"
-                  placeholder="Default (12)"
+                  placeholder={copy.defaultLifespan}
                   value={overrides.customer_lifespan_months}
                   onChange={(e) => setOverrides((prev) => ({ ...prev, customer_lifespan_months: e.target.value }))}
                   className="input-machined w-full text-xs py-1.5"
@@ -371,10 +372,10 @@ export default function DairyUnitEconomicsReport() {
         <div className="space-y-6">
           {tenantState !== 'ready' && (
             <div className="card-machined overflow-hidden !p-0">
-              <ListLoadNotices state={tenantState} label="customer value and profit figures" error={tenantQuery.error} onRetry={tenantQuery.refetch} />
+              <ListLoadNotices state={tenantState} label={copy.figuresLabel} error={tenantQuery.error} onRetry={tenantQuery.refetch} />
             </div>
           )}
-          {tenantState === 'loading' && <ReportSkeleton label="Calculating customer value and profit…" />}
+          {tenantState === 'loading' && <ReportSkeleton label={copy.calculating} />}
           {!hasRowsToShow(tenantState) ? null : (
             <>
               {/* Primary KPI Cards */}
@@ -383,8 +384,8 @@ export default function DairyUnitEconomicsReport() {
                 <div className="card-machined p-5 bg-surface-warm flex flex-col justify-between">
                   <div className="flex items-center justify-between text-ink-muted mb-2">
                     <span className="text-xs font-bold uppercase tracking-wider">
-                      <MetricLabel explanation="The marketing amount spent for each new customer gained during this period.">
-                        Cost to Get a Customer
+                      <MetricLabel explanation={copy.cacHelp}>
+                        {copy.cac}
                       </MetricLabel>
                     </span>
                     <DollarSign size={16} className="text-brand" />
@@ -394,10 +395,10 @@ export default function DairyUnitEconomicsReport() {
                       'text-2xl font-black font-mono tabular-nums',
                       Number(activeData.cac_kes ?? 0) > 0 ? 'text-ink' : 'text-amber-700'
                     )}>
-                      {activeData.cac_kes != null ? `KES ${Number(activeData.cac_kes).toLocaleString(undefined, { maximumFractionDigits: 2 })}` : 'N/A'}
+                      {activeData.cac_kes != null ? `KES ${Number(activeData.cac_kes).toLocaleString(undefined, { maximumFractionDigits: 2 })}` : copy.notAvailable}
                     </div>
                     <p className="text-[11px] text-ink-muted mt-1">
-                      Marketing spend divided by new customers
+                      {copy.cacHint}
                     </p>
                   </div>
                 </div>
@@ -406,8 +407,8 @@ export default function DairyUnitEconomicsReport() {
                 <div className="card-machined p-5 bg-surface-warm flex flex-col justify-between">
                   <div className="flex items-center justify-between text-ink-muted mb-2">
                     <span className="text-xs font-bold uppercase tracking-wider">
-                      <MetricLabel explanation="The profit already earned from each current customer based on recorded sales and costs.">
-                        Total Profit per Customer
+                      <MetricLabel explanation={copy.ltvHelp}>
+                        {copy.ltv}
                       </MetricLabel>
                     </span>
                     <TrendingUp size={16} className="text-accent" />
@@ -422,7 +423,7 @@ export default function DairyUnitEconomicsReport() {
                       {formatKesAmount(activeData.realized_ltv_kes)}
                     </div>
                     <p className="text-[11px] text-ink-muted mt-1">
-                      Recorded profit from each current customer
+                      {copy.ltvHint}
                     </p>
                   </div>
                 </div>
@@ -431,8 +432,8 @@ export default function DairyUnitEconomicsReport() {
                 <div className="card-machined p-5 bg-surface-warm flex flex-col justify-between">
                   <div className="flex items-center justify-between text-ink-muted mb-2">
                     <span className="text-xs font-bold uppercase tracking-wider">
-                      <MetricLabel explanation="Compares the profit from a customer with what you spent to gain that customer.">
-                        Profit vs. Cost Ratio
+                      <MetricLabel explanation={copy.ratioHelp}>
+                        {copy.ratio}
                       </MetricLabel>
                     </span>
                     <ArrowUpRight size={16} className="text-brand" />
@@ -446,7 +447,7 @@ export default function DairyUnitEconomicsReport() {
                     )}>
                       {activeData.ltv_to_cac_ratio != null
                         ? Number(activeData.ltv_to_cac_ratio).toFixed(2)
-                        : 'N/A'}{activeData.ltv_to_cac_ratio != null && 'x'}
+                        : copy.notAvailable}{activeData.ltv_to_cac_ratio != null && 'x'}
                     </div>
                     <div className="mt-2">
                       {(() => {
@@ -471,7 +472,7 @@ export default function DairyUnitEconomicsReport() {
                 {/* Operational Volume Card */}
                 <div className="card-machined p-5 bg-surface-warm flex flex-col justify-between">
                   <div className="flex items-center justify-between text-ink-muted mb-2">
-                    <span className="text-xs font-bold uppercase tracking-wider">Current Customers</span>
+                    <span className="text-xs font-bold uppercase tracking-wider">{copy.currentCustomers}</span>
                     <Users size={16} className="text-ink-muted" />
                   </div>
                   <div>
@@ -480,8 +481,8 @@ export default function DairyUnitEconomicsReport() {
                     </div>
                     <p className="text-[11px] text-ink-muted mt-1">
                       {activeData.liters_per_month_per_account != null
-                        ? `${Number(activeData.liters_per_month_per_account).toFixed(1)} L/mo per account`
-                        : 'Customer Accounts'}
+                        ? copy.perAccount(Number(activeData.liters_per_month_per_account).toFixed(1))
+                        : copy.accounts}
                     </p>
                   </div>
                 </div>
@@ -492,12 +493,12 @@ export default function DairyUnitEconomicsReport() {
                 activeData.data_quality.has_recorded_production_costs === false ||
                 activeData.data_quality.has_recorded_marketing_spend === false) && (
                 <div className="border border-amber-200 bg-amber-50 p-4 text-xs text-amber-900">
-                  <p className="font-bold">Data quality notes</p>
+                  <p className="font-bold">{copy.qualityTitle}</p>
                   <ul className="mt-2 list-disc space-y-1 pl-4">
-                    {activeData.data_quality.zero_price_delivery_count > 0 && <li><span className="font-mono tabular-nums">{activeData.data_quality.zero_price_delivery_count}</span> delivery records have no price.</li>}
-                    {activeData.data_quality.zero_price_billable_liters > 0 && <li><span className="font-mono tabular-nums">{activeData.data_quality.zero_price_billable_liters}</span> billable liters have no price.</li>}
-                    {activeData.data_quality.has_recorded_production_costs === false && <li>No production costs are recorded for this period.</li>}
-                    {activeData.data_quality.has_recorded_marketing_spend === false && <li>No marketing spend is recorded, so customer cost and the profit-to-cost comparison are unavailable.</li>}
+                    {activeData.data_quality.zero_price_delivery_count > 0 && <li><span className="font-mono tabular-nums">{activeData.data_quality.zero_price_delivery_count}</span>{copy.unpricedDeliveries}</li>}
+                    {activeData.data_quality.zero_price_billable_liters > 0 && <li><span className="font-mono tabular-nums">{activeData.data_quality.zero_price_billable_liters}</span>{copy.unpricedLitres}</li>}
+                    {activeData.data_quality.has_recorded_production_costs === false && <li>{copy.noProductionCosts}</li>}
+                    {activeData.data_quality.has_recorded_marketing_spend === false && <li>{copy.noMarketing}</li>}
                   </ul>
                 </div>
               )}
@@ -506,11 +507,11 @@ export default function DairyUnitEconomicsReport() {
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 <div className="card-machined p-6 space-y-4">
                   <h3 className="font-sans font-bold text-lg text-ink border-b border-ink/10 pb-3">
-                    Sales & Marketing Details
+                    {copy.salesTitle}
                   </h3>
                   <dl className="divide-y divide-ink/10 text-sm [&_dd]:font-mono [&_dd]:tabular-nums">
                     <div className="py-2.5 flex justify-between">
-                      <dt className="text-ink-muted">Sales & Marketing Spend</dt>
+                      <dt className="text-ink-muted">{copy.salesSpend}</dt>
                       <dd className={cn(
                         'font-bold',
                         activeData.data_quality.has_recorded_marketing_spend === false || Number(activeData.marketing_spend_kes ?? 0) === 0
@@ -518,24 +519,24 @@ export default function DairyUnitEconomicsReport() {
                           : 'text-ink'
                       )}>
                         {activeData.data_quality.has_recorded_marketing_spend === false
-                          ? 'Not recorded'
-                          : (activeData.marketing_spend_kes != null ? `KES ${Number(activeData.marketing_spend_kes).toLocaleString()}` : 'Not recorded')}
+                          ? copy.notRecorded
+                          : (activeData.marketing_spend_kes != null ? `KES ${Number(activeData.marketing_spend_kes).toLocaleString()}` : copy.notRecorded)}
                       </dd>
                     </div>
                     <div className="py-2.5 flex justify-between">
-                      <dt className="text-ink-muted">New Customers Acquired</dt>
+                      <dt className="text-ink-muted">{copy.newAcquired}</dt>
                       <dd className="font-bold text-ink">
                         {formatCount(activeData.new_customers_acquired)}
                       </dd>
                     </div>
                     <div className="py-2.5 flex justify-between">
-                      <dt className="text-ink-muted">Total Liters Sold</dt>
+                      <dt className="text-ink-muted">{copy.litresSold}</dt>
                       <dd className="font-bold text-ink">
                         {formatLitres(activeData.total_liters_sold)}
                       </dd>
                     </div>
                     <div className="py-2.5 flex justify-between">
-                      <dt className="text-ink-muted">Liters Purchased / Month / Customer</dt>
+                      <dt className="text-ink-muted">{copy.litresPerCustomer}</dt>
                       <dd className="font-bold text-ink">
                         {isUnknown(activeData.liters_purchased_per_month) ? '—' : `${Number(activeData.liters_purchased_per_month).toFixed(2)} L`}
                       </dd>
@@ -545,11 +546,11 @@ export default function DairyUnitEconomicsReport() {
 
                 <div className="card-machined p-6 space-y-4">
                   <h3 className="font-sans font-bold text-lg text-ink border-b border-ink/10 pb-3">
-                    Profitability & Customer Loyalty
+                    {copy.profitTitle}
                   </h3>
                   <dl className="divide-y divide-ink/10 text-sm [&_dd]:font-mono [&_dd]:tabular-nums">
                     <div className="py-2.5 flex justify-between">
-                      <dt className="text-ink-muted">Profit per Liter</dt>
+                      <dt className="text-ink-muted">{copy.profitPerLiter}</dt>
                       <dd className={cn(
                         'font-bold',
                         Number(activeData.gross_margin_per_liter_kes ?? 0) > 0
@@ -560,59 +561,59 @@ export default function DairyUnitEconomicsReport() {
                       </dd>
                     </div>
                     <div className="py-2.5 flex justify-between">
-                      <dt className="text-ink-muted">Assumed Customer Lifespan</dt>
+                      <dt className="text-ink-muted">{copy.assumedLifespan}</dt>
                       <dd className="font-bold text-ink">
-                        {isUnknown(activeData.customer_lifespan_months) ? '—' : `${activeData.customer_lifespan_months} months`}
+                        {isUnknown(activeData.customer_lifespan_months) ? '—' : copy.months(activeData.customer_lifespan_months)}
                       </dd>
                     </div>
                     <div className="py-2.5 flex justify-between">
-                      <dt className="text-ink-muted">Projected Profit per Customer</dt>
+                      <dt className="text-ink-muted">{copy.projected}</dt>
                       <dd className="font-bold text-ink">
-                        {activeData.forecast_ltv_kes != null ? `KES ${Number(activeData.forecast_ltv_kes).toLocaleString()}` : 'N/A'}
+                        {activeData.forecast_ltv_kes != null ? `KES ${Number(activeData.forecast_ltv_kes).toLocaleString()}` : copy.notAvailable}
                       </dd>
                     </div>
                     <div className="py-2.5 flex justify-between">
-                      <dt className="text-ink-muted">Total Revenue</dt>
+                      <dt className="text-ink-muted">{copy.totalRevenue}</dt>
                       <dd className="font-bold text-ink">
-                        {activeData.total_revenue != null ? `KES ${Number(activeData.total_revenue).toLocaleString()}` : 'N/A'}
+                        {activeData.total_revenue != null ? `KES ${Number(activeData.total_revenue).toLocaleString()}` : copy.notAvailable}
                       </dd>
                     </div>
                     <div className="py-2.5 flex justify-between">
-                      <dt className="text-ink-muted">Customer Delivery Revenue</dt>
+                      <dt className="text-ink-muted">{copy.deliveryRevenue}</dt>
                       <dd className="font-bold text-ink">
-                        {activeData.customer_delivery_revenue != null ? `KES ${Number(activeData.customer_delivery_revenue).toLocaleString()}` : 'N/A'}
+                        {activeData.customer_delivery_revenue != null ? `KES ${Number(activeData.customer_delivery_revenue).toLocaleString()}` : copy.notAvailable}
                       </dd>
                     </div>
                     <div className="py-2.5 flex justify-between">
-                      <dt className="text-ink-muted">Buyer Sales Revenue</dt>
+                      <dt className="text-ink-muted">{copy.buyerRevenue}</dt>
                       <dd className="font-bold text-ink">
-                        {activeData.buyer_sales_revenue != null ? `KES ${Number(activeData.buyer_sales_revenue).toLocaleString()}` : 'N/A'}
+                        {activeData.buyer_sales_revenue != null ? `KES ${Number(activeData.buyer_sales_revenue).toLocaleString()}` : copy.notAvailable}
                       </dd>
                     </div>
                     <div className="py-2.5 flex justify-between">
-                      <dt className="text-ink-muted">Total Production Cost</dt>
+                      <dt className="text-ink-muted">{copy.productionCost}</dt>
                       <dd className="font-bold text-ink">
                         {activeData.data_quality.has_recorded_production_costs === false
-                          ? 'No costs recorded'
-                          : (activeData.total_production_cost != null ? `KES ${Number(activeData.total_production_cost).toLocaleString()}` : 'N/A')}
+                          ? copy.noCosts
+                          : (activeData.total_production_cost != null ? `KES ${Number(activeData.total_production_cost).toLocaleString()}` : copy.notAvailable)}
                       </dd>
                     </div>
                     <div className="py-2.5 flex justify-between">
-                      <dt className="text-ink-muted">Current Net Receivables</dt>
+                      <dt className="text-ink-muted">{copy.receivables}</dt>
                       <dd className="font-bold text-ink">
-                        {activeData.current_net_receivables != null ? `KES ${Number(activeData.current_net_receivables).toLocaleString()}` : 'N/A'}
+                        {activeData.current_net_receivables != null ? `KES ${Number(activeData.current_net_receivables).toLocaleString()}` : copy.notAvailable}
                       </dd>
                     </div>
                     <div className="py-2.5 flex justify-between">
-                      <dt className="text-ink-muted">Outstanding Before Credits</dt>
+                      <dt className="text-ink-muted">{copy.outstanding}</dt>
                       <dd className="font-bold text-ink">
-                        {activeData.outstanding_before_credits != null ? `KES ${Number(activeData.outstanding_before_credits).toLocaleString()}` : 'N/A'}
+                        {activeData.outstanding_before_credits != null ? `KES ${Number(activeData.outstanding_before_credits).toLocaleString()}` : copy.notAvailable}
                       </dd>
                     </div>
                     <div className="py-2.5 flex justify-between">
-                      <dt className="text-ink-muted">Customer Credits</dt>
+                      <dt className="text-ink-muted">{copy.credits}</dt>
                       <dd className="font-bold text-ink">
-                        {activeData.customer_credits != null ? `KES ${Number(activeData.customer_credits).toLocaleString()}` : 'N/A'}
+                        {activeData.customer_credits != null ? `KES ${Number(activeData.customer_credits).toLocaleString()}` : copy.notAvailable}
                       </dd>
                     </div>
                   </dl>
@@ -629,27 +630,27 @@ export default function DairyUnitEconomicsReport() {
           <div className="p-4 bg-amber-50 border border-amber-200 rounded-xl text-xs text-amber-800 flex items-start gap-2">
             <Building2 size={16} className="mt-0.5 shrink-0 text-amber-600" />
             <div>
-              <span className="font-bold">Tenant-Scoped Single Farm Model:</span> Each tenant operates a primary farm entity. Financial and milk sales figures reflect total tenant metrics for each registered farm entity.
+              <span className="font-bold">{copy.farmModelTitle}</span> {copy.farmModel}
             </div>
           </div>
 
           {byFarmState !== 'ready' && (
             <div className="card-machined overflow-hidden !p-0">
-              <ListLoadNotices state={byFarmState} label="farm figures" error={byFarmQuery.error} onRetry={byFarmQuery.refetch} />
+              <ListLoadNotices state={byFarmState} label={copy.farmFigures} error={byFarmQuery.error} onRetry={byFarmQuery.refetch} />
             </div>
           )}
-          {byFarmState === 'loading' && <ReportSkeleton label="Loading customer value and profit by farm…" />}
+          {byFarmState === 'loading' && <ReportSkeleton label={copy.loadingFarms} />}
           {!hasRowsToShow(byFarmState) ? null : (
             <div className="card-machined min-w-0 p-3 sm:p-6">
               <table className="hidden w-full text-left text-sm border-collapse md:table">
                 <thead>
                   <tr className="border-b border-ink/10 text-[11px] font-bold uppercase text-ink-muted">
-                    <th className="py-3 px-4">Farm Name</th>
-                    <th className="py-3 px-4">Customer Cost (KES)</th>
-                    <th className="py-3 px-4">Profit per Customer (KES)</th>
-                    <th className="py-3 px-4">Profit vs. Cost</th>
-                    <th className="py-3 px-4">Status Benchmark</th>
-                    <th className="py-3 px-4">Profit/L</th>
+                    <th className="py-3 px-4">{copy.farmColumns.name}</th>
+                    <th className="py-3 px-4">{copy.farmColumns.cac}</th>
+                    <th className="py-3 px-4">{copy.farmColumns.ltv}</th>
+                    <th className="py-3 px-4">{copy.farmColumns.ratio}</th>
+                    <th className="py-3 px-4">{copy.farmColumns.status}</th>
+                    <th className="py-3 px-4">{copy.farmColumns.perLiter}</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-ink/10">
@@ -662,7 +663,7 @@ export default function DairyUnitEconomicsReport() {
                       return (
                         <tr key={farm.farm_id || farm.id || i} className="hover:bg-surface-subtle transition-colors">
                           <td className="py-3 px-4 font-bold text-ink">
-                            {farm.farm_name || farm.name || 'Primary Farm'}
+                            {farm.farm_name || farm.name || copy.primaryFarm}
                           </td>
                           <td className={cn(
                             'py-3 px-4 font-mono tabular-nums',
@@ -700,7 +701,7 @@ export default function DairyUnitEconomicsReport() {
                   ) : (
                     <tr>
                       <td colSpan={6} className="py-6 text-center text-ink-muted">
-                        No farm records available.
+                        {copy.noFarms}
                       </td>
                     </tr>
                   )}
@@ -713,16 +714,16 @@ export default function DairyUnitEconomicsReport() {
                     const badge = getStatusBadge(status);
                     const Icon = badge.icon;
                     return <article key={farm.farm_id || farm.id || i} className="min-w-0 rounded-xl border border-ink/10 bg-surface p-4">
-                      <div className="flex items-start justify-between gap-3"><h3 className="min-w-0 break-words text-sm font-bold text-ink">{farm.farm_name || farm.name || 'Primary Farm'}</h3><span className={cn('inline-flex shrink-0 items-center gap-1 rounded-full border px-2 py-1 text-[10px]', badge.color)}><Icon size={12} />{badge.label}</span></div>
+                      <div className="flex items-start justify-between gap-3"><h3 className="min-w-0 break-words text-sm font-bold text-ink">{farm.farm_name || farm.name || copy.primaryFarm}</h3><span className={cn('inline-flex shrink-0 items-center gap-1 rounded-full border px-2 py-1 text-[10px]', badge.color)}><Icon size={12} />{badge.label}</span></div>
                       <div className="mt-3 grid grid-cols-2 gap-3 rounded-lg bg-surface-raised p-3 text-xs">
-                        <div><p className="text-ink-muted">Customer cost</p><p className="mt-1 font-semibold tabular-nums text-ink">{formatKesAmount(farm.cac_kes ?? farm.cac)}</p></div>
-                        <div><p className="text-ink-muted">Profit per customer</p><p className="mt-1 font-semibold tabular-nums text-brand">{formatKesAmount(farm.ltv_kes ?? farm.ltv)}</p></div>
-                        <div><p className="text-ink-muted">Profit vs. cost</p><p className="mt-1 font-semibold tabular-nums text-ink">{formatRatio(farm.ltv_to_cac_ratio)}</p></div>
-                        <div><p className="text-ink-muted">Profit / L</p><p className="mt-1 font-semibold tabular-nums text-brand">{formatKesFixed(farm.gross_margin_per_liter_kes)}</p></div>
+                        <div><p className="text-ink-muted">{copy.customerCost}</p><p className="mt-1 font-semibold tabular-nums text-ink">{formatKesAmount(farm.cac_kes ?? farm.cac)}</p></div>
+                        <div><p className="text-ink-muted">{copy.profitPerCustomer}</p><p className="mt-1 font-semibold tabular-nums text-brand">{formatKesAmount(farm.ltv_kes ?? farm.ltv)}</p></div>
+                        <div><p className="text-ink-muted">{copy.profitVsCost}</p><p className="mt-1 font-semibold tabular-nums text-ink">{formatRatio(farm.ltv_to_cac_ratio)}</p></div>
+                        <div><p className="text-ink-muted">{copy.profitPerL}</p><p className="mt-1 font-semibold tabular-nums text-brand">{formatKesFixed(farm.gross_margin_per_liter_kes)}</p></div>
                       </div>
                     </article>;
                   })
-                  : <p className="p-5 text-center text-sm text-ink-muted">No farm records available.</p>}
+                  : <p className="p-5 text-center text-sm text-ink-muted">{copy.noFarms}</p>}
               </div>
             </div>
           )}
@@ -736,23 +737,23 @@ export default function DairyUnitEconomicsReport() {
           <div className="card-machined p-6 space-y-5">
             <div className="border-b border-ink/10 pb-3">
               <h3 className="font-sans font-bold text-lg text-ink flex items-center gap-2">
-                <Calculator size={18} className="text-brand" /> Customer Profit Calculator
+                <Calculator size={18} className="text-brand" /> {copy.calculatorTitle}
               </h3>
               <p className="text-xs text-ink-muted mt-1">
-                Enter your own sales figures to compare customer profit with customer cost.
+                {copy.calculatorHint}
               </p>
             </div>
 
             <form onSubmit={handleCalcSubmit} className="space-y-4 text-xs">
               <div>
                 <label className="block font-bold text-ink-muted uppercase mb-1">
-                  Sales & Marketing Spend (KES) *
+                  {copy.spendInput}
                 </label>
                 <input
                   type="number"
                   required
                   min="0"
-                  placeholder="e.g. 50000"
+                  placeholder={`${copy.example} 50000`}
                   value={calcForm.sales_marketing_spend_kes}
                   onChange={(e) => setCalcForm((p) => ({ ...p, sales_marketing_spend_kes: e.target.value }))}
                   className="input-machined w-full text-sm py-2"
@@ -761,13 +762,13 @@ export default function DairyUnitEconomicsReport() {
 
               <div>
                 <label className="block font-bold text-ink-muted uppercase mb-1">
-                  New Customers Acquired *
+                  {copy.customersInput}
                 </label>
                 <input
                   type="number"
                   required
                   min="1"
-                  placeholder="e.g. 10"
+                  placeholder={`${copy.example} 10`}
                   value={calcForm.new_customers_acquired}
                   onChange={(e) => setCalcForm((p) => ({ ...p, new_customers_acquired: e.target.value }))}
                   className="input-machined w-full text-sm py-2"
@@ -776,14 +777,14 @@ export default function DairyUnitEconomicsReport() {
 
               <div>
                 <label className="block font-bold text-ink-muted uppercase mb-1">
-                  Liters Purchased / Month / Customer *
+                  {copy.litresInput}
                 </label>
                 <input
                   type="number"
                   required
                   min="0"
                   step="0.1"
-                  placeholder="e.g. 120"
+                  placeholder={`${copy.example} 120`}
                   value={calcForm.liters_purchased_per_month}
                   onChange={(e) => setCalcForm((p) => ({ ...p, liters_purchased_per_month: e.target.value }))}
                   className="input-machined w-full text-sm py-2"
@@ -792,14 +793,14 @@ export default function DairyUnitEconomicsReport() {
 
               <div>
                 <label className="block font-bold text-ink-muted uppercase mb-1">
-                  Profit per Liter (KES) *
+                  {copy.marginInput}
                 </label>
                 <input
                   type="number"
                   required
                   min="0"
                   step="0.01"
-                  placeholder="e.g. 15.50"
+                  placeholder={`${copy.example} 15.50`}
                   value={calcForm.gross_margin_per_liter_kes}
                   onChange={(e) => setCalcForm((p) => ({ ...p, gross_margin_per_liter_kes: e.target.value }))}
                   className="input-machined w-full text-sm py-2"
@@ -808,13 +809,13 @@ export default function DairyUnitEconomicsReport() {
 
               <div>
                 <label className="block font-bold text-ink-muted uppercase mb-1">
-                  Customer Lifespan (Months) *
+                  {copy.lifespanInput}
                 </label>
                 <input
                   type="number"
                   required
                   min="1"
-                  placeholder="e.g. 12"
+                  placeholder={`${copy.example} 12`}
                   value={calcForm.customer_lifespan_months}
                   onChange={(e) => setCalcForm((p) => ({ ...p, customer_lifespan_months: e.target.value }))}
                   className="input-machined w-full text-sm py-2"
@@ -827,7 +828,7 @@ export default function DairyUnitEconomicsReport() {
                   disabled={calcMutation.isPending}
                   className="btn-command w-full py-2.5 text-sm font-bold flex items-center justify-center gap-2"
                 >
-                  {calcMutation.isPending ? 'Calculating…' : 'Calculate Customer Profit'}
+                  {calcMutation.isPending ? copy.calculatingShort : copy.calculate}
                 </button>
               </div>
             </form>
@@ -838,10 +839,10 @@ export default function DairyUnitEconomicsReport() {
             <div>
               <div className="border-b border-ink/10 pb-3">
                 <h3 className="font-sans font-bold text-lg text-ink">
-                  Simulation Outcome
+                  {copy.outcome}
                 </h3>
                 <p className="text-xs text-ink-muted mt-1">
-                  Calculated metrics from backend API.
+                  {copy.outcomeHint}
                 </p>
               </div>
 
@@ -849,7 +850,7 @@ export default function DairyUnitEconomicsReport() {
                 <div className="mt-5 space-y-6">
                   <div className="grid grid-cols-2 gap-4">
                     <div className="p-4 bg-surface-subtle rounded-xl border border-ink/10">
-                      <span className="text-[11px] font-bold text-ink-muted uppercase block">Cost to Get a Customer</span>
+                      <span className="text-[11px] font-bold text-ink-muted uppercase block">{copy.cac}</span>
                       <span className={cn(
                         'text-2xl font-black font-mono tabular-nums mt-1 block',
                         Number(calcResult.cac_kes ?? calcResult.cac ?? 0) > 0 ? 'text-ink' : 'text-amber-700'
@@ -859,7 +860,7 @@ export default function DairyUnitEconomicsReport() {
                     </div>
 
                     <div className="p-4 bg-surface-subtle rounded-xl border border-ink/10">
-                      <span className="text-[11px] font-bold text-ink-muted uppercase block">Total Profit per Customer</span>
+                      <span className="text-[11px] font-bold text-ink-muted uppercase block">{copy.ltv}</span>
                       <span className={cn(
                         'text-2xl font-black font-mono tabular-nums mt-1 block',
                         Number(calcResult.ltv_kes ?? calcResult.ltv ?? 0) > 0
@@ -872,7 +873,7 @@ export default function DairyUnitEconomicsReport() {
                   </div>
 
                   <div className="p-5 bg-surface-subtle rounded-xl border border-ink/10 space-y-3">
-                    <span className="text-[11px] font-bold text-ink-muted uppercase block">Profit vs. Cost Ratio</span>
+                    <span className="text-[11px] font-bold text-ink-muted uppercase block">{copy.ratio}</span>
                     <div className={cn(
                       'font-mono text-3xl font-semibold tabular-nums',
                       Number(calcResult.ltv_to_cac_ratio ?? 0) >= 3
@@ -898,13 +899,13 @@ export default function DairyUnitEconomicsReport() {
               ) : (
                 <div className="py-16 text-center text-ink-muted text-xs space-y-2">
                   <Calculator size={32} className="mx-auto text-ink-muted/50" />
-                  <p>Fill in the details on the left and select "Calculate Customer Profit" to see the result.</p>
+                  <p>{copy.emptyResult}</p>
                 </div>
               )}
             </div>
 
             <div className="p-3 bg-brand/5 border border-brand/10 rounded-lg text-[11px] text-ink-muted">
-              <span className="font-bold text-brand">Healthy target:</span> Aim to earn at least <span className="font-bold text-ink font-mono tabular-nums">3:1</span> for every shilling spent gaining a customer.
+              <span className="font-bold text-brand">{copy.targetTitle}</span> {copy.targetBefore}<span className="font-bold text-ink font-mono tabular-nums">3:1</span>{copy.targetAfter}
             </div>
           </div>
         </div>

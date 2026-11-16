@@ -7,12 +7,13 @@ import { getSearchSuggestions, matchesSearch } from './fuzzySearch';
 
 import { formatDateTime, getRelativeTime } from './audit';
 import { formatDate as formatDisplayDate } from './dateFormat';
+import { herdCopy } from '../i18n/herd';
 
 export function formatAge(ageMonths) {
-  if (typeof ageMonths !== 'number' || !Number.isFinite(ageMonths)) return 'N/A';
+  if (typeof ageMonths !== 'number' || !Number.isFinite(ageMonths)) return herdCopy.age.unknown;
   const years = Math.floor(ageMonths / 12);
   const months = ageMonths % 12;
-  return `${years}y ${months}m`;
+  return herdCopy.age.short(years, months);
 }
 
 // Day-first display ("03 Nov 2026"); one formatter for the whole app.

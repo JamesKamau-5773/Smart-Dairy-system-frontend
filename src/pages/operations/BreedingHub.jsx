@@ -43,28 +43,27 @@ import {
 } from 'lucide-react';
 import { toLocalIsoDate } from '../../lib/localDate';
 import { reportError } from '../../lib/telemetry';
+import { formatMonthYear } from '../../lib/dateFormat';
+import { breedingCopy } from '../../i18n/breeding';
 
 /**
  * NOTE: The following components should be extracted into their own files
  * under `src/components/breeding/` to improve code organization and reusability.
  */
+// The outcome label and the "awaiting vet" note are worded when shown, in the chosen language.
+// Breeding logs carry no "last updated" time from the backend, so history is grouped and sorted
+// by the AI date instead of a date made up on the phone.
 function createHistoryEntry(log, status = 'Pending', notes = '') {
-  const labelByStatus = {
-    Pregnant: 'Pregnant (In-Calf)',
-    Open: 'Open (Not Pregnant)',
-    Failed: 'Unsuccessful',
-    Pending: 'Pending Check',
-  };
-
   return {
     ...log,
     status,
-    outcome: labelByStatus[status] || 'Pending Check',
-    notes: notes || (status === 'Pending' ? 'Awaiting vet window' : ''),
+    notes,
     expectedCalvingDate: log.expectedCalvingDate ?? null,
-    updatedAt: new Date().toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' }),
   };
 }
+
+const outcomeLabel = (status) => breedingCopy.outcomes[status] ?? breedingCopy.outcomes.Pending;
+const historyNotes = (entry) => entry.notes || (entry.status === 'Pending' ? breedingCopy.hub.awaitingVet : '');
 
 function getStatusTone(status) {
   if (status === 'Pregnant') return 'border-emerald-500/30 bg-emerald-500/10 text-emerald-700';
@@ -74,8 +73,8 @@ function getStatusTone(status) {
 }
 
 function formatSemenSource(source = 'farm_stock') {
-  if (source === 'unknown') return 'Unknown Source';
-  return source === 'vet_provided' ? 'Vet Provided' : 'Farm Stock';
+  if (source === 'unknown') return breedingCopy.sources.unknown;
+  return source === 'vet_provided' ? breedingCopy.sources.vet_provided : breedingCopy.sources.farm_stock;
 }
 
 function getSemenSourceTone(source = 'farm_stock') {
@@ -92,15 +91,12 @@ function formatCowLabel(log = {}) {
 }
 
 function getMonthLabel(dateValue) {
-  const parsedDate = new Date(dateValue);
-  if (Number.isNaN(parsedDate.getTime())) return 'Unknown Month';
-
-  return parsedDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+  return formatMonthYear(dateValue, breedingCopy.hub.unknownMonth);
 }
 
 function groupHistoryByMonth(history) {
   return history.reduce((groups, entry) => {
-    const monthLabel = getMonthLabel(entry.updatedAt);
+    const monthLabel = getMonthLabel(entry.aiDate);
 
     if (!groups.has(monthLabel)) {
       groups.set(monthLabel, []);
@@ -111,10 +107,10 @@ function groupHistoryByMonth(history) {
   }, new Map());
 }
 
-function HistoryStatusBadge({ status, outcome }) {
+function HistoryStatusBadge({ status }) {
   return (
     <span className={`inline-flex rounded-full border px-2 py-1 text-[10px] font-black uppercase tracking-wider ${getStatusTone(status)}`}>
-      {outcome}
+      {outcomeLabel(status)}
     </span>
   );
 }
@@ -123,26 +119,27 @@ function HistoryStatusBadge({ status, outcome }) {
 // COMPONENT 1: Page Header & KPI Chips (Responsibility: High-level context & Global Actions)
 // ============================================================================
 function BreedingHeader({ metrics, onLogService, onRecordHeat }) {
+  const copy = breedingCopy.hub;
   return (
     <div className="flex flex-col gap-6 border-b border-ink/10 pb-6 md:flex-row md:items-end md:justify-between">
       <div>
         <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-brand/10 bg-brand/5 px-3 py-1 text-[10px] font-bold uppercase tracking-widest text-brand">
-          <Dna size={12} /> Herd Reproduction
+          <Dna size={12} /> {copy.eyebrow}
         </div>
         <h2 className="m-0 font-sans text-3xl font-bold tracking-tight text-brand mb-4">
-          AI & <span className="text-ink-muted">Pregnancy</span>
+          {copy.titleStart} <span className="text-ink-muted">{copy.titleEnd}</span>
         </h2>
 
         {/* Compact KPI Chips */}
         <div className="flex flex-wrap items-center gap-3">
           <div className="flex items-center gap-2 rounded-md bg-danger/10 px-3 py-1.5 text-xs font-bold text-danger border border-danger/20">
-            <Flame size={14} /> {metrics.onHeat} On Heat
+            <Flame size={14} /> {copy.onHeat(metrics.onHeat)}
           </div>
           <div className="flex items-center gap-2 rounded-md bg-surface-raised px-3 py-1.5 text-xs font-bold text-ink-strong border border-ink/10">
-            <Stethoscope size={14} /> {metrics.pendingTotal} Pending Checks ({metrics.pendingDueNow} Due)
+            <Stethoscope size={14} /> {copy.pendingChecks(metrics.pendingTotal, metrics.pendingDueNow)}
           </div>
           <div className="flex items-center gap-2 rounded-md bg-brand/5 px-3 py-1.5 text-xs font-bold text-brand border border-brand/10">
-            <Snowflake size={14} /> {metrics.totalStraws ?? '—'} Straws in Tank
+            <Snowflake size={14} /> {copy.straws(metrics.totalStraws ?? '—')}
           </div>
         </div>
       </div>
@@ -150,13 +147,13 @@ function BreedingHeader({ metrics, onLogService, onRecordHeat }) {
       {/* Fixed Primary Action Button */}
       <div className="flex flex-wrap gap-2">
         <button onClick={onRecordHeat} className="btn-secondary flex items-center gap-2 text-sm">
-          <Flame size={16} /> Record Heat
+          <Flame size={16} /> {copy.recordHeat}
         </button>
         <button
           onClick={onLogService}
           className="btn-command flex items-center gap-2 text-sm bg-brand text-surface  hover:bg-brand-dark transition-colors"
         >
-          <Syringe size={16} /> Log AI Service
+          <Syringe size={16} /> {copy.logService}
         </button>
       </div>
     </div>
@@ -179,23 +176,24 @@ function SimpleModalSection({ title, children }) {
 // ============================================================================
 function HeatAlerts({ alerts, onLogService }) {
   if (alerts.length === 0) return null;
+  const copy = breedingCopy.hub;
 
   return (
     <div className="card-machined border-danger/20 bg-danger/5 p-6 ">
       <h3 className="mb-4 flex items-center gap-2 text-sm font-bold uppercase tracking-wider text-danger">
-        <Flame size={18} /> Action Needed: Cows in Heat
+        <Flame size={18} /> {copy.heatAlerts}
       </h3>
       <div className="space-y-3">
         {alerts.map((alert) => (
           <div key={alert.id} className="flex items-center justify-between rounded-lg bg-surface p-4  border border-danger/10">
             <div>
               <h4 className="font-black text-brand text-lg">{formatCowIdentity(alert)}</h4>
-              <p className="text-xs font-bold text-danger mt-1">{alert.intensity} heat observed</p>
-              <p className="mt-1 text-xs text-ink-muted">Next watch window: {alert.nextWindowStart} to {alert.nextWindowEnd}</p>
+              <p className="text-xs font-bold text-danger mt-1">{copy.heatObserved(breedingCopy.intensities[alert.intensity] ?? alert.intensity)}</p>
+              <p className="mt-1 text-xs text-ink-muted">{copy.nextWindow(alert.nextWindowStart, alert.nextWindowEnd)}</p>
             </div>
             <div className="text-right">
               <button type="button" onClick={() => onLogService(alert)} className="btn-command px-3 py-2 text-xs">
-                <Syringe size={14} /> Log AI
+                <Syringe size={14} /> {copy.logAi}
               </button>
             </div>
           </div>
@@ -209,6 +207,7 @@ function HeatAlerts({ alerts, onLogService }) {
 // COMPONENT 3: Vet Queue Item (Responsibility: Individual pregnancy check logic)
 // ============================================================================
 function VetQueueItem({ log, onOutcome, onEdit, isUpdating }) {
+  const copy = breedingCopy.hub;
   const isReady = log.daysPostAI >= 45;
 
   return (
@@ -218,19 +217,19 @@ function VetQueueItem({ log, onOutcome, onEdit, isUpdating }) {
       <div>
         <h4 className={`font-bold text-base ${isReady ? 'text-brand' : 'text-ink-strong'}`}>{formatCowLabel(log)}</h4>
         <div className="mt-1 flex gap-3 font-mono text-xs text-ink-muted">
-          <span>Served: {log.aiDate || '--'}</span>
+          <span>{copy.served(log.aiDate || '--')}</span>
           <span aria-hidden="true">•</span>
-          <span>Bull: {log.sireCode || '--'}</span>
+          <span>{copy.bull(log.sireCode || '--')}</span>
           {log.expectedCalvingDate && (
             <>
               <span aria-hidden="true">•</span>
-              <span>Expected Calving: {log.expectedCalvingDate}</span>
+              <span>{copy.expectedCalving(log.expectedCalvingDate)}</span>
             </>
           )}
           {log.pregnancyCheckDate && (
             <>
               <span aria-hidden="true">•</span>
-              <span>Pregnancy Check: {log.pregnancyCheckDate}</span>
+              <span>{copy.pregnancyCheck(log.pregnancyCheckDate)}</span>
             </>
           )}
           <span aria-hidden="true">•</span>
@@ -242,7 +241,7 @@ function VetQueueItem({ log, onOutcome, onEdit, isUpdating }) {
 
       <div className="flex items-center gap-4 md:gap-6">
         <div className="text-right">
-          <span className="block text-[10px] font-bold uppercase tracking-wider text-ink-muted">Days Since AI</span>
+          <span className="block text-[10px] font-bold uppercase tracking-wider text-ink-muted">{copy.daysSinceAi}</span>
           <span className={`text-lg font-black ${isReady ? 'text-brand' : 'text-ink-muted'}`}>
             {log.daysPostAI}
           </span>
@@ -251,32 +250,32 @@ function VetQueueItem({ log, onOutcome, onEdit, isUpdating }) {
         {isReady ? (
           <div className="flex gap-2">
             <button
-              onClick={() => onOutcome(log.id, 'Open (Not Pregnant)')}
+              onClick={() => onOutcome(log.id, 'Open')}
               disabled={isUpdating}
               className="btn-danger gap-1 px-3 py-2 text-xs"
             >
-              <XCircle size={14} /> {isUpdating ? 'Saving...' : 'Mark Open'}
+              <XCircle size={14} /> {isUpdating ? copy.saving : copy.markOpen}
             </button>
             <button
               onClick={() => onOutcome(log.id, 'Pregnant')}
               disabled={isUpdating}
               className="btn-command gap-1 px-3 py-2 text-xs"
             >
-              <CheckCircle2 size={14} /> {isUpdating ? 'Saving...' : 'Confirm Pregnant'}
+              <CheckCircle2 size={14} /> {isUpdating ? copy.saving : copy.confirmPregnant}
             </button>
           </div>
         ) : (
           <div className="rounded-md border border-ink/10 bg-surface-raised px-4 py-2 text-xs font-bold text-ink-muted">
-            Wait {45 - log.daysPostAI} Days
+            {copy.waitDays(45 - log.daysPostAI)}
           </div>
         )}
         <button
           type="button"
           onClick={() => onEdit(log)}
           className="btn-secondary inline-flex items-center gap-1 px-3 py-2 text-xs"
-          aria-label={`Edit AI service for ${formatCowLabel(log)}`}
+          aria-label={copy.editFor(formatCowLabel(log))}
         >
-          <Pencil size={14} /> Edit
+          <Pencil size={14} /> {copy.edit}
         </button>
       </div>
     </div>
@@ -287,25 +286,26 @@ function VetQueueItem({ log, onOutcome, onEdit, isUpdating }) {
 // COMPONENT 4: Inventory Panel (Responsibility: Semen stock & Reorder logic)
 // ============================================================================
 function SemenInventory({ stock, loadState, error, onRetry, onAddInventory, onRestockInventory, onDeleteInventory }) {
+  const copy = breedingCopy.inventory;
   return (
     <div className="card-machined bg-surface p-6 h-full border border-ink/5 ">
       <div className="flex items-center justify-between mb-6">
         <h3 className="flex items-center gap-2 text-base font-bold text-brand">
-          <Snowflake size={18} className="text-accent" /> Semen Inventory
+          <Snowflake size={18} className="text-accent" /> {copy.title}
         </h3>
       </div>
 
       <div className="space-y-3">
         {loadState !== 'ready' && (
           <div className="overflow-hidden rounded-lg border border-ink/10">
-            <ListLoadNotices state={loadState} label="semen inventory" error={error} onRetry={onRetry} />
+            <ListLoadNotices state={loadState} label={copy.listLabel} error={error} onRetry={onRetry} />
             {loadState === 'loading' && <div aria-busy="true"><CardSkeletons rows={2} /></div>}
           </div>
         )}
         {hasRowsToShow(loadState) && stock.length === 0 && (
           <div className="flex flex-col items-start gap-3 rounded-lg border border-dashed border-ink/10 bg-surface-raised p-4 text-sm text-ink-muted">
-            <p>No semen inventory records yet. Add straws you have in the tank so services can be logged against them.</p>
-            <button type="button" onClick={onAddInventory} className="btn-command">Add semen inventory</button>
+            <p>{copy.empty}</p>
+            <button type="button" onClick={onAddInventory} className="btn-command">{copy.add}</button>
           </div>
         )}
 
@@ -316,13 +316,13 @@ function SemenInventory({ stock, loadState, error, onRetry, onAddInventory, onRe
               <div className="mb-1 flex items-start justify-between">
                 <h4 className="text-sm font-bold text-ink-strong">{bull.name}</h4>
                 <span className={`inline-block rounded px-2 py-0.5 text-[10px] font-bold ${isLowStock ? 'bg-orange-500/20 text-orange-700' : 'bg-brand/10 text-brand'}`}>
-                  {bull.strawsLeft} left {isLowStock && '- Reorder'}
+                  {copy.left(bull.strawsLeft)} {isLowStock && copy.reorder}
                 </span>
               </div>
-              <div className="mb-3 font-mono text-[10px] text-ink-muted">CODE: {bull.code}</div>
+              <div className="mb-3 font-mono text-[10px] text-ink-muted">{copy.code(bull.code)}</div>
 
               <div className="flex items-center gap-2 text-xs font-semibold text-ink-strong">
-                <TrendingUp size={14} className="text-accent" /> Best for: {bull.improves}
+                <TrendingUp size={14} className="text-accent" /> {copy.bestFor(bull.improves)}
               </div>
 
               <div className="mt-3 flex items-center gap-2">
@@ -331,14 +331,14 @@ function SemenInventory({ stock, loadState, error, onRetry, onAddInventory, onRe
                   onClick={() => onRestockInventory(bull)}
                   className="rounded-md border border-brand/20 bg-brand/5 px-3 py-1.5 text-[11px] font-bold text-brand transition-colors hover:bg-brand/10"
                 >
-                  Restock
+                  {copy.restock}
                 </button>
                 <button
                   type="button"
                   onClick={() => onDeleteInventory(bull)}
                   className="inline-flex items-center gap-1 rounded-md border border-rose-200 bg-rose-50 px-2.5 py-1.5 text-[11px] font-bold text-rose-700 transition-colors hover:bg-rose-100"
                 >
-                  <Trash2 size={12} /> Delete
+                  <Trash2 size={12} /> {copy.delete}
                 </button>
               </div>
             </div>
@@ -347,7 +347,7 @@ function SemenInventory({ stock, loadState, error, onRetry, onAddInventory, onRe
       </div>
 
       <button onClick={onAddInventory} className="mt-6 flex w-full items-center justify-center gap-2 rounded-lg border-2 border-dashed border-ink/10 bg-surface-raised py-3 text-xs font-bold text-ink-muted transition-colors hover:border-brand/30 hover:text-brand">
-        <Plus size={14} /> Add New Inventory
+        <Plus size={14} /> {copy.addNew}
       </button>
     </div>
   );
@@ -357,6 +357,7 @@ function SemenInventory({ stock, loadState, error, onRetry, onAddInventory, onRe
 // MAIN ORCHESTRATOR COMPONENT
 // ============================================================================
 export default function BreedingHub() {
+  const copy = breedingCopy.hub;
   const { tenantId, farmId } = useTenant();
   const queryClient = useQueryClient();
   const [infoMessage, setInfoMessage] = useState('');
@@ -507,16 +508,17 @@ export default function BreedingHub() {
   const handleOutcome = async (logId, outcome) => {
     if (statusUpdatingById[logId]) return;
 
+    // 'Open' (not pregnant) is saved as the backend's 'Failed' status.
     const backendStatus = outcome === 'Pregnant' ? 'Pregnant' : 'Failed';
     setStatusUpdatingById((current) => ({ ...current, [logId]: true }));
 
     try {
       await breedingApi.updateLogStatus(logId, backendStatus);
-      notifyInfo(`Cow marked as ${outcome}. Records updated.`);
+      notifyInfo(copy.marked(outcomeLabel(outcome)));
       await queryClient.invalidateQueries({ queryKey: ['breeding', 'logs', tenantId, farmId] });
     } catch (error) {
       reportError(error, { where: 'BreedingHub.updateLogStatus' });
-      setErrorMessage(getApiErrorMessage(error, 'Could not save the vet outcome. Check the connection and retry.'));
+      setErrorMessage(getApiErrorMessage(error, copy.outcomeFailed));
       setShowError(true);
     } finally {
       setStatusUpdatingById((current) => {
@@ -578,17 +580,17 @@ export default function BreedingHub() {
 
   const handleDeleteInventory = async (bull) => {
     if (!bull?.id) {
-      setErrorMessage('This semen inventory item cannot be deleted because it has no identifier.');
+      setErrorMessage(copy.deleteNoId);
       setShowError(true);
       return;
     }
 
     const confirmed = await confirmation.confirm({
-      title: 'Delete semen inventory?',
-      message: `Remove ${bull.name} (${bull.code || 'NO-CODE'}) from inventory? This action cannot be undone.`,
+      title: copy.deleteTitle,
+      message: copy.deleteMessage(bull.name, bull.code || copy.noCode),
       type: 'danger',
-      confirmText: 'Delete',
-      cancelText: 'Cancel',
+      confirmText: copy.deleteConfirm,
+      cancelText: copy.cancel,
     });
 
     if (!confirmed) return;
@@ -598,10 +600,10 @@ export default function BreedingHub() {
       await breedingApi.deleteSemenInventory(bull.id);
       await refreshSemenInventory();
 
-      notifyInfo(`Deleted ${bull.name} from semen inventory.`);
+      notifyInfo(copy.deleted(bull.name));
     } catch (error) {
       reportError(error, { where: 'BreedingHub.deleteSemen' });
-      notifyError(getApiErrorMessage(error, 'Could not remove this semen inventory item. Please try again.'));
+      notifyError(getApiErrorMessage(error, copy.deleteFailed));
     } finally {
       confirmation.setLoading(false);
       confirmation.close();
@@ -612,13 +614,13 @@ export default function BreedingHub() {
     <div className="animate-reveal space-y-8 max-w-7xl mx-auto">
       {errorMessage && (
         <div className="fixed top-4 right-4 z-[60] w-[min(92vw,430px)]">
-          <AlertBanner type="error" title="Error" message={errorMessage} autoDismiss={4000} onDismiss={() => setShowError(false)} />
+          <AlertBanner type="error" title={copy.error} message={errorMessage} autoDismiss={4000} onDismiss={() => setShowError(false)} />
         </div>
       )}
 
       {infoMessage && (
         <div className="fixed top-4 right-4 z-[60] w-[min(92vw,430px)]">
-          <AlertBanner type="success" title="Success" message={infoMessage} autoDismiss={2400} onDismiss={() => setInfoMessage('')} />
+          <AlertBanner type="success" title={copy.success} message={infoMessage} autoDismiss={2400} onDismiss={() => setInfoMessage('')} />
         </div>
       )}
 
@@ -635,14 +637,14 @@ export default function BreedingHub() {
           <div className="card-machined bg-surface p-6 border border-ink/5 ">
             <div className="mb-6 flex items-center justify-between border-b border-ink/10 pb-4">
               <h3 className="flex items-center gap-2 text-base font-bold text-brand">
-                <Stethoscope size={18} className="text-brand-dark" /> Pending Vet Checks
+                <Stethoscope size={18} className="text-brand-dark" /> {copy.pendingTitle}
               </h3>
             </div>
 
             <div className="space-y-3">
               {logsLoadState !== 'ready' && (
                 <div className="overflow-hidden rounded-lg border border-ink/10">
-                  <ListLoadNotices state={logsLoadState} label="breeding records" error={breedingLogsQuery.error} onRetry={breedingLogsQuery.refetch} />
+                  <ListLoadNotices state={logsLoadState} label={copy.logsLabel} error={breedingLogsQuery.error} onRetry={breedingLogsQuery.refetch} />
                   {logsLoadState === 'loading' && <div aria-busy="true"><CardSkeletons rows={2} /></div>}
                 </div>
               )}
@@ -657,36 +659,36 @@ export default function BreedingHub() {
               ))}
               {hasRowsToShow(logsLoadState) && vetQueue.length === 0 && (
                 <div className="py-8 text-center text-sm font-medium text-ink-muted">
-                  All inseminated cows have been checked by the vet.
+                  {copy.allChecked}
                 </div>
               )}
             </div>
 
             {/* Progressive Disclosure Scaffold */}
             <button onClick={() => setIsHistoryOpen(true)} className="mt-4 flex w-full items-center justify-center gap-1 py-2 text-xs font-bold text-brand hover:underline">
-              View All Historical Checks <ChevronRight size={14} />
+              {copy.viewHistory} <ChevronRight size={14} />
             </button>
           </div>
 
           {/* BOTTOM: TRENDS / ROI */}
           <div className="card-machined bg-surface-raised p-6 border border-brand/10">
             <h3 className="mb-6 flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-ink-muted">
-              <TrendingUp size={16} className="text-accent" /> Herd Genetic Progress
+              <TrendingUp size={16} className="text-accent" /> {copy.geneticTitle}
             </h3>
 
             {geneticProgressLoadState === 'loading' ? (
               <div aria-busy="true">
-                <SlowLoadingHint label="the chart" />
+                <SlowLoadingHint label={copy.chartLabel} />
                 <Skeleton className="h-[300px] w-full" />
               </div>
             ) : geneticProgressLoadState === 'error' || geneticProgressLoadState === 'offline' ? (
-              <ListLoadMessage state={geneticProgressLoadState} label="the genetic progress chart" error={geneticProgressError} onRetry={refetchGeneticProgress} />
+              <ListLoadMessage state={geneticProgressLoadState} label={copy.geneticChartLabel} error={geneticProgressError} onRetry={refetchGeneticProgress} />
             ) : geneticProgressData && geneticProgressData.length > 0 ? (
               <ResponsiveContainer width="100%" height={300}>
                 <LineChart data={geneticProgressData} margin={{ top: 5, right: 20, left: -10, bottom: 5 }}>
                   <CartesianGrid strokeDasharray="3 3" strokeOpacity={0.3} />
                   <XAxis dataKey="year" stroke="#64748b" fontSize={12} />
-                  <YAxis stroke="#64748b" fontSize={12} label={{ value: 'Avg. Yield (L/day)', angle: -90, position: 'insideLeft', offset: 10, style: { textAnchor: 'middle', fill: '#64748b' } }} />
+                  <YAxis stroke="#64748b" fontSize={12} label={{ value: copy.yieldAxis, angle: -90, position: 'insideLeft', offset: 10, style: { textAnchor: 'middle', fill: '#64748b' } }} />
                   <Tooltip
                     contentStyle={{
                       backgroundColor: 'rgba(255, 255, 255, 0.8)',
@@ -696,13 +698,13 @@ export default function BreedingHub() {
                     }}
                   />
                   <Legend wrapperStyle={{ fontSize: '12px' }} />
-                  <Line type="monotone" dataKey="daughters_yield" name="Daughters' Avg Yield" stroke="#10b981" strokeWidth={2} dot={{ r: 4 }} activeDot={{ r: 6 }} />
-                  <Line type="monotone" dataKey="mothers_yield" name="Mothers' Avg Yield" stroke="#38BDF8" strokeWidth={2} dot={{ r: 4 }} activeDot={{ r: 6 }} />
+                  <Line type="monotone" dataKey="daughters_yield" name={copy.daughters} stroke="#10b981" strokeWidth={2} dot={{ r: 4 }} activeDot={{ r: 6 }} />
+                  <Line type="monotone" dataKey="mothers_yield" name={copy.mothers} stroke="#38BDF8" strokeWidth={2} dot={{ r: 4 }} activeDot={{ r: 6 }} />
                 </LineChart>
               </ResponsiveContainer>
             ) : (
               <div className="h-[300px] flex items-center justify-center rounded-lg border border-dashed border-ink/10 bg-surface p-6 text-sm text-ink-muted">
-                Not enough data to plot genetic progress chart.
+                {copy.noGeneticData}
               </div>
             )}
           </div>
@@ -731,7 +733,7 @@ export default function BreedingHub() {
           setSelectedHeatObservation(null);
           setSelectedBreedingLog(null);
         }}
-        title={selectedBreedingLog ? 'Edit AI Service' : 'Log AI Service'}
+        title={selectedBreedingLog ? copy.editServiceTitle : copy.logService}
       >
         <LogAIServiceForm
           key={selectedBreedingLog?.id || selectedHeatObservation?.id || 'new-ai-service'}
@@ -760,12 +762,12 @@ export default function BreedingHub() {
             }}
             className="btn-secondary px-4 py-2 text-sm"
           >
-            Cancel
+            {copy.cancel}
           </button>
         </div>
       </BaseModal>
 
-      <BaseModal closeOnBackdrop isOpen={isHeatObservationOpen} onClose={() => setIsHeatObservationOpen(false)} title="Record Heat Observation">
+      <BaseModal closeOnBackdrop isOpen={isHeatObservationOpen} onClose={() => setIsHeatObservationOpen(false)} title={copy.heatTitle}>
         <LogHeatObservationForm
           herdOptions={herdOptions}
           onSuccess={handleHeatObservationSuccess}
@@ -773,20 +775,20 @@ export default function BreedingHub() {
         />
       </BaseModal>
 
-      <BaseModal closeOnBackdrop isOpen={isHistoryOpen} onClose={() => setIsHistoryOpen(false)} title="Historical Checks">
+      <BaseModal closeOnBackdrop isOpen={isHistoryOpen} onClose={() => setIsHistoryOpen(false)} title={copy.historyTitle}>
         <div className="space-y-4">
-          <SimpleModalSection title="All Checks">
+          <SimpleModalSection title={copy.allChecks}>
             <div className="flex flex-col gap-3 border-b border-ink/10 pb-4 md:flex-row md:items-center md:justify-between">
               <div>
                 <div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest text-ink-muted">
-                  <Search size={12} /> Search and filters
+                  <Search size={12} /> {copy.searchAndFilters}
                 </div>
-                <p className="mt-1 text-sm leading-6 text-ink-muted">Filter breeding history by record status, cow name, or ear tag.</p>
+                <p className="mt-1 text-sm leading-6 text-ink-muted">{copy.historyHint}</p>
               </div>
 
               <div className="flex items-center gap-2">
                 <span className="rounded-full border border-ink/10 bg-surface-warm/60 px-3 py-1 text-[10px] font-bold uppercase tracking-widest text-ink-muted">
-                  {activeHistoryControlCount} active
+                  {copy.activeFilters(activeHistoryControlCount)}
                 </span>
                 <button
                   type="button"
@@ -795,7 +797,7 @@ export default function BreedingHub() {
                   className="inline-flex items-center gap-1.5 rounded-lg border border-ink/10 bg-surface px-3 py-1.5 text-xs font-semibold text-ink  transition-all hover:border-brand/20 hover:bg-brand/5 hover:text-brand"
                 >
                   {historyControlsOpen ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
-                  {historyControlsOpen ? 'Hide filters' : 'Show filters'}
+                  {historyControlsOpen ? copy.hideFilters : copy.showFilters}
                 </button>
               </div>
             </div>
@@ -809,7 +811,7 @@ export default function BreedingHub() {
                       type="search"
                       value={historySearch}
                       onChange={(event) => setHistorySearch(event.target.value)}
-                      placeholder="Search name or ear tag..."
+                      placeholder={copy.historySearch}
                       className="w-full bg-transparent text-sm text-ink-strong outline-none placeholder:text-ink-muted"
                     />
                   </div>
@@ -827,18 +829,18 @@ export default function BreedingHub() {
                           : 'border-ink/10 bg-surface-raised text-ink-muted'
                       }`}
                     >
-                      Clear filters
+                      {copy.clearFilters}
                     </button>
                   </div>
                 </div>
 
                 <div className="flex flex-wrap gap-2">
                   {[
-                    { value: 'All', label: 'All' },
-                    { value: 'Pregnant', label: 'Pregnant' },
-                    { value: 'Open', label: 'Open' },
-                    { value: 'Pending', label: 'Pending' },
-                    { value: 'Failed', label: 'Unsuccessful' },
+                    { value: 'All', label: copy.all },
+                    { value: 'Pregnant', label: breedingCopy.statuses.Pregnant },
+                    { value: 'Open', label: breedingCopy.statuses.Open },
+                    { value: 'Pending', label: breedingCopy.statuses.Pending },
+                    { value: 'Failed', label: breedingCopy.statuses.Failed },
                   ].map(({ value, label }) => (
                     <button
                       key={value}
@@ -860,7 +862,7 @@ export default function BreedingHub() {
             <div className="max-h-[420px] overflow-y-auto pr-1">
               {filteredHistory.length === 0 && (
                 <div className="rounded-lg border border-dashed border-ink/10 bg-surface/50 p-6 text-center text-sm text-ink-muted">
-                  No records match the selected filter.
+                  {copy.noHistoryMatches}
                 </div>
               )}
 
@@ -869,7 +871,7 @@ export default function BreedingHub() {
                   <div className="sticky top-0 z-10 flex items-center justify-between rounded-md border border-ink/10 bg-surface px-3 py-2 text-xs font-black uppercase tracking-widest text-brand ">
                     <span>{monthLabel}</span>
                     <span className="rounded-full bg-brand/5 px-2 py-0.5 text-[10px] font-black text-brand">
-                      {entries.length} {entries.length === 1 ? 'record' : 'records'}
+                      {copy.recordCount(entries.length)}
                     </span>
                   </div>
 
@@ -880,17 +882,16 @@ export default function BreedingHub() {
                         <div className="flex min-w-0 items-start justify-between gap-3">
                           <div className="min-w-0">
                             <p className="break-words font-bold text-ink-strong">{formatCowLabel(entry)}</p>
-                            {entry.notes && <p className="mt-1 break-words text-[11px] text-ink-muted">{entry.notes}</p>}
+                            {historyNotes(entry) && <p className="mt-1 break-words text-[11px] text-ink-muted">{historyNotes(entry)}</p>}
                           </div>
-                          <HistoryStatusBadge status={entry.status} outcome={entry.outcome} />
+                          <HistoryStatusBadge status={entry.status} />
                         </div>
                         <dl className="mt-3 grid grid-cols-2 gap-x-3 gap-y-2 border-t border-ink/10 pt-2 text-xs">
-                          <div className="min-w-0"><dt className="text-ink-muted">AI Date</dt><dd className="font-medium text-ink">{entry.aiDate || '—'}</dd></div>
-                          <div className="min-w-0"><dt className="text-ink-muted">Bull</dt><dd className="break-words font-medium text-ink">{entry.sireCode || '—'}</dd></div>
-                          <div className="min-w-0"><dt className="text-ink-muted">Expected Calving</dt><dd className="font-medium text-ink">{entry.expectedCalvingDate || '—'}</dd></div>
-                          <div className="min-w-0"><dt className="text-ink-muted">Updated</dt><dd className="font-medium text-ink">{entry.updatedAt || '—'}</dd></div>
+                          <div className="min-w-0"><dt className="text-ink-muted">{copy.columns.aiDate}</dt><dd className="font-medium text-ink">{entry.aiDate || '—'}</dd></div>
+                          <div className="min-w-0"><dt className="text-ink-muted">{copy.columns.bull}</dt><dd className="break-words font-medium text-ink">{entry.sireCode || '—'}</dd></div>
+                          <div className="min-w-0"><dt className="text-ink-muted">{copy.columns.expectedCalving}</dt><dd className="font-medium text-ink">{entry.expectedCalvingDate || '—'}</dd></div>
                           <div className="col-span-2 min-w-0">
-                            <dt className="sr-only">Source</dt>
+                            <dt className="sr-only">{copy.columns.source}</dt>
                             <dd>
                               <span className={`inline-flex rounded-full border px-2 py-1 text-[10px] font-black uppercase tracking-wider ${getSemenSourceTone(entry.semenSource)}`}>
                                 {formatSemenSource(entry.semenSource)}
@@ -906,13 +907,12 @@ export default function BreedingHub() {
                     <table className="w-full border-collapse text-left">
                       <thead className="bg-surface/70">
                         <tr>
-                          <th className="px-2 py-1.5 text-[9px] font-black uppercase tracking-wider text-ink-muted">Cow</th>
-                          <th className="px-2 py-1.5 text-[9px] font-black uppercase tracking-wider text-ink-muted">AI Date</th>
-                          <th className="px-2 py-1.5 text-[9px] font-black uppercase tracking-wider text-ink-muted">Bull</th>
-                          <th className="px-2 py-1.5 text-[9px] font-black uppercase tracking-wider text-ink-muted">Expected Calving</th>
-                          <th className="px-2 py-1.5 text-[9px] font-black uppercase tracking-wider text-ink-muted">Source</th>
-                          <th className="px-2 py-1.5 text-[9px] font-black uppercase tracking-wider text-ink-muted">Status</th>
-                          <th className="px-2 py-1.5 text-[9px] font-black uppercase tracking-wider text-ink-muted">Updated</th>
+                          <th className="px-2 py-1.5 text-[9px] font-black uppercase tracking-wider text-ink-muted">{copy.columns.cow}</th>
+                          <th className="px-2 py-1.5 text-[9px] font-black uppercase tracking-wider text-ink-muted">{copy.columns.aiDate}</th>
+                          <th className="px-2 py-1.5 text-[9px] font-black uppercase tracking-wider text-ink-muted">{copy.columns.bull}</th>
+                          <th className="px-2 py-1.5 text-[9px] font-black uppercase tracking-wider text-ink-muted">{copy.columns.expectedCalving}</th>
+                          <th className="px-2 py-1.5 text-[9px] font-black uppercase tracking-wider text-ink-muted">{copy.columns.source}</th>
+                          <th className="px-2 py-1.5 text-[9px] font-black uppercase tracking-wider text-ink-muted">{copy.columns.status}</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -920,7 +920,7 @@ export default function BreedingHub() {
                           <tr key={entry.id} className="border-t border-ink/5 align-top hover:bg-surface/50">
                             <td className="px-2 py-2">
                               <div className="font-bold text-ink-strong">{formatCowLabel(entry)}</div>
-                              {entry.notes && <div className="mt-1 text-[11px] text-ink-muted">{entry.notes}</div>}
+                              {historyNotes(entry) && <div className="mt-1 text-[11px] text-ink-muted">{historyNotes(entry)}</div>}
                             </td>
                             <td className="px-2 py-2 text-sm text-ink-muted">{entry.aiDate || '—'}</td>
                             <td className="px-2 py-2 text-sm text-ink-muted">{entry.sireCode || '—'}</td>
@@ -931,9 +931,8 @@ export default function BreedingHub() {
                               </span>
                             </td>
                             <td className="px-2 py-2">
-                              <HistoryStatusBadge status={entry.status} outcome={entry.outcome} />
+                              <HistoryStatusBadge status={entry.status} />
                             </td>
-                            <td className="px-2 py-2 text-sm text-ink-muted">{entry.updatedAt}</td>
                           </tr>
                         ))}
                       </tbody>
@@ -944,12 +943,12 @@ export default function BreedingHub() {
             </div>
           </SimpleModalSection>
           <div className="flex justify-end pt-2">
-            <button type="button" onClick={() => setIsHistoryOpen(false)} className="btn-command px-4 py-2 text-sm">Close</button>
+            <button type="button" onClick={() => setIsHistoryOpen(false)} className="btn-command px-4 py-2 text-sm">{copy.close}</button>
           </div>
         </div>
       </BaseModal>
 
-      <BaseModal closeOnBackdrop isOpen={isInventoryOpen} onClose={() => setIsInventoryOpen(false)} title="Add New Inventory">
+      <BaseModal closeOnBackdrop isOpen={isInventoryOpen} onClose={() => setIsInventoryOpen(false)} title={copy.addInventoryTitle}>
         <ManageSemenInventoryForm
           onSuccess={handleAddInventorySuccess}
           onError={(msg) => { setErrorMessage(msg); setShowError(true); }}
@@ -963,7 +962,7 @@ export default function BreedingHub() {
             onClick={() => setIsInventoryOpen(false)}
             className="btn-secondary px-4 py-2 text-sm"
           >
-            Cancel
+            {copy.cancel}
           </button>
         </div>
       </BaseModal>
@@ -974,7 +973,7 @@ export default function BreedingHub() {
           setIsRestockOpen(false);
           setSelectedInventoryItem(null);
         }}
-        title="Restock Semen Inventory"
+        title={copy.restockTitle}
       >
         <RestockSemenInventoryForm
           inventoryItem={selectedInventoryItem}
@@ -993,7 +992,7 @@ export default function BreedingHub() {
             }}
             className="btn-secondary px-4 py-2 text-sm"
           >
-            Cancel
+            {copy.cancel}
           </button>
         </div>
       </BaseModal>

@@ -1,4 +1,6 @@
 import { downloadBlob } from './download';
+import { formatDateTime } from './audit';
+import { financeCopy } from '../i18n/finance';
 
 export function formatMoney(value) {
   const amount = Number(value || 0);
@@ -8,36 +10,32 @@ export function formatMoney(value) {
   })}`;
 }
 
+/** "03 Nov 2026 14:05" in the chosen language; "Not recorded" when there is no readable date. */
 export function formatReceiptDate(value) {
   const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return value || 'Not recorded';
-
-  return new Intl.DateTimeFormat('en-KE', {
-    day: 'numeric',
-    month: 'short',
-    year: 'numeric',
-    hour: 'numeric',
-    minute: '2-digit',
-  }).format(date);
+  if (Number.isNaN(date.getTime())) return value || financeCopy.receipt.notRecorded;
+  return formatDateTime(date);
 }
 
 export function formatReceiptText(receipt) {
+  const text = financeCopy.receipt.text;
+  const missing = financeCopy.receipt.notRecorded;
   return [
-    receipt.tenant?.name || 'Payment receipt',
-    'Official payment receipt',
+    receipt.tenant?.name || text.fallbackTitle,
+    text.official,
     '------------------------------',
-    `Receipt number: ${receipt.receipt_number}`,
-    `Status: ${receipt.status}`,
-    `Farm: ${receipt.farm?.name || 'Not recorded'}`,
-    `Issued: ${receipt.issued_at}`,
-    `Transaction date: ${receipt.transaction_date || 'Not recorded'}`,
-    `Customer / Source: ${receipt.counterparty_name || 'Not recorded'}`,
-    `Category: ${receipt.category}`,
-    `Payment method: ${receipt.payment_method || 'Not recorded'}`,
-    `Payment reference: ${receipt.payment_reference || 'Not recorded'}`,
-    `Description: ${receipt.description || 'Not recorded'}`,
-    `Amount: ${formatMoney(receipt.amount)}`,
-    `Document SHA-256: ${receipt.document_sha256}`,
+    text.number(receipt.receipt_number),
+    text.status(receipt.status),
+    text.farm(receipt.farm?.name || missing),
+    text.issued(receipt.issued_at),
+    text.transactionDate(receipt.transaction_date || missing),
+    text.source(receipt.counterparty_name || missing),
+    text.category(receipt.category),
+    text.method(receipt.payment_method || missing),
+    text.reference(receipt.payment_reference || missing),
+    text.description(receipt.description || missing),
+    text.amount(formatMoney(receipt.amount)),
+    text.document(receipt.document_sha256),
   ].join('\n');
 }
 
@@ -49,7 +47,7 @@ export function shareReceiptText(receipt) {
   const text = formatReceiptText(receipt);
   if (navigator.share) {
     return navigator.share({
-      title: `Receipt ${receipt.receipt_number}`,
+      title: financeCopy.receipt.text.shareTitle(receipt.receipt_number),
       text,
     });
   }

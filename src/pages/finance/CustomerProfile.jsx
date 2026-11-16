@@ -9,25 +9,32 @@ import Confirmation, { useConfirmation } from '../../components/ui/Confirmation'
 import GroupedDateRows from '../../components/ui/GroupedDateRows';
 import DeliveryModal from '../../components/finance/DeliveryModal';
 import { Popover, PopoverContent, PopoverTrigger } from '../../components/ui/popover';
+import { formatMoneyText } from '../../components/ui/Money';
+import { formatDate } from '../../lib/dateFormat';
+import { financeCopy } from '../../i18n/finance';
+
+const copy = financeCopy.profile;
+// "KES 1,250.00" from a backend figure; "—" when it sent none (never shown as zero).
+const kes = (value) => formatMoneyText(value == null || value === '' ? null : Number(value));
 
 const ProfileDetail = ({ icon: Icon, label, value }) => (
   <div className="flex items-start gap-4">
     <Icon size={18} className="text-ink-muted mt-1 shrink-0" />
     <div>
       <h4 className="text-xs font-bold uppercase tracking-wider text-ink-muted">{label}</h4>
-      <p className="text-sm font-medium text-ink">{value || 'N/A'}</p>
+      <p className="text-sm font-medium text-ink">{value || copy.notAvailable}</p>
     </div>
   </div>
 );
 
 const TransactionRow = ({ tx }) => (
     <tr className="hover:bg-surface-raised transition-colors">
-      <td className="p-4 text-sm text-ink-muted">{new Date(tx.date).toLocaleDateString()}</td>
-      <td className="p-4 text-sm font-medium text-ink">{tx.description || tx.category || 'N/A'}</td>
+      <td className="p-4 text-sm text-ink-muted">{formatDate(tx.date)}</td>
+      <td className="p-4 text-sm font-medium text-ink">{tx.description || tx.category || copy.notAvailable}</td>
       <td className="p-4 text-right text-sm font-bold text-brand">
-        KES {Number(tx.amount || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+        {kes(tx.amount)}
       </td>
-      <td className="p-4 text-sm text-ink-muted text-right">{tx.reference || 'N/A'}</td>
+      <td className="p-4 text-sm text-ink-muted text-right">{tx.reference || copy.notAvailable}</td>
     </tr>
 );
 
@@ -42,21 +49,21 @@ const DeliveryRow = ({ delivery, onEdit, onDelete }) => {
 
   return (
     <tr className="hover:bg-surface-raised transition-colors">
-      <td className="p-4 text-sm text-ink-muted">{new Date(delivery.date).toLocaleDateString()}</td>
+      <td className="p-4 text-sm text-ink-muted">{formatDate(delivery.date)}</td>
       <td className="p-4 text-sm font-medium text-ink text-right">{delivered.toFixed(1)} L</td>
       <td className="p-4 text-sm font-medium text-ink-muted text-right">{personalUse.toFixed(1)} L</td>
       <td className="p-4 text-sm font-bold text-ink text-right">{Number(billableLiters).toFixed(1)} L</td>
       <td className="p-4 text-sm font-bold text-brand text-right">
-        {amount != null ? `KES ${Number(amount).toLocaleString(undefined, { minimumFractionDigits: 2 })}` : '—'}
+        {kes(amount)}
       </td>
       <td className="p-4 text-right">
         <Popover>
           <PopoverTrigger asChild>
-      <button type="button" className="inline-flex h-8 w-8 items-center justify-center rounded-button border border-brand/20 text-brand hover:border-brand-400 hover:bg-brand-50" aria-label={`Actions for delivery on ${delivery.date}`}><MoreVertical size={16} /></button>
+      <button type="button" className="inline-flex h-8 w-8 items-center justify-center rounded-button border border-brand/20 text-brand hover:border-brand-400 hover:bg-brand-50" aria-label={copy.actionsForDelivery(formatDate(delivery.date))}><MoreVertical size={16} /></button>
           </PopoverTrigger>
           <PopoverContent align="end" className="w-40 p-1.5">
-            <button type="button" onClick={() => onEdit(delivery)} className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm text-ink-900 hover:bg-brand-50"><Pencil size={14} /> Edit</button>
-            <button type="button" onClick={() => onDelete(delivery)} className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm text-brand-dark hover:bg-brand-50"><Trash2 size={14} /> Delete</button>
+            <button type="button" onClick={() => onEdit(delivery)} className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm text-ink-900 hover:bg-brand-50"><Pencil size={14} /> {copy.edit}</button>
+            <button type="button" onClick={() => onDelete(delivery)} className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm text-brand-dark hover:bg-brand-50"><Trash2 size={14} /> {copy.delete}</button>
           </PopoverContent>
         </Popover>
       </td>
@@ -120,13 +127,13 @@ export default function CustomerProfile() {
       return id ? financeApi.updateDelivery(id, rest) : financeApi.createDelivery(rest);
     },
     onSuccess: (_, variables) => {
-      toast.success(`Delivery ${variables.id ? 'updated' : 'logged'} successfully!`);
+      toast.success(copy.deliverySaved(Boolean(variables.id)));
       invalidateDeliveryRelatedQueries();
       setIsDeliveryModalOpen(false);
       setEditingDelivery(null);
     },
     onError: (error, variables) => {
-      toast.error(getApiErrorMessage(error, `Could not ${variables.id ? 'update' : 'log'} this delivery. Check the details and try again.`));
+      toast.error(getApiErrorMessage(error, copy.deliverySaveFailed(Boolean(variables.id))));
     },
   });
 
@@ -134,11 +141,11 @@ export default function CustomerProfile() {
     // With the permanent fix in `financeApi`, we can use the intended helper.
     mutationFn: (deliveryId) => financeApi.deleteDelivery(deliveryId),
     onSuccess: () => {
-      toast.success('Delivery deleted successfully!');
+      toast.success(copy.deliveryDeleted);
       invalidateDeliveryRelatedQueries();
     },
     onError: (error) => {
-      toast.error(getApiErrorMessage(error, 'Could not delete this delivery. Please try again.'));
+      toast.error(getApiErrorMessage(error, copy.deliveryDeleteFailed));
     },
     onSettled: () => {
       confirmation.setLoading(false);
@@ -157,9 +164,9 @@ export default function CustomerProfile() {
 
   const handleDeleteDelivery = async (delivery) => {
     const confirmed = await confirmation.confirm({
-      title: 'Delete Delivery',
-      message: `Delete the ${Number(delivery.liters_delivered).toFixed(1)} L delivery logged on ${new Date(delivery.date).toLocaleDateString()}? This action cannot be undone.`,
-      confirmText: 'Delete',
+      title: copy.deleteTitle,
+      message: copy.deleteMessage(Number(delivery.liters_delivered).toFixed(1), formatDate(delivery.date)),
+      confirmText: copy.delete,
       type: 'danger',
     });
     if (confirmed) {
@@ -191,9 +198,9 @@ export default function CustomerProfile() {
   if (isErrorCustomer) {
     return (
       <div className="card-machined border border-brand/20 bg-brand-50 p-8 text-center text-brand-dark">
-        <h2 className="font-bold text-lg">Error Loading Customer</h2>
-        <p className="mt-2 text-sm">{customerError.message || 'The customer profile could not be retrieved.'}</p>
-        <Link to="/finance/buyers" className="btn-secondary mt-4">Go Back to Buyers List</Link>
+        <h2 className="font-bold text-lg">{copy.loadErrorTitle}</h2>
+        <p className="mt-2 text-sm">{customerError.message || copy.loadErrorMessage}</p>
+        <Link to="/finance/buyers" className="btn-secondary mt-4">{copy.backToBuyers}</Link>
       </div>
     );
   }
@@ -201,9 +208,9 @@ export default function CustomerProfile() {
   if (!customer) {
     return (
       <div className="card-machined p-8 text-center">
-        <h2 className="font-bold text-lg">Customer Not Found</h2>
-        <p className="mt-2 text-sm">The requested customer does not exist.</p>
-        <Link to="/finance/buyers" className="btn-secondary mt-4">Go Back to Buyers List</Link>
+        <h2 className="font-bold text-lg">{copy.notFoundTitle}</h2>
+        <p className="mt-2 text-sm">{copy.notFoundMessage}</p>
+        <Link to="/finance/buyers" className="btn-secondary mt-4">{copy.backToBuyers}</Link>
       </div>
     );
   }
@@ -212,7 +219,7 @@ export default function CustomerProfile() {
     <div className="space-y-8 animate-reveal">
       <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
         <div className="flex items-center gap-4">
-          <Link to="/finance/buyers" className="p-2 rounded-md hover:bg-surface-raised transition-colors">
+          <Link to="/finance/buyers" aria-label={copy.back} className="p-2 rounded-md hover:bg-surface-raised transition-colors">
             <ArrowLeft size={20} className="text-ink-muted" />
           </Link>
           <div className="p-3 bg-brand/10 rounded-full text-brand">
@@ -221,74 +228,74 @@ export default function CustomerProfile() {
           <div>
             <h1 className="font-sans font-black text-3xl tracking-tight text-ink">{customer.name}</h1>
             <p className="text-sm font-medium text-ink-muted mt-1">
-              Customer Profile & Statement
+              {copy.subtitle}
             </p>
           </div>
         </div>
         <Link to="/operations/customers" state={{ editCustomer: customer }} className="btn-secondary gap-2">
-          <Edit size={14} /> Edit Customer
+          <Edit size={14} /> {copy.editCustomer}
         </Link>
       </div>
 
       <div className="card-machined p-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-8">
-        <ProfileDetail icon={Phone} label="Phone" value={customer.phone_number} />
-        <ProfileDetail icon={User} label="Contact Person" value={customer.contact_person} />
-        <ProfileDetail icon={Mail} label="Email" value={customer.email} />
-        <ProfileDetail icon={MapPin} label="Address" value={customer.address} />
+        <ProfileDetail icon={Phone} label={copy.phone} value={customer.phone_number} />
+        <ProfileDetail icon={User} label={copy.contactPerson} value={customer.contact_person} />
+        <ProfileDetail icon={Mail} label={copy.email} value={customer.email} />
+        <ProfileDetail icon={MapPin} label={copy.address} value={customer.address} />
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <div className="card-machined p-6">
-          <h4 className="text-xs font-bold uppercase text-ink-muted flex items-center gap-2"><DollarSign size={14}/> Current Balance</h4>
+          <h4 className="text-xs font-bold uppercase text-ink-muted flex items-center gap-2"><DollarSign size={14}/> {copy.currentBalance}</h4>
           <p className="mt-2 text-3xl font-black text-brand">
-            KES {(customer.account_balance ?? customer.balance ?? 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+            {kes(customer.account_balance ?? customer.balance)}
           </p>
         </div>
         <div className="card-machined p-6">
-          <h4 className="text-xs font-bold uppercase text-ink-muted flex items-center gap-2"><Receipt size={14}/> Agreed Rate</h4>
+          <h4 className="text-xs font-bold uppercase text-ink-muted flex items-center gap-2"><Receipt size={14}/> {copy.agreedRate}</h4>
           <p className="text-3xl font-black mt-2 text-ink">
-            KES {(customer.agreed_rate_per_liter ?? customer.agreed_rate ?? 0).toLocaleString(undefined, { minimumFractionDigits: 2 })} / L
+            {kes(customer.agreed_rate_per_liter ?? customer.agreed_rate)} / L
           </p>
         </div>
         <div className="card-machined p-6">
-          <h4 className="text-xs font-bold uppercase text-ink-muted flex items-center gap-2"><Droplets size={14}/> Contract Litres/Day</h4>
+          <h4 className="text-xs font-bold uppercase text-ink-muted flex items-center gap-2"><Droplets size={14}/> {copy.contractLitres}</h4>
           <p className="text-3xl font-black mt-2 text-ink">
-            {customer.daily_contract_liters ? `${Number(customer.daily_contract_liters).toLocaleString(undefined, { maximumFractionDigits: 2 })} L` : 'N/A'}
+            {customer.daily_contract_liters ? `${Number(customer.daily_contract_liters).toLocaleString(undefined, { maximumFractionDigits: 2 })} L` : copy.notAvailable}
           </p>
-          <p className="text-xs text-ink-muted mt-1">For customers billed periodically (weekly/monthly)</p>
+          <p className="text-xs text-ink-muted mt-1">{copy.contractHint}</p>
         </div>
       </div>
 
       <div className="card-machined overflow-hidden !p-0">
         <div className="p-6 border-b border-ink/10 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <h3 className="font-bold text-lg text-ink flex items-center gap-2">
-            <Droplets size={18} className="text-brand" /> Milk Deliveries
+            <Droplets size={18} className="text-brand" /> {copy.deliveries}
           </h3>
           <button type="button" onClick={handleAddDelivery} className="btn-command gap-2 self-start sm:self-auto">
-            <Plus size={14} /> Log Delivery
+            <Plus size={14} /> {copy.logDelivery}
           </button>
         </div>
         <div className="hidden overflow-x-auto md:block">
           <table className="w-full text-left">
             <thead className="bg-surface-raised">
               <tr>
-                <th className="p-4 font-sans text-xs font-semibold uppercase tracking-wider text-ink-muted">Date</th>
-                <th className="p-4 font-sans text-xs font-semibold uppercase tracking-wider text-ink-muted text-right">Delivered</th>
-                <th className="p-4 font-sans text-xs font-semibold uppercase tracking-wider text-ink-muted text-right">Personal Use</th>
-                <th className="p-4 font-sans text-xs font-semibold uppercase tracking-wider text-ink-muted text-right">Billable</th>
-                <th className="p-4 font-sans text-xs font-semibold uppercase tracking-wider text-ink-muted text-right">Amount</th>
-                <th className="p-4 font-sans text-xs font-semibold uppercase tracking-wider text-ink-muted text-right">Actions</th>
+                <th className="p-4 font-sans text-xs font-semibold uppercase tracking-wider text-ink-muted">{copy.deliveryColumns.date}</th>
+                <th className="p-4 font-sans text-xs font-semibold uppercase tracking-wider text-ink-muted text-right">{copy.deliveryColumns.delivered}</th>
+                <th className="p-4 font-sans text-xs font-semibold uppercase tracking-wider text-ink-muted text-right">{copy.deliveryColumns.personalUse}</th>
+                <th className="p-4 font-sans text-xs font-semibold uppercase tracking-wider text-ink-muted text-right">{copy.deliveryColumns.billable}</th>
+                <th className="p-4 font-sans text-xs font-semibold uppercase tracking-wider text-ink-muted text-right">{copy.deliveryColumns.amount}</th>
+                <th className="p-4 font-sans text-xs font-semibold uppercase tracking-wider text-ink-muted text-right">{copy.deliveryColumns.actions}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-ink/5">
               {isLoadingDeliveries ? (
-                <tr><td colSpan="6" className="p-6 text-center text-ink-muted">Loading deliveries...</td></tr>
+                <tr><td colSpan="6" className="p-6 text-center text-ink-muted">{copy.loadingDeliveries}</td></tr>
               ) : deliveries.length > 0 ? (
                 <GroupedDateRows
                   items={deliveries}
                   getDate={(delivery) => delivery.date}
                   colSpan={6}
-                  renderGroupMeta={(items) => `${items.length} ${items.length === 1 ? 'delivery' : 'deliveries'}`}
+                  renderGroupMeta={(items) => copy.deliveryCount(items.length)}
                   renderItem={(delivery) => (
                     <DeliveryRow
                       key={delivery.id}
@@ -299,71 +306,71 @@ export default function CustomerProfile() {
                   )}
                 />
               ) : (
-                <tr><td colSpan="6" className="p-6 text-center text-ink-muted">No deliveries logged for this customer yet.</td></tr>
+                <tr><td colSpan="6" className="p-6 text-center text-ink-muted">{copy.noDeliveries}</td></tr>
               )}
             </tbody>
           </table>
         </div>
         <div className="divide-y divide-ink/10 md:hidden">
-          {isLoadingDeliveries ? <p className="p-5 text-sm text-ink-muted">Loading deliveries...</p> : deliveries.length ? deliveries.map((delivery) => {
+          {isLoadingDeliveries ? <p className="p-5 text-sm text-ink-muted">{copy.loadingDeliveries}</p> : deliveries.length ? deliveries.map((delivery) => {
             const delivered = Number(delivery.liters_delivered) || 0;
             const personalUse = Number(delivery.personal_consumption_liters) || 0;
             const billable = delivery.billable_liters ?? delivered;
             const amount = delivery.amount ?? delivery.billed_amount;
             return (
               <article key={delivery.id} className="min-w-0 space-y-3 p-4">
-                <div className="flex items-start justify-between gap-3"><time className="text-xs text-ink-muted">{new Date(delivery.date).toLocaleDateString()}</time><span className="text-right font-mono text-sm font-bold text-brand">{amount != null ? `KES ${Number(amount).toLocaleString(undefined, { minimumFractionDigits: 2 })}` : '—'}</span></div>
+                <div className="flex items-start justify-between gap-3"><time className="text-xs text-ink-muted">{formatDate(delivery.date)}</time><span className="text-right font-mono text-sm font-bold text-brand">{kes(amount)}</span></div>
                 <dl className="grid grid-cols-2 gap-3 border-t border-ink/10 pt-3 text-xs">
-                  <div><dt className="text-ink-muted">Delivered</dt><dd className="mt-1 font-semibold text-ink">{delivered.toFixed(1)} L</dd></div>
-                  <div><dt className="text-ink-muted">Personal use</dt><dd className="mt-1 font-semibold text-ink">{personalUse.toFixed(1)} L</dd></div>
-                  <div><dt className="text-ink-muted">Billable</dt><dd className="mt-1 font-semibold text-ink">{Number(billable).toFixed(1)} L</dd></div>
+                  <div><dt className="text-ink-muted">{copy.delivered}</dt><dd className="mt-1 font-semibold text-ink">{delivered.toFixed(1)} L</dd></div>
+                  <div><dt className="text-ink-muted">{copy.personalUse}</dt><dd className="mt-1 font-semibold text-ink">{personalUse.toFixed(1)} L</dd></div>
+                  <div><dt className="text-ink-muted">{copy.billable}</dt><dd className="mt-1 font-semibold text-ink">{Number(billable).toFixed(1)} L</dd></div>
                 </dl>
-                <div className="flex justify-end gap-2"><button type="button" onClick={() => handleEditDelivery(delivery)} className="rounded-lg border border-brand/20 px-3 py-2 text-xs font-semibold text-brand">Edit</button><button type="button" onClick={() => handleDeleteDelivery(delivery)} className="rounded-lg border border-brand/20 px-3 py-2 text-xs font-semibold text-brand-dark">Delete</button></div>
+                <div className="flex justify-end gap-2"><button type="button" onClick={() => handleEditDelivery(delivery)} className="rounded-lg border border-brand/20 px-3 py-2 text-xs font-semibold text-brand">{copy.edit}</button><button type="button" onClick={() => handleDeleteDelivery(delivery)} className="rounded-lg border border-brand/20 px-3 py-2 text-xs font-semibold text-brand-dark">{copy.delete}</button></div>
               </article>
             );
-          }) : <p className="p-5 text-sm text-ink-muted">No deliveries logged for this customer yet.</p>}
+          }) : <p className="p-5 text-sm text-ink-muted">{copy.noDeliveries}</p>}
         </div>
       </div>
 
       <div className="card-machined overflow-hidden !p-0">
         <div className="p-6 border-b border-ink/10">
-          <h3 className="font-bold text-lg text-ink">Transaction History</h3>
+          <h3 className="font-bold text-lg text-ink">{copy.transactions}</h3>
         </div>
         <div className="hidden overflow-x-auto md:block">
           <table className="w-full text-left">
             <thead className="bg-surface-raised">
               <tr>
-                <th className="p-4 font-sans text-xs font-semibold uppercase tracking-wider text-ink-muted">Date</th>
-                <th className="p-4 font-sans text-xs font-semibold uppercase tracking-wider text-ink-muted">Description</th>
-                <th className="p-4 font-sans text-xs font-semibold uppercase tracking-wider text-ink-muted text-right">Amount</th>
-                <th className="p-4 font-sans text-xs font-semibold uppercase tracking-wider text-ink-muted text-right">Reference</th>
+                <th className="p-4 font-sans text-xs font-semibold uppercase tracking-wider text-ink-muted">{copy.transactionColumns.date}</th>
+                <th className="p-4 font-sans text-xs font-semibold uppercase tracking-wider text-ink-muted">{copy.transactionColumns.description}</th>
+                <th className="p-4 font-sans text-xs font-semibold uppercase tracking-wider text-ink-muted text-right">{copy.transactionColumns.amount}</th>
+                <th className="p-4 font-sans text-xs font-semibold uppercase tracking-wider text-ink-muted text-right">{copy.transactionColumns.reference}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-ink/5">
               {isLoadingTransactions ? (
-                <tr><td colSpan="4" className="p-6 text-center text-ink-muted">Loading transactions...</td></tr>
+                <tr><td colSpan="4" className="p-6 text-center text-ink-muted">{copy.loadingTransactions}</td></tr>
               ) : transactions.length > 0 ? (
                 <GroupedDateRows
                   items={transactions}
                   getDate={(tx) => tx.date}
                   colSpan={4}
-                  renderGroupMeta={(items) => `${items.length} ${items.length === 1 ? 'transaction' : 'transactions'}`}
+                  renderGroupMeta={(items) => copy.transactionCount(items.length)}
                   renderItem={(tx) => <TransactionRow key={tx.id} tx={tx} />}
                 />
               ) : (
-                <tr><td colSpan="4" className="p-6 text-center text-ink-muted">No transactions found for this customer.</td></tr>
+                <tr><td colSpan="4" className="p-6 text-center text-ink-muted">{copy.noTransactions}</td></tr>
               )}
             </tbody>
           </table>
         </div>
         <div className="divide-y divide-ink/10 md:hidden">
-          {isLoadingTransactions ? <p className="p-5 text-sm text-ink-muted">Loading transactions...</p> : transactions.length ? transactions.map((tx) => (
+          {isLoadingTransactions ? <p className="p-5 text-sm text-ink-muted">{copy.loadingTransactions}</p> : transactions.length ? transactions.map((tx) => (
             <article key={tx.id} className="min-w-0 space-y-2 p-4">
-              <div className="flex items-start justify-between gap-3"><time className="text-xs text-ink-muted">{new Date(tx.date).toLocaleDateString()}</time><span className="shrink-0 text-right font-mono text-sm font-bold text-brand">KES {Number(tx.amount || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span></div>
-              <p className="break-words text-sm font-medium text-ink">{tx.description || tx.category || 'N/A'}</p>
-              <p className="break-all text-xs text-ink-muted">Reference: {tx.reference || 'N/A'}</p>
+              <div className="flex items-start justify-between gap-3"><time className="text-xs text-ink-muted">{formatDate(tx.date)}</time><span className="shrink-0 text-right font-mono text-sm font-bold text-brand">{kes(tx.amount)}</span></div>
+              <p className="break-words text-sm font-medium text-ink">{tx.description || tx.category || copy.notAvailable}</p>
+              <p className="break-all text-xs text-ink-muted">{copy.reference(tx.reference || copy.notAvailable)}</p>
             </article>
-          )) : <p className="p-5 text-sm text-ink-muted">No transactions found for this customer.</p>}
+          )) : <p className="p-5 text-sm text-ink-muted">{copy.noTransactions}</p>}
         </div>
       </div>
 

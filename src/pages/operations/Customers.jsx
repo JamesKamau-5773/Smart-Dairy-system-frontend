@@ -17,6 +17,7 @@ import { useTenant } from '../../hooks/useTenant';
 import { QUERY_KEYS } from '../../providers/QueryProvider';
 import { getListLoadState, hasRowsToShow } from '../../lib/listLoadState';
 import { isFeatureEnabled } from '../../lib/featureFlags';
+import { customerTypeLabel, financeCopy } from '../../i18n/finance';
 
 const TABLE_COLUMNS = 4;
 
@@ -27,13 +28,15 @@ const rateOf = (customer) => customer.agreed_rate_per_liter ?? customer.agreed_r
 /** What the delete dialog says about the customer's account, from the backend's balance. */
 function describeBalanceForDelete(name, rawBalance) {
   const balance = rawBalance === null || rawBalance === undefined || rawBalance === '' ? null : Number(rawBalance);
-  if (balance === null || !Number.isFinite(balance)) return `${name}’s balance couldn’t be checked.`;
-  if (balance > 0) return `${name} still owes ${formatMoneyText(balance)}.`;
-  if (balance < 0) return `${name} has ${formatMoneyText(-balance)} in credit.`;
-  return `${name}’s account is settled.`;
+  const copy = financeCopy.customers;
+  if (balance === null || !Number.isFinite(balance)) return copy.balanceUnknown(name);
+  if (balance > 0) return copy.owes(name, formatMoneyText(balance));
+  if (balance < 0) return copy.credit(name, formatMoneyText(-balance));
+  return copy.settled(name);
 }
 
 export default function CustomersPage() {
+  const copy = financeCopy.customers;
   // The backend has no customer DELETE route yet (BR-007), so offering Delete would always fail.
   const canDeleteCustomers = isFeatureEnabled('customerDelete');
   const queryClient = useQueryClient();
@@ -66,28 +69,28 @@ export default function CustomersPage() {
       if (isQueuedOffline(result)) {
         toast(queuedOfflineMessage());
       } else {
-        toast.success(`Customer ${variables.id ? 'updated' : 'created'} successfully!`);
+        toast.success(copy.saved(Boolean(variables.id)));
       }
       queryClient.invalidateQueries({ queryKey: customersKey });
       setIsPanelOpen(false);
       setSelectedCustomer(null);
     },
     onError: (error, variables) => {
-      toast.error(getApiErrorMessage(error, `Could not ${variables.id ? 'update' : 'create'} this customer. Check the details and try again.`));
+      toast.error(getApiErrorMessage(error, copy.saveFailed(Boolean(variables.id))));
     },
   });
 
   const { mutate: deleteCustomer } = useMutation({
     mutationFn: (customerId) => financeApi.deleteCustomer(customerId),
     onSuccess: () => {
-      toast.success('Customer deleted successfully!');
+      toast.success(copy.deleted);
       queryClient.invalidateQueries({ queryKey: customersKey });
     },
     onError: (error, customerId) => {
       reportError(error, { where: 'Customers.delete' });
-      const name = customers?.find((customer) => customer.id === customerId)?.name ?? 'The customer';
+      const name = customers?.find((customer) => customer.id === customerId)?.name ?? copy.theCustomer;
       toast.error(offlineFailureMessage(error, `${name} wasn’t deleted.`)
-        ?? getApiErrorMessage(error, `Couldn’t delete ${name}. Try again.`));
+        ?? getApiErrorMessage(error, copy.deleteFailed(name)));
     },
     onSettled: () => {
       confirmation.setLoading(false);
@@ -105,12 +108,12 @@ export default function CustomersPage() {
   };
 
   const handleDelete = async (customer) => {
-    const name = customer.name || 'This customer';
+    const name = customer.name || copy.thisCustomer;
     const confirmed = await confirmation.confirm({
-      title: `Delete ${name}?`,
-      message: `${describeBalanceForDelete(name, balanceOf(customer))} Deleting removes them from your customer list. You can’t undo this.`,
-      confirmText: 'Delete',
-      cancelText: 'Keep',
+      title: copy.deleteTitle(name),
+      message: copy.deleteMessage(describeBalanceForDelete(name, balanceOf(customer))),
+      confirmText: copy.deleteConfirm,
+      cancelText: copy.deleteKeep,
       type: 'danger',
       requireText: customer.name || 'DELETE',
     });
@@ -141,15 +144,15 @@ export default function CustomersPage() {
           <div className="p-3 bg-white text-brand-700 rounded-lg border border-brand-100"><Users size={20} /></div>
           <div>
             <h2 className="font-sans font-bold text-2xl tracking-tight text-brand-900 m-0">
-              Customer Management
+              {copy.title}
             </h2>
             <p className="mt-1 text-sm text-brand-700/80">
-              Add, edit, and manage your buyers and customers.
+              {copy.subtitle}
             </p>
           </div>
         </div>
         <button type="button" onClick={handleAdd} className="flex items-center gap-2 rounded-button bg-brand-800 px-4 py-2 text-sm font-semibold text-white  transition-colors hover:bg-brand-900 w-full sm:w-auto justify-center">
-          <Plus size={16} /> Add New Customer
+          <Plus size={16} /> {copy.addNew}
         </button>
       </div>
 
@@ -158,7 +161,7 @@ export default function CustomersPage() {
           <Search size={16} className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-brand" />
           <input
             type="text"
-            placeholder="Search by name, contact, phone, or type..."
+            placeholder={copy.searchPlaceholder}
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="input-machined pl-10"
@@ -169,8 +172,8 @@ export default function CustomersPage() {
       <SlidePanel
         isOpen={isPanelOpen}
         onClose={() => setIsPanelOpen(false)}
-        title={selectedCustomer ? 'Edit Customer' : 'Add New Customer'}
-        subtitle={selectedCustomer ? 'Update the details for this customer.' : 'Add a new customer to your registry.'}
+        title={selectedCustomer ? copy.editTitle : copy.addNew}
+        subtitle={selectedCustomer ? copy.editSubtitle : copy.addSubtitle}
       >
         <CustomerForm
           customer={selectedCustomer}
@@ -184,18 +187,18 @@ export default function CustomersPage() {
       <Confirmation {...confirmation} />
 
       <div className="card-machined overflow-hidden !p-0">
-        <ListLoadNotices state={loadState} label="customers" error={customersQuery.error} onRetry={customersQuery.refetch} />
+        <ListLoadNotices state={loadState} label={copy.listLabel} error={customersQuery.error} onRetry={customersQuery.refetch} />
         {showCustomers && filteredCustomers.length === 0 && (
           <div className="flex flex-col items-center gap-3 p-8 text-center text-sm text-ink-muted">
             {searchTerm ? (
               <>
-                <p>No customers match “{searchTerm}”.</p>
-                <button type="button" onClick={() => setSearchTerm('')} className="text-xs font-bold text-brand hover:underline">Clear search</button>
+                <p>{copy.noMatches(searchTerm)}</p>
+                <button type="button" onClick={() => setSearchTerm('')} className="text-xs font-bold text-brand hover:underline">{copy.clearSearch}</button>
               </>
             ) : (
               <>
-                <p>No customers yet. Add the people and businesses you sell milk to.</p>
-                <button type="button" onClick={handleAdd} className="btn-command">Add your first customer</button>
+                <p>{copy.empty}</p>
+                <button type="button" onClick={handleAdd} className="btn-command">{copy.addFirst}</button>
               </>
             )}
           </div>
@@ -204,10 +207,10 @@ export default function CustomersPage() {
           <table className="w-full text-left border-collapse">
             <thead className="bg-brand-800">
               <tr>
-                <th className="p-4 font-sans text-xs font-bold uppercase tracking-wider text-white text-left">Customer</th>
-                <th className="p-4 font-sans text-xs font-bold uppercase tracking-wider text-white text-left">Contact</th>
-                <th className="p-4 font-sans text-xs font-bold uppercase tracking-wider text-white text-right">Financials</th>
-                <th className="p-4 font-sans text-xs font-bold uppercase tracking-wider text-white text-right">Actions</th>
+                <th className="p-4 font-sans text-xs font-bold uppercase tracking-wider text-white text-left">{copy.columns.customer}</th>
+                <th className="p-4 font-sans text-xs font-bold uppercase tracking-wider text-white text-left">{copy.columns.contact}</th>
+                <th className="p-4 font-sans text-xs font-bold uppercase tracking-wider text-white text-right">{copy.columns.financials}</th>
+                <th className="p-4 font-sans text-xs font-bold uppercase tracking-wider text-white text-right">{copy.columns.actions}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-ink/5">
@@ -216,35 +219,35 @@ export default function CustomersPage() {
                 <tr key={customer.id} className="group hover:bg-surface-raised transition-colors">
                   <td className="p-4 text-left">
                     <div className="font-medium text-ink">{customer.name}</div>
-                    <div className="text-xs text-ink-muted capitalize">{customer.customer_type || 'Unknown'}</div>
+                    <div className="text-xs text-ink-muted capitalize">{customer.customer_type ? customerTypeLabel(customer.customer_type) : copy.unknownType}</div>
                   </td>
                   <td className="p-4 text-sm text-ink-muted text-left">
-                    <div>{customer.contact_person || 'N/A'}</div>
+                    <div>{customer.contact_person || copy.notAvailable}</div>
                     <div className="font-mono">{customer.phone_number}</div>
                     <div className="text-xs">{customer.email || ''}</div>
                   </td>
                   <td className="p-4 text-right">
                     <div className="text-sm">
-                      <span className="text-slate-400">Bal: </span>
+                      <span className="text-slate-400">{copy.balanceShort}</span>
                       <span className="font-bold text-slate-800 font-mono">{formatMoneyText(balanceOf(customer))}</span>
                     </div>
                     <div className="text-xs text-slate-400 mt-0.5">
-                      Rate: <span className="font-mono">{formatMoneyText(rateOf(customer))} / L</span>
+                      {copy.rate} <span className="font-mono">{formatMoneyText(rateOf(customer))} / L</span>
                     </div>
                     {Number(customer.daily_contract_liters) > 0 && (
                       <div className="text-xs text-slate-400 mt-0.5">
-                        Contract: <span className="font-mono">{Number(customer.daily_contract_liters).toLocaleString(undefined, { maximumFractionDigits: 2 })} L/day</span>
+                        {copy.contract} <span className="font-mono">{Number(customer.daily_contract_liters).toLocaleString(undefined, { maximumFractionDigits: 2 })} {copy.perDay}</span>
                       </div>
                     )}
                   </td>
                   <td className="p-4 text-right">
                     <Popover>
                       <PopoverTrigger asChild>
-                        <button type="button" className="inline-flex h-8 w-8 items-center justify-center rounded-button border border-slate-300 text-slate-600 hover:border-brand-400 hover:text-brand-700" aria-label={`Actions for ${customer.name}`}><MoreVertical size={16} /></button>
+                        <button type="button" className="inline-flex h-8 w-8 items-center justify-center rounded-button border border-slate-300 text-slate-600 hover:border-brand-400 hover:text-brand-700" aria-label={copy.actionsFor(customer.name)}><MoreVertical size={16} /></button>
                       </PopoverTrigger>
                       <PopoverContent align="end" className="w-40 p-1.5">
-                        <button type="button" onClick={() => handleEdit(customer)} className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm text-ink-900 hover:bg-brand-50"><Pencil size={14} /> Edit</button>
-                        {canDeleteCustomers && <button type="button" onClick={() => handleDelete(customer)} className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm text-danger hover:bg-danger/10"><Trash2 size={14} /> Delete</button>}
+                        <button type="button" onClick={() => handleEdit(customer)} className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm text-ink-900 hover:bg-brand-50"><Pencil size={14} /> {copy.edit}</button>
+                        {canDeleteCustomers && <button type="button" onClick={() => handleDelete(customer)} className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm text-danger hover:bg-danger/10"><Trash2 size={14} /> {copy.delete}</button>}
                       </PopoverContent>
                     </Popover>
                   </td>
@@ -258,19 +261,19 @@ export default function CustomersPage() {
           {filteredCustomers.map((customer) => (
             <article key={customer.id} className="min-w-0 space-y-3 p-4">
               <div className="flex min-w-0 items-start justify-between gap-3">
-                <div className="min-w-0"><h3 className="break-words font-semibold text-ink">{customer.name}</h3><p className="mt-1 text-xs capitalize text-ink-muted">{customer.customer_type || 'Unknown'}</p></div>
+                <div className="min-w-0"><h3 className="break-words font-semibold text-ink">{customer.name}</h3><p className="mt-1 text-xs capitalize text-ink-muted">{customer.customer_type ? customerTypeLabel(customer.customer_type) : copy.unknownType}</p></div>
                 <span className="shrink-0 font-mono text-sm font-bold text-brand">{formatMoneyText(balanceOf(customer))}</span>
               </div>
               <dl className="grid grid-cols-2 gap-3 border-t border-ink/10 pt-3 text-xs">
-                <div className="min-w-0"><dt className="text-ink-muted">Contact person</dt><dd className="mt-1 break-words text-ink">{customer.contact_person || 'N/A'}</dd></div>
-                <div className="min-w-0"><dt className="text-ink-muted">Phone</dt><dd className="mt-1 break-all font-mono text-ink">{customer.phone_number || 'N/A'}</dd></div>
-                <div className="min-w-0"><dt className="text-ink-muted">Rate</dt><dd className="mt-1 break-words font-mono text-ink">{formatMoneyText(rateOf(customer))}/L</dd></div>
-                {Number(customer.daily_contract_liters) > 0 && <div className="min-w-0"><dt className="text-ink-muted">Daily contract</dt><dd className="mt-1 font-mono text-ink">{Number(customer.daily_contract_liters).toLocaleString(undefined, { maximumFractionDigits: 2 })} L</dd></div>}
-                {customer.email && <div className="col-span-2 min-w-0"><dt className="text-ink-muted">Email</dt><dd className="mt-1 break-all text-ink">{customer.email}</dd></div>}
+                <div className="min-w-0"><dt className="text-ink-muted">{copy.contactPerson}</dt><dd className="mt-1 break-words text-ink">{customer.contact_person || copy.notAvailable}</dd></div>
+                <div className="min-w-0"><dt className="text-ink-muted">{copy.phone}</dt><dd className="mt-1 break-all font-mono text-ink">{customer.phone_number || copy.notAvailable}</dd></div>
+                <div className="min-w-0"><dt className="text-ink-muted">{copy.rateLabel}</dt><dd className="mt-1 break-words font-mono text-ink">{formatMoneyText(rateOf(customer))}/L</dd></div>
+                {Number(customer.daily_contract_liters) > 0 && <div className="min-w-0"><dt className="text-ink-muted">{copy.dailyContract}</dt><dd className="mt-1 font-mono text-ink">{Number(customer.daily_contract_liters).toLocaleString(undefined, { maximumFractionDigits: 2 })} L</dd></div>}
+                {customer.email && <div className="col-span-2 min-w-0"><dt className="text-ink-muted">{copy.email}</dt><dd className="mt-1 break-all text-ink">{customer.email}</dd></div>}
               </dl>
               <div className="flex justify-end gap-2 border-t border-ink/10 pt-3">
-                <button type="button" onClick={() => handleEdit(customer)} className="rounded-button border border-brand/20 px-3 py-2 text-xs font-semibold text-brand">Edit</button>
-                {canDeleteCustomers && <button type="button" onClick={() => handleDelete(customer)} className="rounded-button border border-brand/20 px-3 py-2 text-xs font-semibold text-brand-dark">Delete</button>}
+                <button type="button" onClick={() => handleEdit(customer)} className="rounded-button border border-brand/20 px-3 py-2 text-xs font-semibold text-brand">{copy.edit}</button>
+                {canDeleteCustomers && <button type="button" onClick={() => handleDelete(customer)} className="rounded-button border border-brand/20 px-3 py-2 text-xs font-semibold text-brand-dark">{copy.delete}</button>}
               </div>
             </article>
           ))}

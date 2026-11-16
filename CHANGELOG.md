@@ -4,6 +4,20 @@ What changed for farmers and staff using Maziwa Smart. Newest first.
 
 ## Unreleased
 
+### The whole app in Kiswahili
+
+- **Every screen now follows the language switch.** Before, only the sidebar, sign-in and a few
+  pages changed to Kiswahili. Now the herd, health, AI and pregnancy, milk, feed and stock,
+  buyers and money, staff and payroll, reports, admin and onboarding screens do too. Anything
+  without a Kiswahili translation yet still shows in English. Saved records (statuses,
+  categories, payment methods, recipe names, payroll CSV headings) keep their English codes;
+  only how they are shown changes.
+- **Gaps now show as "—", not invented numbers.** A buyer's profile showed KES 0.00 when the
+  server sent nothing; a new feed batch's protein showed 0%; dates without a value showed "N/A".
+  These now show "—". The AI & pregnancy list no longer shows an "Updated" date of today for
+  every check (the server doesn't send one yet). It lists checks by AI date instead.
+- Dates read day-first everywhere (03 Nov 2026), in the chosen language.
+
 ### Milk record fixes
 
 - **Editing a milk record no longer moves it to the morning.** The form didn't recognise the

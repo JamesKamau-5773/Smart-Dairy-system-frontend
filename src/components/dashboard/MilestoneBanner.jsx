@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Trophy, X } from 'lucide-react';
 import { milestoneKey, milestoneStatus, readFlag, writeFlag } from '../../lib/welcomeProgress';
+import { dashboardCopy } from '../../i18n/dashboard';
 
 /**
  * Congratulates the farm once each time its recorded milk crosses a milestone
@@ -36,11 +37,11 @@ export default function MilestoneBanner({ tenantId, farmId, totalLitres, milkLoa
       </span>
       <p className="flex-1 text-sm text-ink-900">
         <span className="block text-lg font-bold">
-          <span className="font-mono">{status.reached.toLocaleString('en-KE')}</span> litres recorded!
+          <span className="font-mono">{status.reached.toLocaleString('en-KE')}</span> {dashboardCopy.milestone.reached}
         </span>
-        Every one of them is on record. Keep it going.
+        {dashboardCopy.milestone.message}
       </p>
-      <button type="button" onClick={acknowledge} className="btn-ghost h-11 w-11 shrink-0 border-transparent !p-0" aria-label="Dismiss milestone">
+      <button type="button" onClick={acknowledge} className="btn-ghost h-11 w-11 shrink-0 border-transparent !p-0" aria-label={dashboardCopy.milestone.dismiss}>
         <X size={18} aria-hidden="true" />
       </button>
     </section>
