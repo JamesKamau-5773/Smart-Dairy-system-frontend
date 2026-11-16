@@ -10,7 +10,10 @@ What changed for farmers and staff using Maziwa Smart. Newest first.
   from Google, so pages show text sooner on a slow connection, and the font is saved for
   offline use. Numbers keep their columns lined up without the separate monospace font.
 - Buttons, inputs and table headings share one size and weight. On a phone, every text box is
-  16px so the screen doesn't zoom in when you tap it.
+  16px so the screen doesn't zoom in when you tap it, and search boxes say just "Search" so the
+  hint isn't cut off.
+- **The Soft / Dense switch in the profile menu is gone.** The app has one typography now; light
+  and dark stay. A saved Soft or Dense choice is cleared and the usual theme used.
 
 ### The whole app in Kiswahili
 

@@ -15,7 +15,6 @@ export const shellCopy = {
     roleUnknown: 'N/A',
     noRole: 'No role assigned',
     language: 'Language',
-    density: 'Interface density',
     dataSaver: 'Data saver',
     dataSaverHint: 'Hides cow photos until you tap them and refreshes less often, to save mobile data.',
     signOut: 'Sign out',

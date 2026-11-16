@@ -132,8 +132,6 @@
   --text-strong: rgba(15,23,42,0.92);
   --text-normal: rgba(15,23,42,0.78);
   --text-muted:  rgba(15,23,42,0.52);
-  --heading-weight: 700;
-  --ui-weight: 600;
 }
 
 @layer components {

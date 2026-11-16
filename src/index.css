@@ -5,23 +5,6 @@
 @tailwind components;
 @tailwind utilities;
 
-
-:root[data-theme="soft"] {
-  --text-strong: rgba(15,23,42,0.88);
-  --text-normal: rgba(15,23,42,0.72);
-  --text-muted:  rgba(15,23,42,0.44);
-  --heading-weight: 600;
-  --ui-weight: 500;
-}
-
-:root[data-theme="dense"] {
-  --text-strong: rgba(15,23,42,0.98);
-  --text-normal: rgba(15,23,42,0.86);
-  --text-muted:  rgba(15,23,42,0.64);
-  --heading-weight: 800;
-  --ui-weight: 700;
-}
-
 body {
   background: var(--canvas-warm);
   min-height: 100vh;
@@ -37,8 +20,6 @@ body {
 .text-ink-strong { color: var(--text-strong); }
 .text-ink-normal { color: var(--text-normal); }
 .text-ink-muted { color: var(--text-muted); }
-.font-ui { font-weight: var(--ui-weight); }
-.font-heading { font-weight: var(--heading-weight); }
 
 body::before,
 body::after {

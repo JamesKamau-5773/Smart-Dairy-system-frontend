@@ -5,7 +5,6 @@ import { useAuth } from '../contexts/AuthContext';
 import { ChevronDown, UserCircle, Menu } from 'lucide-react';
 import OfflineIndicator from '../components/ui/OfflineIndicator';
 import OfflineQueueInspector from '../components/ui/OfflineQueueInspector';
-import ThemeToggle from '../components/ui/ThemeToggle';
 import Confirmation, { useConfirmation } from '../components/ui/Confirmation';
 import offlineQueue from '../lib/offlineQueue';
 import { useDataSaver } from '../hooks/useDataSaver';
@@ -112,10 +111,6 @@ export default function Header({ onMenuClick = () => {} }) {
                   <LanguageSwitch full />
                 </div>
               )}
-              <div className="border-b border-ink/10 px-3 py-3">
-                <p className="mb-2 text-[10px] font-bold uppercase tracking-wider text-ink-muted">{copy.density}</p>
-                <ThemeToggle />
-              </div>
               <label className="flex cursor-pointer items-start justify-between gap-3 border-b border-ink/10 px-3 py-3" htmlFor="data-saver-toggle">
                 <span>
                   <span className="block text-sm font-semibold text-ink-900">{copy.dataSaver}</span>

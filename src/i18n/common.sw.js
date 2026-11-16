@@ -16,13 +16,6 @@ export const commonCopy = {
     typeAfter: 'ili kuthibitisha',
   },
 
-  density: {
-    soft: 'Laini', // REVIEW: "soft" typography
-    softHint: 'Maandishi laini',
-    dense: 'Kubana', // REVIEW: "dense" typography
-    denseHint: 'Maandishi yaliyobana (yanaonekana zaidi)', // REVIEW
-  },
-
   modal: {
     close: 'Funga',
   },
@@ -112,6 +105,7 @@ export const commonCopy = {
     reset: 'Futa vichujio',
     filters: 'Vichujio',
     all: 'Zote',
+    searchShort: 'Tafuta',
   },
 
   summary: {

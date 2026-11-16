@@ -1,6 +1,7 @@
 import { ChevronDown, Search, X } from 'lucide-react';
 import { formatCount } from '../../lib/numberFormat';
 import { commonCopy } from '../../i18n/common';
+import { PHONE_QUERY, useMediaQuery } from '../../hooks/useMediaQuery';
 
 const CONTROL = 'h-9 min-h-0 rounded-input border border-ink/15 bg-card text-sm text-ink focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/20';
 
@@ -14,12 +15,15 @@ export function Toolbar({ children, end }) {
   );
 }
 
+/** On a phone the placeholder is just "Search": inputs are 16px there and the page's longer
+ * one would be cut off. The label still says what the search covers. */
 export function ToolbarSearch({ label, value, onChange, placeholder }) {
+  const isPhone = useMediaQuery(PHONE_QUERY);
   return (
     <label className="relative min-w-0 flex-1 basis-48">
       <span className="sr-only">{label}</span>
       <Search size={14} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-ink-muted" aria-hidden="true" />
-      <input type="search" value={value} onChange={(event) => onChange(event.target.value)} placeholder={placeholder} className={`${CONTROL} w-full pl-9 pr-3`} />
+      <input type="search" value={value} onChange={(event) => onChange(event.target.value)} placeholder={isPhone ? commonCopy.filters.searchShort : placeholder} className={`${CONTROL} w-full pl-9 pr-3`} />
     </label>
   );
 }

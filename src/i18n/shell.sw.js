@@ -15,7 +15,6 @@ export const shellCopy = {
     roleUnknown: 'Haijulikani',
     noRole: 'Hana jukumu',
     language: 'Lugha',
-    density: 'Mpangilio wa skrini', // REVIEW: "interface density"
     dataSaver: 'Okoa data',
     dataSaverHint: 'Inaficha picha za ng’ombe hadi uziguse na inasasisha mara chache, ili kuokoa data ya simu.',
     signOut: 'Toka',

@@ -1,7 +1,7 @@
 /**
  * Text for shared building blocks used on many pages: confirmation dialogs, list load states,
  * filters, period totals and grouped lists, the session-expired sheet, restored drafts, the
- * offline queue and the density switch. A page passes its own nouns in (e.g. "milk records"),
+ * offline queue. A page passes its own nouns in (e.g. "milk records"),
  * so these sentences are written to read well around any noun.
  */
 export const commonCopy = {
@@ -14,13 +14,6 @@ export const commonCopy = {
     // "Type KE-012 to confirm": the text to type sits between these two.
     typeBefore: 'Type',
     typeAfter: 'to confirm',
-  },
-
-  density: {
-    soft: 'Soft',
-    softHint: 'Soft typography',
-    dense: 'Dense',
-    denseHint: 'Dense typography (higher contrast)',
   },
 
   modal: {
@@ -113,6 +106,8 @@ export const commonCopy = {
     reset: 'Reset',
     filters: 'Filters',
     all: 'All',
+    // A search box's placeholder on a phone, where the page's longer one is cut off.
+    searchShort: 'Search',
   },
 
   summary: {
