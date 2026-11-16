@@ -45,7 +45,7 @@ const renderLog = (path = '/operations/yield') => render(
 
 beforeEach(() => {
   vi.clearAllMocks();
-  // Rows exist this month; the one-day view of 10 Nov is empty.
+  // Rows exist this year; the one-day view of 10 Nov is empty.
   api.listYield.mockImplementation((params) => Promise.resolve(params.date_from === '2026-11-10' ? [] : novemberRows));
   api.getGroupTotals.mockResolvedValue({ groups: [
     { level: 'year', key: '2026', label: '2026', litres: '10.0', entries: 2 },
@@ -57,18 +57,20 @@ beforeEach(() => {
 });
 
 describe('Production Log summary strip', () => {
-  it('shows total milk, avg per day and available for the same period as the table', async () => {
+  it('shows total milk and avg per day (no Available) for the same period as the table: this year', async () => {
     renderLog();
     const strip = await screen.findByRole('region', { name: 'Milk totals' });
     await within(strip).findByText('246.0 L');
-    expect(within(strip).getAllByRole('term').map((term) => term.textContent)).toEqual(['Total milk', 'Avg per day', 'Available']);
-    expect(within(strip).getByText('Totals for this month, 01 Nov 2026 – 16 Nov 2026')).toBeTruthy();
+    expect(within(strip).getAllByRole('term').map((term) => term.textContent)).toEqual(['Total milk', 'Avg per day']);
+    expect(within(strip).queryByText('—')).toBeNull();
+    expect(within(strip).getByText('Totals for 2026')).toBeTruthy();
+    expect(screen.getByRole('button', { name: '01 Jan 2026 – 16 Nov 2026' })).toBeTruthy();
     expect(within(strip).getByRole('link', { name: /View full report/ }).getAttribute('href')).toBe('/operations/reports/milk-inventory');
     expect(screen.queryByRole('group', { name: 'Period' })).toBeNull();
-    const month = { date_from: '2026-11-01', date_to: '2026-11-16' };
+    const month = { date_from: '2026-01-01', date_to: '2026-11-16' };
     expect(api.listYield).toHaveBeenCalledWith(month);
     expect(api.getGroupTotals).toHaveBeenCalledWith({ ...month, levels: 'year,month,day' });
-    expect(api.getPeriodSummary).toHaveBeenCalledWith({ ...month, period: 'custom' });
+    expect(api.getPeriodSummary).toHaveBeenCalledWith({ ...month, period: 'year', anchor: '2026-01-01' });
   });
 
   it('orders the columns Session, Cow, Litres, Milker, Status, Actions, with litres unitless and badges only when not verified', async () => {
@@ -112,7 +114,7 @@ describe('Production Log summary strip', () => {
     await screen.findByRole('table');
     await within(screen.getByRole('table')).findByText('Joyce · Joyce');
     expect(within(strip).queryByText(/No entries/)).toBeNull();
-    expect(within(strip).getAllByRole('term')).toHaveLength(3);
+    expect(within(strip).getAllByRole('term')).toHaveLength(2);
   });
 
   it('still reads an older one-day link (?date=)', async () => {

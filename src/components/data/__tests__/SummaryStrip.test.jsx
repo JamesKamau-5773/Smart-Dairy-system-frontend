@@ -47,6 +47,12 @@ describe('SummaryStrip', () => {
     expect(onRetry).toHaveBeenCalled();
   });
 
+  it('shows a notice instead of figures when the API can\'t total the view', () => {
+    renderStrip({ notice: 'Totals cover one calendar year at a time.', loadState: 'loading', hasData: false });
+    expect(screen.getByRole('status').textContent).toBe('Totals cover one calendar year at a time.');
+    expect(screen.queryByRole('term')).toBeNull();
+  });
+
   it('says so when offline with nothing saved', () => {
     renderStrip({ loadState: 'offline', hasData: false });
     expect(screen.getByRole('status').textContent).toMatch(/offline/);

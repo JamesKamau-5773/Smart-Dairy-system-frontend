@@ -2,8 +2,6 @@
 // They map API DTOs to view models and do nothing else: every total, average, bucket
 // and percentage comes from the backend. Components never read raw API shapes.
 
-// A date range chosen in a page's filters.
-export const CUSTOM_PERIOD = 'custom';
 export const GROUP_LEVELS = Object.freeze(['year', 'month', 'week', 'day']);
 // The levels the Production Log and Ledger tables group by (no weeks).
 export const TABLE_GROUP_LEVELS = Object.freeze(['year', 'month', 'day']);
@@ -164,14 +162,22 @@ export function toTotalsParams(filters = {}) {
 
 /**
  * The range the Production Log and the Ledger open on, for the table and the summary strip
- * alike: the current month up to today. (Totals for "all dates" need BR-021.)
- * `today` is YYYY-MM-DD; only the text is used, no date maths.
+ * alike: the current year, 1 Jan up to today. `today` is YYYY-MM-DD; text only, no date maths.
+ * TODO(BR-021): with a no-period summary the pages could offer "all dates" instead.
  */
-export function currentMonthRange(today) {
-  return { from: `${today.slice(0, 7)}-01`, to: today };
+export function currentYearRange(today) {
+  return { from: `${today.slice(0, 4)}-01-01`, to: today };
 }
 
-/** Summary params for the table's date range (`period=custom`). */
+/**
+ * Summary params for the table's date range, or null when the API can't total it.
+ *
+ * The summary endpoints take only `period=week|month|year` + `anchor` (anything else is a 422);
+ * `date_from` / `date_to` then narrow that period's totals. So a range inside one calendar
+ * year is asked for as that year, narrowed to the range: the backend totals exactly the
+ * range. TODO(BR-021): a range across two years needs a summary that takes any range.
+ */
 export function summaryScopeParams(range) {
-  return { period: CUSTOM_PERIOD, date_from: range.from, date_to: range.to };
+  if (!range?.from || !range?.to || range.from.slice(0, 4) !== range.to.slice(0, 4)) return null;
+  return { period: 'year', anchor: range.from, date_from: range.from, date_to: range.to };
 }

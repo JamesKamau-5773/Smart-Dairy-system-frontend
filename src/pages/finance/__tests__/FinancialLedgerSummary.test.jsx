@@ -17,7 +17,7 @@ vi.mock('../../../hooks/useTenant', () => ({
   useTenant: () => ({ tenantId: 'tenant-1', farmId: 'farm-1' }),
 }));
 
-// The Ledger opens on the current month up to today.
+// The Ledger opens on the current year up to today.
 vi.mock('../../../lib/localDate', async (importOriginal) => ({ ...(await importOriginal()), todayLocalIso: () => '2026-11-16' }));
 
 vi.mock('../../../contexts/AuthContext', () => ({
@@ -71,8 +71,8 @@ const novemberSummary = {
   breakdown: [],
 };
 
-const THIS_MONTH = 'Totals for this month, 01 Nov 2026 – 16 Nov 2026';
-const MONTH_DATES = { date_from: '2026-11-01', date_to: '2026-11-16' };
+const THIS_YEAR = 'Totals for 2026';
+const YEAR_DATES = { date_from: '2026-01-01', date_to: '2026-11-16' };
 
 const renderLedger = (path = '/finance/ledger') => {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
@@ -102,14 +102,14 @@ describe('FinancialLedger summaries', () => {
   it('shows one strip of backend figures and no period toggle, chart or all-time balances', async () => {
     renderLedger();
 
-    expect(await screen.findByText(THIS_MONTH)).toBeTruthy();
+    expect(await screen.findByText(THIS_YEAR)).toBeTruthy();
     const strip = screen.getByRole('region', { name: 'Money in and out' });
     // 1740000 cents → KES 17,400.00, with no client-side arithmetic.
     expect(within(strip).getByText('17,400')).toBeTruthy();
     expect(within(strip).getByText('14,200')).toBeTruthy();
     expect(within(strip).getAllByRole('term').map((term) => term.textContent)).toEqual(['Money in', 'Money out', 'Net', 'Unpaid']);
     expect(within(strip).getByRole('link', { name: /View full report/ }).getAttribute('href'))
-      .toBe('/operations/reports?period=custom&start_date=2026-11-01&end_date=2026-11-16');
+      .toBe('/operations/reports?period=custom&start_date=2026-01-01&end_date=2026-11-16');
 
     expect(screen.queryByRole('button', { name: 'Next period' })).toBeNull();
     expect(screen.queryByRole('button', { name: 'Month' })).toBeNull();
@@ -120,12 +120,14 @@ describe('FinancialLedger summaries', () => {
     expect(screen.getByRole('heading', { name: 'Ledger' })).toBeTruthy();
   });
 
-  it('opens the table and the strip on the same period: this month up to today', async () => {
+  it('opens the table and the strip on the same period: this year up to today', async () => {
     renderLedger();
-    await screen.findByText(THIS_MONTH);
-    await waitFor(() => expect(backendMocks.listLedgerEntries).toHaveBeenCalledWith(expect.objectContaining(MONTH_DATES)));
-    expect(backendMocks.getGroupTotals).toHaveBeenCalledWith({ ...MONTH_DATES, levels: 'year,month,day' });
-    expect(backendMocks.getSummary).toHaveBeenCalledWith({ ...MONTH_DATES, period: 'custom' });
+    await screen.findByText(THIS_YEAR);
+    await waitFor(() => expect(backendMocks.listLedgerEntries).toHaveBeenCalledWith(expect.objectContaining(YEAR_DATES)));
+    expect(backendMocks.getGroupTotals).toHaveBeenCalledWith({ ...YEAR_DATES, levels: 'year,month,day' });
+    // Supported params only: the year, narrowed to 1 Jan – today.
+    expect(backendMocks.getSummary).toHaveBeenCalledWith({ ...YEAR_DATES, period: 'year', anchor: '2026-01-01' });
+    expect(screen.getByRole('button', { name: '01 Jan 2026 – 16 Nov 2026' })).toBeTruthy();
     // The default isn't a filter, so there is no chip to remove.
     expect(screen.queryByRole('button', { name: /^Remove filter/ })).toBeNull();
   });
@@ -169,25 +171,25 @@ describe('FinancialLedger summaries', () => {
     const range = { date_from: '2026-10-01', date_to: '2026-10-15' };
     await waitFor(() => expect(backendMocks.listLedgerEntries).toHaveBeenCalledWith(expect.objectContaining(range)));
     expect(backendMocks.getGroupTotals).toHaveBeenCalledWith(expect.objectContaining(range));
-    expect(backendMocks.getSummary).toHaveBeenCalledWith({ period: 'custom', ...range });
+    expect(backendMocks.getSummary).toHaveBeenCalledWith({ period: 'year', anchor: '2026-10-01', ...range });
     expect(await screen.findByText('Totals for 01 Oct 2026 – 15 Oct 2026')).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Remove filter 01 Oct 2026 – 15 Oct 2026' })).toBeTruthy();
     expect(screen.getByRole('link', { name: /View full report/ }).getAttribute('href'))
       .toBe('/operations/reports?period=custom&start_date=2026-10-01&end_date=2026-10-15');
   });
 
-  it('ignores a reversed range in the address and opens on this month', async () => {
+  it('ignores a reversed range in the address and opens on this year', async () => {
     renderLedger('/finance/ledger?from=2026-10-15&to=2026-10-01');
     await waitFor(() => expect(backendMocks.listLedgerEntries).toHaveBeenCalled());
-    expect(backendMocks.listLedgerEntries.mock.calls[0][0]).toMatchObject(MONTH_DATES);
+    expect(backendMocks.listLedgerEntries.mock.calls[0][0]).toMatchObject(YEAR_DATES);
   });
 
   it('sets the date range from the toolbar, for the table and the strip together', async () => {
     renderLedger();
-    await screen.findByText(THIS_MONTH);
+    await screen.findByText(THIS_YEAR);
 
     // The date button names the range the table shows.
-    fireEvent.click(screen.getByRole('button', { name: '01 Nov 2026 – 16 Nov 2026' }));
+    fireEvent.click(screen.getByRole('button', { name: '01 Jan 2026 – 16 Nov 2026' }));
     const form = await screen.findByRole('form', { name: 'Custom date range' });
     fireEvent.change(within(form).getByLabelText('From'), { target: { value: '01/10/2026' } });
     fireEvent.change(within(form).getByLabelText('To'), { target: { value: '15/10/2026' } });
@@ -196,7 +198,17 @@ describe('FinancialLedger summaries', () => {
     await waitFor(() => {
       expect(backendMocks.listLedgerEntries).toHaveBeenLastCalledWith(expect.objectContaining({ date_from: '2026-10-01', date_to: '2026-10-15' }));
     });
-    expect(backendMocks.getSummary).toHaveBeenLastCalledWith({ period: 'custom', date_from: '2026-10-01', date_to: '2026-10-15' });
+    expect(backendMocks.getSummary).toHaveBeenLastCalledWith({ period: 'year', anchor: '2026-10-01', date_from: '2026-10-01', date_to: '2026-10-15' });
+  });
+
+  it('says the strip covers one year at a time for a range across two years, and requests no totals', async () => {
+    renderLedger('/finance/ledger?from=2025-12-01&to=2026-01-15');
+    const strip = await screen.findByRole('region', { name: 'Money in and out' });
+    expect(await within(strip).findByText(/Totals cover one calendar year at a time/)).toBeTruthy();
+    expect(within(strip).queryByRole('term')).toBeNull();
+    expect(backendMocks.getSummary).not.toHaveBeenCalled();
+    // The table still shows the chosen dates.
+    await waitFor(() => expect(backendMocks.listLedgerEntries).toHaveBeenCalledWith(expect.objectContaining({ date_from: '2025-12-01', date_to: '2026-01-15' })));
   });
 
   it('says "No records" instead of a row of zeros when the API reports none', async () => {
@@ -209,7 +221,7 @@ describe('FinancialLedger summaries', () => {
 
   it('sends every filter to the server for rows and totals, and shows it as a chip', async () => {
     renderLedger();
-    await screen.findByText(THIS_MONTH);
+    await screen.findByText(THIS_YEAR);
 
     fireEvent.change(screen.getByRole('searchbox'), { target: { value: 'Auntie' } });
 
@@ -235,7 +247,7 @@ describe('FinancialLedger summaries', () => {
       : allAccountsResponse));
     renderLedger();
 
-    await screen.findByText(THIS_MONTH);
+    await screen.findByText(THIS_YEAR);
     fireEvent.change(screen.getByRole('searchbox'), { target: { value: 'Antie' } });
 
     expect(await screen.findByText('No exact match for “Antie”. Showing results for Auntie Grace.')).toBeTruthy();

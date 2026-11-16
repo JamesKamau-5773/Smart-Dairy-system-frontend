@@ -40,17 +40,28 @@ function useScope() {
   return { tenantId, farmId, enabled: Boolean(tenantId && farmId) };
 }
 
-const summaryParams = (range, filters) => ({ ...summaryScopeParams(range), ...toTotalsParams(filters) });
+// Null when the API can't total the range (it crosses a calendar year; BR-021).
+const summaryParams = (range, filters) => {
+  const scope = summaryScopeParams(range);
+  return scope ? { ...scope, ...toTotalsParams(filters) } : null;
+};
+
+// A summary the API can't give for this range: nothing is requested, and the strip says why.
+function useSummaryQuery({ queryKey, queryFn, select, params, enabled }) {
+  const totals = useTotalsQuery({ queryKey, queryFn, select, enabled: enabled && params !== null });
+  return { ...totals, unsupported: params === null };
+}
 const levelParams = (filters, levels) => ({ ...toTotalsParams(filters), ...(levels ? { levels: levels.join(',') } : {}) });
 
 /** Ledger summary for the table's date range and other filters. */
 export function useLedgerSummary({ range, filters }) {
   const { tenantId, farmId, enabled } = useScope();
   const params = summaryParams(range, filters);
-  return useTotalsQuery({
+  return useSummaryQuery({
     queryKey: [...QUERY_KEYS.LEDGER_SUMMARY(tenantId, farmId), params],
     queryFn: () => ledgerApi.getSummary(params),
     select: toLedgerSummary,
+    params,
     enabled,
   });
 }
@@ -70,10 +81,11 @@ export function useLedgerGroupTotals(filters, { levels, enabled: allowed = true 
 export function useProductionSummary({ range, filters }) {
   const { tenantId, farmId, enabled } = useScope();
   const params = summaryParams(range, filters);
-  return useTotalsQuery({
+  return useSummaryQuery({
     queryKey: [...QUERY_KEYS.PRODUCTION_PERIOD_SUMMARY(tenantId, farmId), params],
     queryFn: () => productionApi.getPeriodSummary(params),
     select: toProductionSummary,
+    params,
     enabled,
   });
 }

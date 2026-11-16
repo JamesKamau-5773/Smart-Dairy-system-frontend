@@ -94,7 +94,7 @@ export const commonCopy = {
     checkConnection: 'Angalia mtandao wako.',
     asOf: (time) => `Hadi saa ${time}`,
     scope: (label) => `Jumla za ${label}`,
-    thisMonth: (range) => `mwezi huu, ${range}`,
+    acrossYears: 'Jumla huonyeshwa kwa mwaka mmoja kwa wakati. Chagua tarehe ndani ya mwaka mmoja ili kuziona.', // REVIEW
     fullReport: 'Ona ripoti kamili',
     dates: 'Tarehe',
   },

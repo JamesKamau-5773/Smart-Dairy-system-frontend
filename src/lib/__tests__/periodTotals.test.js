@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { changeDirection, currentMonthRange, minorUnitsToAmount, summaryScopeParams, toLedgerGroupTotals, toLedgerSummary, toProductionSummary, toTotalsParams } from '../periodTotals';
+import { changeDirection, currentYearRange, minorUnitsToAmount, summaryScopeParams, toLedgerGroupTotals, toLedgerSummary, toProductionSummary, toTotalsParams } from '../periodTotals';
 import { buildGroupTree, defaultOpenKeys, expandAll } from '../groupTree';
 import { formatDate, formatDayLabel, maskInputDate, parseInputDate, toInputDate } from '../dateFormat';
 import { formatDecimal, formatLitres } from '../numberFormat';
@@ -45,9 +45,13 @@ describe('period totals adapters', () => {
     expect(toTotalsParams({ type: 'all', search: '', date_from: '2026-11-01', status: undefined })).toEqual({ date_from: '2026-11-01' });
   });
 
-  it('opens on the current month up to today, and asks the summary for the table\'s range', () => {
-    expect(currentMonthRange('2026-11-16')).toEqual({ from: '2026-11-01', to: '2026-11-16' });
-    expect(summaryScopeParams({ from: '2026-10-01', to: '2026-10-15' })).toEqual({ period: 'custom', date_from: '2026-10-01', date_to: '2026-10-15' });
+  it('opens on the current year up to today, and asks the summary for the table\'s range', () => {
+    expect(currentYearRange('2026-11-16')).toEqual({ from: '2026-01-01', to: '2026-11-16' });
+    // The API takes week|month|year only (period=custom is a 422), and narrows the period by
+    // date_from / date_to, so a range inside one year is that year, narrowed to the range.
+    expect(summaryScopeParams({ from: '2026-10-01', to: '2026-10-15' })).toEqual({ period: 'year', anchor: '2026-10-01', date_from: '2026-10-01', date_to: '2026-10-15' });
+    // TODO(BR-021): a range across two years can't be totalled yet.
+    expect(summaryScopeParams({ from: '2025-12-01', to: '2026-01-15' })).toBeNull();
   });
 });
 
@@ -100,13 +104,14 @@ describe('production log page rules', () => {
     expect(['246.0', '8', 4, 3.5, '1306.4'].map((value) => litres(value))).toEqual(['246.0 L', '8.0 L', '4.0 L', '3.5 L', '1,306.4 L']);
   });
 
-  it('shows total milk, avg per day and available, with "—" for a figure the API does not send', async () => {
+  it('shows total milk and avg per day, leaving Available out until BR-022', async () => {
     const { productionSummaryConfig } = await import('../../components/periods/periodConfigs');
     const text = (items) => items.map((item) => [item.label, item.value.props.children]);
     const base = toProductionSummary({ current: { litres: '246.0', entries: 36, avg_litres_per_day: '41.0' } });
-    expect(text(productionSummaryConfig.items(base))).toEqual([['Total milk', '246.0 L'], ['Avg per day', '41.0 L'], ['Available', '—']]);
+    expect(text(productionSummaryConfig.items(base))).toEqual([['Total milk', '246.0 L'], ['Avg per day', '41.0 L']]);
+    // Not shown even when sent, and never as a dash.
     const withAvailable = toProductionSummary({ current: { litres: '246.0', entries: 36, avg_litres_per_day: '41.0', available_litres: '233.5' } });
-    expect(text(productionSummaryConfig.items(withAvailable))[2]).toEqual(['Available', '233.5 L']);
+    expect(productionSummaryConfig.items(withAvailable).map((item) => item.key)).toEqual(['litres', 'avg']);
   });
 
   it('is empty only when the API says there are no entries', async () => {
@@ -172,7 +177,7 @@ describe('ledger grouping', () => {
     const { ledgerSummaryConfig, summaryScope } = await import('../../components/periods/periodConfigs');
     const summary = toLedgerSummary({ label: 'Nov 2026', current: { income: '100', expenses: '0', net: '100', unpaid: '0', count: 1 } });
     expect(ledgerSummaryConfig.items(summary).map((item) => item.label)).toEqual(['Money in', 'Money out', 'Net', 'Unpaid']);
-    expect(summaryScope({ from: '2026-11-01', to: '2026-11-16' }, { isDefault: true })).toBe('this month, 01 Nov 2026 – 16 Nov 2026');
+    expect(summaryScope({ from: '2026-01-01', to: '2026-11-16' }, { isDefault: true })).toBe('2026');
     expect(summaryScope({ from: '2026-10-01', to: '2026-10-15' })).toBe('01 Oct 2026 – 15 Oct 2026');
   });
 });

@@ -550,12 +550,20 @@ will then match them (one constant), and ideally read them from BR-015 capabilit
 **Status:** Open · **Priority:** High · **Raised:** 2026-11-16 · **Frontend:** `lib/periodTotals.js` (`currentMonthRange`, `summaryScopeParams`), `hooks/usePeriodTotals.js`, `hooks/useLedgerData.js`, `hooks/useProductionData.js`
 
 The Production Log and the Ledger no longer have a Week / Month / Year control. The table and the
-one-row summary strip above it must always cover the same dates. Both summary endpoints require a
-period, so the frontend can't offer "all dates".
+one-row summary strip above it must always cover the same dates.
 
-Today both pages open on the current month up to today, for the table and the strip alike, and the
-Dates filter picks another range. Both are sent as `period=custom&date_from&date_to`. "All dates"
-needs this request.
+What the backend takes today (read from `app/schemas/period_query.py` at backend `4f70b5e`): `period`
+must be `week`, `month` or `year` (anything else, including `custom`, is `422 INVALID_PERIOD`), and
+`date_from` / `date_to` then narrow that period's totals. The frontend therefore:
+
+- opens both pages on **the current year, 1 Jan to today**, for the table and the strip, captioned
+  "Totals for 2026";
+- asks for any range inside one calendar year as
+  `period=year&anchor=<from>&date_from=<from>&date_to=<to>`, which totals exactly that range;
+- shows "Totals cover one calendar year at a time" instead of figures when the chosen range crosses
+  a year boundary. It requests no summary then.
+
+So "all dates" and multi-year ranges need this request. It stays high priority.
 
 Request:
 
@@ -573,14 +581,14 @@ Request:
    Center shape (`revenue_total_kes`, …), so use `period=all` there, or a new path such as
    `GET /api/production/totals`.
 
-2. Confirm `period=custom&date_from&date_to` is supported by **`/api/production/summary`** (it is
-   in the ledger contract only). The Production Log sends it when a date is chosen
-   (`date_from = date_to`).
+2. Accept **any range**: `period=custom&date_from&date_to` (as `docs/contracts/period-totals.md`
+   asked), or no period with `date_from` / `date_to`, on both summary endpoints, so a range across
+   years has totals.
 
 3. Same filters as the lists and group totals: ledger `type`, `category`, `search`, `date_from`,
    `date_to`; production `search`, `session`, `date_from`, `date_to`.
 
-When this ships, the Dates filter can offer "All dates" for the table and the strip together.
+When this ships, the strip drops its one-year limit and the Dates filter can offer "All dates".
 
 ---
 
@@ -588,11 +596,14 @@ When this ships, the Dates filter can offer "All dates" for the table and the st
 
 **Status:** Open · **Raised:** 2026-11-16 (first asked in `docs/contracts/period-totals.md`, question 6) · **Frontend:** `components/periods/periodConfigs.jsx` (`productionSummaryConfig`), `pages/operations/productionLog.jsx`
 
-The Production Log strip shows **Total milk**, **Avg per day** and **Available**. Available shows
-"—" because `GET /api/production/summary` doesn't send it.
+The Production Log strip shows **Total milk** and **Avg per day**. **Available** is left out, not
+shown as "—", until this is confirmed.
 
-When the filters match no entries, the strip shows one line, "No entries · last entry 07 Nov 2026",
-where the date opens that day in the table. Without `last_entry_date` it can only say "No entries".
+The backend source at `4f70b5e` already sends `current.available_litres` and `current.last_entry_date`
+(the latter ignoring the date filter, as asked below). If that code is deployed, please confirm the
+definitions below and mark this **Done**. The frontend will then add Available back (one line in
+`productionSummaryConfig`). The "No entries · last entry <date>" line already uses
+`last_entry_date` when it is sent.
 
 Request: in `current` of `GET /api/production/summary` (all periods, including BR-021's):
 

@@ -50,7 +50,7 @@ describe('useLedgerData', () => {
     const shared = { type: 'revenue', search: 'Auntie', date_from: '2026-10-01', date_to: '2026-10-15' };
     expect(api.listLedgerEntries).toHaveBeenCalledWith({ per_page: 100, farm_id: 'farm-1', tenant_id: 'tenant-1', ...shared, search_query: 'Auntie' });
     expect(api.ledgerGroupTotals).toHaveBeenCalledWith({ ...shared, levels: 'year,month,day' });
-    expect(api.ledgerSummary).toHaveBeenCalledWith({ ...shared, period: 'custom' });
+    expect(api.ledgerSummary).toHaveBeenCalledWith({ ...shared, period: 'year', anchor: '2026-10-01' });
     expect(result.current.rows.total).toBe(563);
     await waitFor(() => expect(result.current.summary.data.current.income).toBe(17400));
   });
@@ -62,7 +62,7 @@ describe('useLedgerData', () => {
     const dates = { date_from: '2026-11-01', date_to: '2026-11-16' };
     expect(api.listLedgerEntries).toHaveBeenCalledWith({ per_page: 100, farm_id: 'farm-1', tenant_id: 'tenant-1', ...dates });
     expect(api.ledgerGroupTotals).toHaveBeenCalledWith({ ...dates, levels: 'year,month,day' });
-    expect(api.ledgerSummary).toHaveBeenCalledWith({ ...dates, period: 'custom' });
+    expect(api.ledgerSummary).toHaveBeenCalledWith({ ...dates, period: 'year', anchor: '2026-11-01' });
   });
 });
 
@@ -77,7 +77,7 @@ describe('useProductionData', () => {
     const shared = { search: 'Neema', session: 'Morning', date_from: '2026-11-07', date_to: '2026-11-07' };
     expect(api.listYield).toHaveBeenCalledWith(shared);
     expect(api.productionGroupTotals).toHaveBeenCalledWith({ ...shared, levels: 'year,month,day' });
-    expect(api.productionSummary).toHaveBeenCalledWith({ ...shared, period: 'custom' });
+    expect(api.productionSummary).toHaveBeenCalledWith({ ...shared, period: 'year', anchor: '2026-11-07' });
     expect(result.current.rows.data).toEqual([{ id: 'y1' }]);
   });
 
@@ -85,7 +85,15 @@ describe('useProductionData', () => {
     renderHook(() => useProductionData({ filters: { search: '', session: 'all' }, range: { from: '2026-11-01', to: '2026-11-16' } }), { wrapper });
     await waitFor(() => expect(api.listYield).toHaveBeenCalled());
     expect(api.listYield).toHaveBeenCalledWith({ date_from: '2026-11-01', date_to: '2026-11-16' });
-    expect(api.productionSummary).toHaveBeenCalledWith({ period: 'custom', date_from: '2026-11-01', date_to: '2026-11-16' });
+    expect(api.productionSummary).toHaveBeenCalledWith({ period: 'year', anchor: '2026-11-01', date_from: '2026-11-01', date_to: '2026-11-16' });
+  });
+
+  it('asks for no summary when the range crosses a year, and says so (BR-021)', async () => {
+    const { result } = renderHook(() => useProductionData({ filters: { search: '', session: 'all' }, range: { from: '2025-12-01', to: '2026-01-15' } }), { wrapper });
+    await waitFor(() => expect(api.listYield).toHaveBeenCalled());
+    expect(api.listYield).toHaveBeenCalledWith({ date_from: '2025-12-01', date_to: '2026-01-15' });
+    expect(result.current.summary.unsupported).toBe(true);
+    expect(api.productionSummary).not.toHaveBeenCalled();
   });
 });
 

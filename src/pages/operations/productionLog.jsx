@@ -21,11 +21,11 @@ import SummaryStrip from "../../components/data/SummaryStrip";
 import { FilterChips, ResultCount, Toolbar, ToolbarSearch } from "../../components/data/Toolbar";
 import OverflowMenu from "../../components/ui/OverflowMenu";
 import ToolbarDateRange from "../../components/data/ToolbarDateRange";
-import { productionGroupConfig, productionSummaryConfig, summaryIsEmpty, summaryScope } from "../../components/periods/periodConfigs";
+import { productionGroupConfig, productionSummaryConfig, summaryIsEmpty, summaryNotice, summaryScope } from "../../components/periods/periodConfigs";
 import { useInvalidateProduction } from "../../hooks/usePeriodTotals";
 import { useProductionData } from "../../hooks/useProductionData";
 import { formatLitres } from "../../lib/numberFormat";
-import { currentMonthRange } from "../../lib/periodTotals";
+import { currentYearRange } from "../../lib/periodTotals";
 import { formatDateRange } from "../../lib/dateFormat";
 import toast from "react-hot-toast";
 import { productionCopy as copy, sessionLabel } from "../../i18n/production";
@@ -205,10 +205,10 @@ export default function YieldLog() {
 
   // Every filter runs on the server, and one hook requests the rows, the group totals and
   // the summary strip with the same params, so all three agree.
-  // The table and the strip open on the current month (as on the Ledger); a range in the
-  // address replaces it.
+  // The table and the strip open on the current year, 1 Jan to today (as on the Ledger); a
+  // range in the address replaces it, and removing that range goes back to the year.
   const chosenRange = chosenRangeOf(filters);
-  const dateRange = chosenRange ?? currentMonthRange(todayLocalIso());
+  const dateRange = chosenRange ?? currentYearRange(todayLocalIso());
   const chosenDay = chosenRange && chosenRange.from === chosenRange.to ? chosenRange.from : '';
   const setRange = (next) => updateFilters({ from: next?.from ?? '', to: next?.to ?? '', date: '' });
   const { rows: yieldRows, groupTotals, summary: productionSummary } = useProductionData({
@@ -468,6 +468,7 @@ export default function YieldLog() {
         items={summary ? productionSummaryConfig.items(summary) : []}
         scope={summaryScope(dateRange, { isDefault: !chosenRange })}
         empty={stripEmpty}
+        notice={summaryNotice(productionSummary)}
         link={{ to: '/operations/reports/milk-inventory' }}
         loadState={productionSummary.loadState}
         hasData={Boolean(summary)}

@@ -94,7 +94,7 @@ export const commonCopy = {
     checkConnection: 'Check your connection.',
     asOf: (time) => `As of ${time}`,
     scope: (label) => `Totals for ${label}`,
-    thisMonth: (range) => `this month, ${range}`,
+    acrossYears: 'Totals cover one calendar year at a time. Choose dates within one year to see them.',
     fullReport: 'View full report',
     dates: 'Dates',
   },

@@ -23,6 +23,7 @@ function Retry({ onRetry }) {
  * items:     [{ key, label, value }]
  * scope:     what the figures cover, e.g. "Nov 2026" or "01 Oct 2026 – 15 Oct 2026"
  * empty:     shown instead of the figures when the result has no records (never a row of zeros)
+ * notice:    shown instead of everything else when the API can't total this view (nothing loads)
  * link:      { to, label? }
  * loadState: 'loading' | 'ready' | 'stale' | 'error' | 'offline'
  */
@@ -31,6 +32,7 @@ export default function SummaryStrip({
   items = [],
   scope,
   empty = null,
+  notice = null,
   link,
   loadState,
   hasData,
@@ -41,7 +43,9 @@ export default function SummaryStrip({
   const asOfTime = formatAsOfTime(asOf);
 
   let body;
-  if (loadState === 'loading' && !hasData) {
+  if (notice) {
+    body = <p role="status" className="text-sm text-ink-muted">{notice}</p>;
+  } else if (loadState === 'loading' && !hasData) {
     body = (
       <div aria-busy="true" className="flex flex-wrap gap-x-8 gap-y-2">
         {Array.from({ length: Math.max(items.length, 3) }, (_, index) => (

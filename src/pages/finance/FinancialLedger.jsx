@@ -24,11 +24,11 @@ import GroupedDataTable from '../../components/data/GroupedDataTable';
 import SummaryStrip from '../../components/data/SummaryStrip';
 import ToolbarDateRange from '../../components/data/ToolbarDateRange';
 import { FilterChips, ResultCount, Toolbar, ToolbarSearch, ToolbarSelect } from '../../components/data/Toolbar';
-import { ledgerGroupConfig, ledgerSummaryConfig, summaryIsEmpty, summaryScope } from '../../components/periods/periodConfigs';
+import { ledgerGroupConfig, ledgerSummaryConfig, summaryIsEmpty, summaryNotice, summaryScope } from '../../components/periods/periodConfigs';
 import { useInvalidateLedger } from '../../hooks/usePeriodTotals';
 import { useLedgerData } from '../../hooks/useLedgerData';
 import { formatDateRange } from '../../lib/dateFormat';
-import { currentMonthRange } from '../../lib/periodTotals';
+import { currentYearRange } from '../../lib/periodTotals';
 import { ledgerCopy } from '../../i18n/ledger';
 import { correctionKind } from '../../lib/ledgerCorrection';
 import { readAttachments } from '../../lib/receiptAttachments';
@@ -100,9 +100,10 @@ const FinancialLedger = () => {
   const { filters: urlFilters, setFilters: setUrlFilters, resetFilters: resetUrlFilters } = useUrlFilters(URL_FILTERS, { allowed: URL_FILTER_VALUES });
   const [search, setSearch] = useState('');
   const ledgerFilters = { ...urlFilters, search };
-  // The table and the strip open on the current month; a range in the address replaces it.
+  // The table and the strip open on the current year (1 Jan to today); a range in the
+  // address replaces it, and removing that range goes back to the year.
   const chosenRange = rangeFrom(urlFilters);
-  const range = chosenRange ?? currentMonthRange(todayLocalIso());
+  const range = chosenRange ?? currentYearRange(todayLocalIso());
   const COLUMNS = COLUMN_LAYOUT.map((entry) => ({
     ...entry,
     header: entry.srOnly ? <span className="sr-only">{ledgerCopy.columns[entry.id]}</span> : ledgerCopy.columns[entry.id],
@@ -344,6 +345,7 @@ const FinancialLedger = () => {
         items={summary ? ledgerSummaryConfig.items(summary) : []}
         scope={summaryScope(range, { isDefault: !chosenRange })}
         empty={summaryIsEmpty(summary) && tableIsEmpty && 'No records'}
+        notice={summaryNotice(ledgerSummary)}
         link={{ to: reportLink }}
         loadState={ledgerSummary.loadState}
         hasData={Boolean(summary)}

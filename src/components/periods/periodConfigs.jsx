@@ -11,11 +11,13 @@ import { commonCopy } from '../../i18n/common';
 
 const moneyOrDash = (amount, props = {}) => (amount == null ? '—' : <Money amount={amount} {...props} />);
 const signedMoneyText = (amount) => (amount == null ? '—' : formatMoneyText(amount));
-/** What the strip covers, named: "this month, 01 Nov 2026 – 16 Nov 2026" or the chosen range. */
-export const summaryScope = (range, { isDefault = false } = {}) => {
-  const dates = formatDateRange(range?.from, range?.to);
-  return isDefault && dates ? commonCopy.summary.thisMonth(dates) : dates;
-};
+/** What the strip covers: the year ("2026") for the default range, else the chosen dates. */
+export const summaryScope = (range, { isDefault = false } = {}) => (
+  isDefault && range?.from ? range.from.slice(0, 4) : formatDateRange(range?.from, range?.to)
+);
+
+/** Why the strip has no figures for this range, or null when it can have them. */
+export const summaryNotice = (summaryState) => (summaryState.unsupported ? commonCopy.summary.acrossYears : null);
 
 /** True when the API says the result has no records (never inferred from missing figures). */
 export const summaryIsEmpty = (summary) => summary?.current?.count === 0;
@@ -49,11 +51,11 @@ const entriesText = (count) => (count == null ? '—' : productionCopy.group.ent
 const litresValue = (value) => <span className="font-mono tabular-nums">{formatLitres(value)}</span>;
 
 export const productionSummaryConfig = {
-  // TODO(BR-022): `available_litres` is requested from the backend; "—" until it is sent.
+  // TODO(BR-022): "Available" (`available_litres`) is left out, not shown as "—", until the
+  // backend confirms the field; add it back here as a third item when it does.
   items: ({ current }) => [
     { key: 'litres', label: productionCopy.summary.totalMilk, value: litresValue(current.litres) },
     { key: 'avg', label: productionCopy.summary.avgPerDay, value: litresValue(current.avgLitresPerDay) },
-    { key: 'available', label: productionCopy.summary.available, value: litresValue(current.availableLitres) },
   ],
 };
 

@@ -106,7 +106,9 @@ Standard error envelope; `422` for an invalid period or anchor.
 7. The "Recent calf feedings" section lists records only. If a total is wanted there, it should
    come from the API too (the same `fed_to_calves_litres`).
 8. Ledger re-layout (2026-11-07, details in `docs/audit/ledger-relayout.md`):
-   - `GET /api/ledger/summary?period=custom&date_from=YYYY-MM-DD&date_to=YYYY-MM-DD` (now sent),
+   - `GET /api/ledger/summary?period=custom&date_from=YYYY-MM-DD&date_to=YYYY-MM-DD`. Not sent any more:
+     the backend answers `422 INVALID_PERIOD`. The frontend sends `period=year` narrowed by `date_from` /
+     `date_to` instead (BACKEND_REQUESTS.md, BR-021),
      with `previous` (the comparable preceding range) and `breakdown`.
    - Always return `previous` with `label` and `count`, even when that period is empty.
    - `breakdown[]`: add `short_label` ("Mar") and `count`; key month breakdowns by day so
