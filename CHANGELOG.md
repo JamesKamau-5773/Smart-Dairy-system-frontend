@@ -4,6 +4,14 @@ What changed for farmers and staff using Maziwa Smart. Newest first.
 
 ## Unreleased
 
+### One typeface (typography phase 1)
+
+- **The app uses one typeface, Inter, served with the app.** It no longer downloads three fonts
+  from Google, so pages show text sooner on a slow connection, and the font is saved for
+  offline use. Numbers keep their columns lined up without the separate monospace font.
+- Buttons, inputs and table headings share one size and weight. On a phone, every text box is
+  16px so the screen doesn't zoom in when you tap it.
+
 ### The whole app in Kiswahili
 
 - **Every screen now follows the language switch.** Before, only the sidebar, sign-in and a few

@@ -1,5 +1,20 @@
 /** @type {import('tailwindcss').Config} */
 import tailwindcssAnimate from 'tailwindcss-animate';
+import plugin from 'tailwindcss/plugin.js';
+import { TYPE_ROLES } from './src/styles/typeRoles.js';
+
+// One `text-<role>` class per type role. Values come from the --type-<role>-* tokens in
+// src/styles/brand.css. Uppercase belongs to the label role only; stat values use tabular figures.
+const typeRoles = plugin(({ addUtilities }) => {
+  addUtilities(Object.fromEntries(TYPE_ROLES.map((role) => [`.text-${role}`, {
+    fontSize: `var(--type-${role}-size)`,
+    lineHeight: `var(--type-${role}-line)`,
+    fontWeight: `var(--type-${role}-weight)`,
+    letterSpacing: role === 'label' ? 'var(--type-label-tracking)' : '0',
+    textTransform: role === 'label' ? 'uppercase' : 'none',
+    ...(role === 'stat-value' ? { fontVariantNumeric: 'tabular-nums' } : {}),
+  }])));
+});
 
 export default {
   darkMode: ['attr', 'data-theme'],
@@ -25,7 +40,8 @@ export default {
       '2xl': '1536px', 
     },
     extend: {
-      // 1. ENTERPRISE TYPOGRAPHY (Tighter line heights, smaller base sizes for dense data)
+      // 1. TYPOGRAPHY: use the `text-<role>` classes (src/styles/typeRoles.js). This older
+      // scale is kept only until every page has moved to the roles, then deleted.
       fontSize: {
         'xs': ['0.75rem', { lineHeight: '1rem' }],        // 12px
         'sm': ['0.875rem', { lineHeight: '1.25rem' }],    // 14px enterprise base
@@ -185,10 +201,12 @@ export default {
         "accordion-down": "accordion-down 0.2s ease-out",
         "accordion-up": "accordion-up 0.2s ease-out",
       },
+      // One family: Inter (src/styles/brand.css). display and mono are old names for it, kept
+      // until the cleanup phase; mono keeps its tabular figures.
       fontFamily: {
-        sans: ['Inter Tight', 'Inter', 'system-ui', 'sans-serif'],
-        display: ['Inter Tight', 'Inter', 'system-ui', 'sans-serif'],
-        mono: ['"JetBrains Mono"', 'SFMono-Regular', 'Menlo', 'Monaco', 'Consolas', 'monospace'], // Enterprise standard mono
+        sans: 'var(--font-sans)',
+        display: 'var(--font-sans)',
+        mono: ['var(--font-sans)', { fontFeatureSettings: '"tnum"' }],
       },
       borderWidth: {
         '3': '3px',
@@ -199,5 +217,5 @@ export default {
       }
     },
   },
-  plugins: [tailwindcssAnimate],
+  plugins: [tailwindcssAnimate, typeRoles],
 }

@@ -7,6 +7,7 @@
 //   node e2e/manual/period-pages-screens.mjs before   # or: after
 //
 // Output: docs/audit/screens/<label>-<page>-<width>.png (or SCREENS_OUT_DIR)
+// Pages: SCREENS_PAGES=register,home,ledger,production-log,reports,inventory (default: ledger,production-log,reports)
 import { chromium } from '@playwright/test';
 import { mkdirSync } from 'node:fs';
 
@@ -14,6 +15,11 @@ const LABEL = process.argv[2] ?? 'after';
 const BASE_URL = process.env.SCREENS_BASE_URL ?? 'http://localhost:4173';
 const API_ORIGIN = 'http://api.e2e.test';
 const OUT_DIR = process.env.SCREENS_OUT_DIR ?? 'docs/audit/screens';
+// 'register' is shot before signing in; 'home' is wherever registering lands.
+const ROUTES = { register: '/register', home: null, ledger: '/finance/ledger', 'production-log': '/operations/yield', reports: '/operations/reports?period=custom&start_date=2026-09-01&end_date=2026-11-16', inventory: '/operations/inventory' };
+const PAGES = (process.env.SCREENS_PAGES ?? 'ledger,production-log,reports').split(',').map((name) => name.trim()).filter(Boolean);
+const unknownPage = PAGES.find((name) => !(name in ROUTES));
+if (unknownPage) throw new Error(`Unknown page "${unknownPage}". Known: ${Object.keys(ROUTES).join(', ')}`);
 
 // ── Ledger fixtures ────────────────────────────────────────────────────────────
 const isoWeek = (iso) => {
@@ -219,31 +225,34 @@ async function capture(browser, width, height) {
     await route.fulfill({ status, contentType: 'application/json', body: JSON.stringify(payload) });
   });
 
-  await page.goto(`${BASE_URL}/register`);
-  await page.getByLabel('Farm name').fill('Shamba');
-  await page.getByLabel('Phone number').fill('0712000000');
-  await page.getByLabel('Password', { exact: true }).fill('Maziwa1234a');
-  await page.getByRole('button', { name: /Create farm account/ }).click();
-  await page.waitForURL((url) => !url.pathname.includes('/register'));
-
-  const shots = [
-    ['ledger', '/finance/ledger'],
-    ['production-log', '/operations/yield'],
-    ['reports', '/operations/reports?period=custom&start_date=2026-09-01&end_date=2026-11-16'],
-  ];
-  for (const [name, route] of shots) {
-    await page.goto(`${BASE_URL}${route}`);
+  // The app scrolls inside <main>, not the document, so grow the viewport to fit it.
+  const shoot = async (name) => {
     await page.waitForLoadState('networkidle');
     await page.waitForTimeout(600);
-    // The app scrolls inside <main>, not the document, so grow the viewport to fit it.
     const fullHeight = await page.evaluate(() => {
       const scroller = document.querySelector('main .overflow-y-auto');
-      return scroller ? Math.ceil(scroller.scrollHeight + scroller.getBoundingClientRect().top + 96) : 0;
+      const content = scroller ? scroller.scrollHeight + scroller.getBoundingClientRect().top : document.documentElement.scrollHeight;
+      return Math.ceil(content + 96);
     });
     await page.setViewportSize({ width, height: Math.max(height, fullHeight) });
     await page.waitForTimeout(400);
     await page.screenshot({ path: `${OUT_DIR}/${LABEL}-${name}-${width}.png` });
     await page.setViewportSize({ width, height });
+  };
+
+  await page.goto(`${BASE_URL}/register`);
+  if (PAGES.includes('register')) await shoot('register');
+  await page.getByLabel('Farm name').fill('Shamba');
+  await page.getByLabel('Phone number').fill('0712000000');
+  await page.getByLabel('Password', { exact: true }).fill('Maziwa1234a');
+  await page.getByRole('button', { name: /Create farm account/ }).click();
+  await page.waitForURL((url) => !url.pathname.includes('/register'));
+  if (PAGES.includes('home')) await shoot('home');
+
+  for (const name of PAGES.filter((page) => ROUTES[page])) {
+    if (name === 'register') continue;
+    await page.goto(`${BASE_URL}${ROUTES[name]}`);
+    await shoot(name);
   }
   await context.close();
 }

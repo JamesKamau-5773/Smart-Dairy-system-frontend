@@ -46,6 +46,8 @@ export default defineConfig({
         ],
       },
       workbox: {
+        // The defaults plus the self-hosted Inter, so text keeps its font offline.
+        globPatterns: ['**/*.{js,css,html,woff2}'],
         navigateFallback: '/app.html',
         // "/" is the static landing page, and robots.txt / sitemap.xml must reach the network.
         navigateFallbackDenylist: [/^\/$/, /^\/index\.html$/, /^\/robots\.txt$/, /^\/sitemap\.xml$/, /^\/api\//, /^\/uploads\//],
