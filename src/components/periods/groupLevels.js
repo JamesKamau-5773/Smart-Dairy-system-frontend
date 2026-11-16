@@ -1,15 +1,14 @@
-// Levels are told apart by weight, indent and a neutral fill that lightens by level,
-// never by brand colour or a coloured edge. The month header is sticky, so its fill is solid.
+// Group rows in the brand table style: a tinted year row, a lighter tinted month row and a
+// white day row, with brand-coloured year and month labels. Levels also differ by weight and
+// indent, so they never rest on colour alone. The month header is sticky, so its fill is solid.
 export const LEVEL_STYLES = {
-  year: 'bg-ink-100 text-ink text-sm font-bold',
-  month: 'bg-ink-50 text-ink text-sm font-semibold',
-  week: 'bg-ink-50 text-ink text-xs font-semibold',
+  year: 'bg-brand-100 text-brand-dark text-sm font-bold',
+  month: 'bg-brand-50 text-brand text-sm font-semibold',
   day: 'bg-card text-ink text-xs font-semibold',
 };
 
 export const LEVEL_INDENT = {
   year: 'pl-2 sm:pl-4',
   month: 'pl-2 sm:pl-5',
-  week: 'pl-3 sm:pl-8',
-  day: 'pl-4 sm:pl-11',
+  day: 'pl-4 sm:pl-8',
 };

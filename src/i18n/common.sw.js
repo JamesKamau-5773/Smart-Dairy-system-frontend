@@ -87,25 +87,16 @@ export const commonCopy = {
     all: 'Zote',
   },
 
-  period: {
-    label: 'Kipindi',
-    week: 'Wiki',
-    month: 'Mwezi',
-    year: 'Mwaka',
-    custom: 'Chagua',
-    previous: 'Kipindi kilichopita',
-    next: 'Kipindi kijacho',
-    names: { week: 'wiki', month: 'mwezi', year: 'mwaka', custom: 'kipindi' },
+  summary: {
     offline: 'Huna mtandao na jumla hizi bado hazijahifadhiwa kwenye simu hii. Zitapakia mtandao ukirudi.',
     loadFailed: 'Imeshindwa kupakia jumla.',
     refreshFailed: 'Imeshindwa kusasisha.',
     checkConnection: 'Angalia mtandao wako.',
     asOf: (time) => `Hadi saa ${time}`,
-    // "kipindi kilichopita" avoids noun-class agreement with wiki / mwezi / mwaka.
-    // Keeps the English signature (the key check compares arguments).
-    // eslint-disable-next-line no-unused-vars
-    vsPrior: (_period) => 'ukilinganisha na kipindi kilichopita',
-    change: { up: 'juu', down: 'chini', flat: 'hakuna mabadiliko' },
+    scope: (label) => `Jumla za ${label}`,
+    thisMonth: (range) => `mwezi huu, ${range}`,
+    fullReport: 'Ona ripoti kamili',
+    dates: 'Tarehe',
   },
 
   groups: {

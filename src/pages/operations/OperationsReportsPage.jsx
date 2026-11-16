@@ -10,13 +10,9 @@ import { QUERY_KEYS } from '@/providers/QueryProvider';
 import { getListLoadState, hasRowsToShow } from '@/lib/listLoadState';
 import { ListLoadMessage, SlowLoadingHint, StaleDataNotice } from '@/components/ui/ListLoadState';
 import { cn } from '@/lib/utils';
+import { formatMoneyText } from '@/components/ui/Money';
+import MoneyFlowChart from '@/components/finance/MoneyFlowChart';
 import { REPORT_PERIODS, getRangeForPeriod, isValidRange } from './reports/dashboardRange';
-
-const currencyFormatter = new Intl.NumberFormat('en-KE', {
-  style: 'currency',
-  currency: 'KES',
-  maximumFractionDigits: 0,
-});
 
 const numberFormatter = new Intl.NumberFormat('en-KE', {
   maximumFractionDigits: 1,
@@ -25,10 +21,8 @@ const numberFormatter = new Intl.NumberFormat('en-KE', {
 // A figure the backend didn't send is unknown: "—", never 0.
 const toFigure = (value) => (value === null || value === undefined || value === '' || !Number.isFinite(Number(value)) ? null : Number(value));
 
-function formatCurrency(value) {
-  const amount = toFigure(value);
-  return amount === null ? '—' : currencyFormatter.format(amount);
-}
+// One currency format app-wide ("KES 1,234.00"), from the shared Money helper.
+const formatCurrency = (value) => formatMoneyText(toFigure(value));
 
 function formatNumber(value) {
   const amount = toFigure(value);
@@ -484,6 +478,13 @@ export default function OperationsReportsPage() {
               <SummaryCard key={card.label} {...card} />
             ))}
           </div>
+
+          <MoneyFlowChart
+            start={resolvedRange.start}
+            end={resolvedRange.end}
+            search={searchQuery}
+            customerSelected={selectedBuyerIds.length > 0}
+          />
 
           {selectedCustomer && dashboardData?.buyerPerformance?.daily_records?.length > 0 && (
             <div className="rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden">

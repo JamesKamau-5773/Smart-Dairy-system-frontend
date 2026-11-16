@@ -44,6 +44,14 @@ export function formatDayLabel(value, { withYear = false } = {}) {
   return withYear ? `${label} ${date.getFullYear()}` : label;
 }
 
+/** A month key (YYYY-MM) → "Nov 2026", or just "Nov" without the year; null when unreadable. */
+export function formatMonth(key, { withYear = true } = {}) {
+  const match = /^(\d{4})-(\d{2})$/.exec(key ?? '');
+  if (!match || Number(match[2]) < 1 || Number(match[2]) > 12) return null;
+  const month = names().months[Number(match[2]) - 1];
+  return withYear ? `${month} ${match[1]}` : month;
+}
+
 /** "03 Nov 2026 – 15 Nov 2026" for a chosen range. */
 export function formatDateRange(from, to) {
   if (!from || !to) return null;

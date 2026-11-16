@@ -17,29 +17,30 @@ const records = [{ id: 'a', name: 'Vet visit', bucket: { year: '2025', month: '2
 const renderRecord = (r) => <p key={r.id}>{r.name}</p>;
 
 describe('GroupedList', () => {
-  it('folds single-child groups into one header so the same totals are never stacked', () => {
+  it('shows year, month and day headers even when a month has a single day', () => {
     render(<GroupedList records={records} getBucket={(r) => r.bucket} groups={groups} config={ledgerGroupConfig} renderRecord={renderRecord} />);
 
-    const headers = screen.getAllByRole('button', { expanded: true });
-    expect(headers).toHaveLength(1);
-    const header = screen.getByRole('button', { name: /^Wed 24 Dec 2025, 1 record, net −KES 50.00/ });
-    expect(header.getAttribute('data-group-keys')).toBe('2025 2025-12 2025-12-24');
+    const year = screen.getByRole('button', { name: /^2025, 1 record, net −KES 50.00/ });
+    const month = screen.getByRole('button', { name: /^December, 1 record/ });
+    const day = screen.getByRole('button', { name: /^Wed 24 Dec, 1 record/ });
+    expect(day.getAttribute('data-group-keys')).toBe('2025-12-24');
+    expect([year, month, day].map((header) => header.getAttribute('aria-expanded'))).toEqual(['true', 'true', 'true']);
     expect(screen.getByText('Vet visit')).toBeTruthy();
 
-    fireEvent.click(header);
-    expect(header.getAttribute('aria-expanded')).toBe('false');
+    fireEvent.click(day);
+    expect(day.getAttribute('aria-expanded')).toBe('false');
     expect(screen.queryByText('Vet visit')).toBeNull();
   });
 
   it('shows — when group totals are unavailable instead of adding up rows', () => {
     render(<GroupedList records={records} getBucket={(r) => r.bucket} groups={null} groupsUnavailable config={ledgerGroupConfig} renderRecord={renderRecord} />);
     expect(screen.getByText('Group totals couldn’t load, so headers show —.')).toBeTruthy();
-    expect(screen.getByRole('button', { name: /^Wed 24 Dec 2025, count not available, totals not available/ })).toBeTruthy();
+    expect(screen.getByRole('button', { name: /^Wed 24 Dec, count not available, totals not available/ })).toBeTruthy();
   });
 
-  it('puts the in and out totals in the Money in and Money out columns of the table', () => {
-    const columns = ['date', 'party', 'category', 'description', 'ref', 'money_in', 'money_out', 'status', 'actions'].map((id) => ({ id, header: id, align: id.startsWith('money') ? 'right' : 'left' }));
-    const twoDays = toLedgerGroupTotals({ groups: [
+  it('puts each group\'s net in the Amount column, signed and without the currency', () => {
+    const columns = ['party', 'category', 'ref', 'description', 'amount', 'status', 'actions'].map((id) => ({ id, header: id, align: id === 'amount' ? 'right' : 'left' }));
+    const twoMonths = toLedgerGroupTotals({ groups: [
       { level: 'year', key: '2026', label: '2026', count: 3, income: '480000', expenses: '7093925', net: '-6613925' },
       { level: 'month', key: '2026-11', parent: '2026', label: 'November', count: 2, income: '0', expenses: '7093925', net: '-7093925' },
       { level: 'month', key: '2026-10', parent: '2026', label: 'October', count: 1, income: '480000', expenses: '0', net: '480000' },
@@ -51,26 +52,29 @@ describe('GroupedList', () => {
     ];
     const { container } = render(
       <table><tbody>
-        <GroupedList records={rows} getBucket={(r) => r.bucket} groups={twoDays} config={ledgerGroupConfig} variant="table" columns={columns} renderRecord={(r) => <tr key={r.id}><td>{r.id}</td></tr>} />
+        <GroupedList records={rows} getBucket={(r) => r.bucket} groups={twoMonths} config={ledgerGroupConfig} variant="table" columns={columns} renderRecord={(r) => <tr key={r.id}><td>{r.id}</td></tr>} />
       </tbody></table>,
     );
 
-    const november = screen.getByRole('button', { name: /^November, 2 records/ }).closest('tr');
-    const cells = november.querySelectorAll('td');
-    // Label spans Date…Ref (5 columns), then Money in, Money out, Status, ⋮.
-    expect(cells[0].getAttribute('colspan')).toBe('5');
-    expect(cells).toHaveLength(5);
-    expect(cells[1].textContent).toBe('KES0.00');
-    expect(cells[2].textContent).toBe('KES70,939.25');
-    expect(cells[3].textContent).toBe('');
-    expect(cells[4].textContent).toBe('');
-    // Net sits at the end of the label, with a true minus sign.
-    expect(cells[0].textContent).toContain('· 2 records');
-    expect(cells[0].textContent).toMatch(/Net −minus KES70,939\.25/);
+    const cellsOf = (name) => screen.getByRole('button', { name }).closest('tr').querySelectorAll('td');
+    const november = cellsOf(/^November, 2 records/);
+    // Label spans Customer…Description (4 columns), then Amount, Status, ⋮.
+    expect(november[0].getAttribute('colspan')).toBe('4');
+    expect(november).toHaveLength(4);
+    expect(november[0].textContent).toContain('November· 2 records');
+    // A negative net: true minus, negative colour, no "KES" (the header names it).
+    expect(november[1].textContent).toMatch(/^−minus 70,939\.25$/);
+    expect(november[1].querySelector('.text-money-negative')).toBeTruthy();
+    expect(november[2].textContent).toBe('');
+    expect(november[3].textContent).toBe('');
+    // A positive net stays plain: no positive colour.
+    const october = cellsOf(/^October, 1 record/);
+    expect(october[1].textContent).toBe('4,800.00');
+    expect(october[1].querySelector('.text-money-positive')).toBeNull();
     expect(container.querySelector('[data-group-keys~="2026-11"]')).toBeTruthy();
   });
 
-  it('keeps every level on the Production Log, weeks included', () => {
+  it('groups the Production Log by year, month and day, ignoring week groups', () => {
     const production = toProductionGroupTotals({ groups: [
       { level: 'year', key: '2026', label: '2026', litres: '246.0', entries: 2, avg_litres_per_day: '41.0' },
       { level: 'month', key: '2026-11', parent: '2026', label: 'November', litres: '246.0', entries: 2, avg_litres_per_day: '41.0' },
@@ -81,7 +85,7 @@ describe('GroupedList', () => {
     render(<GroupedList records={milk} getBucket={(r) => r.bucket} groups={production} config={productionGroupConfig} renderRecord={renderRecord} />);
     expect(screen.getByRole('button', { name: /^2026, 2 entries/ })).toBeTruthy();
     expect(screen.getByRole('button', { name: /^November, 2 entries/ })).toBeTruthy();
-    expect(screen.getByRole('button', { name: /^2 – 8 Nov, 2 entries/ })).toBeTruthy();
+    expect(screen.queryByRole('button', { name: /^2 – 8 Nov/ })).toBeNull();
     expect(screen.getByRole('button', { name: /^Fri 06 Nov, 2 entries/ })).toBeTruthy();
   });
 });

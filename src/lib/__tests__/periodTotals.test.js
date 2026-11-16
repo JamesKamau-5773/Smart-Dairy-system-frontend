@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { changeDirection, minorUnitsToAmount, neighbourAnchor, toLedgerGroupTotals, toLedgerSummary, toProductionSummary, toTotalsParams } from '../periodTotals';
-import { buildGroupTree, collapseSingleChildren, defaultOpenKeys } from '../groupTree';
+import { changeDirection, currentMonthRange, minorUnitsToAmount, summaryScopeParams, toLedgerGroupTotals, toLedgerSummary, toProductionSummary, toTotalsParams } from '../periodTotals';
+import { buildGroupTree, defaultOpenKeys, expandAll } from '../groupTree';
 import { formatDate, formatDayLabel, maskInputDate, parseInputDate, toInputDate } from '../dateFormat';
 import { formatDecimal, formatLitres } from '../numberFormat';
 
@@ -41,11 +41,13 @@ describe('period totals adapters', () => {
     expect(vm.change.direction).toBe('down');
   });
 
-  it('drops empty filters and steps one day outside the API range', () => {
+  it('drops empty filters', () => {
     expect(toTotalsParams({ type: 'all', search: '', date_from: '2026-11-01', status: undefined })).toEqual({ date_from: '2026-11-01' });
-    expect(neighbourAnchor({ from: '2026-11-01', to: '2026-11-30' }, -1)).toBe('2026-10-31');
-    expect(neighbourAnchor({ from: '2026-12-01', to: '2026-12-31' }, 1)).toBe('2027-01-01');
-    expect(neighbourAnchor(null, 1)).toBeNull();
+  });
+
+  it('opens on the current month up to today, and asks the summary for the table\'s range', () => {
+    expect(currentMonthRange('2026-11-16')).toEqual({ from: '2026-11-01', to: '2026-11-16' });
+    expect(summaryScopeParams({ from: '2026-10-01', to: '2026-10-15' })).toEqual({ period: 'custom', date_from: '2026-10-01', date_to: '2026-10-15' });
   });
 });
 
@@ -98,23 +100,20 @@ describe('production log page rules', () => {
     expect(['246.0', '8', 4, 3.5, '1306.4'].map((value) => litres(value))).toEqual(['246.0 L', '8.0 L', '4.0 L', '3.5 L', '1,306.4 L']);
   });
 
-  it('lists only the metrics the API sends and never computes the missing ones', async () => {
+  it('shows total milk, avg per day and available, with "—" for a figure the API does not send', async () => {
     const { productionSummaryConfig } = await import('../../components/periods/periodConfigs');
-    const base = toProductionSummary({ period: 'week', label: '2 – 8 Nov 2026', range: { from: '2026-11-02', to: '2026-11-08' }, current: { litres: '246.0', entries: 36, avg_litres_per_day: '41.0' } });
-    expect(productionSummaryConfig.metrics(base).map((metric) => metric.label)).toEqual(['Total milk', 'Avg per day', 'Entries']);
-
-    const withCalves = toProductionSummary({ period: 'week', current: { litres: '246.0', entries: 36, avg_litres_per_day: '41.0', fed_to_calves_litres: '12.5', available_litres: '233.5' }, change: { entries_pct: '4.1' } });
-    const metrics = productionSummaryConfig.metrics(withCalves);
-    expect(metrics.map((metric) => [metric.label, metric.value])).toEqual([['Total milk', '246.0 L'], ['Avg per day', '41.0 L'], ['Entries', '36'], ['Fed to calves', '12.5 L'], ['Available', '233.5 L']]);
-    expect(metrics[2].change).toMatchObject({ direction: 'up', pct: '4.1' });
+    const text = (items) => items.map((item) => [item.label, item.value.props.children]);
+    const base = toProductionSummary({ current: { litres: '246.0', entries: 36, avg_litres_per_day: '41.0' } });
+    expect(text(productionSummaryConfig.items(base))).toEqual([['Total milk', '246.0 L'], ['Avg per day', '41.0 L'], ['Available', '—']]);
+    const withAvailable = toProductionSummary({ current: { litres: '246.0', entries: 36, avg_litres_per_day: '41.0', available_litres: '233.5' } });
+    expect(text(productionSummaryConfig.items(withAvailable))[2]).toEqual(['Available', '233.5 L']);
   });
 
-  it('describes an empty period with the last entry date only when the API sends it', async () => {
-    const { productionSummaryConfig } = await import('../../components/periods/periodConfigs');
-    const past = toProductionSummary({ period: 'week', label: '7 – 13 Sep 2026', range: { from: '2026-09-07', to: '2026-09-13' }, current: { litres: '0.0', entries: 0 } });
-    expect(productionSummaryConfig.emptyMessage(past)).toBe('No entries in 7 – 13 Sep 2026');
-    const withLast = toProductionSummary({ period: 'week', label: '7 – 13 Sep 2026', range: { from: '2026-09-07', to: '2026-09-13' }, current: { litres: '0.0', entries: 0, last_entry_date: '2026-09-23' } });
-    expect(productionSummaryConfig.emptyMessage(withLast)).toBe('No entries in 7 – 13 Sep 2026 · last entry 23 Sep 2026');
+  it('is empty only when the API says there are no entries', async () => {
+    const { summaryIsEmpty } = await import('../../components/periods/periodConfigs');
+    expect(summaryIsEmpty(toProductionSummary({ current: { litres: '0.0', entries: 0 } }))).toBe(true);
+    expect(summaryIsEmpty(toProductionSummary({ current: { litres: '0.0' } }))).toBe(false);
+    expect(summaryIsEmpty(null)).toBe(false);
   });
 });
 
@@ -157,24 +156,23 @@ describe('ledger grouping', () => {
     expect(tree.roots[0].children.map((n) => n.key)).toEqual(['2026-11', '2026-10']);
   });
 
-  it('folds a month with one day into one header that keeps both keys', () => {
+  it('keeps a header for every year, month and day, even when a month has one day', () => {
     const tree = buildGroupTree(records, (r) => r.bucket, groups, ['year', 'month', 'day']);
-    const [year] = collapseSingleChildren(tree.roots);
+    const [year] = expandAll(tree.roots);
     expect(year.label).toBe('2026');
-    expect(year.children.map((n) => [n.label, n.keys])).toEqual([
-      ['Tue 03 Nov', ['2026-11', '2026-11-03']],
-      ['Wed 28 Oct', ['2026-10', '2026-10-28']],
+    expect(year.children.map((month) => [month.label, month.children.map((day) => day.label)])).toEqual([
+      ['November', ['Tue 03 Nov']],
+      ['October', ['Wed 28 Oct']],
     ]);
-    // Header totals stay the API's (the day's, identical to the month's).
+    // Header totals stay the API's.
     expect(year.children[0].totals.count).toBe(2);
   });
 
-  it('says there is no previous-period data instead of showing a dash', async () => {
-    const { ledgerSummaryConfig } = await import('../../components/periods/periodConfigs');
-    const noPrevious = toLedgerSummary({ label: '2026', current: { income: '100', expenses: '0', net: '100', unpaid: '0', count: 1 }, previous: { key: '2025', label: '2025', count: 0 } });
-    const change = ledgerSummaryConfig.metrics(noPrevious).find((metric) => metric.key === 'change');
-    expect(change.value.props.children.join('')).toBe('No 2025 data');
-    const labels = ledgerSummaryConfig.secondary(noPrevious, { owed: 370.3, credit: 6.36 }).map((item) => item.label);
-    expect(labels).toEqual(['Unpaid in 2026', 'Owed to you (all time)', 'Customer credit (now)', 'Records in 2026']);
+  it('shows money in, money out, net and unpaid, and names the period the table shows', async () => {
+    const { ledgerSummaryConfig, summaryScope } = await import('../../components/periods/periodConfigs');
+    const summary = toLedgerSummary({ label: 'Nov 2026', current: { income: '100', expenses: '0', net: '100', unpaid: '0', count: 1 } });
+    expect(ledgerSummaryConfig.items(summary).map((item) => item.label)).toEqual(['Money in', 'Money out', 'Net', 'Unpaid']);
+    expect(summaryScope({ from: '2026-11-01', to: '2026-11-16' }, { isDefault: true })).toBe('this month, 01 Nov 2026 – 16 Nov 2026');
+    expect(summaryScope({ from: '2026-10-01', to: '2026-10-15' })).toBe('01 Oct 2026 – 15 Oct 2026');
   });
 });

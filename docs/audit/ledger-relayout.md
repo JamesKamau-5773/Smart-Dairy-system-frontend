@@ -1,5 +1,13 @@
 # Ledger re-layout and shared page components
 
+> **Partly superseded (2026-11-16).** Both pages dropped the Week / Month / Year control, the
+> period chart moved to the Farm Reporting Dashboard (`components/finance/MoneyFlowChart.jsx`), and
+> `PeriodSummary` / `PeriodControl` became one `SummaryStrip` per page. The table header is
+> now brand blue, with tinted year and month rows, through the shared
+> `components/data/GroupedDataTable.jsx`. The Ledger's all-time "Owed to you" and "Customer
+> credit" figures are no longer on the page. Open backend items: BR-021, BR-022, BR-023 in
+> `BACKEND_REQUESTS.md`.
+
 Date: 2026-11-07 · Pages: `/finance/ledger`, `/operations/yield` (Production Log)
 Screens: `docs/audit/screens/{before,after}-{ledger,production-log}-{1280,390}.png`,
 reproducible with `e2e/manual/period-pages-screens.mjs` (mocked API, same figures before and after).

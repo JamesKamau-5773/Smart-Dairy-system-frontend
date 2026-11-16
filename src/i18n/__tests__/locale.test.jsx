@@ -17,6 +17,8 @@ import { commonCopy as commonEn } from '../common.en';
 import { commonCopy as commonSw } from '../common.sw';
 import { productionCopy as productionEn } from '../production.en';
 import { productionCopy as productionSw } from '../production.sw';
+import { ledgerCopy as ledgerEn } from '../ledger.en';
+import { ledgerCopy as ledgerSw } from '../ledger.sw';
 import { sessionLabel } from '../production';
 import { formatDate, formatDayLabel } from '../../lib/dateFormat';
 import Confirmation from '../../components/ui/Confirmation';
@@ -92,6 +94,7 @@ describe('translations', () => {
     ['errors', errorsEn, errorsSw],
     ['common', commonEn, commonSw],
     ['production', productionEn, productionSw],
+    ['ledger', ledgerEn, ledgerSw],
   ])('%s.sw.js uses only keys that exist in English', (_name, en, sw) => {
     compareShape(en, sw);
   });

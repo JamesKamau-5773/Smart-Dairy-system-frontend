@@ -2,10 +2,11 @@
 // They map API DTOs to view models and do nothing else: every total, average, bucket
 // and percentage comes from the backend. Components never read raw API shapes.
 
-export const PERIODS = Object.freeze(['week', 'month', 'year']);
-// A farmer-chosen date range. Not remembered between visits (it has no anchor to step from).
+// A date range chosen in a page's filters.
 export const CUSTOM_PERIOD = 'custom';
 export const GROUP_LEVELS = Object.freeze(['year', 'month', 'week', 'day']);
+// The levels the Production Log and Ledger tables group by (no weeks).
+export const TABLE_GROUP_LEVELS = Object.freeze(['year', 'month', 'day']);
 
 const MINOR_UNITS = /^(-?)(\d+)$/;
 
@@ -101,15 +102,6 @@ export function toLedgerSummary(dto) {
   };
 }
 
-/**
- * Whether the previous period has records: true/false when the API says so, null when
- * it can't be told (no `previous`, or no `count` on it).
- */
-export function previousHasData(summary) {
-  const count = summary?.previous?.count;
-  return Number.isInteger(count) ? count > 0 : null;
-}
-
 export function toProductionSummary(dto) {
   if (!dto || typeof dto !== 'object') return null;
   return {
@@ -171,14 +163,15 @@ export function toTotalsParams(filters = {}) {
 }
 
 /**
- * The anchor for the neighbouring period: a calendar step of one day outside the
- * range the API returned. The backend still decides which period that day falls in.
+ * The range the Production Log and the Ledger open on, for the table and the summary strip
+ * alike: the current month up to today. (Totals for "all dates" need BR-021.)
+ * `today` is YYYY-MM-DD; only the text is used, no date maths.
  */
-export function neighbourAnchor(range, direction) {
-  const edge = direction < 0 ? range?.from : range?.to;
-  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(edge ?? '');
-  if (!match) return null;
-  const date = new Date(Date.UTC(Number(match[1]), Number(match[2]) - 1, Number(match[3]) + (direction < 0 ? -1 : 1)));
-  const pad = (value) => String(value).padStart(2, '0');
-  return `${date.getUTCFullYear()}-${pad(date.getUTCMonth() + 1)}-${pad(date.getUTCDate())}`;
+export function currentMonthRange(today) {
+  return { from: `${today.slice(0, 7)}-01`, to: today };
+}
+
+/** Summary params for the table's date range (`period=custom`). */
+export function summaryScopeParams(range) {
+  return { period: CUSTOM_PERIOD, date_from: range.from, date_to: range.to };
 }

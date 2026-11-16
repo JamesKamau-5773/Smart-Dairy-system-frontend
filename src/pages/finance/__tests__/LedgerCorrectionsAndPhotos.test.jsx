@@ -120,8 +120,9 @@ describe('receipt photos', () => {
     api.fetchAttachment.mockResolvedValue(new Blob(['%PDF'], { type: 'application/pdf' }));
     api.uploadAttachment.mockResolvedValue({ id: 8, url: '/api/finance/transactions/1/attachments/8', content_type: 'application/pdf', filename: 'second.pdf' });
     renderLedger();
-    // The paperclip in the row opens the saved photos.
-    fireEvent.click(within(await tableRow('Boda to town')).getByRole('button', { name: 'Receipt photos (1)' }));
+    // Saved photos open from the row's ⋮ menu (the row has no separate receipt button).
+    expect(within(await tableRow('Boda to town')).queryByRole('button', { name: /Receipt photos/ })).toBeNull();
+    fireEvent.click(within(await openRowMenu('Boda to town')).getByRole('menuitem', { name: 'Photos (1)' }));
     const dialog = await screen.findByRole('dialog', { name: 'Receipt photos' });
     expect(await within(dialog).findByRole('button', { name: 'Open invoice.pdf' })).toBeTruthy();
     expect(api.fetchAttachment).toHaveBeenCalledWith('/api/finance/transactions/1/attachments/7');
@@ -134,7 +135,7 @@ describe('receipt photos', () => {
 
   it('says why a file was refused without sending it', async () => {
     renderLedger();
-    expect(within(await tableRow('Boda to town')).getByRole('button', { name: 'Add receipt photo' })).toBeTruthy();
+    expect(within(await tableRow('Boda to town')).queryByRole('button', { name: 'Add receipt photo' })).toBeNull();
     fireEvent.click(within(await openRowMenu('Boda to town')).getByRole('menuitem', { name: 'Add photo' }));
     const dialog = await screen.findByRole('dialog', { name: 'Receipt photos' });
     fireEvent.change(dialog.querySelector('input[type="file"]:not([capture])'), { target: { files: [new File(['x'], 'notes.txt', { type: 'text/plain' })] } });

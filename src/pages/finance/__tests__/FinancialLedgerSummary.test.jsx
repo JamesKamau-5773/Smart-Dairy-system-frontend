@@ -8,7 +8,6 @@ globalThis.React = React;
 
 const backendMocks = vi.hoisted(() => ({
   listLedgerEntries: vi.fn(),
-  getLedgerBalances: vi.fn(),
   listAnimals: vi.fn(),
   getSummary: vi.fn(),
   getGroupTotals: vi.fn(),
@@ -18,12 +17,15 @@ vi.mock('../../../hooks/useTenant', () => ({
   useTenant: () => ({ tenantId: 'tenant-1', farmId: 'farm-1' }),
 }));
 
+// The Ledger opens on the current month up to today.
+vi.mock('../../../lib/localDate', async (importOriginal) => ({ ...(await importOriginal()), todayLocalIso: () => '2026-11-16' }));
+
 vi.mock('../../../contexts/AuthContext', () => ({
   useAuth: () => ({ currentUser: { role: 'FARMER' } }),
 }));
 
 vi.mock('../../../lib/backendApi', () => ({
-  financeApi: { listLedgerEntries: backendMocks.listLedgerEntries, getLedgerBalances: backendMocks.getLedgerBalances, categories: () => Promise.resolve({}) },
+  financeApi: { listLedgerEntries: backendMocks.listLedgerEntries, categories: () => Promise.resolve({}) },
   ledgerApi: { getSummary: backendMocks.getSummary, getGroupTotals: backendMocks.getGroupTotals },
   herdApi: { list: backendMocks.listAnimals },
   getApiErrorMessage: (error) => error?.message || 'Request failed',
@@ -69,11 +71,14 @@ const novemberSummary = {
   breakdown: [],
 };
 
-const renderLedger = () => {
+const THIS_MONTH = 'Totals for this month, 01 Nov 2026 – 16 Nov 2026';
+const MONTH_DATES = { date_from: '2026-11-01', date_to: '2026-11-16' };
+
+const renderLedger = (path = '/finance/ledger') => {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return render(React.createElement(
     MemoryRouter,
-    null,
+    { initialEntries: [path] },
     React.createElement(QueryClientProvider, { client: queryClient }, React.createElement(FinancialLedger)),
   ));
 };
@@ -86,7 +91,6 @@ beforeEach(() => {
     Promise.resolve(params.search_query ? auntieResponse : allAccountsResponse)
   ));
   backendMocks.getSummary.mockResolvedValue(novemberSummary);
-  backendMocks.getLedgerBalances.mockResolvedValue({ outstanding_receivables: 24110, customer_credit: 636 });
   backendMocks.getGroupTotals.mockResolvedValue({ groups: [] });
   backendMocks.listAnimals.mockResolvedValue([
     { id: 'C-007', name: 'C-007' },
@@ -95,74 +99,117 @@ beforeEach(() => {
 });
 
 describe('FinancialLedger summaries', () => {
-  it('shows the backend period totals exactly, each figure with its scope, and no navy block', async () => {
+  it('shows one strip of backend figures and no period toggle, chart or all-time balances', async () => {
     renderLedger();
 
-    expect(await screen.findByText('Nov 2026')).toBeTruthy();
+    expect(await screen.findByText(THIS_MONTH)).toBeTruthy();
+    const strip = screen.getByRole('region', { name: 'Money in and out' });
     // 1740000 cents → KES 17,400.00, with no client-side arithmetic.
-    expect(screen.getByText('17,400')).toBeTruthy();
-    expect(screen.getByText('14,200')).toBeTruthy();
-    expect(screen.getByLabelText('down 5.3% vs Oct 2026')).toBeTruthy();
-    expect(screen.getByRole('button', { name: 'Next period' }).disabled).toBe(true);
-    expect(backendMocks.getSummary).toHaveBeenCalledWith(expect.objectContaining({ period: 'month' }));
+    expect(within(strip).getByText('17,400')).toBeTruthy();
+    expect(within(strip).getByText('14,200')).toBeTruthy();
+    expect(within(strip).getAllByRole('term').map((term) => term.textContent)).toEqual(['Money in', 'Money out', 'Net', 'Unpaid']);
+    expect(within(strip).getByRole('link', { name: /View full report/ }).getAttribute('href'))
+      .toBe('/operations/reports?period=custom&start_date=2026-11-01&end_date=2026-11-16');
 
-    expect(screen.getByText('Unpaid in Nov 2026')).toBeTruthy();
-    expect(screen.getByText('Owed to you (all time)')).toBeTruthy();
-    expect(screen.getByText('Customer credit (now)')).toBeTruthy();
-    expect(screen.getByText('Records in Nov 2026')).toBeTruthy();
-    expect(await screen.findByText('24,110')).toBeTruthy();
-    expect(screen.queryByText('Unpaid Money')).toBeNull();
-    expect(screen.queryByText(/follow every filter/)).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Next period' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Month' })).toBeNull();
+    expect(screen.queryByRole('list', { name: /Money in and out by/ })).toBeNull();
+    expect(screen.queryByText('Owed to you (all time)')).toBeNull();
+    expect(screen.queryByText('Customer credit (now)')).toBeNull();
+    expect(screen.queryByText(/Change in net/)).toBeNull();
     expect(screen.getByRole('heading', { name: 'Ledger' })).toBeTruthy();
-    // The all-time balances are never narrowed by the period or filters.
-    expect(backendMocks.getLedgerBalances).toHaveBeenCalledWith({ farm_id: 'farm-1', tenant_id: 'tenant-1' });
   });
 
-  it('scopes the table to the period range the API resolved', async () => {
+  it('opens the table and the strip on the same period: this month up to today', async () => {
     renderLedger();
-    await screen.findByText('Nov 2026');
-    await waitFor(() => {
-      expect(backendMocks.listLedgerEntries).toHaveBeenCalledWith(expect.objectContaining({ date_from: '2026-11-01', date_to: '2026-11-30' }));
+    await screen.findByText(THIS_MONTH);
+    await waitFor(() => expect(backendMocks.listLedgerEntries).toHaveBeenCalledWith(expect.objectContaining(MONTH_DATES)));
+    expect(backendMocks.getGroupTotals).toHaveBeenCalledWith({ ...MONTH_DATES, levels: 'year,month,day' });
+    expect(backendMocks.getSummary).toHaveBeenCalledWith({ ...MONTH_DATES, period: 'custom' });
+    // The default isn't a filter, so there is no chip to remove.
+    expect(screen.queryByRole('button', { name: /^Remove filter/ })).toBeNull();
+  });
+
+  it('shows one Amount column: income plain, expenses negative, no KES, and badges only for unposted records', async () => {
+    backendMocks.listLedgerEntries.mockResolvedValue({
+      items: [
+        { id: 1, date: '2026-11-03', transaction_type: 'Revenue', counterparty_name: 'Brookside Dairy', amount: 48600, status: 'POSTED', bucket: { year: '2026', month: '2026-11', day: '2026-11-03' } },
+        { id: 2, date: '2026-11-03', transaction_type: 'Expense', counterparty_name: 'Unga Feeds Ltd', amount: 15025, status: 'PENDING', bucket: { year: '2026', month: '2026-11', day: '2026-11-03' } },
+      ],
+      meta: { total: 2 },
     });
-    expect(backendMocks.getGroupTotals).toHaveBeenCalledWith(expect.objectContaining({ date_from: '2026-11-01', date_to: '2026-11-30', levels: 'year,month,day' }));
-    // The period is the page's only date control.
-    expect(document.querySelector('input[type="date"]')).toBeNull();
+    backendMocks.getGroupTotals.mockResolvedValue({ groups: [
+      { level: 'year', key: '2026', label: '2026', count: 2, income: '4860000', expenses: '1502500', net: '3357500' },
+      { level: 'month', key: '2026-11', parent: '2026', label: 'November', count: 2, income: '4860000', expenses: '1502500', net: '3357500' },
+      { level: 'day', key: '2026-11-03', parent: '2026-11', count: 2, income: '4860000', expenses: '1502500', net: '3357500' },
+    ] });
+    renderLedger();
+
+    const table = await screen.findByRole('table');
+    expect(within(table).getAllByRole('columnheader').map((th) => th.textContent))
+      .toEqual(['Customer / Supplier', 'Category', 'Ref', 'Description', 'Amount (KES)', 'Status', 'Actions']);
+    // The current month keeps its own header between the year and the day.
+    expect(await within(table).findByRole('button', { name: /^November, 2 records/ })).toBeTruthy();
+    const rowOf = (name) => within(table).getByText(name).closest('tr');
+    await within(table).findByText('Brookside Dairy');
+    const income = rowOf('Brookside Dairy').querySelectorAll('td');
+    const expense = rowOf('Unga Feeds Ltd').querySelectorAll('td');
+    expect(income[4].textContent).toBe('48,600.00');
+    expect(expense[4].textContent).toMatch(/^−minus 15,025\.00$/);
+    expect(expense[4].querySelector('.text-money-negative')).toBeTruthy();
+    expect(table.querySelector('.text-money-positive')).toBeNull();
+    // Posted is normal and gets no badge; other statuses do.
+    expect(income[5].textContent).toBe('');
+    expect(expense[5].textContent).toBe('pending');
   });
 
-  it('uses a custom dd/mm/yyyy range for the summary and the table', async () => {
-    renderLedger();
-    await screen.findByText('Nov 2026');
+  it('takes a date range from the address for the table, the group totals and the strip', async () => {
+    renderLedger('/finance/ledger?from=2026-10-01&to=2026-10-15');
 
-    fireEvent.click(screen.getByRole('button', { name: 'Custom' }));
+    const range = { date_from: '2026-10-01', date_to: '2026-10-15' };
+    await waitFor(() => expect(backendMocks.listLedgerEntries).toHaveBeenCalledWith(expect.objectContaining(range)));
+    expect(backendMocks.getGroupTotals).toHaveBeenCalledWith(expect.objectContaining(range));
+    expect(backendMocks.getSummary).toHaveBeenCalledWith({ period: 'custom', ...range });
+    expect(await screen.findByText('Totals for 01 Oct 2026 – 15 Oct 2026')).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Remove filter 01 Oct 2026 – 15 Oct 2026' })).toBeTruthy();
+    expect(screen.getByRole('link', { name: /View full report/ }).getAttribute('href'))
+      .toBe('/operations/reports?period=custom&start_date=2026-10-01&end_date=2026-10-15');
+  });
+
+  it('ignores a reversed range in the address and opens on this month', async () => {
+    renderLedger('/finance/ledger?from=2026-10-15&to=2026-10-01');
+    await waitFor(() => expect(backendMocks.listLedgerEntries).toHaveBeenCalled());
+    expect(backendMocks.listLedgerEntries.mock.calls[0][0]).toMatchObject(MONTH_DATES);
+  });
+
+  it('sets the date range from the toolbar, for the table and the strip together', async () => {
+    renderLedger();
+    await screen.findByText(THIS_MONTH);
+
+    // The date button names the range the table shows.
+    fireEvent.click(screen.getByRole('button', { name: '01 Nov 2026 – 16 Nov 2026' }));
     const form = await screen.findByRole('form', { name: 'Custom date range' });
-    fireEvent.change(within(form).getByLabelText('From'), { target: { value: '01102026' } });
-    fireEvent.change(within(form).getByLabelText('To'), { target: { value: '15/10/2026' } });
-    expect(within(form).getByLabelText('From').value).toBe('01/10/2026');
-    // A To date after today is refused (the range picker never offers the future).
-    fireEvent.change(within(form).getByLabelText('To'), { target: { value: '31/12/2099' } });
-    expect(within(form).getByText(/Use a date on or before/)).toBeTruthy();
-    expect(within(form).getByRole('button', { name: 'Apply' }).disabled).toBe(true);
+    fireEvent.change(within(form).getByLabelText('From'), { target: { value: '01/10/2026' } });
     fireEvent.change(within(form).getByLabelText('To'), { target: { value: '15/10/2026' } });
     fireEvent.click(within(form).getByRole('button', { name: 'Apply' }));
 
     await waitFor(() => {
-      expect(backendMocks.getSummary).toHaveBeenLastCalledWith(expect.objectContaining({ period: 'custom', date_from: '2026-10-01', date_to: '2026-10-15' }));
-    });
-    await waitFor(() => {
       expect(backendMocks.listLedgerEntries).toHaveBeenLastCalledWith(expect.objectContaining({ date_from: '2026-10-01', date_to: '2026-10-15' }));
     });
-    expect(screen.getByText('01 Oct 2026 – 15 Oct 2026')).toBeTruthy();
+    expect(backendMocks.getSummary).toHaveBeenLastCalledWith({ period: 'custom', date_from: '2026-10-01', date_to: '2026-10-15' });
   });
 
-  it('says when there is no previous-period data', async () => {
-    backendMocks.getSummary.mockResolvedValue({ ...novemberSummary, previous: { ...novemberSummary.previous, count: 0 }, change: null });
+  it('says "No records" instead of a row of zeros when the API reports none', async () => {
+    backendMocks.getSummary.mockResolvedValue({ ...novemberSummary, current: { income: '0', expenses: '0', net: '0', unpaid: '0', count: 0 } });
     renderLedger();
-    expect(await screen.findByText('No Oct 2026 data')).toBeTruthy();
+    const strip = await screen.findByRole('region', { name: 'Money in and out' });
+    expect(await within(strip).findByText('No records')).toBeTruthy();
+    expect(within(strip).queryByRole('term')).toBeNull();
   });
 
   it('sends every filter to the server for rows and totals, and shows it as a chip', async () => {
     renderLedger();
-    await screen.findByText('Nov 2026');
+    await screen.findByText(THIS_MONTH);
 
     fireEvent.change(screen.getByRole('searchbox'), { target: { value: 'Auntie' } });
 
@@ -176,7 +223,7 @@ describe('FinancialLedger summaries', () => {
     });
     expect(backendMocks.getSummary).toHaveBeenLastCalledWith(expect.objectContaining({ search: 'Auntie' }));
     expect(backendMocks.getGroupTotals).toHaveBeenLastCalledWith(expect.objectContaining({ search: 'Auntie' }));
-    expect(screen.getByText('Filtered: “Auntie”')).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Remove filter “Auntie”' })).toBeTruthy();
 
     fireEvent.click(screen.getByRole('button', { name: 'Reset' }));
     expect(screen.queryByRole('button', { name: 'Reset' })).toBeNull();
@@ -188,7 +235,7 @@ describe('FinancialLedger summaries', () => {
       : allAccountsResponse));
     renderLedger();
 
-    await screen.findByText('Nov 2026');
+    await screen.findByText(THIS_MONTH);
     fireEvent.change(screen.getByRole('searchbox'), { target: { value: 'Antie' } });
 
     expect(await screen.findByText('No exact match for “Antie”. Showing results for Auntie Grace.')).toBeTruthy();

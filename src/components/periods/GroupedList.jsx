@@ -1,6 +1,6 @@
 import { Fragment, useEffect, useMemo, useRef, useState } from 'react';
 import { RefreshCw } from 'lucide-react';
-import { ancestorKeys, buildGroupTree, collapseSingleChildren, defaultOpenKeys, expandAll } from '../../lib/groupTree';
+import { ancestorKeys, buildGroupTree, defaultOpenKeys, expandAll } from '../../lib/groupTree';
 import { GROUP_LEVELS } from '../../lib/periodTotals';
 import { todayLocalIso } from '../../lib/localDate';
 import { GroupRowCard, GroupRowTable } from './GroupRow';
@@ -12,7 +12,7 @@ import { commonCopy } from '../../i18n/common';
  * Header totals come from the group-totals endpoint, looked up by key, never from rows.
  *
  * config: {
- *   levels?: ['year', 'month', 'day'], collapseSingleChild?: boolean,
+ *   levels?: ['year', 'month', 'day'],
  *   noun: [singular, plural], describeSummary(totals) → string,
  *   columnTotals: { [columnId]: (totals) → node }, labelMeta?(totals) → node   (table)
  *   renderSummary(totals) → node                                              (cards)
@@ -35,8 +35,8 @@ export default function GroupedList({
   const containerRef = useRef(null);
   const levels = config.levels ?? GROUP_LEVELS;
   const tree = useMemo(() => buildGroupTree(records, getBucket, groups, levels), [records, getBucket, groups, levels]);
-  const display = useMemo(() => (config.collapseSingleChild ? collapseSingleChildren(tree.roots) : expandAll(tree.roots)), [tree, config.collapseSingleChild]);
-  // Every key a display node stands for → that node's key (folded groups share one header).
+  const display = useMemo(() => expandAll(tree.roots), [tree]);
+  // Every key a display node stands for → that node's key.
   const displayKeyOf = useMemo(() => {
     const map = new Map();
     const walk = (node) => {

@@ -17,7 +17,7 @@ export default function PeriodChart({ items, series, describe, isEmpty, axisLabe
 
   return (
     <figure className="min-w-0 space-y-2">
-      <figcaption className="hidden items-center gap-4 text-xs text-ink-muted sm:flex">
+      <figcaption className="flex flex-wrap items-center gap-4 text-xs text-ink-muted">
         {series.map((entry) => (
           <span key={entry.id} className="inline-flex items-center gap-1.5">
             <span aria-hidden="true" className={`h-2.5 w-2.5 rounded-[2px] ${entry.barClass}`} />

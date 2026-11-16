@@ -6,14 +6,14 @@
 //   VITE_API_BASE_URL=http://api.e2e.test npm run build && npx vite preview --port 4173 &
 //   node e2e/manual/period-pages-screens.mjs before   # or: after
 //
-// Output: docs/audit/screens/<label>-<page>-<width>.png
+// Output: docs/audit/screens/<label>-<page>-<width>.png (or SCREENS_OUT_DIR)
 import { chromium } from '@playwright/test';
 import { mkdirSync } from 'node:fs';
 
 const LABEL = process.argv[2] ?? 'after';
 const BASE_URL = process.env.SCREENS_BASE_URL ?? 'http://localhost:4173';
 const API_ORIGIN = 'http://api.e2e.test';
-const OUT_DIR = 'docs/audit/screens';
+const OUT_DIR = process.env.SCREENS_OUT_DIR ?? 'docs/audit/screens';
 
 // ── Ledger fixtures ────────────────────────────────────────────────────────────
 const isoWeek = (iso) => {
@@ -204,9 +204,6 @@ async function capture(browser, width, height) {
     viewport: { width, height }, locale: 'en-KE', timezoneId: 'Africa/Nairobi', serviceWorkers: 'block',
     deviceScaleFactor: 1, isMobile: width < 768, hasTouch: width < 768,
   });
-  await context.addInitScript(() => {
-    try { window.localStorage.setItem('jivu:period:ledger', 'year'); } catch { /* ignore */ }
-  });
   const page = await context.newPage();
   // The saved session is verified against /auth/me; keep it valid after registering.
   let registered = false;
@@ -229,7 +226,11 @@ async function capture(browser, width, height) {
   await page.getByRole('button', { name: /Create farm account/ }).click();
   await page.waitForURL((url) => !url.pathname.includes('/register'));
 
-  const shots = [['ledger', '/finance/ledger'], ['production-log', '/operations/yield']];
+  const shots = [
+    ['ledger', '/finance/ledger'],
+    ['production-log', '/operations/yield'],
+    ['reports', '/operations/reports?period=custom&start_date=2026-09-01&end_date=2026-11-16'],
+  ];
   for (const [name, route] of shots) {
     await page.goto(`${BASE_URL}${route}`);
     await page.waitForLoadState('networkidle');

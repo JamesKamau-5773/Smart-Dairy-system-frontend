@@ -1,6 +1,6 @@
-import { useEffect, useMemo, useState } from 'react';
-import { keepPreviousData, useMutation, useQuery } from '@tanstack/react-query';
-import { ChevronDown, ImagePlus, Minus, Paperclip, PencilLine, Plus, ReceiptText } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { useMutation } from '@tanstack/react-query';
+import { ChevronDown, Minus, Paperclip, PencilLine, Plus, ReceiptText } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useTenant } from '../../hooks/useTenant';
 import { useAuth } from '../../contexts/AuthContext';
@@ -10,9 +10,6 @@ import { offlineFailureMessage } from '../../lib/offlinePolicy';
 import { useLedgerCategories } from '../../hooks/useLedgerCategories';
 import { todayLocalIso } from '../../lib/localDate';
 import { formatDate } from '../../lib/dateFormat';
-import { CardSkeletons, ListLoadMessage, SlowLoadingHint, StaleDataNotice, TableSkeletonRows } from '../../components/ui/ListLoadState';
-import { getListLoadState } from '../../lib/listLoadState';
-import { QUERY_KEYS } from '../../providers/QueryProvider';
 import Money from '../../components/ui/Money';
 import OverflowMenu from '../../components/ui/OverflowMenu';
 import ReceiptPreview from '../../components/finance/ReceiptPreview';
@@ -22,40 +19,46 @@ import ReceiptPhotosModal from '../../components/finance/ReceiptPhotosModal';
 import { downloadReceiptPdf, shareReceiptText } from '../../lib/receipt';
 import PageHeader from '../../components/layout/PageHeader';
 import DataSection from '../../components/data/DataSection';
-import { TableHead, cellClass } from '../../components/data/DataTable';
+import { cellClass } from '../../components/data/DataTable';
+import GroupedDataTable from '../../components/data/GroupedDataTable';
+import SummaryStrip from '../../components/data/SummaryStrip';
+import ToolbarDateRange from '../../components/data/ToolbarDateRange';
 import { FilterChips, ResultCount, Toolbar, ToolbarSearch, ToolbarSelect } from '../../components/data/Toolbar';
-import PeriodSummary from '../../components/periods/PeriodSummary';
-import PeriodControl from '../../components/periods/PeriodControl';
-import PeriodChart from '../../components/periods/PeriodChart';
-import GroupedList from '../../components/periods/GroupedList';
-import { ledgerGroupConfig, ledgerSummaryConfig } from '../../components/periods/periodConfigs';
-import { useInvalidateLedger, useLedgerGroupTotals, useLedgerSummary, usePeriodSelection } from '../../hooks/usePeriodTotals';
-import { CUSTOM_PERIOD, toTotalsParams } from '../../lib/periodTotals';
+import { ledgerGroupConfig, ledgerSummaryConfig, summaryIsEmpty, summaryScope } from '../../components/periods/periodConfigs';
+import { useInvalidateLedger } from '../../hooks/usePeriodTotals';
+import { useLedgerData } from '../../hooks/useLedgerData';
+import { formatDateRange } from '../../lib/dateFormat';
+import { currentMonthRange } from '../../lib/periodTotals';
+import { ledgerCopy } from '../../i18n/ledger';
 import { correctionKind } from '../../lib/ledgerCorrection';
 import { readAttachments } from '../../lib/receiptAttachments';
-import { useUrlFilters } from '../../hooks/useUrlFilters';
+import { ISO_DATE_FILTER, useUrlFilters } from '../../hooks/useUrlFilters';
 
-// Type and category live in the address. Search stays in the page: it can hold a customer's
-// name or phone number, which never go in a URL.
-const URL_FILTERS = { type: 'all', category: 'all' };
-const URL_FILTER_VALUES = { type: ['all', 'revenue', 'expense'] };
+// Type, category and the date range live in the address, so other pages can link to a
+// filtered view (e.g. /finance/ledger?from=2026-11-01&to=2026-11-30). Search stays in the
+// page: it can hold a customer's name or phone number, which never go in a URL.
+const URL_FILTERS = { type: 'all', category: 'all', from: '', to: '' };
+const URL_FILTER_VALUES = { type: ['all', 'revenue', 'expense'], from: ISO_DATE_FILTER, to: ISO_DATE_FILTER };
+
+/** The address's range when it is complete and in order (ISO dates compare as text); else null. */
+const rangeFrom = ({ from, to }) => (from && to && from <= to ? { from, to } : null);
 const TYPE_OPTIONS = [['all', 'All types'], ['revenue', 'Money in'], ['expense', 'Money out']];
 const TYPE_LABELS = Object.fromEntries(TYPE_OPTIONS);
 
-// Bank-statement order. Each record fills Money in or Money out, never both.
-// Fixed widths fit nine columns in a 1280px window; Description takes what's left.
-const COLUMNS = [
-  { id: 'date', header: 'Date', width: 'w-[5.75rem]' },
-  { id: 'party', header: 'Customer/Supplier', width: 'w-[8.5rem]' },
-  { id: 'category', header: 'Category', width: 'w-[6.75rem]' },
-  { id: 'description', header: 'Description' },
-  { id: 'ref', header: 'Ref', width: 'w-[5.75rem]' },
-  { id: 'money_in', header: 'Money in', align: 'right', mono: true, width: 'w-[7.5rem]' },
-  { id: 'money_out', header: 'Money out', align: 'right', mono: true, width: 'w-[7.5rem]' },
-  { id: 'status', header: 'Status', width: 'w-[4.75rem]' },
-  { id: 'actions', header: <span className="sr-only">Actions</span>, align: 'right', width: 'w-[5.25rem]' },
+// Fixed widths for every column but Description, which takes what's left, so nothing moves
+// when groups open and close. At 1280px Customer / Supplier and Ref fit without truncating.
+// The day group row carries the date, so rows don't repeat it. Headers are read at render
+// so they follow the language.
+const COLUMN_LAYOUT = [
+  { id: 'party', width: 'w-[13rem]' },
+  { id: 'category', width: 'w-[8rem]' },
+  { id: 'ref', width: 'w-[8rem]' },
+  { id: 'description' },
+  { id: 'amount', align: 'right', mono: true, width: 'w-[8rem]' },
+  { id: 'status', width: 'w-[5.5rem]' },
+  { id: 'actions', align: 'right', width: 'w-[3.5rem]', srOnly: true },
 ];
-const column = Object.fromEntries(COLUMNS.map((entry) => [entry.id, entry]));
+const column = Object.fromEntries(COLUMN_LAYOUT.map((entry) => [entry.id, entry]));
 
 /** 'in' or 'out' from the record's own type; null when the API sent neither. */
 const directionOf = (tx) => {
@@ -68,9 +71,19 @@ const partyOf = (tx) => tx.counterparty_name || tx.customer_name || tx.buyer_nam
 const descriptionOf = (tx) => [tx.item_name, tx.description].filter(Boolean).join(' · ');
 const getBucket = (tx) => tx.bucket;
 
+/** The amount signed by the entry's own type: income as is, an expense negative; null if unknown. */
+const signedAmount = (tx) => {
+  const amount = Number(tx.amount);
+  const direction = directionOf(tx);
+  if (!direction || tx.amount === null || tx.amount === undefined || !Number.isFinite(amount)) return null;
+  return direction === 'out' ? -Math.abs(amount) : amount;
+};
+
+// Posted is the normal state, so only other statuses get a badge.
 const StatusBadge = ({ status }) => {
   if (!status) return <span className="text-xs text-ink-muted">—</span>;
   const text = String(status).toLowerCase().replace(/_/g, ' ');
+  if (text === 'posted') return null;
   const voided = ['voided', 'void', 'cancelled'].includes(text);
   return (
     <span className={`inline-flex max-w-full items-center rounded-badge border border-ink/10 bg-ink-50 px-1.5 py-0.5 text-[11px] font-medium capitalize ${voided ? 'text-ink-muted line-through' : 'text-ink'}`}>
@@ -79,29 +92,21 @@ const StatusBadge = ({ status }) => {
   );
 };
 
-// Paperclip = receipt photos saved; image-plus = none yet (and the farmer may add one).
-// Different shapes, so the state never rests on colour or fill alone.
-const ReceiptClip = ({ transaction, canUpload, onOpen, size = 'h-8 w-8' }) => {
-  const count = readAttachments(transaction).length;
-  if (!count && !canUpload) return <span aria-hidden="true" className={`inline-block ${size}`} />;
-  const label = count ? `Receipt photos (${count})` : 'Add receipt photo';
-  return (
-    <button type="button" onClick={() => onOpen(transaction)} aria-label={label} title={label} className={`relative inline-flex ${size} shrink-0 items-center justify-center !rounded-input hover:bg-ink-50 ${count ? 'text-ink' : 'text-ink-muted'}`}>
-      {count ? <Paperclip size={15} aria-hidden="true" /> : <ImagePlus size={15} aria-hidden="true" />}
-      {count > 1 && <span aria-hidden="true" className="absolute right-0.5 top-0.5 font-sans text-[9px] font-semibold">{count}</span>}
-    </button>
-  );
-};
-
 const FinancialLedger = () => {
   const { tenantId, farmId } = useTenant();
   const { currentUser } = useAuth();
   const invalidateLedger = useInvalidateLedger();
   const categories = useLedgerCategories(tenantId, farmId);
-  const [groupFocus, setGroupFocus] = useState(null);
   const { filters: urlFilters, setFilters: setUrlFilters, resetFilters: resetUrlFilters } = useUrlFilters(URL_FILTERS, { allowed: URL_FILTER_VALUES });
   const [search, setSearch] = useState('');
   const ledgerFilters = { ...urlFilters, search };
+  // The table and the strip open on the current month; a range in the address replaces it.
+  const chosenRange = rangeFrom(urlFilters);
+  const range = chosenRange ?? currentMonthRange(todayLocalIso());
+  const COLUMNS = COLUMN_LAYOUT.map((entry) => ({
+    ...entry,
+    header: entry.srOnly ? <span className="sr-only">{ledgerCopy.columns[entry.id]}</span> : ledgerCopy.columns[entry.id],
+  }));
   const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('');
   const [expandedIds, setExpandedIds] = useState(() => new Set());
   const [modalTransactionType, setModalTransactionType] = useState(null);
@@ -120,71 +125,32 @@ const FinancialLedger = () => {
     return () => window.clearTimeout(timeoutId);
   }, [searchQuery]);
 
-  // Type, category and search run on the server for rows, group headers and the summary.
-  const serverFilters = useMemo(() => ({
-    type: ledgerFilters.type,
-    category: ledgerFilters.category,
-    search: debouncedSearchQuery,
-  }), [ledgerFilters.type, ledgerFilters.category, debouncedSearchQuery]);
-
-  // The period is the page's one date control. The table follows the range the API
-  // resolved for it (or the farmer's custom range); no dates are worked out here.
-  const { period, anchor, customRange, setPeriod, setCustomRange, step } = usePeriodSelection('ledger');
-  const periodSummary = useLedgerSummary({ period, anchor, customRange, filters: serverFilters });
-  const summary = periodSummary.data;
-  const tableRange = period === CUSTOM_PERIOD ? customRange : summary?.range ?? null;
-  // If the period can't load, the list still loads (undated) and says so.
-  const periodUnavailable = !summary && (periodSummary.loadState === 'error' || periodSummary.loadState === 'offline');
-  const tableReady = Boolean(tableRange) || periodUnavailable;
-  const tableParams = useMemo(() => ({
-    ...toTotalsParams(serverFilters),
-    ...(tableRange ? { date_from: tableRange.from, date_to: tableRange.to } : {}),
-  }), [serverFilters, tableRange]);
-
-  const groupTotals = useLedgerGroupTotals(tableParams, { levels: ledgerGroupConfig.levels, enabled: tableReady });
-  const { data, error, refetch, status: ledgerStatus, fetchStatus: ledgerFetchStatus } = useQuery({
-    queryKey: [...QUERY_KEYS.LEDGER_ENTRIES(tenantId, farmId), tableParams],
-    // The ledger endpoint needs the scope as query parameters for the farm-wide view.
-    queryFn: () => financeApi.listLedgerEntries({
-      per_page: 100,
-      farm_id: farmId,
-      tenant_id: tenantId,
-      ...tableParams,
-      // The list historically read `search_query`; the contract names it `search`.
-      ...(debouncedSearchQuery ? { search_query: debouncedSearchQuery } : {}),
-    }),
-    enabled: Boolean(tenantId && farmId && tableReady),
-    placeholderData: keepPreviousData,
+  // One hook requests the rows, the group totals and the summary strip with the same
+  // filters and date range, so the strip always sums up exactly what the table shows.
+  const { rows, groupTotals, summary: ledgerSummary } = useLedgerData({
+    filters: { type: ledgerFilters.type, category: ledgerFilters.category, search: debouncedSearchQuery },
+    range,
   });
-  // All-time balances: never narrowed by the period or the filters.
-  const { data: balancesData } = useQuery({
-    queryKey: [...QUERY_KEYS.LEDGER_ENTRIES(tenantId, farmId), 'balances'],
-    queryFn: () => financeApi.getLedgerBalances({ farm_id: farmId, tenant_id: tenantId }),
-    enabled: Boolean(tenantId && farmId),
-  });
-  const balances = { owed: balancesData?.outstanding_receivables ?? null, credit: balancesData?.customer_credit ?? null };
-
-  const ledgerLoadState = getListLoadState({ status: ledgerStatus, fetchStatus: ledgerFetchStatus, data });
-  const isLoading = ledgerLoadState === 'loading';
-  const isListUnavailable = ledgerLoadState === 'offline' || ledgerLoadState === 'error';
-  const transactions = useMemo(() => data?.items || [], [data]);
-  const resultCount = data?.meta?.total ?? null;
+  const summary = ledgerSummary.data;
+  const transactions = rows.items;
   const groupsUnavailable = groupTotals.loadState === 'error' || groupTotals.loadState === 'offline';
 
-  const categoryOptions = useMemo(() => {
+  const categoryOptions = (() => {
     const options = ledgerFilters.type === 'revenue' ? categories.income
       : ledgerFilters.type === 'expense' ? categories.expense
         : [...categories.income, ...categories.expense];
     return [['all', 'All categories'], ...new Map(options).entries()];
-  }, [categories.income, categories.expense, ledgerFilters.type]);
+  })();
   const categoryLabel = Object.fromEntries(categoryOptions)[ledgerFilters.category] ?? ledgerFilters.category;
 
   const setFilter = (name, value) => {
     if (name === 'search') setSearch(value);
     else setUrlFilters({ [name]: value, ...(name === 'type' ? { category: 'all' } : {}) });
   };
+  const setRange = (next) => setUrlFilters({ from: next?.from ?? '', to: next?.to ?? '' });
   const chips = [
     searchQuery && { key: 'search', label: `“${searchQuery}”`, onRemove: () => setFilter('search', '') },
+    chosenRange && { key: 'range', label: formatDateRange(chosenRange.from, chosenRange.to), onRemove: () => setRange(null) },
     ledgerFilters.type !== 'all' && { key: 'type', label: TYPE_LABELS[ledgerFilters.type], onRemove: () => setFilter('type', 'all') },
     ledgerFilters.category !== 'all' && { key: 'category', label: categoryLabel, onRemove: () => setFilter('category', 'all') },
   ].filter(Boolean);
@@ -257,9 +223,13 @@ const FinancialLedger = () => {
     );
   };
 
-  const amountCell = (tx, direction) => (directionOf(tx) === direction
-    ? <Money amount={tx.amount} size="sm" className="font-semibold text-ink" />
-    : null);
+  // Income plain, expenses negative in the negative colour; the header names the currency.
+  const amountCell = (tx) => {
+    const amount = signedAmount(tx);
+    return amount === null
+      ? <span className="text-xs text-ink-muted">—</span>
+      : <Money amount={amount} size="sm" tone="signed" showCurrency={false} className="font-semibold" />;
+  };
 
   // Desktop row, 44px. The full description and reference open in the row detail.
   const renderRow = (tx) => {
@@ -268,9 +238,9 @@ const FinancialLedger = () => {
     const detailId = `ledger-detail-${tx.id}`;
     return [
       <tr key={tx.id} className="h-11 border-b border-ink/5 hover:bg-ink-50/60">
-        <td className={cellClass(column.date, '!py-0 whitespace-nowrap')}><span className="text-xs text-ink-muted">{formatDate(tx.date, '—')}</span></td>
         <td className={cellClass(column.party, '!py-0')}><span className="block truncate text-sm font-medium text-ink" title={partyOf(tx)}>{partyOf(tx)}</span></td>
         <td className={cellClass(column.category, '!py-0')}><span className="block truncate text-xs text-ink-muted" title={tx.category || undefined}>{tx.category || '—'}</span></td>
+        <td className={cellClass(column.ref, '!py-0')}><span className="block truncate text-[11px] text-ink-muted" title={tx.reference_code || undefined}>{tx.reference_code || '—'}</span></td>
         <td className={cellClass(column.description, '!py-0')}>
           <button
             type="button"
@@ -288,16 +258,9 @@ const FinancialLedger = () => {
             <ChevronDown size={13} aria-hidden="true" className={`ml-auto shrink-0 text-ink-muted transition-transform motion-reduce:transition-none ${expanded ? 'rotate-180' : ''}`} />
           </button>
         </td>
-        <td className={cellClass(column.ref, '!py-0')}><span className="block truncate text-[11px] text-ink-muted" title={tx.reference_code || undefined}>{tx.reference_code || '—'}</span></td>
-        <td className={cellClass(column.money_in, '!py-0 whitespace-nowrap')}>{amountCell(tx, 'in')}</td>
-        <td className={cellClass(column.money_out, '!py-0 whitespace-nowrap')}>{amountCell(tx, 'out')}</td>
+        <td className={cellClass(column.amount, '!py-0 whitespace-nowrap')}>{amountCell(tx)}</td>
         <td className={cellClass(column.status, '!py-0')}><StatusBadge status={tx.status} /></td>
-        <td className={cellClass(column.actions, '!py-0')}>
-          <div className="flex items-center justify-end gap-0.5">
-            <ReceiptClip transaction={tx} canUpload={canUploadReceipts} onOpen={setPhotosFor} />
-            {menuFor(tx, 'h-8 w-8')}
-          </div>
-        </td>
+        <td className={cellClass(column.actions, '!py-0')}>{menuFor(tx, 'h-8 w-8')}</td>
       </tr>,
       expanded && (
         <tr key={`${tx.id}-detail`} id={detailId} className="border-b border-ink/5 bg-ink-50/60">
@@ -329,12 +292,11 @@ const FinancialLedger = () => {
           </div>
           <div className="shrink-0 pt-1 text-right">
             <p className="text-[10px] font-semibold uppercase tracking-wider text-ink-muted">{direction === 'in' ? 'Money in' : direction === 'out' ? 'Money out' : 'Amount'}</p>
-            <Money amount={tx.amount} size="sm" className="font-semibold text-ink" />
+            {signedAmount(tx) === null
+              ? <Money amount={tx.amount} size="sm" className="font-semibold" />
+              : <Money amount={signedAmount(tx)} size="sm" tone="signed" className="font-semibold" />}
           </div>
-          <div className="flex shrink-0 items-center">
-            <ReceiptClip transaction={tx} canUpload={canUploadReceipts} onOpen={setPhotosFor} size="h-11 w-11" />
-            {menuFor(tx, 'h-11 w-11')}
-          </div>
+          <div className="flex shrink-0 items-center">{menuFor(tx, 'h-11 w-11')}</div>
         </div>
         <div className="flex min-w-0 items-start gap-2 pr-2">
           {description ? (
@@ -356,25 +318,18 @@ const FinancialLedger = () => {
     </div>
   );
   const emptyMessage = hasActiveFilters
-    ? 'No records match these filters for this period.'
+    ? 'No records match these filters.'
     : (
       <div className="flex flex-col items-center gap-3">
-        <p>No records for this period. Record milk sales, payments and costs to see your profit.</p>
+        <p>No records yet. Record milk sales, payments and costs to see your profit.</p>
         {addActions}
       </div>
     );
 
-  const groupedListProps = {
-    records: transactions,
-    getBucket,
-    groups: groupTotals.data,
-    groupsUnavailable,
-    onRetryGroups: groupTotals.refetch,
-    config: ledgerGroupConfig,
-    focus: groupFocus,
-  };
-
-  const scopeNote = hasActiveFilters ? `Filtered: ${chips.map((chip) => chip.label).join(' · ')}` : null;
+  // The dashboard opens on the same dates as the ledger.
+  const reportLink = `/operations/reports?period=custom&start_date=${range.from}&end_date=${range.to}`;
+  // "No records" only when the table is empty too (the strip and table share filters and dates).
+  const tableIsEmpty = (rows.loadState === 'ready' || rows.loadState === 'stale') && transactions.length === 0;
 
   return (
     <div className="mx-auto max-w-7xl animate-reveal space-y-4">
@@ -384,96 +339,52 @@ const FinancialLedger = () => {
         secondaryActions={[{ key: 'expense', label: 'Log expense', icon: Minus, onClick: () => openForm('expense') }]}
       />
 
-      <PeriodSummary
-        title="Money in and out"
-        control={(
-          <PeriodControl
-            period={period}
-            label={summary?.label}
-            onPeriodChange={setPeriod}
-            onPrevious={() => step(summary?.range, -1)}
-            onNext={() => step(summary?.range, 1)}
-            canGoPrevious={Boolean(summary?.range)}
-            canGoNext={Boolean(summary?.range) && summary.hasNext}
-            customRange={customRange}
-            onCustomRange={setCustomRange}
-            maxDate={todayLocalIso()}
-          />
-        )}
-        scopeNote={scopeNote}
-        loadState={periodSummary.loadState}
+      <SummaryStrip
+        label="Money in and out"
+        items={summary ? ledgerSummaryConfig.items(summary) : []}
+        scope={summaryScope(range, { isDefault: !chosenRange })}
+        empty={summaryIsEmpty(summary) && tableIsEmpty && 'No records'}
+        link={{ to: reportLink }}
+        loadState={ledgerSummary.loadState}
         hasData={Boolean(summary)}
-        isEmpty={summary?.current?.count === 0}
-        error={periodSummary.error}
-        asOf={periodSummary.asOf}
-        onRetry={periodSummary.refetch}
-        metrics={summary ? ledgerSummaryConfig.metrics(summary) : []}
-        secondary={summary ? ledgerSummaryConfig.secondary(summary, balances) : []}
-        emptyMessage={summary && (
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <span>{ledgerSummaryConfig.emptyMessage(summary)}</span>
-            {addActions}
-          </div>
-        )}
-        chart={summary && (
-          <PeriodChart
-            label={`Money in and out by sub-period, ${summary.label ?? ''}`}
-            items={summary.breakdown}
-            {...ledgerSummaryConfig.chart}
-            onSelect={(key) => setGroupFocus({ key, nonce: Date.now() })}
-          />
-        )}
+        error={ledgerSummary.error}
+        asOf={ledgerSummary.asOf}
+        onRetry={ledgerSummary.refetch}
       />
 
       <DataSection
         label="Ledger records"
         toolbar={(
-          <Toolbar end={<ResultCount count={resultCount} noun={['record', 'records']} />}>
+          <Toolbar end={<ResultCount count={rows.total} noun={['record', 'records']} />}>
             <ToolbarSearch label="Search records" value={ledgerFilters.search} onChange={(value) => setFilter('search', value)} placeholder="Search customer, item, reference…" />
             <ToolbarSelect label="Type" value={ledgerFilters.type} onChange={(value) => setFilter('type', value)} options={TYPE_OPTIONS} />
             <ToolbarSelect label="Category" value={ledgerFilters.category} onChange={(value) => setFilter('category', value)} options={categoryOptions} />
+            <ToolbarDateRange range={range} onChange={setRange} maxDate={todayLocalIso()} />
             <FilterChips chips={chips} onReset={() => { setSearch(''); resetUrlFilters(); }} />
           </Toolbar>
         )}
-        notices={(
-          <>
-            {isLoading && <SlowLoadingHint label="transactions" />}
-            {periodUnavailable && (
-              <p role="status" className="border-b border-ink/10 bg-ink-50 px-4 py-2 text-xs text-ink-muted">
-                The period couldn’t load, so this list shows every date.
-              </p>
-            )}
-            {data?.summary_scope?.typo_matched && (
-              <p role="status" className="border-b border-ink/10 bg-ink-50 px-4 py-2 text-sm text-ink">
-                No exact match for “{data.summary_scope.search_query}”. Showing results for {data.summary_scope.matched_names?.join(', ')}.
-              </p>
-            )}
-            {ledgerLoadState === 'stale' && <StaleDataNotice label="transactions" error={error} onRetry={refetch} />}
-          </>
+        notices={rows.searchScope?.typo_matched && (
+          <p role="status" className="border-b border-ink/10 bg-ink-50 px-4 py-2 text-sm text-ink">
+            No exact match for “{rows.searchScope.search_query}”. Showing results for {rows.searchScope.matched_names?.join(', ')}.
+          </p>
         )}
       >
-        <div className="hidden xl:block">
-          <table className="w-full table-fixed border-collapse text-left">
-            <TableHead columns={COLUMNS} />
-            <tbody className="bg-card">
-              {isLoading ? (
-                <TableSkeletonRows columns={COLUMNS.length} />
-              ) : isListUnavailable ? (
-                <tr><td colSpan={COLUMNS.length}><ListLoadMessage state={ledgerLoadState} label="transactions" error={error} onRetry={refetch} /></td></tr>
-              ) : transactions.length > 0 ? (
-                <GroupedList {...groupedListProps} variant="table" columns={COLUMNS} renderRecord={renderRow} />
-              ) : (
-                <tr><td colSpan={COLUMNS.length} className="p-10 text-center text-sm text-ink-muted !font-sans">{emptyMessage}</td></tr>
-              )}
-            </tbody>
-          </table>
-        </div>
-        <div className="xl:hidden">
-          {isLoading ? <div className="divide-y divide-ink/10"><CardSkeletons /></div>
-            : isListUnavailable ? <ListLoadMessage state={ledgerLoadState} label="transactions" error={error} onRetry={refetch} />
-              : transactions.length > 0 ? <GroupedList {...groupedListProps} variant="cards" renderRecord={renderCard} />
-                : <div className="p-6 text-center text-sm text-ink-muted">{emptyMessage}</div>}
-        </div>
+        <GroupedDataTable
+          columns={COLUMNS}
+          rows={transactions}
+          getBucket={getBucket}
+          groups={groupTotals.data}
+          groupsUnavailable={groupsUnavailable}
+          onRetryGroups={groupTotals.refetch}
+          config={ledgerGroupConfig}
+          renderRow={renderRow}
+          renderCard={renderCard}
+          loadState={rows.loadState}
+          error={rows.error}
+          onRetry={rows.refetch}
+          rowsLabel="transactions"
+          empty={emptyMessage}
+        />
       </DataSection>
 
       {modalTransactionType && (

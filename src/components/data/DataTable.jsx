@@ -14,7 +14,11 @@ export const cellClass = (column, extra = '') => [
   extra,
 ].filter(Boolean).join(' ');
 
-/** <colgroup> + <thead>. Widths come from the column definitions. */
+/**
+ * <colgroup> + <thead> in the brand header style: solid brand fill, white uppercase labels.
+ * Widths come from the column definitions; use it in a `table-fixed` table so columns
+ * never move when groups open or close.
+ */
 export function TableHead({ columns }) {
   return (
     <>
@@ -22,9 +26,9 @@ export function TableHead({ columns }) {
         {columns.map((column) => <col key={column.id} className={column.width ?? ''} />)}
       </colgroup>
       <thead>
-        <tr className="border-b border-ink/10 bg-ink-50">
+        <tr className="bg-brand">
           {columns.map((column) => (
-            <th key={column.id} scope="col" className={cellClass(column, 'text-[10px] font-semibold uppercase tracking-wider text-ink-muted')}>
+            <th key={column.id} scope="col" className={cellClass(column, 'h-10 whitespace-nowrap text-[11px] font-semibold uppercase tracking-wider text-white')}>
               {column.header}
             </th>
           ))}

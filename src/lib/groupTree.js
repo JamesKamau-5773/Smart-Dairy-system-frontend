@@ -74,37 +74,7 @@ export function groupLabel(node) {
   return node.label ?? node.key;
 }
 
-function mergedLabel(parent, child) {
-  const withYear = parent.level === 'year' || parent.hasYear;
-  if (child.level === 'day') return formatDayLabel(child.key, { withYear }) ?? groupLabel(child);
-  if (parent.level === 'year') return `${groupLabel(child)} ${parent.label}`;
-  return `${parent.label} · ${groupLabel(child)}`;
-}
-
-/**
- * Display nodes where a group with exactly one child group is folded into that child,
- * so the same totals are never stacked: 2026 › November › Tue 03 Nov becomes one
- * "Tue 03 Nov 2026" header. Each display node keeps every key it stands for (`keys`),
- * so a request to open or jump to any of them finds it. The tree itself is unchanged.
- */
-export function collapseSingleChildren(roots) {
-  const toDisplay = (node) => {
-    let display = { ...node, keys: [node.key], label: groupLabel(node), hasYear: node.level === 'year' };
-    while (display.level !== 'day' && display.children.length === 1) {
-      const child = display.children[0];
-      display = {
-        ...child,
-        keys: [...display.keys, child.key],
-        label: mergedLabel(display, child),
-        hasYear: display.hasYear || display.level === 'year',
-      };
-    }
-    return { ...display, children: display.children.map(toDisplay) };
-  };
-  return roots.map(toDisplay);
-}
-
-/** Display nodes without folding: every level keeps its own header. */
+/** Display nodes: every level keeps its own header (Year → Month → Day, always). */
 export function expandAll(roots) {
   const toDisplay = (node) => ({ ...node, keys: [node.key], label: groupLabel(node), children: node.children.map(toDisplay) });
   return roots.map(toDisplay);

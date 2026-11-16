@@ -1,4 +1,4 @@
-import { keepPreviousData, useQuery } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { useTenant } from "../../hooks/useTenant";
 import { useAuth } from "../../contexts/AuthContext";
 import { canViewAdminControls } from "../../lib/roles";
@@ -12,22 +12,21 @@ import QueuedMilkEntries from "../../components/operations/QueuedMilkEntries";
 import CalfMilkFeedModal from "../../components/operations/CalfMilkFeedModal";
 import RecentCalfFeedings from "../../components/operations/RecentCalfFeedings";
 import Confirmation, { useConfirmation } from "../../components/ui/Confirmation";
-import PeriodSummary from "../../components/periods/PeriodSummary";
-import PeriodControl from "../../components/periods/PeriodControl";
 import PageHeader from "../../components/layout/PageHeader";
 import DataSection from "../../components/data/DataSection";
 import { SURFACE } from "../../components/data/surface";
-import { TableHead, cellClass } from "../../components/data/DataTable";
-import { FilterChips, Toolbar, ToolbarSearch } from "../../components/data/Toolbar";
+import { cellClass } from "../../components/data/DataTable";
+import GroupedDataTable from "../../components/data/GroupedDataTable";
+import SummaryStrip from "../../components/data/SummaryStrip";
+import { FilterChips, ResultCount, Toolbar, ToolbarSearch } from "../../components/data/Toolbar";
 import OverflowMenu from "../../components/ui/OverflowMenu";
-import DateField from "../../components/ui/DateField";
-import GroupedList from "../../components/periods/GroupedList";
-import { productionGroupConfig, productionSummaryConfig } from "../../components/periods/periodConfigs";
-import { useInvalidateProduction, useProductionGroupTotals, useProductionSummary, usePeriodSelection } from "../../hooks/usePeriodTotals";
+import ToolbarDateRange from "../../components/data/ToolbarDateRange";
+import { productionGroupConfig, productionSummaryConfig, summaryIsEmpty, summaryScope } from "../../components/periods/periodConfigs";
+import { useInvalidateProduction } from "../../hooks/usePeriodTotals";
+import { useProductionData } from "../../hooks/useProductionData";
 import { formatLitres } from "../../lib/numberFormat";
-import { toTotalsParams } from "../../lib/periodTotals";
-import { CardSkeletons, ListLoadMessage, SlowLoadingHint, StaleDataNotice, TableSkeletonRows } from "../../components/ui/ListLoadState";
-import { getListLoadState } from "../../lib/listLoadState";
+import { currentMonthRange } from "../../lib/periodTotals";
+import { formatDateRange } from "../../lib/dateFormat";
 import toast from "react-hot-toast";
 import { productionCopy as copy, sessionLabel } from "../../i18n/production";
 import { commonCopy } from "../../i18n/common";
@@ -105,24 +104,35 @@ function normalizeStatus(raw) {
 const getBucket = (row) => row.bucket;
 
 // One column definition for the header, rows and group rows (litres totals line up).
+// Fixed widths sized to their content for every column but Milker, which takes what's
+// left, so nothing moves as groups open and close. Litres sit right beside Cow.
 // Headers are read at render so they follow the language.
 const COLUMN_LAYOUT = [
-  { id: 'session' },
+  { id: 'session', width: 'w-[7rem]' },
+  { id: 'cow', width: 'w-[14rem]' },
+  { id: 'litres', align: 'right', mono: true, width: 'w-[6rem]' },
   { id: 'milker' },
-  { id: 'cow' },
-  { id: 'litres', align: 'right', mono: true },
-  { id: 'status' },
-  { id: 'actions', align: 'right' },
+  { id: 'status', width: 'w-[7.5rem]' },
+  { id: 'actions', align: 'right', width: 'w-[9.5rem]' },
 ];
 const column = Object.fromEntries(COLUMN_LAYOUT.map((entry) => [entry.id, entry]));
 // Kept in the address (Back, reload and shared links keep them). The search is a cow's
 // name or tag, which is safe in a URL.
 // No status filter: the backend ignores status (except "anomaly") on this list, so it would
 // look like it filtered while showing everything (BACKEND_REQUESTS.md, BR-019).
-const EMPTY_FILTERS = { date: "", cowId: "", session: "all" };
+// `date` is the older one-day filter, still read so saved links keep working.
+const EMPTY_FILTERS = { from: "", to: "", date: "", cowId: "", session: "all" };
 const FILTER_VALUES = {
+  from: ISO_DATE_FILTER,
+  to: ISO_DATE_FILTER,
   date: ISO_DATE_FILTER,
   session: ["all", "Morning", "Midday", "Evening"],
+};
+
+/** The range chosen in the address (ISO dates compare as text), or null for the default month. */
+const chosenRangeOf = ({ from, to, date }) => {
+  if (from && to && from <= to) return { from, to };
+  return date ? { from: date, to: date } : null;
 };
 
 // Maps a yield record from the API to what the page shows. Display only: the amount
@@ -162,7 +172,8 @@ const formatMilker = (value) => {
   return digits.length === 12 && digits.startsWith('254') ? `+254 ${digits.slice(3, 6)} ${digits.slice(6, 9)} ${digits.slice(9)}` : milker;
 };
 
-const StatusChip = ({ status }) => (status ? (
+// Verified is the normal state, so only other statuses get a badge.
+const StatusChip = ({ status }) => (status === 'Verified' ? null : status ? (
   <span
     className={`inline-flex items-center gap-1 rounded-badge border px-2 py-1 font-sans text-[11px] font-medium ${
       status === 'Verified'
@@ -188,37 +199,27 @@ export default function YieldLog() {
   const [fastLogInitialDate, setFastLogInitialDate] = useState('');
   const [fastLogMode, setFastLogMode] = useState('create');
   const confirmation = useConfirmation();
-  const { filters, setFilter: updateFilter, resetFilters: clearFilters, hasActiveFilters: hasUrlFilters } = useUrlFilters(EMPTY_FILTERS, { allowed: FILTER_VALUES });
+  const { filters, setFilter: updateFilter, setFilters: updateFilters, resetFilters: clearFilters, hasActiveFilters: hasUrlFilters } = useUrlFilters(EMPTY_FILTERS, { allowed: FILTER_VALUES });
   const [filtersOpen, setFiltersOpen] = useState(hasUrlFilters);
   const COLUMNS = COLUMN_LAYOUT.map((entry) => ({ ...entry, header: copy.columns[entry.id] }));
 
-  // Every filter runs on the server so rows, group headers and period totals agree.
-  const serverFilters = useMemo(() => ({
-    search: filters.cowId.trim(),
-    date_from: filters.date,
-    date_to: filters.date,
-    session: filters.session,
-  }), [filters]);
-
-  const { period, anchor, setPeriod, step } = usePeriodSelection('production');
-  const periodSummary = useProductionSummary({ period, anchor, filters: serverFilters });
-  const summary = periodSummary.data;
-  const groupTotals = useProductionGroupTotals(serverFilters);
-
-  const {
-    data: yieldRowsRaw,
-    error: yieldRowsError,
-    isError: hasYieldRowsError,
-    status: yieldRowsStatus,
-    fetchStatus: yieldRowsFetchStatus,
-    refetch: refetchYieldRows,
-  } = useQuery({
-    queryKey: [...QUERY_KEYS.YIELD_ROWS(tenantId, farmId), toTotalsParams(serverFilters)],
-    queryFn: () => productionApi.listYield(toTotalsParams(serverFilters)),
-    placeholderData: keepPreviousData,
+  // Every filter runs on the server, and one hook requests the rows, the group totals and
+  // the summary strip with the same params, so all three agree.
+  // The table and the strip open on the current month (as on the Ledger); a range in the
+  // address replaces it.
+  const chosenRange = chosenRangeOf(filters);
+  const dateRange = chosenRange ?? currentMonthRange(todayLocalIso());
+  const chosenDay = chosenRange && chosenRange.from === chosenRange.to ? chosenRange.from : '';
+  const setRange = (next) => updateFilters({ from: next?.from ?? '', to: next?.to ?? '', date: '' });
+  const { rows: yieldRows, groupTotals, summary: productionSummary } = useProductionData({
+    filters: { search: filters.cowId.trim(), session: filters.session },
+    range: dateRange,
   });
-  const milkLoadState = getListLoadState({ status: yieldRowsStatus, fetchStatus: yieldRowsFetchStatus, data: yieldRowsRaw });
-  const hasMilkRowsToShow = milkLoadState === 'ready' || milkLoadState === 'stale';
+  const summary = productionSummary.data;
+  const yieldRowsRaw = yieldRows.data;
+  const yieldRowsError = yieldRows.error;
+  const hasYieldRowsError = yieldRows.isError;
+  const [groupFocus, setGroupFocus] = useState(null);
 
   const {
     data: milkDispositions = [],
@@ -255,14 +256,14 @@ export default function YieldLog() {
     });
   }, [hasYieldRowsError, yieldRowsError, tenantId, farmId]);
 
-  const hasActiveFilters = Boolean(filters.date || filters.cowId.trim() || filters.session !== 'all');
+  const hasActiveFilters = Boolean(chosenRange || filters.cowId.trim() || filters.session !== 'all');
   const groupsUnavailable = groupTotals.loadState === 'error' || groupTotals.loadState === 'offline';
 
   const activeChips = [
     filters.cowId.trim() && { key: 'cowId', label: `“${filters.cowId.trim()}”`, clear: '' },
-    filters.date && { key: 'date', label: formatDate(filters.date), clear: '' },
     filters.session !== 'all' && { key: 'session', label: sessionLabel(filters.session), clear: 'all' },
   ].filter(Boolean).map((chip) => ({ ...chip, onRemove: () => updateFilter(chip.key, chip.clear) }));
+  if (chosenRange) activeChips.push({ key: 'range', label: formatDateRange(chosenRange.from, chosenRange.to), onRemove: () => setRange(null) });
 
 
   // Integrated Safety Check: Fetching active medical withdrawals
@@ -310,7 +311,7 @@ export default function YieldLog() {
   const openCreateLog = () => {
     setFastLogMode('create');
     setSelectedRecord(null);
-    setFastLogInitialDate(filters.date || todayLocalIso());
+    setFastLogInitialDate(chosenDay || todayLocalIso());
     setShowFastLog(true);
   };
 
@@ -386,13 +387,13 @@ export default function YieldLog() {
     </Link>
   );
 
-  // Dense desktop row (~40px).
+  // Desktop row (44px). The day group above it carries the date.
   const renderRow = (row) => (
-    <tr key={row.id} className="h-10 border-b border-ink/5 hover:bg-ink-50">
+    <tr key={row.id} className="h-11 border-b border-ink/5 hover:bg-ink-50">
       <td className={cellClass(column.session, '!py-1 text-xs text-ink')}>{sessionLabel(row.session)}</td>
-      <td className={cellClass(column.milker, '!py-1 text-xs text-ink')}>{formatMilker(row.milker)}</td>
-      <td className={cellClass(column.cow, '!py-1 text-sm')}>{cowLink(row, tableLink)}</td>
-      <td className={cellClass(column.litres, '!py-1 text-sm text-ink')}>{formatLitres(row.amount)}</td>
+      <td className={cellClass(column.cow, '!py-1 text-sm')}><span className="block truncate">{cowLink(row, tableLink)}</span></td>
+      <td className={cellClass(column.litres, '!py-1 text-sm tabular-nums text-ink')}>{formatLitres(row.amount, { unit: false })}</td>
+      <td className={cellClass(column.milker, '!py-1 text-xs text-ink')}><span className="block truncate">{formatMilker(row.milker)}</span></td>
       <td className={cellClass(column.status, '!py-1')}><StatusChip status={row.status} /></td>
       <td className={cellClass(column.actions, '!py-1')}>
         <div className="inline-flex items-center gap-2">
@@ -428,18 +429,32 @@ export default function YieldLog() {
     </article>
   );
 
-  const groupedListProps = {
-    records: milkRows,
-    getBucket,
-    groups: groupTotals.data,
-    groupsUnavailable,
-    onRetryGroups: groupTotals.refetch,
-    config: productionGroupConfig,
+  const hasMilkRowsToShow = yieldRows.loadState === 'ready' || yieldRows.loadState === 'stale';
+  // No entries for these filters: one line, never a row of zeros, and only when the table
+  // is empty too. The last entry's date (from the API) opens that day in the table: its
+  // month up to that day, with the other filters cleared.
+  const lastEntryDate = summary?.current?.lastEntryDate;
+  const showLastEntry = () => {
+    updateFilters({ cowId: '', session: 'all', date: '', from: `${lastEntryDate.slice(0, 7)}-01`, to: lastEntryDate });
+    setGroupFocus({ key: lastEntryDate, nonce: Date.now() });
   };
-
+  const stripEmpty = summaryIsEmpty(summary) && hasMilkRowsToShow && milkRows.length === 0 && (
+    <span>
+      {copy.summary.noEntries}
+      {/* TODO(BR-022): `last_entry_date` is requested from the backend; only "No entries" until then. */}
+      {lastEntryDate && (
+        <>
+          {' · '}{copy.summary.lastEntry}{' '}
+          <button type="button" onClick={showLastEntry} className="inline font-semibold text-brand underline-offset-2 hover:underline">
+            {formatDate(lastEntryDate)}
+          </button>
+        </>
+      )}
+    </span>
+  );
 
   return (
-    <div className="space-y-4">
+    <div className="mx-auto max-w-7xl space-y-4">
       <Confirmation {...confirmation} />
       <PageHeader
         title={copy.title}
@@ -448,27 +463,17 @@ export default function YieldLog() {
         secondaryOnMobile="inline"
       />
 
-      <PeriodSummary
-        control={(
-          <PeriodControl
-            period={period}
-            label={summary?.label}
-            onPeriodChange={setPeriod}
-            onPrevious={() => step(summary?.range, -1)}
-            onNext={() => step(summary?.range, 1)}
-            canGoPrevious={Boolean(summary?.range)}
-            canGoNext={Boolean(summary?.range) && summary.hasNext}
-          />
-        )}
-        loadState={periodSummary.loadState}
+      <SummaryStrip
+        label={copy.summary.label}
+        items={summary ? productionSummaryConfig.items(summary) : []}
+        scope={summaryScope(dateRange, { isDefault: !chosenRange })}
+        empty={stripEmpty}
+        link={{ to: '/operations/reports/milk-inventory' }}
+        loadState={productionSummary.loadState}
         hasData={Boolean(summary)}
-        isEmpty={summary?.current?.count === 0}
-        error={periodSummary.error}
-        asOf={periodSummary.asOf}
-        onRetry={periodSummary.refetch}
-        metrics={summary ? productionSummaryConfig.metrics(summary) : []}
-        emptyMessage={summary && productionSummaryConfig.emptyMessage(summary)}
-        skeletonCount={3}
+        error={productionSummary.error}
+        asOf={productionSummary.asOf}
+        onRetry={productionSummary.refetch}
       />
 
       {showFastLog && (
@@ -485,7 +490,7 @@ export default function YieldLog() {
       <CalfMilkFeedModal
         isOpen={showCalfMilkFeed}
         onClose={() => setShowCalfMilkFeed(false)}
-        initialDate={filters.date}
+        initialDate={chosenDay}
       />
 
       {hardlocks?.length > 0 && (
@@ -504,7 +509,7 @@ export default function YieldLog() {
         label={copy.sectionLabel}
         toolbar={(
           <>
-            <Toolbar>
+            <Toolbar end={hasMilkRowsToShow && <ResultCount count={milkRows.length} noun={copy.group.noun} />}>
               <ToolbarSearch label={copy.searchLabel} value={filters.cowId} onChange={(value) => updateFilter('cowId', value)} placeholder={copy.searchPlaceholder} />
               <button
                 type="button"
@@ -515,11 +520,11 @@ export default function YieldLog() {
               >
                 <SlidersHorizontal size={14} aria-hidden="true" /> {commonCopy.filters.filters}
               </button>
+              <ToolbarDateRange range={dateRange} onChange={setRange} maxDate={todayLocalIso()} />
               <FilterChips chips={activeChips} onReset={clearFilters} />
             </Toolbar>
             {filtersOpen && (
               <div id="production-filter-panel" className="grid grid-cols-1 gap-3 pb-2 pt-1 sm:grid-cols-2">
-                <DateField label={copy.date} value={filters.date} onChange={(value) => updateFilter('date', value)} max={todayLocalIso()} inputClassName="input-machined h-10 min-h-0 !py-2 text-sm" />
                 <label className="space-y-1 text-xs font-semibold text-ink-muted">
                   {copy.session}
                   <select value={filters.session} onChange={(e) => updateFilter('session', e.target.value)} className="input-machined">
@@ -534,28 +539,23 @@ export default function YieldLog() {
           </>
         )}
       >
-        {milkLoadState === 'loading' && <SlowLoadingHint label={copy.rowsLabel} />}
-        {milkLoadState === 'stale' && <StaleDataNotice label={copy.rowsLabel} error={yieldRowsError} onRetry={refetchYieldRows} />}
-        {(milkLoadState === 'offline' || milkLoadState === 'error') && (
-          <ListLoadMessage state={milkLoadState} label={copy.rowsLabel} error={yieldRowsError} onRetry={refetchYieldRows} />
-        )}
-        <div className={`hidden ${hasMilkRowsToShow || milkLoadState === 'loading' ? 'xl:block' : ''}`}>
-          <table className="w-full border-collapse text-left">
-            <TableHead columns={COLUMNS} />
-            <tbody className="bg-card" aria-busy={milkLoadState === 'loading'}>
-              {milkLoadState === 'loading' ? <TableSkeletonRows columns={COLUMNS.length} />
-                : hasMilkRowsToShow && (milkRows.length > 0
-                  ? <GroupedList {...groupedListProps} variant="table" columns={COLUMNS} renderRecord={renderRow} />
-                  : <tr><td className="p-6 text-center text-sm text-ink-muted" colSpan={COLUMNS.length}>{emptyMessage}</td></tr>)}
-            </tbody>
-          </table>
-        </div>
-        <div className="xl:hidden" aria-busy={milkLoadState === 'loading'}>
-          {milkLoadState === 'loading' && <div className="divide-y divide-ink/10"><CardSkeletons /></div>}
-          {hasMilkRowsToShow && (milkRows.length > 0
-            ? <GroupedList {...groupedListProps} variant="cards" renderRecord={renderCard} />
-            : <div className="p-6 text-center text-sm text-ink-muted">{emptyMessage}</div>)}
-        </div>
+        <GroupedDataTable
+          columns={COLUMNS}
+          rows={milkRows}
+          getBucket={getBucket}
+          groups={groupTotals.data}
+          groupsUnavailable={groupsUnavailable}
+          onRetryGroups={groupTotals.refetch}
+          config={productionGroupConfig}
+          renderRow={renderRow}
+          renderCard={renderCard}
+          focus={groupFocus}
+          loadState={yieldRows.loadState}
+          error={yieldRowsError}
+          onRetry={yieldRows.refetch}
+          rowsLabel={copy.rowsLabel}
+          empty={emptyMessage}
+        />
       </DataSection>
 
       <RecentCalfFeedings

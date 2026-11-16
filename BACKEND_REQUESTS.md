@@ -21,6 +21,7 @@ Everything below is open. Suggested order:
 4. **Plans and access: BR-014, BR-015, BR-020.**
 5. **Data the browser still works out for itself:** BR-002, BR-003, BR-004, BR-008, BR-009,
    BR-011, BR-012, BR-013, and the open questions in `docs/contracts/period-totals.md`.
+   **Summary strips and the dashboard chart: BR-021, BR-022, BR-023.**
 6. **Language: BR-018.**
 7. **Safe saves and missing features:** BR-005, BR-006, BR-007, BR-010.
 
@@ -541,4 +542,104 @@ Found while checking `GET /api/production/yield` (`app/api/operations.py`, `prod
 the page to `SUPER_ADMIN` and `ADMIN`, so farm owners can't reach a page their account may use.
 The backend is the source of truth for access, so please confirm the intended roles. The frontend
 will then match them (one constant), and ideally read them from BR-015 capabilities instead.
+
+---
+
+## BR-021 — Summary totals for everything the filters match (no period)
+
+**Status:** Open · **Priority:** High · **Raised:** 2026-11-16 · **Frontend:** `lib/periodTotals.js` (`currentMonthRange`, `summaryScopeParams`), `hooks/usePeriodTotals.js`, `hooks/useLedgerData.js`, `hooks/useProductionData.js`
+
+The Production Log and the Ledger no longer have a Week / Month / Year control. The table and the
+one-row summary strip above it must always cover the same dates. Both summary endpoints require a
+period, so the frontend can't offer "all dates".
+
+Today both pages open on the current month up to today, for the table and the strip alike, and the
+Dates filter picks another range. Both are sent as `period=custom&date_from&date_to`. "All dates"
+needs this request.
+
+Request:
+
+1. `GET /api/ledger/summary` and `GET /api/production/summary` accept **no `period`** (or
+   `period=all`) together with the usual filters, and return the totals for every record those
+   filters match. Same response shape; `range` = the first and last record dates; `label` may be
+   null; `previous`, `change` and `breakdown` may be omitted.
+
+   ```
+   GET /api/ledger/summary?type=revenue&search=Auntie
+   GET /api/production/summary?search=Neema&session=Morning
+   ```
+
+   **Production only:** `/api/production/summary` without `period` already returns the old Command
+   Center shape (`revenue_total_kes`, …), so use `period=all` there, or a new path such as
+   `GET /api/production/totals`.
+
+2. Confirm `period=custom&date_from&date_to` is supported by **`/api/production/summary`** (it is
+   in the ledger contract only). The Production Log sends it when a date is chosen
+   (`date_from = date_to`).
+
+3. Same filters as the lists and group totals: ledger `type`, `category`, `search`, `date_from`,
+   `date_to`; production `search`, `session`, `date_from`, `date_to`.
+
+When this ships, the Dates filter can offer "All dates" for the table and the strip together.
+
+---
+
+## BR-022 — Production summary: `available_litres` and `last_entry_date`
+
+**Status:** Open · **Raised:** 2026-11-16 (first asked in `docs/contracts/period-totals.md`, question 6) · **Frontend:** `components/periods/periodConfigs.jsx` (`productionSummaryConfig`), `pages/operations/productionLog.jsx`
+
+The Production Log strip shows **Total milk**, **Avg per day** and **Available**. Available shows
+"—" because `GET /api/production/summary` doesn't send it.
+
+When the filters match no entries, the strip shows one line, "No entries · last entry 07 Nov 2026",
+where the date opens that day in the table. Without `last_entry_date` it can only say "No entries".
+
+Request: in `current` of `GET /api/production/summary` (all periods, including BR-021's):
+
+```json
+"current": {
+  "litres": "246.0", "entries": 36, "avg_litres_per_day": "41.0",
+  "available_litres": "233.5",
+  "last_entry_date": "2026-11-07"
+}
+```
+
+- `available_litres`: milk produced minus milk fed to calves (and any other disposal the farm
+  records) for the same filters and dates, 1 dp string. Please define which dispositions count.
+- `last_entry_date`: the most recent milk entry date (`YYYY-MM-DD`, farm-local) **ignoring the
+  date filter but respecting the others**, or for the whole farm. Please say which. The frontend
+  clears the filters before scrolling to that day, so either works.
+
+---
+
+## BR-023 — Money in / out by day or month for the Farm Reporting Dashboard
+
+**Status:** Open · **Raised:** 2026-11-16 · **Frontend:** `hooks/useMoneyFlowSeries.js`, `components/finance/MoneyFlowChart.jsx`, `pages/operations/OperationsReportsPage.jsx`
+
+The Money in / Money out chart moved from the Ledger to the dashboard, under the KPI cards. It
+follows the dashboard's filters: date range, search and customer. It shows a bar per day for ranges
+up to 31 days and a bar per month for longer ranges. A single day shows the 30 days ending on it.
+
+It reads the existing ledger group totals, one level at a time:
+
+```
+GET /api/ledger/group-totals?levels=day&date_from=2026-10-18&date_to=2026-11-16[&search=…]
+GET /api/ledger/group-totals?levels=month&date_from=2026-09-01&date_to=2026-11-16[&search=…]
+```
+
+Requests:
+
+1. **Customer filter.** Accept `buyer_id` (one or several, comma-separated, as in BR-012) on
+   `GET /api/ledger/group-totals` and `GET /api/ledger/summary`, narrowing to records for those
+   customers. Until then, the chart is replaced by "This chart can't be narrowed to customers yet"
+   whenever a customer is selected.
+2. **Confirm single-level requests.** `levels=day` or `levels=month` alone returns just those groups
+   (no `year` parent needed), with `count`, `income`, `expenses` and `net` in minor units.
+3. **Empty buckets.** The chart draws a day or month the API doesn't return as "no records".
+   Please confirm that's what an omitted group means, or return every bucket in the range with
+   `count: 0`. The second is preferred: the frontend then doesn't rely on absence.
+4. **Same definitions as the KPI cards.** The cards read `/api/finance/ledger?start_date&end_date`
+   (`total_income`, `total_costs`). Please confirm the chart's `income` / `expenses` count the same
+   records (statuses, voided entries), so the bars add up to the cards. The frontend never sums
+   them to check.
 

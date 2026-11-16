@@ -87,22 +87,16 @@ export const commonCopy = {
     all: 'All',
   },
 
-  period: {
-    label: 'Period',
-    week: 'Week',
-    month: 'Month',
-    year: 'Year',
-    custom: 'Custom',
-    previous: 'Previous period',
-    next: 'Next period',
-    names: { week: 'week', month: 'month', year: 'year', custom: 'period' },
+  summary: {
     offline: 'You’re offline and these totals haven’t been saved on this phone yet. They will load when your connection returns.',
     loadFailed: 'Couldn’t load totals.',
     refreshFailed: 'Couldn’t refresh.',
     checkConnection: 'Check your connection.',
     asOf: (time) => `As of ${time}`,
-    vsPrior: (period) => `vs prior ${period}`,
-    change: { up: 'up', down: 'down', flat: 'no change' },
+    scope: (label) => `Totals for ${label}`,
+    thisMonth: (range) => `this month, ${range}`,
+    fullReport: 'View full report',
+    dates: 'Dates',
   },
 
   groups: {

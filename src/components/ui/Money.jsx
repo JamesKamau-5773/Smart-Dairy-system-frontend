@@ -54,6 +54,9 @@ export function formatMoneyText(amount, currency = 'KES') {
  *  showSign      boolean                    — always show +/- sign
  *  tone          'net'                      — signed figure: money-positive / money-negative
  *                                              token, true minus (U+2212), no plus sign
+ *                'signed'                   — as 'net', but only negatives are coloured
+ *  showCurrency  boolean                    — show the currency symbol (default true); hide it
+ *                                              where a column header already names the unit
  *  colored       boolean                    — legacy alias of tone="net"
  *  animate       boolean                    — bounce animation on value change
  *  compact       boolean                    — abbreviate large numbers (1.2M, 45K)
@@ -67,6 +70,7 @@ export default function Money({
   showSign  = false,
   colored   = false,
   tone      = null,
+  showCurrency = true,
   animate   = false,
   compact   = false,
   blurred   = false,
@@ -108,11 +112,12 @@ export default function Money({
 
   /* ── Color classes ──────────────────────────────────────────────────── */
   // The sign is always shown with the colour, so colour is never the only signal.
-  const isNet = tone === 'net' || colored;
+  const isSigned = tone === 'signed';
+  const isNet = tone === 'net' || colored || isSigned;
   const colorClass = !isNet || !isValid
     ? ''
     : isNeg ? 'text-money-negative'
-    : isPos ? 'text-money-positive'
+    : isPos && !isSigned ? 'text-money-positive'
     : '';
 
   /* ── Sign prefix ────────────────────────────────────────────────────── */
@@ -145,12 +150,14 @@ export default function Money({
       )}
 
       {/* Currency symbol */}
-      <span
-        className={`${sz.symbol} font-semibold opacity-70 leading-none self-center mr-0.5`}
-        aria-label={currency}
-      >
-        {meta.symbol || currency}
-      </span>
+      {showCurrency && (
+        <span
+          className={`${sz.symbol} font-semibold opacity-70 leading-none self-center mr-0.5`}
+          aria-label={currency}
+        >
+          {meta.symbol || currency}
+        </span>
+      )}
 
       {/* Amount — blurred content */}
       <span className={privacyClass}>

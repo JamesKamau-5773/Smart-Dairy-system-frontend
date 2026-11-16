@@ -18,6 +18,9 @@ vi.mock('../../../hooks/useTenant', () => ({
   useTenant: () => ({ tenantId: 'tenant_1', farmId: 'farm_1' }),
 }));
 
+// The milk log opens on the current month; a fixed today keeps its cache key stable.
+vi.mock('../../../lib/localDate', async (importOriginal) => ({ ...(await importOriginal()), todayLocalIso: () => '2026-11-16' }));
+
 vi.mock('../../../contexts/AuthContext', () => ({
   useAuth: () => ({ currentUser: { id: 1, role: 'FARMER', tenant_id: 'tenant_1', farm_id: 'farm_1' } }),
 }));
@@ -59,7 +62,7 @@ const screens = [
     name: 'milk log',
     Page: YieldLog,
     load: api.listYield,
-    queryKey: ['production-yield-rows', 'tenant_1', 'farm_1', {}],
+    queryKey: ['production-yield-rows', 'tenant_1', 'farm_1', { date_from: '2026-11-01', date_to: '2026-11-16' }],
     label: 'milk records',
     // The milk log's figures come from the period totals endpoint, not from the list.
     hasListStats: false,

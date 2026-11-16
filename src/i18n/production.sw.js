@@ -44,22 +44,17 @@ export const productionCopy = {
   medicineMessage: (count) => `Ng’ombe ${count} ${count === 1 ? 'yuko' : 'wako'} katika kipindi cha kusubiri dawa kuisha. Rekodi za maziwa yao zimezuiliwa ili maziwa mengine yasichafuliwe.`, // REVIEW: "withdrawal period"
 
   summary: {
+    label: 'Jumla za maziwa',
     totalMilk: 'Jumla ya maziwa',
     avgPerDay: 'Wastani kwa siku',
-    entries: 'Rekodi',
-    fedToCalves: 'Yaliyonyweshwa ndama', // REVIEW
     available: 'Yaliyopo',
-    // The period's own word isn't repeated, so no noun-class agreement is needed.
-    // eslint-disable-next-line no-unused-vars
-    emptyCurrent: (_periodName) => 'Hakuna rekodi katika kipindi hiki',
-    emptyIn: (label) => `Hakuna rekodi katika ${label}`,
-    lastEntry: (date) => ` · rekodi ya mwisho ${date}`,
+    noEntries: 'Hakuna rekodi',
+    lastEntry: 'rekodi ya mwisho',
   },
   group: {
     noun: ['rekodi', 'rekodi'],
     entries: (_count, formatted) => `rekodi ${formatted}`,
-    perDayUnit: 'L/siku',
-    describe: (litres, perDay) => `${litres}, ${perDay} kwa siku`,
+    describe: (litres) => litres,
   },
 
   queued: {

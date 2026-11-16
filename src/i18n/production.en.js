@@ -44,20 +44,17 @@ export const productionCopy = {
   medicineMessage: (count) => `${count} ${count === 1 ? 'cow is' : 'cows are'} in a withdrawal period. Their milk entries are restricted so the batch isn’t contaminated.`,
 
   summary: {
+    label: 'Milk totals',
     totalMilk: 'Total milk',
     avgPerDay: 'Avg per day',
-    entries: 'Entries',
-    fedToCalves: 'Fed to calves',
     available: 'Available',
-    emptyCurrent: (periodName) => `No entries this ${periodName}`,
-    emptyIn: (label) => `No entries in ${label}`,
-    lastEntry: (date) => ` · last entry ${date}`,
+    noEntries: 'No entries',
+    lastEntry: 'last entry',
   },
   group: {
     noun: ['entry', 'entries'],
     entries: (count, formatted) => `${formatted} ${count === 1 ? 'entry' : 'entries'}`,
-    perDayUnit: 'L/day',
-    describe: (litres, perDay) => `${litres}, ${perDay} per day`,
+    describe: (litres) => litres,
   },
 
   queued: {

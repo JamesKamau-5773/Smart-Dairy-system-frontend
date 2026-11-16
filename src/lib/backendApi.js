@@ -1276,16 +1276,6 @@ export const financeApi = {
       },
     };
   },
-  /**
-   * Farm-wide balances right now: what buyers owe (all time, including debts entered on
-   * a buyer's profile) and customer credit. Read from an unfiltered, undated ledger
-   * request so no page filter or period can narrow them. A dedicated balances endpoint
-   * is requested from the backend (docs/audit/ledger-relayout.md).
-   */
-  getLedgerBalances(scope = {}) {
-    return apiClient.get('/finance/ledger', { params: { ...scope, page: 1, per_page: 1 } })
-      .then((response) => toObject(response.data)?.summary ?? {});
-  },
   createLedgerEntry(payload) {
     // The backend expects `transaction_type` as 'Revenue' or 'Expense', but older
     // form components may send `type` as 'income' or 'expense'. This adapter
