@@ -1,4 +1,3 @@
-import { BadgeCheck, BriefcaseBusiness, Phone, Save, User, X } from 'lucide-react';
 import { EMPLOYEE_ROLE_OPTIONS, formatKenyanPhoneInput } from '../../../lib/staffAccessForm';
 import { staffCopy } from '../../../i18n/staff';
 
@@ -20,7 +19,8 @@ export default function ProfileStatusTab({ profileData, setProfileData, errors, 
 
           <div className="grid gap-x-5 gap-y-4 sm:grid-cols-2">
             <label className="block">
-              <span className="mb-2 flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-ink-500"><User size={13} /> {copy.fullName} <span className="text-danger">*</span></span>
+              <span className="mb-2 block text-[10px] font-black uppercase tracking-widest text-ink-500">
+              {copy.fullName} <span className="text-danger">*</span></span>
           <input
             required
             autoComplete="name"
@@ -33,7 +33,8 @@ export default function ProfileStatusTab({ profileData, setProfileData, errors, 
         </label>
 
             <label className="block">
-              <span className="mb-2 flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-ink-500"><BriefcaseBusiness size={13} /> {copy.jobRole} <span className="text-danger">*</span></span>
+              <span className="mb-2 block text-[10px] font-black uppercase tracking-widest text-ink-500">
+              {copy.jobRole} <span className="text-danger">*</span></span>
               <select
             required
             value={profileData.role}
@@ -47,7 +48,8 @@ export default function ProfileStatusTab({ profileData, setProfileData, errors, 
         </label>
 
             <label className="block">
-              <span className="mb-2 flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-ink-500"><Phone size={13} /> {copy.phone} <span className="text-danger">*</span></span>
+              <span className="mb-2 block text-[10px] font-black uppercase tracking-widest text-ink-500">
+              {copy.phone} <span className="text-danger">*</span></span>
               <input
                 required
                 type="tel"
@@ -63,7 +65,8 @@ export default function ProfileStatusTab({ profileData, setProfileData, errors, 
             </label>
 
             <label className="block">
-              <span className="mb-2 flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-ink-500"><BadgeCheck size={13} /> {copy.status}</span>
+              <span className="mb-2 block text-[10px] font-black uppercase tracking-widest text-ink-500">
+              {copy.status}</span>
           <select
             value={profileData.status}
             onChange={(event) => updateField('status', event.target.value)}
@@ -129,13 +132,15 @@ export default function ProfileStatusTab({ profileData, setProfileData, errors, 
           onClick={onClose}
           className="btn-secondary min-w-28"
         >
-          <X size={14} className="mr-1 inline" /> {copy.cancel}
+
+          {copy.cancel}
         </button>
         <button
           type="submit"
-          className="btn-command inline-flex min-w-36 items-center justify-center gap-2"
+          className="btn-command inline-flex min-w-36 items-center justify-center"
         >
-          <Save size={14} /> {copy.saveProfile}
+
+          {copy.saveProfile}
         </button>
       </div>
     </form>

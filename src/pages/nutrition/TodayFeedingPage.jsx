@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import toast from 'react-hot-toast';
-import { Check, Loader2, Package, Utensils } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
 import AlertBanner from '../../components/ui/AlertBanner';
 import InlineNotice from '../../components/ui/InlineNotice';
 import { nutritionApi } from '../../lib/backendApi';
@@ -56,10 +56,7 @@ export default function TodayFeedingPage() {
   return (
     <div className="mx-auto max-w-3xl space-y-6 animate-reveal">
       <header className="border-b border-ink/10 pb-4">
-        <p className="inline-flex items-center gap-2 rounded-full bg-brand/10 px-3 py-1 text-[10px] font-bold uppercase tracking-widest text-brand">
-          <Utensils size={12} aria-hidden="true" /> {LABELS.FEEDING_AREA}
-        </p>
-        <h1 className="mt-3 text-2xl font-black tracking-tight text-ink sm:text-3xl">{LABELS.TODAY_FEEDING}</h1>
+        <h1 className="text-2xl font-black tracking-tight text-ink sm:text-3xl">{LABELS.TODAY_FEEDING}</h1>
         <p className="mt-1 text-sm text-ink-muted">{copy.subtitle}</p>
         {today?.totals && (
           <p className="mt-2 text-xs font-semibold text-ink-muted">
@@ -98,7 +95,7 @@ export default function TodayFeedingPage() {
 
       {(today?.active_batches ?? []).length > 0 && (
         <section aria-labelledby="feed-in-store" className="rounded-card border border-ink/10 bg-surface p-4">
-          <h2 id="feed-in-store" className="mb-3 flex items-center gap-2 text-sm font-black text-ink"><Package size={16} aria-hidden="true" /> {copy.batchesTitle}</h2>
+          <h2 id="feed-in-store" className="mb-3 text-sm font-black text-ink">{copy.batchesTitle}</h2>
           <ul className="divide-y divide-ink/10">
             {today.active_batches.map((batch) => (
               <li key={batch.batch_id} className="flex flex-wrap items-baseline justify-between gap-2 py-2 text-sm">
@@ -186,7 +183,7 @@ function GroupCard({ group, readiness, isRecording, onFed }) {
               />
             </label>
             <button type="submit" disabled={isRecording || !amountOk} className="btn-command min-h-12 gap-2 px-5 text-base">
-              {isRecording ? <><Loader2 size={18} className="animate-spin" aria-hidden="true" /> {copy.recording}</> : <><Check size={18} aria-hidden="true" /> {copy.record}</>}
+              {isRecording ? <><Loader2 size={18} className="animate-spin" aria-hidden="true" /> {copy.recording}</> : copy.record}
             </button>
           </form>
           {!amountOk && amount !== '' && (

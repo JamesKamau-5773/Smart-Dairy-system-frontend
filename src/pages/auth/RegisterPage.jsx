@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, Link, useSearchParams } from 'react-router-dom';
-import { ArrowRight, CheckCircle2, Users } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import AlertBanner from '../../components/ui/AlertBanner';
 import AuthLayout from '../../components/auth/AuthLayout';
@@ -222,12 +221,12 @@ export default function RegisterPage() {
         )}
 
         {welcomeName ? (
-          <p role="status" className="btn-command w-full gap-2 py-4 text-base">
-            <CheckCircle2 size={18} aria-hidden="true" /> {copy.welcome(welcomeName)}
+          <p role="status" className="btn-command w-full py-4 text-base">
+            {copy.welcome(welcomeName)}
           </p>
         ) : (
           <SubmitButton pending={isSubmitting} pendingLabel={copy.submitting} retryIn={retryIn} disabled={!online}>
-            {submitLabel} <ArrowRight size={18} aria-hidden="true" />
+            {submitLabel}
           </SubmitButton>
         )}
       </form>
@@ -236,10 +235,7 @@ export default function RegisterPage() {
         <>
           <AuthDivider />
           <GoogleSignInButton next="/app" disabled={!online} />
-          <p className="mt-6 flex gap-3 rounded-card border border-ink/10 bg-surface p-4 text-sm text-ink-muted">
-            <Users size={18} className="mt-0.5 shrink-0 text-brand" aria-hidden="true" />
-            <span>{copy.inviteNote}</span>
-          </p>
+          <p className="mt-6 rounded-card border border-ink/10 bg-surface p-4 text-sm text-ink-muted">{copy.inviteNote}</p>
         </>
       )}
 

@@ -1,13 +1,12 @@
 import { useMemo, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { Eye, EyeOff, KeyRound, ShieldCheck } from 'lucide-react';
+import { Eye, EyeOff } from 'lucide-react';
 import AlertBanner from '../../components/ui/AlertBanner';
 import { useAuth } from '../../contexts/AuthContext';
 import { getDefaultLandingPath } from '../../lib/roles';
 import { adminCopy } from '../../i18n/admin';
 
 const copy = adminCopy.claim;
-
 export default function ClaimAccountPage() {
   const [searchParams] = useSearchParams();
   const token = useMemo(() => searchParams.get('token') || '', [searchParams]);
@@ -70,10 +69,7 @@ export default function ClaimAccountPage() {
       <div className="mx-auto flex min-h-[85vh] max-w-xl items-center">
         <section className="w-full rounded-2xl border border-[#5a3b8d]/20 bg-white/90 p-8 ">
           <header className="mb-7 text-center">
-            <p className="inline-flex items-center gap-2 rounded-full bg-[#5a3b8d]/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.14em] text-[#4d3276]">
-              <ShieldCheck size={14} /> {copy.badge}
-            </p>
-            <h1 className="mt-4 text-3xl font-black tracking-tight text-[#372257]">{copy.title}</h1>
+            <h1 className="text-3xl font-black tracking-tight text-[#372257]">{copy.title}</h1>
             <p className="mt-2 text-sm text-[#563f79]">{copy.subtitle}</p>
           </header>
 
@@ -125,11 +121,10 @@ export default function ClaimAccountPage() {
             <label className="block text-xs font-semibold uppercase tracking-[0.12em] text-[#5f4a82]">
               {copy.newPassword}
               <div className="relative mt-2">
-                <KeyRound size={15} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[#6b5b86]" />
                 <input
                   type={showPassword ? 'text' : 'password'}
                   autoComplete="new-password"
-                  className="w-full rounded-lg border border-[#5a3b8d]/20 bg-[#faf7ff] py-3 pl-10 pr-12 text-sm text-[#2f1d4d] outline-none focus:border-[#5a3b8d] focus:ring-2 focus:ring-[#5a3b8d]/20"
+                  className="w-full rounded-lg border border-[#5a3b8d]/20 bg-[#faf7ff] py-3 pl-4 pr-12 text-sm text-[#2f1d4d] outline-none focus:border-[#5a3b8d] focus:ring-2 focus:ring-[#5a3b8d]/20"
                   value={password}
                   onChange={(event) => setPassword(event.target.value)}
                   required
@@ -141,7 +136,7 @@ export default function ClaimAccountPage() {
                   aria-label={showPassword ? copy.hidePassword : copy.showPassword}
                   aria-pressed={showPassword}
                 >
-                  {showPassword ? <EyeOff size={17} /> : <Eye size={17} />}
+                  {showPassword ? <EyeOff size={17} aria-hidden="true" /> : <Eye size={17} aria-hidden="true" />}
                 </button>
               </div>
             </label>
@@ -164,7 +159,7 @@ export default function ClaimAccountPage() {
                   aria-label={showConfirmPassword ? copy.hideConfirm : copy.showConfirm}
                   aria-pressed={showConfirmPassword}
                 >
-                  {showConfirmPassword ? <EyeOff size={17} /> : <Eye size={17} />}
+                  {showConfirmPassword ? <EyeOff size={17} aria-hidden="true" /> : <Eye size={17} aria-hidden="true" />}
                 </button>
               </div>
             </label>

@@ -60,7 +60,7 @@ function GroupHeader({ level, label, items, isOpen, onToggle, renderGroupMeta, r
       className="flex w-full items-center gap-2 text-left"
       aria-expanded={isOpen}
     >
-      {isOpen ? <ChevronDown size={level === 'year' ? 16 : 14} /> : <ChevronRight size={level === 'year' ? 16 : 14} />}
+      {isOpen ? <ChevronDown size={level === 'year' ? 16 : 14} aria-hidden="true" /> : <ChevronRight size={level === 'year' ? 16 : 14} aria-hidden="true" />}
       <span>{label}</span>
       {renderGroupCount && (
         <span className="rounded-full bg-black/5 px-1.5 py-0.5 text-[10px] font-medium text-ink-muted">

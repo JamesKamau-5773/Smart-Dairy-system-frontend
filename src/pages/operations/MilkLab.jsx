@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useMutation, useQuery } from '@tanstack/react-query';
-import { Loader2, AlertCircle, Calculator, ArrowRight, Droplets, Wheat, Clock, Beaker } from 'lucide-react';
+import { Loader2, AlertCircle } from 'lucide-react';
 import { feedApi, getApiErrorMessage, herdApi } from '../../lib/backendApi';
 import { Skeleton } from '../../components/ui';
 import LABELS from '../../lib/labels';
@@ -95,9 +95,6 @@ function CowTargetRow({ row, tone = 'default', actionLabel = null, actionTo = nu
  */
 const EmptyCalculatorState = () => (
   <div className="bg-surface rounded-2xl  border border-ink/10 p-12 flex flex-col items-center justify-center text-center animate-reveal">
-    <div className="bg-brand/5 p-4 rounded-full mb-4 border border-brand/10">
-      <Calculator className="w-8 h-8 text-brand/60" />
-    </div>
     <h3 className="text-lg font-bold text-ink mb-2">{copy.emptyTitle}</h3>
     <p className="text-sm text-ink-muted max-w-md mx-auto">
       {copy.emptyHint}
@@ -121,8 +118,7 @@ const ResultsDashboard = ({ data, targetLiters, targetSource, activeCowCount, ta
         {/* Target Milk Card */}
         <div className="relative overflow-hidden rounded-2xl border border-brand/20 bg-surface p-4 sm:p-6">
           <div className="absolute top-0 left-0 w-1 h-full bg-brand rounded-l-2xl"></div>
-          <div className="flex items-center gap-2 mb-4 text-brand">
-            <Droplets className="w-5 h-5" />
+          <div className="mb-4 text-brand">
             <h4 className="text-[10px] font-black uppercase tracking-widest">{LABELS.TARGET_MILK}</h4>
           </div>
           <p className="mb-2 break-words text-2xl font-black text-ink sm:text-3xl">{Number(targetLiters).toFixed(1)} L</p>
@@ -132,8 +128,7 @@ const ResultsDashboard = ({ data, targetLiters, targetSource, activeCowCount, ta
         {/* Dairy Meal Protein Card - UPDATED LABEL */}
         <div className="relative overflow-hidden rounded-2xl border border-brand/20 bg-brand/5 p-4 sm:p-6">
           <div className="absolute top-0 left-0 w-1 h-full bg-brand rounded-l-2xl"></div>
-          <div className="flex items-center gap-2 mb-4 text-brand">
-            <Beaker className="w-5 h-5" />
+          <div className="mb-4 text-brand">
             <h4 className="text-[10px] font-black uppercase tracking-widest">{copy.protein}</h4>
           </div>
           <p className="mb-2 break-words text-2xl font-black text-brand sm:text-3xl">{proteinTarget}</p>
@@ -143,8 +138,7 @@ const ResultsDashboard = ({ data, targetLiters, targetSource, activeCowCount, ta
         {/* Dairy Meal Card */}
         <div className="relative overflow-hidden rounded-2xl border border-brand/20 bg-surface p-4 sm:p-6">
           <div className="absolute left-0 top-0 h-full w-1 rounded-l-2xl bg-brand-400"></div>
-          <div className="mb-4 flex items-center gap-2 text-brand">
-            <Wheat className="w-5 h-5" />
+          <div className="mb-4 text-brand">
             <h4 className="text-[10px] font-black uppercase tracking-widest">{LABELS.MILKING_TIME_DAIRY_MEAL}</h4>
           </div>
           <p className="mb-2 break-words text-2xl font-black text-ink sm:text-3xl">
@@ -156,8 +150,7 @@ const ResultsDashboard = ({ data, targetLiters, targetSource, activeCowCount, ta
         {/* Boma Feedings Card */}
         <div className="relative overflow-hidden rounded-2xl border border-brand/20 bg-surface p-4 sm:p-6">
           <div className="absolute left-0 top-0 h-full w-1 rounded-l-2xl bg-brand-400"></div>
-          <div className="mb-4 flex items-center gap-2 text-brand-800">
-            <Clock className="w-5 h-5" />
+          <div className="mb-4 text-brand-800">
             <h4 className="text-[10px] font-black uppercase tracking-widest">{LABELS.BOMA_FEEDINGS}</h4>
           </div>
           <p className="text-3xl font-black text-ink mb-2">
@@ -341,13 +334,12 @@ export default function MilkLab() {
             >
               {calcMutation.isPending ? (
                 <>
-                  <Loader2 size={20} className="animate-spin" />
+                  <Loader2 size={20} className="animate-spin" aria-hidden="true" />
                   <span>{copy.computing}</span>
                 </>
               ) : (
                 <>
                   <span>{copy.calculate}</span>
-                  <ArrowRight size={18} className="group-hover:translate-x-1 transition-transform" />
                 </>
               )}
             </button>
@@ -440,7 +432,7 @@ export default function MilkLab() {
         <div className="pt-2">
           {calcMutation.isError && (
             <div className="mb-6 flex items-start gap-2 rounded-xl border border-brand/20 bg-brand-50 p-4 text-sm text-brand-dark animate-reveal">
-              <AlertCircle size={18} />
+              <AlertCircle size={18} aria-hidden="true" className="shrink-0" />
               <div>
                 <p className="font-bold">{copy.planFailed}</p>
                 <p className="mt-1">{getApiErrorMessage(calcMutation.error, copy.calculateFailed)}</p>

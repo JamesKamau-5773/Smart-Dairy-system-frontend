@@ -1,6 +1,5 @@
 import { useRef, useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { Camera, Paperclip } from 'lucide-react';
 import BaseModal from '../ui/BaseModal';
 import AlertBanner from '../ui/AlertBanner';
 import AttachmentThumb from './AttachmentThumb';
@@ -78,11 +77,13 @@ export default function ReceiptPhotosModal({ transaction, title, canUpload, onCl
           ) : (
             <div className="space-y-2">
               <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-                <button type="button" onClick={() => cameraInput.current?.click()} disabled={upload.isPending} className="btn-command gap-2 text-sm">
-                  <Camera size={16} aria-hidden="true" /> {copy.takePhoto}
+                <button type="button" onClick={() => cameraInput.current?.click()} disabled={upload.isPending} className="btn-command text-sm">
+
+    {copy.takePhoto}
                 </button>
-                <button type="button" onClick={() => fileInput.current?.click()} disabled={upload.isPending} className="btn-secondary gap-2 text-sm">
-                  <Paperclip size={16} aria-hidden="true" /> {copy.choose}
+                <button type="button" onClick={() => fileInput.current?.click()} disabled={upload.isPending} className="btn-secondary text-sm">
+
+    {copy.choose}
                 </button>
               </div>
               <input ref={cameraInput} type="file" accept="image/*" capture="environment" onChange={handleFile} className="sr-only" tabIndex={-1} aria-hidden="true" />

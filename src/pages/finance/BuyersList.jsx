@@ -1,10 +1,7 @@
 import { useMemo, useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
-import { 
-  Users, Search, Plus, TrendingDown, CheckCircle2,
-  FileText, MessageCircle, MoreVertical, SlidersHorizontal
-} from 'lucide-react';
+import { Search, Plus, MoreVertical } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { useTenant } from '../../hooks/useTenant';
 import { useUrlFilters } from '../../hooks/useUrlFilters';
@@ -23,7 +20,6 @@ import { formatCount } from '../../lib/numberFormat';
 import { SITE } from '../../landing/content';
 import { normalizeKenyanPhone } from '../../lib/phone';
 import { customerTypeLabel, financeCopy } from '../../i18n/finance';
-
 // "KES 1,250.00"; "—" when the backend sent no figure (unknown is never shown as zero).
 const formatKes = formatMoneyText;
 
@@ -42,16 +38,11 @@ const balanceStatus = (balance) => {
 /**
  * SRP: Renders a single Financial KPI Widget.
  */
-const KPIWidget = ({ title, value, subtitle, icon: Icon, valueColor = "text-brand", state = 'ready' }) => (
+const KPIWidget = ({ title, value, subtitle, valueColor = "text-brand", state = 'ready' }) => (
   <div className="group relative overflow-hidden rounded-card border border-slate-200 border-t-[4px] border-t-brand-400 bg-white/90 p-6 backdrop-blur">
-    <div className="flex justify-between items-start mb-4">
-      <h3 className="text-[11px] font-black uppercase tracking-widest text-slate-600">
-        {title}
-      </h3>
-      <div className="rounded-button border border-brand-400/30 bg-brand-400/10 p-2 text-brand-400 transition-colors group-hover:bg-brand-400/20">
-        <Icon size={18} strokeWidth={2.5} />
-      </div>
-    </div>
+    <h3 className="mb-4 text-[11px] font-black uppercase tracking-widest text-slate-600">
+      {title}
+    </h3>
     <StatValue state={state} label={financeCopy.buyers.listLabel} className={`mb-1 break-words font-mono text-2xl font-bold tabular-nums sm:text-3xl ${valueColor}`}>
       {value}
     </StatValue>
@@ -203,8 +194,7 @@ export default function BuyersList() {
       
       {/* Header Section with Primary Action */}
       <div className="mb-8 flex flex-col items-start justify-between gap-4 rounded-card border border-slate-200 border-l-[4px] border-l-brand-400 bg-white/90 p-5 backdrop-blur md:flex-row md:items-center">
-        <div className="flex items-center gap-4">
-          <div className="rounded-button border border-brand-400/30 bg-brand-400/10 p-3 text-brand-400"><Users size={20} /></div>
+        <div>
           <div>
             <h1 className="m-0 font-display text-2xl font-bold text-ink-900">
               {copy.title}
@@ -221,7 +211,7 @@ export default function BuyersList() {
             onClick={() => setIsAddPanelOpen(true)}
             className="flex items-center gap-2 rounded-button bg-brand-700 px-6 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-brand-900 w-full md:w-auto justify-center"
           >
-            <Plus size={18} />
+            <Plus size={18} aria-hidden="true" />
             {copy.addNew}
           </button>
         )}
@@ -233,14 +223,12 @@ export default function BuyersList() {
             title={copy.totalBuyers}
             value={safeCustomers.length} 
             subtitle={copy.totalBuyersHint}
-            icon={Users} 
             state={loadState}
           />
           <KPIWidget 
             title={copy.totalOutstanding}
             value={formatKes(totalOutstanding)}
             subtitle={copy.totalOutstandingHint}
-            icon={TrendingDown}
             valueColor="text-brand-dark"
             state={loadState}
           />
@@ -248,7 +236,6 @@ export default function BuyersList() {
             title={copy.settledAccounts}
             value={formatCount(settledBuyersCount)} 
             subtitle={copy.settledAccountsHint}
-            icon={CheckCircle2}
             valueColor="text-brand" 
             state={loadState}
           />
@@ -261,7 +248,7 @@ export default function BuyersList() {
             <section className="rounded-card border border-slate-200 bg-white/90 p-5 backdrop-blur md:p-6" aria-label={copy.filtersLabel}>
               <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
                 <div className="relative min-w-0 flex-1 lg:max-w-lg">
-                  <Search className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-brand" size={17} />
+                  <Search className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-brand" size={17} aria-hidden="true" />
                   <input
                     type="search"
                     placeholder={copy.searchPlaceholder}
@@ -271,12 +258,11 @@ export default function BuyersList() {
                   />
                 </div>
                 <label className="relative flex min-w-[190px] items-center">
-                  <SlidersHorizontal className="pointer-events-none absolute left-3.5 text-brand" size={16} />
                   <span className="sr-only">{copy.status}</span>
                   <select
                     value={statusFilter}
                     onChange={(event) => setStatusFilter(event.target.value)}
-                    className="h-10 w-full appearance-none rounded-input border border-ink/20 bg-surface pl-10 pr-9 text-sm font-semibold text-ink focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/30"
+                    className="h-10 w-full appearance-none rounded-input border border-ink/20 bg-surface pl-3 pr-9 text-sm font-semibold text-ink focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/30"
                     aria-label={copy.status}
                   >
                     <option value="all">{copy.allStatuses}</option>
@@ -288,9 +274,8 @@ export default function BuyersList() {
                   <button
                     type="button"
                     onClick={shareSelectedStatements}
-                    className="inline-flex h-10 items-center justify-center gap-2 rounded-button bg-brand-700 px-4 font-mono text-sm font-semibold tabular-nums text-white hover:bg-brand-900 lg:ml-auto"
+                    className="inline-flex h-10 items-center justify-center rounded-button bg-brand-700 px-4 font-mono text-sm font-semibold tabular-nums text-white hover:bg-brand-900 lg:ml-auto"
                   >
-                    <MessageCircle size={17} />
                     {copy.shareSelected(selectedCustomerIds.length)}
                   </button>
                 )}
@@ -367,22 +352,24 @@ export default function BuyersList() {
                                   className="inline-flex h-8 w-8 items-center justify-center rounded-button border border-slate-300 bg-white text-slate-600 hover:border-brand-400 hover:bg-brand-50 hover:text-brand-900"
                                   aria-label={copy.actionsFor(buyer?.name || copy.buyer)}
                                 >
-                                  <MoreVertical size={16} />
+                                  <MoreVertical size={16} aria-hidden="true" />
                                 </button>
                               </PopoverTrigger>
                               <PopoverContent align="end" className="w-52 rounded-card border border-slate-200 bg-white/95 p-1.5  backdrop-blur">
                                 <Link
                                   to={`/finance/customers/${id}`}
-                                  className="flex items-center gap-2 rounded-button px-3 py-2 text-sm font-semibold text-ink-900 hover:bg-brand-50 hover:text-brand-900"
+                                  className="flex items-center rounded-button px-3 py-2 text-sm font-semibold text-ink-900 hover:bg-brand-50 hover:text-brand-900"
                                 >
-                                  <FileText size={15} className="text-brand-400" /> {copy.openStatement}
+
+      {copy.openStatement}
                                 </Link>
                                 <button
                                   type="button"
                                   onClick={() => shareCustomerStatement(buyer)}
                                   className="flex w-full items-center gap-2 rounded-button px-3 py-2 text-left text-sm font-semibold text-ink-900 hover:bg-brand-50 hover:text-brand-900"
                                 >
-                                  <MessageCircle size={15} className="text-brand-400" /> {copy.shareWhatsApp}
+
+      {copy.shareWhatsApp}
                                 </button>
                               </PopoverContent>
                             </Popover>
@@ -393,7 +380,6 @@ export default function BuyersList() {
                     {filteredCustomers.length === 0 && (
                       <tr>
                         <td colSpan={8} className="px-6 py-16 text-center">
-                          <Search className="mx-auto mb-3 text-ink-500" size={26} />
                           <p className="font-display font-bold text-ink-900">{copy.noMatchesTitle}</p>
                           <p className="mt-1 text-sm font-medium text-ink-600">{copy.noMatchesHint}</p>
                           {buyerSuggestionChips}
@@ -429,8 +415,10 @@ export default function BuyersList() {
                       <div className="flex min-w-0 flex-wrap items-center justify-between gap-2 border-t border-ink/10 pt-3">
                         <p className="min-w-0 flex-1 break-all text-xs text-ink-muted">{contact}</p>
                         <div className="flex shrink-0 gap-2">
-                          <Link to={`/finance/customers/${id}`} className="inline-flex min-h-10 items-center gap-1.5 rounded-button border border-brand/20 px-2.5 text-xs font-semibold text-brand-dark hover:bg-brand-50"><FileText size={14} /> {copy.statement}</Link>
-                          <button type="button" onClick={() => shareCustomerStatement(buyer)} className="inline-flex min-h-10 items-center gap-1.5 rounded-button bg-brand px-2.5 text-xs font-semibold text-white hover:bg-brand-dark"><MessageCircle size={14} /> {copy.whatsApp}</button>
+                          <Link to={`/finance/customers/${id}`} className="inline-flex min-h-10 items-center rounded-button border border-brand/20 px-2.5 text-xs font-semibold text-brand-dark hover:bg-brand-50">
+          {copy.statement}</Link>
+                          <button type="button" onClick={() => shareCustomerStatement(buyer)} className="inline-flex min-h-10 items-center rounded-button bg-brand px-2.5 text-xs font-semibold text-white hover:bg-brand-dark">
+          {copy.whatsApp}</button>
                         </div>
                       </div>
                     </article>
@@ -457,10 +445,6 @@ export default function BuyersList() {
         {/* First-time empty state: only once the backend has answered with no buyers. */}
         {showBuyers && safeCustomers.length === 0 && (
           <div className="mx-auto mt-12 flex max-w-3xl animate-fade-in flex-col items-center justify-center rounded-card border border-slate-200 bg-white/90 p-12 text-center backdrop-blur">
-            <div className="mb-6 rounded-full border border-brand-400/30 bg-brand-400/10 p-4">
-              <Users size={40} className="text-brand-400" />
-            </div>
-            
             <h2 className="text-xl font-black text-ink mb-2">{copy.emptyTitle}</h2>
             <p className="text-sm text-ink-muted max-w-md mb-8 leading-relaxed">
               {copy.emptyHint}
@@ -471,7 +455,7 @@ export default function BuyersList() {
                 onClick={() => setIsAddPanelOpen(true)}
                 className="w-full sm:w-auto flex items-center justify-center gap-2 bg-brand-700 text-white px-6 py-3 rounded-button font-bold text-sm hover:bg-brand-900 transition-colors"
               >
-                <Plus size={18} /> {copy.addFirst}
+                <Plus size={18} aria-hidden="true" /> {copy.addFirst}
               </button>
 
             </div>

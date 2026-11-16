@@ -16,7 +16,7 @@ import { queuedOfflineMessage, isQueuedOffline } from '../../lib/offlinePolicy';
 import { useFormDraft } from '../../hooks/useFormDraft';
 import DraftRestoredNotice from '../ui/DraftRestoredNotice';
 import { formatCowIdentity } from '../../lib/cowIdentity';
-import { ArrowLeft, Droplets, CheckCircle2, AlertOctagon, CloudOff, Trash2, X } from 'lucide-react';
+import { ArrowLeft, CheckCircle2, AlertOctagon, CloudOff, X } from 'lucide-react';
 import { todayLocalIso } from '../../lib/localDate';
 import { useServerFieldErrors } from '../../hooks/useServerFieldErrors';
 import FieldError from '../ui/FieldError';
@@ -97,7 +97,7 @@ const FastMilkUI = ({
         : { Icon: CheckCircle2, iconClass: 'text-brand', title: copy.outcomeSaved };
     return (
       <div role="status" className="my-auto max-h-[calc(100dvh-2rem)] w-full max-w-md overflow-y-auto overscroll-contain bg-white rounded-3xl p-6 flex flex-col items-center justify-center text-center space-y-4 animate-reveal touch-pan-y sm:p-12 sm:max-h-[90dvh]">
-        <outcome.Icon size={64} className={`${outcome.iconClass} scale-150 mb-2`} />
+        <outcome.Icon size={64} className={`${outcome.iconClass} scale-150 mb-2`} aria-hidden="true" />
         <h3 className="font-black text-3xl text-ink">{outcome.title}</h3>
         <p className="text-ink-muted font-bold">
           {messageType === 'success' ? copy.nextCow : messageType === 'info' ? copy.sentWhenOnline : message}
@@ -115,8 +115,8 @@ const FastMilkUI = ({
       )}
 
       {onClose && (
-        <button onClick={onClose} className="absolute top-4 right-4 p-2 text-ink-muted hover:text-danger hover:bg-danger/5 rounded-full transition-colors" aria-label={copy.close}>
-          <X size={20} />
+        <button type="button" onClick={onClose} className="absolute top-4 right-4 p-2 text-ink-muted hover:text-danger hover:bg-danger/5 rounded-full transition-colors" aria-label={copy.close}>
+          <X size={20} aria-hidden="true" />
         </button>
       )}
 
@@ -127,14 +127,11 @@ const FastMilkUI = ({
           className="btn-ghost absolute left-4 top-4 h-9 w-9 !min-h-0 !p-0"
           aria-label={copy.back}
         >
-          <ArrowLeft size={16} />
+          <ArrowLeft size={16} aria-hidden="true" />
         </button>
       )}
 
       <div className="p-8 pb-6 text-center border-b border-ink/5">
-        <div className="inline-flex items-center justify-center w-12 h-12 bg-brand/10 text-brand rounded-full mb-4">
-          <Droplets size={24} />
-        </div>
         <h2 className="font-sans font-black text-3xl text-brand tracking-tight">
           {isEditMode ? copy.titleEdit : copy.titleCreate}
         </h2>
@@ -229,7 +226,7 @@ const FastMilkUI = ({
 
         {isLocked && (
           <div className="p-3 rounded-lg bg-danger/10 border border-danger flex items-center gap-3 text-danger">
-            <AlertOctagon size={20} />
+            <AlertOctagon size={20} aria-hidden="true" />
             <div className="text-sm font-bold">{copy.onMedication}</div>
           </div>
         )}
@@ -265,9 +262,9 @@ const FastMilkUI = ({
               type="button"
               onClick={onDelete}
               disabled={isPending || isDeleting}
-              className="inline-flex flex-1 items-center justify-center gap-2 rounded-xl border border-danger/20 px-5 py-4 font-bold text-danger hover:bg-danger/5 disabled:opacity-60 transition-colors sm:flex-none"
+              className="inline-flex flex-1 items-center justify-center rounded-xl border border-danger/20 px-5 py-4 font-bold text-danger hover:bg-danger/5 disabled:opacity-60 transition-colors sm:flex-none"
             >
-              <Trash2 size={16} /> {isDeleting ? copy.deleting : copy.deleteRecord}
+              {isDeleting ? copy.deleting : copy.deleteRecord}
             </button>
           )}
           <button type="submit" disabled={!formData.cowId || !formData.volume || !formData.date || isLocked || isPending} className={`flex-1 bg-brand text-surface font-black text-lg py-4 rounded-xl hover:bg-brand-dark disabled:opacity-70 transition-all active:scale-95 ${isEditMode ? 'basis-full sm:basis-auto' : ''}`}>

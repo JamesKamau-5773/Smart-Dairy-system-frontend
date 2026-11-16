@@ -1,6 +1,5 @@
 // src/components/inventory/RegisterResourceModal.jsx
 import { useState } from 'react';
-import { Check } from 'lucide-react';
 import BaseModal from '../ui/BaseModal';
 import { proteinGramsPerKgToInput, proteinInputToGramsPerKg } from '../../lib/feedNutritionUnits';
 import { validateInventoryItem } from '../../lib/inventoryItemRules';
@@ -133,7 +132,8 @@ export default function RegisterResourceModal({ isOpen, onClose, onRegister }) {
         )}
 
         <button type="submit" className="w-full py-4 mt-4 bg-brand text-white rounded-[12px] font-black text-xs uppercase tracking-wider flex items-center justify-center gap-2 hover:bg-brand-dark transition-colors">
-          <Check size={16} /> {feedCopy.inventory.form.save}
+
+          {feedCopy.inventory.form.save}
         </button>
       </form>
     </BaseModal>

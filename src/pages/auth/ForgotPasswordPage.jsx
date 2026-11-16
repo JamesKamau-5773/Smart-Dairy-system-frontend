@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Mail, MessageCircle } from 'lucide-react';
 import AlertBanner from '../../components/ui/AlertBanner';
 import AuthLayout from '../../components/auth/AuthLayout';
 import SubmitButton from '../../components/auth/SubmitButton';
@@ -19,7 +18,6 @@ import { authCopy } from '../../i18n/auth';
 
 const { forgot: copy, fields, common } = authCopy;
 
-const CHANNEL_ICONS = { whatsapp: MessageCircle, email: Mail };
 // WhatsApp works for every account with a phone, so it is offered while options load
 // (or if they fail to load on a weak connection). Email only appears once the server enables it.
 const FALLBACK_CHANNELS = [{ id: 'whatsapp', enabled: true }];
@@ -122,12 +120,11 @@ export default function ForgotPasswordPage() {
               <legend className="mb-2 block text-sm font-semibold text-ink-900">{copy.channelLabel}</legend>
               <div className="grid grid-cols-2 gap-2">
                 {options.channels.map((option) => {
-                  const Icon = CHANNEL_ICONS[option.id] ?? MessageCircle;
                   const selected = channel === option.id;
                   return (
                     <label
                       key={option.id}
-                      className={`flex min-h-12 cursor-pointer items-center justify-center gap-2 rounded-card border px-3 text-sm font-semibold ${selected ? 'border-brand bg-brand/5 text-brand' : 'border-ink/15 text-ink-900'}`}
+                      className={`flex min-h-12 cursor-pointer items-center justify-center rounded-card border px-3 text-sm font-semibold ${selected ? 'border-brand bg-brand/5 text-brand' : 'border-ink/15 text-ink-900'}`}
                     >
                       <input
                         type="radio"
@@ -141,7 +138,7 @@ export default function ForgotPasswordPage() {
                         }}
                         className="sr-only"
                       />
-                      <Icon size={18} aria-hidden="true" /> {copy[option.id] ?? option.label}
+                      {copy[option.id] ?? option.label}
                     </label>
                   );
                 })}

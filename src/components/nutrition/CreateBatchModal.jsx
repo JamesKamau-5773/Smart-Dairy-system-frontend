@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { CheckCircle2, Loader, Package, Scale, Percent, AlertTriangle } from 'lucide-react';
+import { Loader, AlertTriangle } from 'lucide-react';
 import BaseModal from '../ui/BaseModal';
 import { nutritionApi } from '../../lib/backendApi';
 import { getApiErrorMessage } from '../../lib/backendApi';
@@ -156,7 +156,7 @@ export default function CreateBatchModal({
             disabled={createBatchMutation.isPending || isLoadingRecipe || proteinSummaryQuery.isFetching || !proteinSummaryQuery.data || batchIngredients.length === 0 || !hasCompleteFormula || hasInsufficientStock}
             className="flex items-center gap-2 px-6 py-3 rounded-xl font-black text-xs uppercase bg-brand text-white hover:bg-brand-dark disabled:bg-slate-300"
           >
-            {createBatchMutation.isPending ? <Loader className="animate-spin" size={16} /> : <CheckCircle2 size={16} />}
+            {createBatchMutation.isPending && <Loader className="animate-spin" size={16} aria-hidden="true" />}
             {createBatchMutation.isPending ? copy.recording : copy.confirm(Number(mixSize || 0).toFixed(2))}
           </button>
         </>
@@ -220,11 +220,13 @@ export default function CreateBatchModal({
 
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
             <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
-              <div className="flex items-center gap-2 text-xs font-bold text-slate-500"><Scale size={15} /> {copy.totalBatch}</div>
+              <div className="text-xs font-bold text-slate-500">
+          {copy.totalBatch}</div>
               <p className="mt-1 text-lg font-black text-slate-800">{Number(mixSize || 0).toFixed(2)} kg</p>
             </div>
             <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
-              <div className="flex items-center gap-2 text-xs font-bold text-slate-500"><Percent size={15} /> {copy.proteinContent}</div>
+              <div className="text-xs font-bold text-slate-500">
+          {copy.proteinContent}</div>
               <p className="mt-1 text-lg font-black text-slate-800">
                 {proteinSummaryQuery.data
                   ? `${Number(proteinSummaryQuery.data.average_protein_percent).toFixed(2)}%`
@@ -232,7 +234,8 @@ export default function CreateBatchModal({
               </p>
             </div>
             <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
-              <div className="flex items-center gap-2 text-xs font-bold text-slate-500"><Package size={15} /> {copy.totalProtein}</div>
+              <div className="text-xs font-bold text-slate-500">
+          {copy.totalProtein}</div>
               <p className="mt-1 text-lg font-black text-slate-800">
                 {proteinSummaryQuery.data
                   ? `${(Number(proteinSummaryQuery.data.total_protein_grams) / 1000).toFixed(2)} kg`

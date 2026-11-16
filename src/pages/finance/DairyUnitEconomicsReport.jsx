@@ -3,20 +3,7 @@ import { useQuery, useMutation } from '@tanstack/react-query';
 import { format, subDays } from 'date-fns';
 import { formatDate } from '@/lib/dateFormat';
 import { financeCopy } from '@/i18n/finance';
-import {
-  TrendingUp,
-  DollarSign,
-  Users,
-  Calendar as CalendarIcon,
-  Filter,
-  Calculator,
-  Building2,
-  HelpCircle,
-  ArrowUpRight,
-  ShieldCheck,
-  AlertTriangle,
-  CheckCircle2
-} from 'lucide-react';
+import { Calendar as CalendarIcon } from 'lucide-react';
 import { getApiErrorMessage, reportsApi } from '@/lib/backendApi';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Button } from '@/components/ui/button';
@@ -55,40 +42,34 @@ function getStatusBadge(status) {
       return {
         label: copy.benchmarks.unprofitable,
         color: 'bg-rose-50 text-rose-700 border-rose-200',
-        icon: AlertTriangle,
       };
     case '1:1–2:1':
     case '1:1-2:1':
       return {
         label: copy.benchmarks.low,
         color: 'bg-amber-50 text-amber-700 border-amber-200',
-        icon: AlertTriangle,
       };
     case '2:1–3:1':
     case '2:1-3:1':
       return {
         label: copy.benchmarks.healthy,
         color: 'bg-blue-50 text-blue-700 border-blue-200',
-        icon: CheckCircle2,
       };
     case '3:1–4:1':
     case '3:1-4:1':
       return {
         label: copy.benchmarks.strong,
         color: 'bg-emerald-50 text-emerald-700 border-emerald-200',
-        icon: CheckCircle2,
       };
     case 'above 4:1':
       return {
         label: copy.benchmarks.excellent,
         color: 'bg-emerald-100 text-emerald-800 border-emerald-300 font-bold',
-        icon: ShieldCheck,
       };
     default:
       return {
         label: status || copy.notAvailable,
         color: 'bg-gray-50 text-gray-700 border-gray-200',
-        icon: HelpCircle,
       };
   }
 }
@@ -232,9 +213,6 @@ export default function DairyUnitEconomicsReport() {
       {/* Header */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-end border-b border-ink/10 pb-6 gap-4">
         <div>
-          <div className="inline-flex items-center gap-2 px-3 py-1 bg-brand/5 text-brand border border-brand/10 text-[10px] font-bold uppercase tracking-widest rounded-full mb-3">
-            <TrendingUp size={12} /> {copy.eyebrow}
-          </div>
           <h1 className="font-sans font-black text-3xl tracking-tight text-ink m-0">
             {copy.title}
           </h1>
@@ -266,11 +244,12 @@ export default function DairyUnitEconomicsReport() {
           <button
             onClick={() => setActiveTab('calculator')}
             className={cn(
-              'px-4 py-2 rounded-lg transition-all flex items-center gap-1.5',
+              'px-4 py-2 rounded-lg transition-all',
               activeTab === 'calculator' ? 'bg-surface-warm  text-brand font-bold' : 'text-ink-muted hover:text-ink'
             )}
           >
-            <Calculator size={14} /> {copy.tabs.calculator}
+
+  {copy.tabs.calculator}
           </button>
         </div>
       </div>
@@ -284,8 +263,9 @@ export default function DairyUnitEconomicsReport() {
         <div className="card-machined p-5 space-y-4">
           <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
             <div className="flex items-center gap-3">
-              <span className="text-xs font-bold uppercase tracking-wider text-ink-muted flex items-center gap-1.5">
-                <Filter size={14} /> {copy.period}
+              <span className="text-xs font-bold uppercase tracking-wider text-ink-muted">
+
+  {copy.period}
               </span>
               <Popover>
                 <PopoverTrigger asChild>
@@ -297,7 +277,7 @@ export default function DairyUnitEconomicsReport() {
                       !date && 'text-muted-foreground'
                     )}
                   >
-                    <CalendarIcon className="mr-2 h-3.5 w-3.5" />
+                    <CalendarIcon className="mr-2 h-3.5 w-3.5" aria-hidden="true" />
                     {date?.from ? (
                       date.to ? (
                         <>
@@ -388,7 +368,6 @@ export default function DairyUnitEconomicsReport() {
                         {copy.cac}
                       </MetricLabel>
                     </span>
-                    <DollarSign size={16} className="text-brand" />
                   </div>
                   <div>
                     <div className={cn(
@@ -411,7 +390,6 @@ export default function DairyUnitEconomicsReport() {
                         {copy.ltv}
                       </MetricLabel>
                     </span>
-                    <TrendingUp size={16} className="text-accent" />
                   </div>
                   <div>
                     <div className={cn(
@@ -436,7 +414,6 @@ export default function DairyUnitEconomicsReport() {
                         {copy.ratio}
                       </MetricLabel>
                     </span>
-                    <ArrowUpRight size={16} className="text-brand" />
                   </div>
                   <div>
                     <div className={cn(
@@ -453,15 +430,14 @@ export default function DairyUnitEconomicsReport() {
                       {(() => {
                         const status = activeData.benchmark_status || activeData.status;
                         const badge = getStatusBadge(status);
-                        const Icon = badge.icon;
                         return (
                           <span
                             className={cn(
-                              'inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full border text-[11px]',
+                              'inline-flex items-center px-2.5 py-0.5 rounded-full border text-[11px]',
                               badge.color
                             )}
                           >
-                            <Icon size={12} /> {badge.label}
+                            {badge.label}
                           </span>
                         );
                       })()}
@@ -473,7 +449,6 @@ export default function DairyUnitEconomicsReport() {
                 <div className="card-machined p-5 bg-surface-warm flex flex-col justify-between">
                   <div className="flex items-center justify-between text-ink-muted mb-2">
                     <span className="text-xs font-bold uppercase tracking-wider">{copy.currentCustomers}</span>
-                    <Users size={16} className="text-ink-muted" />
                   </div>
                   <div>
                     <div className="text-2xl font-black text-ink font-mono tabular-nums">
@@ -627,8 +602,7 @@ export default function DairyUnitEconomicsReport() {
       {/* TAB 2: BY FARM VIEW */}
       {activeTab === 'by-farm' && (
         <div className="space-y-6">
-          <div className="p-4 bg-amber-50 border border-amber-200 rounded-xl text-xs text-amber-800 flex items-start gap-2">
-            <Building2 size={16} className="mt-0.5 shrink-0 text-amber-600" />
+          <div className="p-4 bg-amber-50 border border-amber-200 rounded-xl text-xs text-amber-800 ">
             <div>
               <span className="font-bold">{copy.farmModelTitle}</span> {copy.farmModel}
             </div>
@@ -659,7 +633,6 @@ export default function DairyUnitEconomicsReport() {
                     (byFarmData?.farms || byFarmData?.data || byFarmData).map((farm, i) => {
                       const status = farm.benchmark_status || farm.status;
                       const badge = getStatusBadge(status);
-                      const Icon = badge.icon;
                       return (
                         <tr key={farm.farm_id || farm.id || i} className="hover:bg-surface-subtle transition-colors">
                           <td className="py-3 px-4 font-bold text-ink">
@@ -683,8 +656,8 @@ export default function DairyUnitEconomicsReport() {
                             {formatRatio(farm.ltv_to_cac_ratio)}
                           </td>
                           <td className="py-3 px-4">
-                            <span className={cn('inline-flex items-center gap-1 px-2 py-0.5 rounded-full border text-xs', badge.color)}>
-                              <Icon size={12} /> {badge.label}
+                            <span className={cn('inline-flex items-center px-2 py-0.5 rounded-full border text-xs', badge.color)}>
+                              {badge.label}
                             </span>
                           </td>
                           <td className={cn(
@@ -712,9 +685,8 @@ export default function DairyUnitEconomicsReport() {
                   ? (byFarmData?.farms || byFarmData?.data || byFarmData).map((farm, i) => {
                     const status = farm.benchmark_status || farm.status;
                     const badge = getStatusBadge(status);
-                    const Icon = badge.icon;
                     return <article key={farm.farm_id || farm.id || i} className="min-w-0 rounded-xl border border-ink/10 bg-surface p-4">
-                      <div className="flex items-start justify-between gap-3"><h3 className="min-w-0 break-words text-sm font-bold text-ink">{farm.farm_name || farm.name || copy.primaryFarm}</h3><span className={cn('inline-flex shrink-0 items-center gap-1 rounded-full border px-2 py-1 text-[10px]', badge.color)}><Icon size={12} />{badge.label}</span></div>
+                      <div className="flex items-start justify-between gap-3"><h3 className="min-w-0 break-words text-sm font-bold text-ink">{farm.farm_name || farm.name || copy.primaryFarm}</h3><span className={cn('inline-flex shrink-0 items-center rounded-full border px-2 py-1 text-[10px]', badge.color)}>{badge.label}</span></div>
                       <div className="mt-3 grid grid-cols-2 gap-3 rounded-lg bg-surface-raised p-3 text-xs">
                         <div><p className="text-ink-muted">{copy.customerCost}</p><p className="mt-1 font-semibold tabular-nums text-ink">{formatKesAmount(farm.cac_kes ?? farm.cac)}</p></div>
                         <div><p className="text-ink-muted">{copy.profitPerCustomer}</p><p className="mt-1 font-semibold tabular-nums text-brand">{formatKesAmount(farm.ltv_kes ?? farm.ltv)}</p></div>
@@ -736,8 +708,9 @@ export default function DairyUnitEconomicsReport() {
           {/* Input Form */}
           <div className="card-machined p-6 space-y-5">
             <div className="border-b border-ink/10 pb-3">
-              <h3 className="font-sans font-bold text-lg text-ink flex items-center gap-2">
-                <Calculator size={18} className="text-brand" /> {copy.calculatorTitle}
+              <h3 className="font-sans font-bold text-lg text-ink">
+
+  {copy.calculatorTitle}
               </h3>
               <p className="text-xs text-ink-muted mt-1">
                 {copy.calculatorHint}
@@ -886,10 +859,9 @@ export default function DairyUnitEconomicsReport() {
                       {(() => {
                         const status = calcResult.benchmark_status || calcResult.status;
                         const badge = getStatusBadge(status);
-                        const Icon = badge.icon;
                         return (
-                          <span className={cn('inline-flex items-center gap-1.5 px-3 py-1 rounded-full border text-xs font-bold', badge.color)}>
-                            <Icon size={14} /> {badge.label}
+                          <span className={cn('inline-flex items-center px-3 py-1 rounded-full border text-xs font-bold', badge.color)}>
+                            {badge.label}
                           </span>
                         );
                       })()}
@@ -898,7 +870,6 @@ export default function DairyUnitEconomicsReport() {
                 </div>
               ) : (
                 <div className="py-16 text-center text-ink-muted text-xs space-y-2">
-                  <Calculator size={32} className="mx-auto text-ink-muted/50" />
                   <p>{copy.emptyResult}</p>
                 </div>
               )}

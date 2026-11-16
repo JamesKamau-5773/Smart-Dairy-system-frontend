@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { UserPlus, Save, BriefcaseBusiness, WalletCards, Phone, CalendarDays, KeyRound, AlertTriangle } from 'lucide-react';
+import { AlertTriangle } from 'lucide-react';
 import AccessProvisioningFields from './AccessProvisioningFields';
 import BaseModal from '../ui/BaseModal';
 import { FARM_STAFF_ROLE_OPTIONS, getDefaultStaffPageAccess, STAFF_PAGE_ACCESS_OPTIONS } from '../../lib/staffOnboarding';
@@ -116,7 +116,6 @@ export default function AddEmployeeModal({ isOpen, onClose, onSave }) {
       onClose={onClose}
       title={copy.title}
       subtitle={copy.subtitle}
-      icon={<UserPlus size={18} />}
       closeOnBackdrop
       dismissible={!isSaving}
       closeLabel={copy.close}
@@ -124,8 +123,8 @@ export default function AddEmployeeModal({ isOpen, onClose, onSave }) {
       footerActions={(
         <>
           <button type="button" onClick={onClose} disabled={isSaving} className="btn-secondary min-w-28">{employeeCreated ? copy.closeButton : copy.cancel}</button>
-          {!employeeCreated && <button type="submit" disabled={isSaving} className="btn-command inline-flex min-w-40 items-center justify-center gap-2 disabled:cursor-not-allowed disabled:opacity-50">
-            <Save size={14} /> {isSaving ? copy.saving : accessMode === ACCESS_MODES.NONE ? copy.save : copy.saveWithAccess}
+          {!employeeCreated && <button type="submit" disabled={isSaving} className="btn-command inline-flex min-w-40 items-center justify-center disabled:cursor-not-allowed disabled:opacity-50">
+            {isSaving ? copy.saving : accessMode === ACCESS_MODES.NONE ? copy.save : copy.saveWithAccess}
           </button>}
         </>
       )}
@@ -139,29 +138,34 @@ export default function AddEmployeeModal({ isOpen, onClose, onSave }) {
 
           <div className="grid gap-x-5 gap-y-4 sm:grid-cols-2">
             <label className="block">
-              <span className="mb-2 flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-slate-500"><UserPlus size={13} /> {copy.fullName} <span className="text-danger">*</span></span>
+              <span className="mb-2 block text-[10px] font-black uppercase tracking-widest text-slate-500">
+    {copy.fullName} <span className="text-danger">*</span></span>
               <input required autoFocus autoComplete="name" id="employee-name" name="name" value={formData.name} onChange={handleChange} placeholder={copy.namePlaceholder} className="input-machined w-full" {...fieldErrorProps('employee-name', errorFor('name'))} />
               <FieldError id="employee-name" message={errorFor('name')} />
             </label>
             <label className="block">
-              <span className="mb-2 flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-slate-500"><BriefcaseBusiness size={13} /> {copy.jobRole} <span className="text-danger">*</span></span>
+              <span className="mb-2 block text-[10px] font-black uppercase tracking-widest text-slate-500">
+    {copy.jobRole} <span className="text-danger">*</span></span>
               <select required id="employee-role" name="role" value={formData.role} onChange={handleChange} className="input-machined w-full" {...fieldErrorProps('employee-role', errorFor('role'))}>
                 {FARM_STAFF_ROLE_OPTIONS.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
               </select>
               <FieldError id="employee-role" message={errorFor('role')} />
             </label>
             <label className="block">
-              <span className="mb-2 flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-slate-500"><Phone size={13} /> {copy.phone} <span className="text-danger">*</span></span>
+              <span className="mb-2 block text-[10px] font-black uppercase tracking-widest text-slate-500">
+    {copy.phone} <span className="text-danger">*</span></span>
               <input required id="employee-phone" name="phoneNumber" type="tel" inputMode="tel" autoComplete="tel" value={formData.phoneNumber} onChange={handleChange} placeholder={copy.phonePlaceholder} className="input-machined w-full tabular-nums" {...fieldErrorProps('employee-phone', errorFor('phoneNumber'))} />
               <FieldError id="employee-phone" message={errorFor('phoneNumber')} />
             </label>
             <label className="block">
-              <span className="mb-2 flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-slate-500"><WalletCards size={13} /> {copy.salary} <span className="text-danger">*</span></span>
+              <span className="mb-2 block text-[10px] font-black uppercase tracking-widest text-slate-500">
+    {copy.salary} <span className="text-danger">*</span></span>
               <input required id="employee-salary" name="baseSalary" type="text" inputMode="numeric" value={formData.baseSalary} onChange={handleChange} placeholder={copy.salaryPlaceholder} className="input-machined w-full tabular-nums" {...fieldErrorProps('employee-salary', errorFor('baseSalary'))} />
               <FieldError id="employee-salary" message={errorFor('baseSalary')} />
             </label>
             <label className="block sm:col-span-2 sm:max-w-[calc(50%-0.625rem)]">
-              <span className="mb-2 flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-slate-500"><CalendarDays size={13} /> {copy.hireDate} <span className="text-danger">*</span></span>
+              <span className="mb-2 block text-[10px] font-black uppercase tracking-widest text-slate-500">
+    {copy.hireDate} <span className="text-danger">*</span></span>
               <input required id="employee-hire-date" name="hireDate" type="date" value={formData.hireDate} onChange={handleChange} className="input-machined w-full" {...fieldErrorProps('employee-hire-date', errorFor('hireDate'))} />
               <FieldError id="employee-hire-date" message={errorFor('hireDate')} />
             </label>
@@ -174,8 +178,7 @@ export default function AddEmployeeModal({ isOpen, onClose, onSave }) {
         </section>
 
         <section>
-          <div className="mb-4 flex items-start gap-3 border-b border-slate-100 pb-3">
-            <KeyRound size={17} className="mt-0.5 shrink-0 text-brand" />
+          <div className="mb-4 border-b border-slate-100 pb-3">
             <div>
               <h3 className="text-xs font-black uppercase tracking-widest text-slate-700">{copy.appAccess}</h3>
               <p className="mt-1 text-xs text-slate-500">{copy.appAccessHint}</p>
@@ -209,7 +212,7 @@ export default function AddEmployeeModal({ isOpen, onClose, onSave }) {
 
         {partialFailureMessage && (
           <div className="flex items-start gap-3 rounded-md border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-900" role="alert">
-            <AlertTriangle size={17} className="mt-0.5 shrink-0" />
+            <AlertTriangle size={17} className="mt-0.5 shrink-0" aria-hidden="true" />
             <span>{partialFailureMessage}</span>
           </div>
         )}

@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import { Check, Copy, MessageCircle } from 'lucide-react';
 import { authCopy } from '../../i18n/auth';
 import { displayPhone } from '../../lib/phone';
 
@@ -34,15 +33,14 @@ export default function WhatsAppCodeCard({ waLink, messageText, whatsappNumber, 
         onClick={onOpen}
         className="btn-command w-full gap-2 py-4 text-base"
       >
-        <MessageCircle size={20} aria-hidden="true" /> {buttonLabel}
+        {buttonLabel}
       </a>
 
       <div className="rounded-card border border-ink/10 bg-surface p-4">
         <p className="text-xs font-semibold text-ink-muted">{authCopy.verifyPhone.codeLabel}</p>
         <div className="mt-1 flex items-center justify-between gap-3">
           <span className="font-mono text-2xl font-bold tracking-wider text-ink-900">{messageText}</span>
-          <button type="button" onClick={copyCode} className="btn-ghost shrink-0 gap-1.5 text-sm">
-            {copied ? <Check size={16} aria-hidden="true" /> : <Copy size={16} aria-hidden="true" />}
+          <button type="button" onClick={copyCode} className="btn-ghost shrink-0 text-sm">
             <span aria-live="polite">{copied ? authCopy.common.copied : authCopy.common.copy}</span>
           </button>
         </div>

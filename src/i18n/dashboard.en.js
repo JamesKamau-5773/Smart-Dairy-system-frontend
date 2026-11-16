@@ -46,7 +46,7 @@ export const dashboardCopy = {
     progress: (done, total) => `${done} of ${total} done. Each step takes a minute or two.`,
     hide: 'Hide the setup checklist',
     progressLabel: 'Farm setup progress',
-    doneStep: 'Done: ',
+    doneBadge: 'Done',
     step: (number) => `Step ${number}: `,
   },
   milestone: {

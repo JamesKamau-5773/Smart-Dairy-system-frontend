@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Eye, EyeOff, RefreshCw } from 'lucide-react';
+import { Eye, EyeOff } from 'lucide-react';
 import { ACCESS_MODES, generateSecurePassword } from '../../lib/staffAccessForm';
 import { FARM_STAFF_ROLE_OPTIONS } from '../../lib/staffOnboarding';
 import { staffCopy } from '../../i18n/staff';
@@ -89,14 +89,15 @@ export default function AccessProvisioningFields({
                     aria-invalid={Boolean(errors.password)}
                   />
                   <button type="button" onClick={() => setShowPassword((visible) => !visible)} className="absolute right-2 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center text-ink-500" aria-label={showPassword ? copy.hidePassword : copy.showPassword}>
-                    {showPassword ? <EyeOff size={17} /> : <Eye size={17} />}
+                    {showPassword ? <EyeOff size={17} aria-hidden="true" /> : <Eye size={17} aria-hidden="true" />}
                   </button>
                 </div>
                 {errors.password && <span className="mt-1.5 block font-normal text-danger">{errors.password}</span>}
               </label>
 
-              <button type="button" onClick={handleGeneratePassword} className="inline-flex items-center gap-2 text-xs font-bold text-brand hover:text-brand-dark">
-                <RefreshCw size={14} /> {copy.generate}
+              <button type="button" onClick={handleGeneratePassword} className="inline-flex items-center text-xs font-bold text-brand hover:text-brand-dark">
+
+                {copy.generate}
               </button>
 
               <label className="flex items-start gap-3 rounded-md border border-ink-200 bg-ink-50 px-4 py-3 text-sm text-ink-700">

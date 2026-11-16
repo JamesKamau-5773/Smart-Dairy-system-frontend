@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { Calculator, AlertTriangle } from 'lucide-react';
+import { AlertTriangle } from 'lucide-react';
 import { calculateRecipeMetrics, validateRecipe } from '../../services/NutritionalCalculator';
 import DataWarningList from '../../components/inventory/DataWarningList';
 import { getShareTotal, sharesAddUp } from '../../lib/mixPlannerRules';
@@ -52,7 +52,7 @@ function RecipeAlerts({ alerts }) {
     <div className="mb-6 space-y-2 animate-in fade-in slide-in-from-top-2">
       {alerts.map((alert, idx) => (
         <div key={idx} className="flex items-start gap-2 rounded-md border border-brand/20 bg-brand-50 p-3 text-xs font-bold text-brand-dark">
-          <AlertTriangle size={16} className="shrink-0 mt-0.5" />
+          <AlertTriangle size={16} className="shrink-0 mt-0.5" aria-hidden="true" />
           <p>{alert.message}</p>
         </div>
       ))}
@@ -230,8 +230,7 @@ export default function RecipeBuilder({
     <div className="bg-surface p-6 border border-ink/5 rounded-card ">
       {/* Header Area */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between mb-6 border-b border-ink/5 pb-4">
-        <h3 className="flex items-center gap-2 text-sm font-black uppercase tracking-wide text-brand-dark">
-          <Calculator size={18} /> 
+        <h3 className="text-sm font-black uppercase tracking-wide text-brand-dark">
           {config.title}
         </h3>
         <BatchSizeControl value={batchSize} onChange={updateBatchSize} />

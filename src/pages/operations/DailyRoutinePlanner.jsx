@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import { Clock, Save, CheckSquare } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { getApiErrorMessage } from '../../lib/backendApi';
 import { offlineFailureMessage } from '../../lib/offlinePolicy';
@@ -120,8 +119,9 @@ export default function DailyRoutinePlanner() {
           {/* LEFT COLUMN: The Schedule List */}
           <div className="lg:col-span-2 card-machined bg-surface p-6  border border-ink/10">
             <div className="flex items-center justify-between mb-4 border-b border-ink/5 pb-4">
-              <h3 className="text-xs font-bold uppercase tracking-widest text-ink-muted flex items-center gap-2">
-                <Clock size={16} /> {copy.dailyTasks}
+              <h3 className="text-xs font-bold uppercase tracking-widest text-ink-muted">
+
+                {copy.dailyTasks}
               </h3>
             </div>
 
@@ -153,8 +153,9 @@ export default function DailyRoutinePlanner() {
                     </div>
 
                     {countSteps(task.checklist) > 0 && (
-                      <div className="hidden md:flex items-center gap-1 text-[10px] font-bold text-ink-muted bg-surface-warm px-2 py-1 rounded">
-                        <CheckSquare size={12} /> {copy.notesAdded}
+                      <div className="hidden md:flex items-center text-[10px] font-bold text-ink-muted bg-surface-warm px-2 py-1 rounded">
+
+                        {copy.notesAdded}
                       </div>
                     )}
                   </div>
@@ -168,9 +169,9 @@ export default function DailyRoutinePlanner() {
                 type="button"
                 onClick={handleSave}
                 disabled={saveRoutine.isPending || changedCount === 0}
-                className="btn-command bg-brand text-surface flex items-center gap-2 px-6 disabled:opacity-60"
+                className="btn-command bg-brand text-surface flex items-center px-6 disabled:opacity-60"
               >
-                <Save size={16} /> {saveRoutine.isPending ? copy.saving : copy.save}
+                {saveRoutine.isPending ? copy.saving : copy.save}
               </button>
             </div>
           </div>

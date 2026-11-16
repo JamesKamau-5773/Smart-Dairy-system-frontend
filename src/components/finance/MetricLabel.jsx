@@ -1,5 +1,6 @@
 import React from 'react';
 import { HelpCircle } from 'lucide-react';
+import { commonCopy } from '../../i18n/common';
 
 export default function MetricLabel({ children, explanation }) {
   const tooltipId = React.useId();
@@ -10,7 +11,7 @@ export default function MetricLabel({ children, explanation }) {
       <span className="group relative inline-flex">
         <button
           type="button"
-          aria-label={`About ${children}`}
+          aria-label={commonCopy.controls.about(children)}
           aria-describedby={tooltipId}
           className="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-slate-700 outline-none transition-colors hover:bg-slate-200 hover:text-slate-950 focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2"
         >

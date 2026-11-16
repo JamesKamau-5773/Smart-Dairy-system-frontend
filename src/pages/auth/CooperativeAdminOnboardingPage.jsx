@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import { FileSpreadsheet, Mail, Upload, UserPlus } from 'lucide-react';
 import AlertBanner from '../../components/ui/AlertBanner';
 import InviteClaimPreview from '../../components/auth/InviteClaimPreview';
 import { useAuth } from '../../contexts/AuthContext';
@@ -86,8 +85,9 @@ export default function CooperativeAdminOnboardingPage() {
       <div className="mx-auto grid max-w-6xl gap-6 lg:grid-cols-2">
         <section className="rounded-2xl border border-[#7a3e1f]/20 bg-white/90 p-6 ">
           <header className="mb-5">
-            <p className="inline-flex items-center gap-2 rounded-full bg-[#7a3e1f]/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.15em] text-[#5a2e16]">
-              <UserPlus size={14} /> {copy.manualBadge}
+            <p className="inline-flex items-center rounded-full bg-[#7a3e1f]/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.15em] text-[#5a2e16]">
+
+    {copy.manualBadge}
             </p>
             <h1 className="mt-4 text-3xl font-black tracking-tight text-[#3d1f11]">{copy.title}</h1>
             <p className="mt-2 text-sm text-[#6b3f2a]">{copy.subtitle}</p>
@@ -108,10 +108,9 @@ export default function CooperativeAdminOnboardingPage() {
             <label className="block text-xs font-semibold uppercase tracking-[0.12em] text-[#6a3a24]">
               {copy.email}
               <div className="relative mt-2">
-                <Mail size={15} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[#8f5a41]" />
                 <input
                   type="email"
-                  className="w-full rounded-lg border border-[#7a3e1f]/20 bg-[#fffcfa] py-3 pl-10 pr-4 text-sm text-[#2e160b] outline-none transition focus:border-[#7a3e1f] focus:ring-2 focus:ring-[#7a3e1f]/20"
+                  className="w-full rounded-lg border border-[#7a3e1f]/20 bg-[#fffcfa] py-3 pl-4 pr-4 text-sm text-[#2e160b] outline-none transition focus:border-[#7a3e1f] focus:ring-2 focus:ring-[#7a3e1f]/20"
                   value={manualInvite.email}
                   onChange={(event) => setManualInvite((prev) => ({ ...prev, email: event.target.value }))}
                   placeholder="member@cooperative.org"
@@ -170,8 +169,9 @@ export default function CooperativeAdminOnboardingPage() {
 
         <section className="rounded-2xl border border-[#224f87]/20 bg-white/90 p-6 ">
           <header className="mb-5">
-            <p className="inline-flex items-center gap-2 rounded-full bg-[#224f87]/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.15em] text-[#1d4370]">
-              <FileSpreadsheet size={14} /> {copy.bulkBadge}
+            <p className="inline-flex items-center rounded-full bg-[#224f87]/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.15em] text-[#1d4370]">
+
+    {copy.bulkBadge}
             </p>
             <h2 className="mt-4 text-3xl font-black tracking-tight text-[#132f4f]">{copy.csvTitle}</h2>
             <p className="mt-2 text-sm text-[#35577d]">{copy.csvText}</p>
@@ -199,7 +199,6 @@ export default function CooperativeAdminOnboardingPage() {
                   <p className="text-xs text-[#446687]">{copy.accepted}</p>
                 </div>
                 <label className="btn-secondary cursor-pointer">
-                  <Upload size={14} className="mr-2" />
                   {copy.chooseFile}
                   <input
                     type="file"

@@ -1,8 +1,8 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { AlertTriangle, Info, XCircle, CheckCircle2, RefreshCw, ArrowRight, X } from 'lucide-react';
+import { AlertTriangle, Info, XCircle, CheckCircle2, X } from 'lucide-react';
 import { INVERSE, tone } from './tones';
-import { useDrawAttention } from '../../hooks/useDrawAttention';
 import { commonCopy } from '../../i18n/common';
+import { useDrawAttention } from '../../hooks/useDrawAttention';
 
 // Tones come from the app's palette (./tones): brand blue and ink, with the
 // strength of the blue and the icon carrying the type.
@@ -140,16 +140,16 @@ export default function AlertBanner({
             <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1">
               {action && (action.href ? (
                 <a href={action.href} target="_blank" rel="noopener noreferrer" className={linkClass}>
-                  {action.label} <ArrowRight size={14} aria-hidden="true" />
+                  {action.label}
                 </a>
               ) : (
                 <button type="button" onClick={action.onClick} className={linkClass}>
-                  {action.label} <ArrowRight size={14} aria-hidden="true" />
+                  {action.label}
                 </button>
               ))}
               {onRetry && (
                 <button type="button" onClick={onRetry} className={linkClass}>
-                  <RefreshCw size={14} aria-hidden="true" /> Try again
+                  {commonCopy.list.tryAgain}
                 </button>
               )}
             </div>

@@ -49,7 +49,7 @@ export const dashboardCopy = {
     progress: (done, total) => `${done} kati ya ${total} zimekamilika. Kila hatua inachukua dakika moja au mbili.`,
     hide: 'Ficha orodha ya kuweka tayari',
     progressLabel: 'Maendeleo ya kuweka shamba tayari',
-    doneStep: 'Imekamilika: ',
+    doneBadge: 'Imekamilika',
     step: (number) => `Hatua ${number}: `,
   },
   milestone: {

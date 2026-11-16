@@ -1,5 +1,4 @@
 import React, { useEffect, useState } from 'react';
-import { AlertTriangle, CheckCircle2, X } from 'lucide-react';
 import BaseModal from '../ui/BaseModal';
 import { staffCopy } from '../../i18n/staff';
 
@@ -37,16 +36,20 @@ export default function VerifyReturnModal({ isOpen, staff, onClose, onConfirm })
           <button
             type="button"
             onClick={() => setReturned('YES')}
+            aria-pressed={returned === 'YES'}
             className={`flex items-center justify-center gap-2 rounded-md border px-4 py-3 text-sm font-semibold transition-colors ${returned === 'YES' ? 'border-emerald-300 bg-emerald-50 text-emerald-800' : 'border-gray-200 bg-white text-gray-700 hover:bg-gray-50'}`}
           >
-            <CheckCircle2 size={16} /> {copy.yes}
+
+    {copy.yes}
           </button>
           <button
             type="button"
             onClick={() => setReturned('NO')}
+            aria-pressed={returned === 'NO'}
             className={`flex items-center justify-center gap-2 rounded-md border px-4 py-3 text-sm font-semibold transition-colors ${returned === 'NO' ? 'border-rose-300 bg-rose-50 text-rose-800' : 'border-gray-200 bg-white text-gray-700 hover:bg-gray-50'}`}
           >
-            <AlertTriangle size={16} /> {copy.no}
+
+    {copy.no}
           </button>
         </div>
 
@@ -69,7 +72,8 @@ export default function VerifyReturnModal({ isOpen, staff, onClose, onConfirm })
             onClick={onClose}
             className="rounded-md border border-gray-200 bg-white px-4 py-2 text-xs font-semibold uppercase tracking-[0.18em] text-gray-600 transition-colors hover:bg-gray-50"
           >
-            <X size={14} className="mr-1 inline" /> {copy.cancel}
+
+    {copy.cancel}
           </button>
           <button
             type="button"

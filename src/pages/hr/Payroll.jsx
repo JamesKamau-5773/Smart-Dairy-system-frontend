@@ -1,5 +1,4 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Banknote, CalendarClock, Download, FileText, History, Users } from 'lucide-react';
 import toast from 'react-hot-toast';
 import PayPayrollModal from '../../components/forms/PayPayrollModal';
 import AlertBanner from '../../components/ui/AlertBanner';
@@ -19,14 +18,11 @@ const copy = staffCopy.payroll;
 
 const money = (value) => Number(value || 0).toLocaleString();
 
-function Kpi({ title, value, Icon }) {
+function Kpi({ title, value }) {
   return (
-    <div className="flex items-start justify-between gap-4 rounded-card border border-ink/10 bg-card p-4">
-      <div>
-        <p className="text-[11px] font-semibold uppercase tracking-wider text-ink-muted">{title}</p>
-        <p className="mt-1 text-2xl font-bold tabular-nums text-ink">{value}</p>
-      </div>
-      <Icon size={18} className="mt-1 text-brand" aria-hidden="true" />
+    <div className="rounded-card border border-ink/10 bg-card p-4">
+      <p className="text-[11px] font-semibold uppercase tracking-wider text-ink-muted">{title}</p>
+      <p className="mt-1 text-2xl font-bold tabular-nums text-ink">{value}</p>
     </div>
   );
 }
@@ -90,8 +86,8 @@ function StatutoryCell({ line }) {
 function PayslipButton({ line, run, onDownload, pending }) {
   if (!canDownloadPayslips(run.status)) return null;
   return (
-    <button type="button" onClick={() => onDownload(line)} disabled={pending} className="inline-flex min-h-9 items-center gap-1 text-xs font-semibold text-brand underline-offset-4 hover:underline disabled:opacity-50">
-      <FileText size={14} aria-hidden="true" /> {pending ? copy.preparing : copy.payslip}
+    <button type="button" onClick={() => onDownload(line)} disabled={pending} className="inline-flex min-h-9 items-center text-xs font-semibold text-brand underline-offset-4 hover:underline disabled:opacity-50">
+      {pending ? copy.preparing : copy.payslip}
     </button>
   );
 }
@@ -324,8 +320,8 @@ export default function Payroll() {
           <h1 className="text-2xl font-black tracking-tight text-ink sm:text-3xl">{copy.title}</h1>
           <p className="mt-1 text-sm text-ink-muted">{copy.subtitle}</p>
         </div>
-        <button type="button" onClick={runPayroll} disabled={busy !== null || status !== 'ready'} className="btn-command gap-2 self-start text-sm">
-          <Banknote size={16} aria-hidden="true" /> {busy === 'run' ? copy.creating : nextDraftId ? copy.openDraft(nextLabel) : copy.create(nextLabel)}
+        <button type="button" onClick={runPayroll} disabled={busy !== null || status !== 'ready'} className="btn-command self-start text-sm">
+          {busy === 'run' ? copy.creating : nextDraftId ? copy.openDraft(nextLabel) : copy.create(nextLabel)}
         </button>
       </header>
 
@@ -348,9 +344,9 @@ export default function Payroll() {
       {status === 'ready' && activeRun && (
         <>
           <div className="grid gap-3 md:grid-cols-3">
-            <Kpi title={copy.netPay(activeRun.period)} value={`KES ${money(activeRun.totalDisbursed)}`} Icon={Banknote} />
-            <Kpi title={copy.employees} value={activeRun.employees} Icon={Users} />
-            <Kpi title={copy.nextPayroll(nextLabel)} value={periodPayDate(nextPeriod)} Icon={CalendarClock} />
+            <Kpi title={copy.netPay(activeRun.period)} value={`KES ${money(activeRun.totalDisbursed)}`} />
+            <Kpi title={copy.employees} value={activeRun.employees} />
+            <Kpi title={copy.nextPayroll(nextLabel)} value={periodPayDate(nextPeriod)} />
           </div>
 
           <section className="card-machined overflow-hidden" aria-labelledby="active-run-title">
@@ -369,9 +365,11 @@ export default function Payroll() {
                 {runStatusCode === 'FINALIZED' && (
                   <button type="button" onClick={() => setPayOpen(true)} disabled={busy !== null} className="btn-command text-sm">{copy.recordPayment}</button>
                 )}
-                <button type="button" onClick={exportCsv} className="btn-secondary gap-2 text-sm"><Download size={15} aria-hidden="true" /> {copy.exportCsv}</button>
+                <button type="button" onClick={exportCsv} className="btn-secondary text-sm">
+    {copy.exportCsv}</button>
                 {runs.length > 1 && (
-                  <button type="button" onClick={() => setHistoryOpen(true)} className="btn-ghost gap-2 text-sm"><History size={15} aria-hidden="true" /> {copy.earlierRuns(runs.length - 1)}</button>
+                  <button type="button" onClick={() => setHistoryOpen(true)} className="btn-ghost text-sm">
+    {copy.earlierRuns(runs.length - 1)}</button>
                 )}
               </div>
             </div>

@@ -1,4 +1,3 @@
-import { Baby, Droplets, Plus } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { formatCowIdentity } from '../../lib/cowIdentity';
 import { formatDate } from '../../lib/herdUtils';
@@ -20,10 +19,7 @@ export default function MilkDispositionHistory({
   return (
     <section className="card-machined overflow-hidden !p-0" aria-labelledby="calf-milk-heading">
       <header className="flex flex-col gap-4 border-b border-ink/10 bg-surface px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-accent/15 text-brand">
-            <Baby size={19} />
-          </div>
+        <div>
           <div>
             <h3 id="calf-milk-heading" className="font-semibold text-ink">{title}</h3>
             <p className="mt-0.5 text-xs text-ink-muted">
@@ -36,8 +32,9 @@ export default function MilkDispositionHistory({
             <Link to={viewAllHref} className="btn-ghost justify-center px-4 py-2 text-xs">{copy.viewAll}</Link>
           )}
           {onRecord && (
-            <button type="button" onClick={onRecord} className="btn-secondary justify-center gap-2 px-4 py-2 text-xs">
-              <Plus size={14} /> {copy.feedCalf}
+            <button type="button" onClick={onRecord} className="btn-secondary justify-center px-4 py-2 text-xs">
+
+              {copy.feedCalf}
             </button>
           )}
         </div>
@@ -51,8 +48,7 @@ export default function MilkDispositionHistory({
         </div>
       ) : records.length === 0 ? (
         <div className="flex flex-col items-center px-5 py-10 text-center">
-          <Droplets size={24} className="text-ink/25" />
-          <p className="mt-3 text-sm font-semibold text-ink">{copy.emptyTitle}</p>
+          <p className="text-sm font-semibold text-ink">{copy.emptyTitle}</p>
           <p className="mt-1 text-xs text-ink-muted">{copy.emptyHint}</p>
         </div>
       ) : (

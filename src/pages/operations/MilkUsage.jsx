@@ -1,6 +1,5 @@
 import React, { useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Baby, CalendarDays, Droplets, RotateCcw, Users } from 'lucide-react';
 import { productionApi } from '../../lib/backendApi';
 import { formatCowIdentity } from '../../lib/cowIdentity';
 import {
@@ -62,32 +61,29 @@ export default function MilkUsage() {
       <section className="rounded-[28px] border border-brand/15 bg-brand-50 p-5 sm:p-6">
         <header className="flex min-w-0 flex-col gap-4 border-b border-ink/10 pb-5 sm:flex-row sm:items-end sm:justify-between">
           <div className="min-w-0">
-            <div className="mb-4 inline-flex items-center gap-2 rounded-md border border-brand/20 bg-brand/10 px-2 py-1 text-[10px] font-semibold text-brand">
-              <Droplets size={12} /> {copy.eyebrow}
-            </div>
             <h1 className="m-0 break-words font-display text-3xl font-semibold tracking-tight text-brand sm:text-4xl">
               {copy.titleStart} <span className="text-ink/30">{copy.titleEnd}</span>
             </h1>
             <p className="mt-2 max-w-2xl text-sm leading-6 text-ink-muted">{copy.subtitle}</p>
           </div>
-          <button type="button" onClick={() => setShowFeedModal(true)} className="btn-command w-full justify-center gap-2 whitespace-nowrap px-5 py-3 sm:w-auto">
-            <Baby size={16} /> {copy.feedCalf}
+          <button type="button" onClick={() => setShowFeedModal(true)} className="btn-command w-full justify-center whitespace-nowrap px-5 py-3 sm:w-auto">
+
+            {copy.feedCalf}
           </button>
         </header>
 
         <div className="mt-5 grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4">
           {[
-            { label: copy.fedToday, value: `${summary.todayLiters.toFixed(2)} L`, icon: Droplets },
-            { label: copy.fedThisMonth, value: `${summary.monthLiters.toFixed(2)} L`, icon: CalendarDays },
-            { label: copy.calvesServed, value: summary.calfCount, icon: Users },
-            { label: copy.feedingRecords, value: summary.recordCount, icon: Baby },
-          ].map(({ label, value, icon: Icon }) => (
-            <div key={label} className="flex min-w-0 items-start justify-between gap-2 rounded-2xl border border-ink/10 bg-surface p-3 sm:p-4">
+            { label: copy.fedToday, value: `${summary.todayLiters.toFixed(2)} L` },
+            { label: copy.fedThisMonth, value: `${summary.monthLiters.toFixed(2)} L` },
+            { label: copy.calvesServed, value: summary.calfCount },
+            { label: copy.feedingRecords, value: summary.recordCount },
+          ].map(({ label, value }) => (
+            <div key={label} className="min-w-0 rounded-2xl border border-ink/10 bg-surface p-3 sm:p-4">
               <div>
                 <p className="text-[10px] font-bold uppercase tracking-widest text-ink-muted">{label}</p>
                 <p className="mt-2 break-words text-2xl font-black tabular-nums text-brand sm:text-3xl">{value}</p>
               </div>
-              <Icon size={18} className="mt-1 text-brand" />
             </div>
           ))}
         </div>
@@ -113,8 +109,9 @@ export default function MilkUsage() {
             <input type="date" value={filters.to} min={filters.from || undefined} max={todayLocalIso()} onChange={(event) => updateFilter('to', event.target.value)} className="input-machined w-full" />
           </label>
           <div className="flex items-end">
-            <button type="button" onClick={() => { setFilters(EMPTY_FILTERS); setPage(1); }} className="btn-ghost w-full justify-center gap-2 py-3">
-              <RotateCcw size={14} /> {copy.resetFilters}
+            <button type="button" onClick={() => { setFilters(EMPTY_FILTERS); setPage(1); }} className="btn-ghost w-full justify-center py-3">
+
+              {copy.resetFilters}
             </button>
           </div>
         </div>

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Eye, EyeOff, LockKeyhole } from 'lucide-react';
+import { Eye, EyeOff } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import AlertBanner from '../../components/ui/AlertBanner';
 import { useAuth } from '../../contexts/AuthContext';
@@ -7,7 +7,6 @@ import { getDefaultLandingPath } from '../../lib/roles';
 import { adminCopy } from '../../i18n/admin';
 
 const copy = adminCopy.requiredReset;
-
 export default function RequiredPasswordResetPage() {
   const { completeRequiredPasswordReset } = useAuth();
   const navigate = useNavigate();
@@ -45,9 +44,6 @@ export default function RequiredPasswordResetPage() {
   return (
     <main className="flex min-h-screen items-center justify-center bg-surface-warm px-4 py-8">
       <section className="w-full max-w-md rounded-lg border border-ink-200 bg-surface-strong p-6 sm:p-8" aria-labelledby="reset-password-title">
-        <div className="mb-6 flex h-11 w-11 items-center justify-center rounded-md bg-brand/10 text-brand">
-          <LockKeyhole size={22} aria-hidden="true" />
-        </div>
         <h1 id="reset-password-title" className="font-display text-2xl font-semibold text-ink-strong">{copy.title}</h1>
         <p className="mt-2 text-sm leading-6 text-ink-muted">{copy.subtitle}</p>
 
@@ -68,7 +64,7 @@ export default function RequiredPasswordResetPage() {
                 required
               />
               <button type="button" onClick={() => setShowPassword((visible) => !visible)} className="absolute right-2 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center text-ink-muted" aria-label={showPassword ? copy.hidePasswords : copy.showPasswords}>
-                {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                {showPassword ? <EyeOff size={18} aria-hidden="true" /> : <Eye size={18} aria-hidden="true" />}
               </button>
             </div>
             <p className="mt-1.5 text-xs text-ink-muted">{copy.hint}</p>

@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { DollarSign, Edit2, KeyRound, MoreVertical, Search, Trash2, UserCheck, UserMinus, UserPlus } from 'lucide-react';
+import { MoreVertical, Plus, Search } from 'lucide-react';
 import toast from 'react-hot-toast';
 import AddEmployeeModal from '../../components/forms/AddEmployeeModal';
 import EmployeeAccountInviteModal from '../../components/forms/EmployeeAccountInviteModal';
@@ -19,7 +19,6 @@ import { getApiErrorMessage, hrApi } from '../../lib/backendApi';
 import { accountLabel, hasAppAccount, roleLabel, staffStatus } from '../../lib/staffLabels';
 import { tone } from '../../components/ui/tones';
 import { staffCopy } from '../../i18n/staff';
-
 const money = (value) => `KES ${Number(value || 0).toLocaleString()}`;
 
 function StatusChip({ status }) {
@@ -208,16 +207,16 @@ export default function StaffRegistry() {
   // One list of actions for the desktop menu and the phone buttons.
   const actionsFor = (member) => {
     if (member.status === 'INACTIVE') {
-      return [{ key: 'rehire', label: copy.actions.rehire, Icon: UserCheck, onClick: () => handleRehire(member) }];
+      return [{ key: 'rehire', label: copy.actions.rehire, onClick: () => handleRehire(member) }];
     }
     return [
-      ...(member.status === 'OVERDUE' ? [{ key: 'verify', label: copy.actions.verify, Icon: UserCheck, onClick: () => open('verify', member), primary: true }] : []),
-      { key: 'edit', label: copy.actions.edit, Icon: Edit2, onClick: () => open('edit', member) },
-      { key: 'advance', label: copy.actions.advance, Icon: DollarSign, onClick: () => open('edit', member) },
-      ...(member.loanBalance > 0 ? [{ key: 'repay', label: copy.actions.repay, Icon: DollarSign, onClick: () => open('repay', member) }] : []),
-      { key: 'access', label: hasAppAccount(member.accountStatus) ? copy.actions.manageAccess : copy.actions.giveAccess, Icon: KeyRound, onClick: () => open('access', member) },
-      { key: 'offboard', label: copy.actions.offboard, Icon: UserMinus, onClick: () => open('offboard', member), danger: true },
-      { key: 'delete', label: copy.actions.delete, Icon: Trash2, onClick: () => handleDelete(member), danger: true },
+      ...(member.status === 'OVERDUE' ? [{ key: 'verify', label: copy.actions.verify, onClick: () => open('verify', member), primary: true }] : []),
+      { key: 'edit', label: copy.actions.edit, onClick: () => open('edit', member) },
+      { key: 'advance', label: copy.actions.advance, onClick: () => open('edit', member) },
+      ...(member.loanBalance > 0 ? [{ key: 'repay', label: copy.actions.repay, onClick: () => open('repay', member) }] : []),
+      { key: 'access', label: hasAppAccount(member.accountStatus) ? copy.actions.manageAccess : copy.actions.giveAccess, onClick: () => open('access', member) },
+      { key: 'offboard', label: copy.actions.offboard, onClick: () => open('offboard', member), danger: true },
+      { key: 'delete', label: copy.actions.delete, onClick: () => handleDelete(member), danger: true },
     ];
   };
 
@@ -231,7 +230,7 @@ export default function StaffRegistry() {
           <p className="mt-1 text-sm text-ink-muted">{copy.subtitle}</p>
         </div>
         <button type="button" onClick={() => setIsAddEmployeeModalOpen(true)} className="btn-command gap-2 self-start text-sm">
-          <UserPlus size={16} aria-hidden="true" /> {copy.add}
+          <Plus size={16} aria-hidden="true" /> {copy.add}
         </button>
       </header>
 
@@ -282,7 +281,8 @@ export default function StaffRegistry() {
         <section className="card-machined flex flex-col items-start gap-3 p-6">
           <p className="text-base font-bold text-ink">{copy.emptyTitle}</p>
           <p className="text-sm text-ink-muted">{copy.emptyHint}</p>
-          <button type="button" onClick={() => setIsAddEmployeeModalOpen(true)} className="btn-command gap-2 text-sm"><UserPlus size={16} aria-hidden="true" /> {copy.addFirst}</button>
+          <button type="button" onClick={() => setIsAddEmployeeModalOpen(true)} className="btn-command text-sm">
+        {copy.addFirst}</button>
         </section>
       ) : filteredStaff.length === 0 ? (
         <p className="text-sm text-ink-muted">
@@ -320,8 +320,8 @@ export default function StaffRegistry() {
                       <td className="px-5 py-3.5">
                         <div className="flex items-center justify-end gap-2">
                           {primary && (
-                            <button type="button" onClick={primary.onClick} className="btn-command gap-1.5 px-3 text-xs">
-                              <primary.Icon size={14} aria-hidden="true" /> {primary.label}
+                            <button type="button" onClick={primary.onClick} className="btn-command px-3 text-xs">
+                              {primary.label}
                             </button>
                           )}
                           <Popover>
@@ -331,9 +331,9 @@ export default function StaffRegistry() {
                               </button>
                             </PopoverTrigger>
                             <PopoverContent align="end" className="w-52 p-1.5">
-                              {actions.filter((action) => !action.primary).map(({ key, label, Icon, onClick, danger }) => (
-                                <button key={key} type="button" onClick={onClick} className={`flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm ${danger ? 'text-danger hover:bg-danger-50' : 'text-ink hover:bg-brand-50'}`}>
-                                  <Icon size={14} aria-hidden="true" /> {label}
+                              {actions.filter((action) => !action.primary).map(({ key, label, onClick, danger }) => (
+                                <button key={key} type="button" onClick={onClick} className={`flex w-full items-center rounded-md px-3 py-2 text-left text-sm ${danger ? 'text-danger hover:bg-danger-50' : 'text-ink hover:bg-brand-50'}`}>
+                                  {label}
                                 </button>
                               ))}
                             </PopoverContent>

@@ -1,14 +1,13 @@
 import React, { useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
-import { ChevronDown, ChevronUp, Plus, Ruler, Save, Users } from 'lucide-react';
+import { ChevronDown, ChevronUp } from 'lucide-react';
 import { getApiErrorMessage, nutritionApi } from '../../lib/backendApi';
 import { useTenant } from '../../hooks/useTenant';
 import { feedingGroupLabel } from '../../lib/feedingGroups';
 import { feedCopy } from '../../i18n/feed';
 
 const copy = feedCopy.groupPlanner;
-
 const EMPTY_PROFILE = {
   avg_body_weight_kg: '',
   dmi_percent_bw: '',
@@ -45,7 +44,7 @@ function ProfileEditor({ profile, onSave, isSaving }) {
       ))}
       <div className="col-span-2 flex justify-end sm:col-span-4">
         <button type="submit" disabled={isSaving} className="btn-command inline-flex items-center gap-2 px-3 py-2 text-xs">
-          <Save size={13} /> {isSaving ? copy.saving : copy.saveProfile}
+          {isSaving ? copy.saving : copy.saveProfile}
         </button>
       </div>
     </form>
@@ -64,7 +63,8 @@ function RecipeMeasurementEditor({ recipe, onSave, isSaving }) {
 
   return (
     <form className="mt-4 border-t border-ink/10 pt-4" onSubmit={(event) => { event.preventDefault(); onSave(recipe.id, form); }}>
-      <h4 className="flex items-center gap-2 text-xs font-bold uppercase text-ink"><Ruler size={14} /> {copy.mixMeasure}</h4>
+      <h4 className="text-xs font-bold uppercase text-ink">
+      {copy.mixMeasure}</h4>
       <div className="mt-3 grid grid-cols-2 gap-3 lg:grid-cols-5">
         <label className="text-[11px] font-semibold text-ink-muted">
           {copy.quantityDescribes}
@@ -91,7 +91,7 @@ function RecipeMeasurementEditor({ recipe, onSave, isSaving }) {
         </label>
       </div>
       <div className="mt-3 flex justify-end">
-        <button type="submit" disabled={isSaving} className="btn-command inline-flex items-center gap-2 px-3 py-2 text-xs"><Save size={13} /> {isSaving ? copy.saving : copy.saveMeasures}</button>
+        <button type="submit" disabled={isSaving} className="btn-command inline-flex items-center gap-2 px-3 py-2 text-xs">{isSaving ? copy.saving : copy.saveMeasures}</button>
       </div>
     </form>
   );
@@ -143,7 +143,8 @@ function AssignMixButton({ group }) {
       className="inline-flex min-h-10 shrink-0 items-center justify-center gap-1.5 rounded-button bg-brand px-2.5 text-xs font-semibold text-white hover:bg-brand-dark"
       aria-label={copy.assignTo(label)}
     >
-      <Plus size={15} /> {copy.assign}
+
+      {copy.assign}
     </button>
   );
 }
@@ -206,7 +207,8 @@ export default function FeedingGroupPlanner() {
     <section className="card-machined overflow-hidden bg-surface">
       <div className="flex flex-col gap-3 border-b border-ink/10 bg-surface-raised px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h2 className="flex items-center gap-2 text-lg font-bold text-brand"><Users size={18} /> {copy.title}</h2>
+          <h2 className="text-lg font-bold text-brand">
+    {copy.title}</h2>
           <p className="mt-1 text-xs text-ink-muted">{copy.subtitle}</p>
         </div>
         {message && <p className="text-xs font-semibold text-ink-muted" role="status">{message}</p>}
@@ -233,7 +235,7 @@ export default function FeedingGroupPlanner() {
                       <td className="px-5 py-3 text-right text-sm font-bold text-brand tabular-nums">{Number(group.daily_group_batch_kg || 0).toFixed(2)} kg</td>
                       <td className="px-5 py-3 text-right text-sm font-semibold text-ink tabular-nums">{Number(group.group_batch_per_feeding_kg || 0).toFixed(2)} kg</td>
                       <td className="px-5 py-3 text-xs text-ink-muted">{group.assigned_recipe?.name ?? <AssignMixButton group={group} />}</td>
-                      <td className="px-5 py-3 text-right"><button type="button" onClick={() => setExpandedGroup(isExpanded ? null : group.feeding_group)} className="p-1 text-ink-muted hover:text-brand" aria-label={copy.editProfile(feedingGroupLabel(group.feeding_group))}>{isExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}</button></td>
+                      <td className="px-5 py-3 text-right"><button type="button" onClick={() => setExpandedGroup(isExpanded ? null : group.feeding_group)} className="p-1 text-ink-muted hover:text-brand" aria-label={copy.editProfile(feedingGroupLabel(group.feeding_group))} aria-expanded={isExpanded}>{isExpanded ? <ChevronUp size={16} aria-hidden="true" /> : <ChevronDown size={16} aria-hidden="true" />}</button></td>
                     </tr>
                     {isExpanded && <tr><td colSpan={8} className="px-5 pb-4"><GroupDetails group={group} profile={profile} onSaveProfile={(feedingGroup, payload) => saveProfile.mutate({ group: feedingGroup, payload })} onSaveRecipe={(recipeId, payload) => saveRecipe.mutate({ recipeId, payload })} isSavingProfile={saveProfile.isPending} isSavingRecipe={saveRecipe.isPending} /></td></tr>}
                   </React.Fragment>
@@ -267,7 +269,7 @@ export default function FeedingGroupPlanner() {
                 <div className="mt-3 flex min-w-0 items-center justify-between gap-3 border-t border-ink/10 pt-3">
                   <p className="min-w-0 break-words text-xs text-ink-muted">{group.quantity_label}{group.assigned_recipe?.name ? ` · ${group.assigned_recipe.name}` : ''}</p>
                   {group.assigned_recipe ? (
-                    <button type="button" onClick={() => setExpandedGroup(isExpanded ? null : group.feeding_group)} className="inline-flex min-h-10 shrink-0 items-center justify-center gap-1.5 rounded-button border border-brand/20 px-2.5 text-xs font-semibold text-brand-dark" aria-label={copy.recipeDetailsLabel(isExpanded, feedingGroupLabel(group.feeding_group))} aria-expanded={isExpanded}>{isExpanded ? <><ChevronUp size={15} /> {copy.close}</> : <><ChevronDown size={15} /> {copy.recipeDetails}</>}</button>
+                    <button type="button" onClick={() => setExpandedGroup(isExpanded ? null : group.feeding_group)} className="inline-flex min-h-10 shrink-0 items-center justify-center gap-1.5 rounded-button border border-brand/20 px-2.5 text-xs font-semibold text-brand-dark" aria-label={copy.recipeDetailsLabel(isExpanded, feedingGroupLabel(group.feeding_group))} aria-expanded={isExpanded}>{isExpanded ? <><ChevronUp size={15} aria-hidden="true" /> {copy.close}</> : <><ChevronDown size={15} aria-hidden="true" /> {copy.recipeDetails}</>}</button>
                   ) : (
                     <AssignMixButton group={group} />
                   )}

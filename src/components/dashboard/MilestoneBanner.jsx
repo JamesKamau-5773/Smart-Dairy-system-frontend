@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Trophy, X } from 'lucide-react';
+import { X } from 'lucide-react';
 import { milestoneKey, milestoneStatus, readFlag, writeFlag } from '../../lib/welcomeProgress';
 import { dashboardCopy } from '../../i18n/dashboard';
 
@@ -32,9 +32,6 @@ export default function MilestoneBanner({ tenantId, farmId, totalLitres, milkLoa
 
   return (
     <section role="status" className="card-machined flex items-center gap-4 bg-brand/5 p-5">
-      <span className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-brand text-white">
-        <Trophy size={20} aria-hidden="true" />
-      </span>
       <p className="flex-1 text-sm text-ink-900">
         <span className="block text-lg font-bold">
           <span className="font-mono">{status.reached.toLocaleString('en-KE')}</span> {dashboardCopy.milestone.reached}

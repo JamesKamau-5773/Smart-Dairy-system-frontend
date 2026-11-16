@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import { Save, Edit2 } from 'lucide-react';
 import BaseModal from '../ui/BaseModal';
 import { resolveIngredientStandards } from '../../lib/feedNutritionStandards';
 import { proteinGramsPerKgToInput, proteinInputToGramsPerKg } from '../../lib/feedNutritionUnits';
@@ -70,7 +69,6 @@ export default function EditResourceModal({ isOpen, onClose, item, onSave }) {
       onClose={onClose}
       title={feedCopy.inventory.form.editTitle}
       subtitle={feedCopy.inventory.form.editSubtitle}
-      icon={<Edit2 size={18} strokeWidth={2.5} />}
       size="lg"
       onSubmit={handleSubmit}
       footerActions={(
@@ -86,7 +84,8 @@ export default function EditResourceModal({ isOpen, onClose, item, onSave }) {
             type="submit"
             className="flex-[2] py-3 px-6 rounded-lg font-black text-xs uppercase tracking-widest bg-ink text-white hover:bg-ink-strong transition-all  flex items-center justify-center gap-2"
           >
-            <Save size={16} strokeWidth={3} /> {feedCopy.inventory.form.saveChanges}
+
+        {feedCopy.inventory.form.saveChanges}
           </button>
         </>
       )}

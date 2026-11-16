@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { AlertTriangle, Clock3, RefreshCw, Trash2 } from 'lucide-react';
+import { AlertTriangle, Trash2 } from 'lucide-react';
 import BaseModal from './BaseModal';
 import offlineQueue from '../../lib/offlineQueue';
 import { commonCopy } from '../../i18n/common';
@@ -62,9 +62,7 @@ export default function OfflineQueueInspector({ isOpen, onClose } = {}) {
             <div key={item.id} className="flex items-start justify-between gap-3 rounded-lg border border-ink/10 bg-surface p-3">
               <div className="min-w-0 text-sm">
                 <div className="flex items-center gap-2 font-bold text-ink-900">
-                  {item.status === 'NEEDS_ATTENTION'
-                    ? <AlertTriangle size={16} className="shrink-0 text-warning-700" />
-                    : <Clock3 size={16} className="shrink-0 text-ink-500" />}
+                  {item.status === 'NEEDS_ATTENTION' && <AlertTriangle size={16} className="shrink-0 text-warning-700" aria-hidden="true" />}
                   <span className="truncate">{operationLabel(item)}</span>
                 </div>
                 <div className="mt-1 text-xs text-ink-muted">{new Date(item.createdAt).toLocaleString()}</div>
@@ -92,7 +90,7 @@ export default function OfflineQueueInspector({ isOpen, onClose } = {}) {
                   aria-label={commonCopy.queue.removeLabel(operationLabel(item))}
                   title={commonCopy.queue.removeHint}
                 >
-                  <Trash2 size={16} />
+                  <Trash2 size={16} aria-hidden="true" />
                 </button>
               )}
             </div>
@@ -101,8 +99,7 @@ export default function OfflineQueueInspector({ isOpen, onClose } = {}) {
 
         <div className="flex justify-end gap-3">
           <button onClick={onClose} className="btn-secondary">{commonCopy.queue.close}</button>
-          <button onClick={handleFlush} disabled={working || items.length === 0} className="btn-command flex items-center gap-2">
-            <RefreshCw size={16} className={working ? 'animate-spin' : ''} />
+          <button onClick={handleFlush} disabled={working || items.length === 0} className="btn-command flex items-center">
             {working ? commonCopy.queue.sending : commonCopy.queue.sendNow}
           </button>
         </div>

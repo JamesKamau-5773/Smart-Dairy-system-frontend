@@ -2,7 +2,6 @@ import { useQuery } from '@tanstack/react-query';
 import { useTenant } from '../hooks/useTenant';
 import { QUERY_KEYS } from '../providers/QueryProvider';
 import { productionApi } from '../lib/backendApi';
-import { Activity, Droplets, TrendingUp, DollarSign, LineChart as ChartIcon, ShoppingCart, Archive } from 'lucide-react';
 import React, { Suspense, lazy, useMemo, useState } from 'react';
 import { subDays } from 'date-fns';
 import { buildDailyTrend, metricFromSummary } from '../lib/dashboardUtils';
@@ -20,21 +19,14 @@ import { swahiliGreeting } from '../lib/welcomeProgress';
 import { dashboardCopy } from '../i18n/dashboard';
 import { Skeleton } from '@/components/ui';
 
-const SummaryCard = ({ title, value, unit, icon: Icon, trend, loading = false }) => (
+const SummaryCard = ({ title, value, unit, loading = false }) => (
   <div className="glass-panel p-6 flex flex-col justify-between min-h-[180px] relative overflow-hidden group">
-    <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity text-brand">
-      <Icon size={64} strokeWidth={1} />
-    </div>
-    
     <div className="flex justify-between items-start z-10">
       <div className="space-y-1">
         <span className="font-sans text-[11px] font-bold uppercase tracking-wider text-ink-muted">
           {title}
         </span>
         <div className="h-1 w-8 bg-brand rounded-full"></div>
-      </div>
-      <div className="p-2 border border-ink/10 bg-surface rounded-lg ">
-        <Icon size={18} className="text-brand" />
       </div>
     </div>
 
@@ -221,19 +213,20 @@ export default function CommandCenter() {
       </section>
 
       <section className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
-        <SummaryCard title={copy.totalMilk} value={totalLitersToday === null ? '—' : totalLitersToday.toFixed(1)} unit={copy.liters} icon={Droplets} loading={summaryQuery.isLoading} />
-        <SummaryCard title={copy.saleableMilk} value={summaryQuery.isLoading ? '—' : (summary?.saleable_liters ?? 0).toFixed(1)} unit={copy.liters} icon={Droplets} loading={summaryQuery.isLoading} />
-        <SummaryCard title={copy.milkSold} value={summaryQuery.isLoading ? '—' : (summary?.total_sold_liters ?? 0).toFixed(1)} unit={copy.liters} icon={ShoppingCart} loading={summaryQuery.isLoading} />
-        <SummaryCard title={copy.milkRemaining} value={summaryQuery.isLoading ? '—' : (summary?.remaining_milk_liters ?? 0).toFixed(1)} unit={copy.liters} icon={Archive} loading={summaryQuery.isLoading} />
-        <SummaryCard title={copy.cowsMilked} value={cowsMilked ?? '—'} unit={copy.cows} icon={Activity} loading={summaryQuery.isLoading} />
-        <SummaryCard title={copy.averagePerCow} value={averageYieldPerCow ?? '—'} unit={copy.perCow} icon={TrendingUp} loading={summaryQuery.isLoading} />
-        <SummaryCard title={copy.profitPerLiter} value={summaryQuery.isLoading ? '—' : <Money amount={profitPerLiter} currency={summary?.currency ?? 'KES'} />} icon={DollarSign} loading={summaryQuery.isLoading} />
+        <SummaryCard title={copy.totalMilk} value={totalLitersToday === null ? '—' : totalLitersToday.toFixed(1)} unit={copy.liters} loading={summaryQuery.isLoading} />
+        <SummaryCard title={copy.saleableMilk} value={summaryQuery.isLoading ? '—' : (summary?.saleable_liters ?? 0).toFixed(1)} unit={copy.liters} loading={summaryQuery.isLoading} />
+        <SummaryCard title={copy.milkSold} value={summaryQuery.isLoading ? '—' : (summary?.total_sold_liters ?? 0).toFixed(1)} unit={copy.liters} loading={summaryQuery.isLoading} />
+        <SummaryCard title={copy.milkRemaining} value={summaryQuery.isLoading ? '—' : (summary?.remaining_milk_liters ?? 0).toFixed(1)} unit={copy.liters} loading={summaryQuery.isLoading} />
+        <SummaryCard title={copy.cowsMilked} value={cowsMilked ?? '—'} unit={copy.cows} loading={summaryQuery.isLoading} />
+        <SummaryCard title={copy.averagePerCow} value={averageYieldPerCow ?? '—'} unit={copy.perCow} loading={summaryQuery.isLoading} />
+        <SummaryCard title={copy.profitPerLiter} value={summaryQuery.isLoading ? '—' : <Money amount={profitPerLiter} currency={summary?.currency ?? 'KES'} />} loading={summaryQuery.isLoading} />
       </section>
 
       <div className="card-machined bg-surface p-8 border border-ink/10">
         <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-8 gap-4">
-          <h3 className="font-sans font-bold text-xl text-brand flex items-center gap-2">
-            <ChartIcon size={20} className="text-accent" /> {copy.trendTitle}
+          <h3 className="font-sans font-bold text-xl text-brand">
+
+            {copy.trendTitle}
           </h3>
           <div className="inline-flex rounded-lg border border-ink/10 bg-surface p-1" role="group" aria-label={copy.trendRange}>
             {[['30', copy.ranges[30]], ['90', copy.ranges[90]], ['all', copy.ranges.all]].map(([value, label]) => (

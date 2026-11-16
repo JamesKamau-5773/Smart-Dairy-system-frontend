@@ -1,6 +1,5 @@
 import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Building2, Mail, Phone, UserRound, UserRoundPlus } from 'lucide-react';
 import AlertBanner from '../../components/ui/AlertBanner';
 import InviteClaimPreview from '../../components/auth/InviteClaimPreview';
 import { getApiErrorMessage, onboardingApi } from '../../lib/backendApi';
@@ -29,8 +28,8 @@ function SectionHeader({ eyebrow, title, description, accent = 'brand' }) {
 
   return (
     <header className="mb-6">
-      <p className={`inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-[0.16em] ${accentClass}`}>
-        <Building2 size={14} /> {eyebrow}
+      <p className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-[0.16em] ${accentClass}`}>
+        {eyebrow}
       </p>
       <h2 className="mt-4 text-3xl font-black tracking-tight text-ink-strong">{title}</h2>
       <p className="mt-2 text-sm leading-6 text-ink-muted">{description}</p>
@@ -149,13 +148,12 @@ export default function SuperAdminCooperativeSetupPage() {
 
             <FormField label={copy.contactPhone}>
               <div className="relative mt-2">
-                <Phone size={15} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-ink-muted" />
                 <input
                   id="cooperative-contact-phone"
                   type="tel"
                   inputMode="tel"
                   autoComplete="tel"
-                  className={`${inputClassName} mt-0 pl-10`}
+                  className={`${inputClassName} mt-0`}
                   value={cooperativeForm.contact_phone}
                   onChange={(event) => {
                     setPhoneErrors((current) => ({ ...current, contact: undefined }));
@@ -186,9 +184,8 @@ export default function SuperAdminCooperativeSetupPage() {
           <form onSubmit={handleFirstAdminInvite} className="space-y-4">
             <FormField label={copy.fullName}>
               <div className="relative mt-2">
-                <UserRound size={15} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-ink-muted" />
                 <input
-                  className={`${inputClassName} mt-0 pl-10`}
+                  className={`${inputClassName} mt-0`}
                   value={adminForm.full_name}
                   onChange={(event) => setAdminForm((prev) => ({ ...prev, full_name: event.target.value }))}
                   placeholder="Amina Wanjiru"
@@ -199,10 +196,9 @@ export default function SuperAdminCooperativeSetupPage() {
 
             <FormField label={copy.email}>
               <div className="relative mt-2">
-                <Mail size={15} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-ink-muted" />
                 <input
                   type="email"
-                  className={`${inputClassName} mt-0 pl-10`}
+                  className={`${inputClassName} mt-0`}
                   value={adminForm.email}
                   onChange={(event) => setAdminForm((prev) => ({ ...prev, email: event.target.value }))}
                   placeholder="admin@greenrift.coop"

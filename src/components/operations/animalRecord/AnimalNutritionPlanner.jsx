@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Calculator } from 'lucide-react';
 import LABELS from '../../../lib/labels';
 import { herdCopy, herdStatusLabel } from '../../../i18n/herd';
 import { animalYieldTargetService, isLactatingStatus } from '../../../services/animalYieldTargetService';
@@ -129,9 +128,10 @@ export default function AnimalNutritionPlanner({ animal, tenantId, farmId }) {
                   horizonDays,
                 });
               }}
-              className="btn-command flex-1 justify-center gap-2 px-6 py-2.5"
+              className="btn-command flex-1 justify-center px-6 py-2.5"
             >
-              <Calculator size={18} /> {copy.plan}
+
+    {copy.plan}
             </button>
             <button
               type="button"
@@ -155,9 +155,6 @@ export default function AnimalNutritionPlanner({ animal, tenantId, farmId }) {
             {targetQuery.isLoading && <p className="text-xs text-ink-muted">{copy.loadingGoal}</p>}
             {!plannerResult && (
               <>
-                <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-ink/5 text-ink-muted">
-                  <Calculator size={24} />
-                </div>
                 <p className="text-sm font-semibold text-ink">{LABELS.READY_TO_CALCULATE_TITLE}</p>
                 <p className="mt-1 max-w-[200px] text-xs text-ink-muted">{LABELS.READY_TO_CALCULATE_DESC}</p>
               </>

@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import { createPortal } from 'react-dom';
-import { FlaskConical, LockKeyhole } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useOfflineQueue } from '../../hooks/useOfflineQueue';
 import { useDemoSession } from '../../hooks/useDemoSession';
@@ -55,14 +54,11 @@ export default function SessionExpiredSheet() {
         aria-labelledby="session-expired-title"
         className="w-full max-w-sm space-y-4 rounded-modal border border-ink/10 bg-white p-6"
       >
-        <div className="flex items-start gap-3">
-          <span className="rounded-full bg-brand-50 p-2.5 text-brand" aria-hidden="true"><LockKeyhole size={20} /></span>
-          <div>
-            <h2 id="session-expired-title" className="text-lg font-bold text-ink">{commonCopy.session.title}</h2>
-            <p className="mt-1 text-sm text-ink-muted">
-              {commonCopy.session.message}
-            </p>
-          </div>
+        <div>
+          <h2 id="session-expired-title" className="text-lg font-bold text-ink">{commonCopy.session.title}</h2>
+          <p className="mt-1 text-sm text-ink-muted">
+            {commonCopy.session.message}
+          </p>
         </div>
 
         <label className="block text-sm font-semibold text-ink" htmlFor="session-username">
@@ -140,12 +136,9 @@ function DemoSessionEndedSheet() {
       aria-labelledby="demo-ended-title"
       className="w-full max-w-sm space-y-4 rounded-modal border border-ink/10 bg-white p-6"
     >
-      <div className="flex items-start gap-3">
-        <span className="rounded-full bg-brand-50 p-2.5 text-brand" aria-hidden="true"><FlaskConical size={20} /></span>
-        <div>
-          <h2 id="demo-ended-title" className="text-lg font-bold text-ink">{copy.expiredTitle}</h2>
-          <p className="mt-1 text-sm text-ink-muted">{copy.expiredMessage}</p>
-        </div>
+      <div>
+        <h2 id="demo-ended-title" className="text-lg font-bold text-ink">{copy.expiredTitle}</h2>
+        <p className="mt-1 text-sm text-ink-muted">{copy.expiredMessage}</p>
       </div>
 
       {error && <p role="alert" className="text-sm text-danger-900">{error}</p>}

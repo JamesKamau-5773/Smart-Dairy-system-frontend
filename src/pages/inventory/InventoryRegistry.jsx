@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import toast from 'react-hot-toast';
-import { Search, Plus, Filter, Edit2, Package, Trash2, ChevronDown, MoreVertical, Archive, ArchiveRestore, MinusCircle, ClipboardCheck } from 'lucide-react';
+import { Search, Plus, ChevronDown, MoreVertical } from 'lucide-react';
 import AlertBanner from '../../components/ui/AlertBanner';
 import Confirmation, { useConfirmation } from '../../components/ui/Confirmation';
 import RegisterResourceModal from '../../components/inventory/RegisterResourceModal';
@@ -263,15 +263,15 @@ export default function InventoryRegistry() {
   // One action list for the desktop menu and the phone buttons.
   const getRowActions = (item) => {
     if (isArchived(item)) {
-      return canManageItems ? [{ key: 'restore', label: itemCopy.restore, Icon: ArchiveRestore, onClick: () => itemActions.restore.mutate({ item }) }] : [];
+      return canManageItems ? [{ key: 'restore', label: itemCopy.restore, onClick: () => itemActions.restore.mutate({ item }) }] : [];
     }
     return [
-      { key: 'restock', label: feedCopy.inventory.restock, Icon: Plus, onClick: () => handleRestock(item) },
-      { key: 'stock-out', label: stockOutCopy.action, Icon: MinusCircle, onClick: () => setStockDialog({ kind: 'out', item }) },
-      ...(canManageItems ? [{ key: 'stock-count', label: stockCountCopy.action, Icon: ClipboardCheck, onClick: () => setStockDialog({ kind: 'count', item }) }] : []),
-      { key: 'edit', label: feedCopy.inventory.edit, Icon: Edit2, onClick: () => handleEdit(item) },
-      ...(canManageItems ? [{ key: 'archive', label: itemCopy.archive, Icon: Archive, onClick: () => archiveItem(item) }] : []),
-      { key: 'delete', label: feedCopy.inventory.delete, Icon: Trash2, onClick: () => handleDelete(item), danger: true },
+      { key: 'restock', label: feedCopy.inventory.restock, onClick: () => handleRestock(item) },
+      { key: 'stock-out', label: stockOutCopy.action, onClick: () => setStockDialog({ kind: 'out', item }) },
+      ...(canManageItems ? [{ key: 'stock-count', label: stockCountCopy.action, onClick: () => setStockDialog({ kind: 'count', item }) }] : []),
+      { key: 'edit', label: feedCopy.inventory.edit, onClick: () => handleEdit(item) },
+      ...(canManageItems ? [{ key: 'archive', label: itemCopy.archive, onClick: () => archiveItem(item) }] : []),
+      { key: 'delete', label: feedCopy.inventory.delete, onClick: () => handleDelete(item), danger: true },
     ];
   };
 
@@ -332,8 +332,7 @@ export default function InventoryRegistry() {
 
       {/* HEADER SECTION */}
       <div className="mb-8 flex flex-col gap-4 rounded-card border border-brand-100 bg-brand-50 p-5 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex min-w-0 items-center gap-4">
-          <div className="p-3 bg-white text-brand-700 rounded-lg border border-brand-100"><Package size={20} /></div>
+        <div className="min-w-0">
           <div>
             <h2 className="font-sans font-bold text-2xl tracking-tight text-brand-900 m-0">{feedCopy.inventory.title}</h2>
             <p className="text-sm text-brand-700/80 mt-1">{feedCopy.inventory.subtitle}</p>
@@ -344,7 +343,7 @@ export default function InventoryRegistry() {
           type="button"
           className="flex w-full shrink-0 items-center justify-center gap-2 whitespace-nowrap rounded-button bg-brand-800 px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-brand-900 sm:w-auto"
         >
-          <Plus size={16} /> {feedCopy.inventory.add}
+          <Plus size={16} aria-hidden="true" /> {feedCopy.inventory.add}
         </button>
       </div>
 
@@ -357,7 +356,7 @@ export default function InventoryRegistry() {
       {/* SEARCH AND FILTER */}
       <div className="mb-6 flex min-w-0 flex-col gap-3 sm:flex-row sm:gap-4">
         <div className="relative min-w-0 flex-1">
-            <Search size={16} className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-brand" />
+            <Search size={16} className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-brand" aria-hidden="true" />
             <input
                 placeholder={feedCopy.inventory.searchPlaceholder}
                 className="w-full rounded-lg border border-ink/20 py-3 pl-10 pr-4 text-xs font-bold outline-none focus:border-brand/50"
@@ -366,9 +365,8 @@ export default function InventoryRegistry() {
             />
         </div>
         <div className="relative w-full sm:w-auto sm:min-w-48">
-            <Filter size={14} className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-brand" />
             <select
-                className="w-full appearance-none rounded-lg border border-ink/20 bg-surface py-3 pl-10 pr-10 text-xs font-black uppercase text-ink hover:bg-brand-50 focus:border-brand/50 focus:outline-none cursor-pointer"
+                className="w-full appearance-none rounded-lg border border-ink/20 bg-surface py-3 pl-4 pr-10 text-xs font-black uppercase text-ink hover:bg-brand-50 focus:border-brand/50 focus:outline-none cursor-pointer"
                 value={categoryFilter}
                 onChange={(e) => setCategoryFilter(e.target.value)}
             >
@@ -376,7 +374,7 @@ export default function InventoryRegistry() {
                     <option key={cat} value={cat}>{cat === 'All' ? feedCopy.inventory.allCategories : feedCopy.inventory.categories[cat] ?? cat}</option>
                 ))}
             </select>
-            <ChevronDown size={16} className="absolute right-4 top-1/2 -translate-y-1/2 text-ink-muted pointer-events-none" />
+            <ChevronDown size={16} className="absolute right-4 top-1/2 -translate-y-1/2 text-ink-muted pointer-events-none" aria-hidden="true" />
         </div>
         <label className="flex min-h-11 items-center gap-2 text-xs font-bold text-ink">
           <input type="checkbox" checked={showArchived} onChange={(event) => setShowArchived(event.target.checked)} className="h-4 w-4 accent-brand" />
@@ -438,12 +436,12 @@ export default function InventoryRegistry() {
                   <Popover>
                     <PopoverTrigger asChild>
                       <button type="button" className="inline-flex h-8 w-8 items-center justify-center rounded-button border border-ink/15 text-ink-muted hover:border-brand-400 hover:text-brand-700" aria-label={feedCopy.inventory.actionsFor(item.name)}>
-                        <MoreVertical size={16} />
+                        <MoreVertical size={16} aria-hidden="true" />
                       </button>
                     </PopoverTrigger>
                     <PopoverContent align="end" className="w-52 p-1.5">
-                      {getRowActions(item).map(({ key, label, Icon, onClick, danger }) => (
-                        <button key={key} type="button" onClick={onClick} className={`flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm ${danger ? 'text-danger hover:bg-ink-100' : 'text-ink-900 hover:bg-brand-50'}`}><Icon size={14} /> {label}</button>
+                      {getRowActions(item).map(({ key, label, onClick, danger }) => (
+                        <button key={key} type="button" onClick={onClick} className={`flex w-full items-center rounded-md px-3 py-2 text-left text-sm ${danger ? 'text-danger hover:bg-ink-100' : 'text-ink-900 hover:bg-brand-50'}`}>{label}</button>
                       ))}
                     </PopoverContent>
                   </Popover>

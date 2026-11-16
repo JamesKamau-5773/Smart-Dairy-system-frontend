@@ -5,7 +5,7 @@ import { useTenant } from '../../hooks/useTenant';
 import { QUERY_KEYS } from '../../providers/QueryProvider';
 import { inventoryApi } from '../../lib/backendApi';
 import { useAuth } from '../../contexts/AuthContext';
-import { Activity, AlertTriangle, ArrowRight, Clock, CheckCircle2, Wheat, Loader2, ClipboardList } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
 import { convertKgToLocal } from '../../lib/units';
 import { useRoutinePlans } from '../../hooks/useRoutinePlans';
 import { useUnitConversions } from '../../hooks/useUnitConversions';
@@ -150,9 +150,6 @@ export default function HerdsmanView() {
 
       <div className="flex flex-col md:flex-row justify-between items-start md:items-end border-b border-ink/10 pb-6 gap-4">
         <div>
-          <div className="inline-flex items-center gap-2 px-3 py-1 bg-accent/10 text-accent-dark text-[10px] font-bold uppercase tracking-widest rounded-full mb-3">
-            <Activity size={12} /> {copy.eyebrow}
-          </div>
           <h2 className="font-sans font-bold text-3xl tracking-tight text-brand m-0">
             {copy.titleStart} <span className="text-ink-muted">{copy.titleEnd}</span>
           </h2>
@@ -161,8 +158,9 @@ export default function HerdsmanView() {
         <div className="flex flex-col items-end gap-3">
           
           <div className="text-[10px] uppercase font-bold text-ink-muted">{copy.currentShift}</div>
-          <div className="text-lg font-bold text-brand flex items-center gap-2">
-            <Clock size={16} /> {copy.morningMilking}
+          <div className="text-lg font-bold text-brand">
+
+    {copy.morningMilking}
           </div>
           {/* Herd registry link removed to keep barn-floor UI focused */}
         </div>
@@ -170,30 +168,27 @@ export default function HerdsmanView() {
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
         <div className="rounded-2xl border border-ink/10 bg-surface/90 p-4 ">
-          <div className="flex items-start justify-between gap-3">
+          <div>
             <div>
               <p className="text-[10px] font-bold uppercase tracking-widest text-ink-muted">{copy.activeAlerts}</p>
               <p className="mt-2 text-3xl font-black text-ink">{priorityAlerts.length}</p>
             </div>
-            <div className="rounded-2xl border border-slate-200 bg-white/90 p-3 text-danger"><AlertTriangle size={18} /></div>
           </div>
         </div>
         <div className="rounded-2xl border border-ink/10 bg-surface/90 p-4 ">
-          <div className="flex items-start justify-between gap-3">
+          <div>
             <div>
               <p className="text-[10px] font-bold uppercase tracking-widest text-ink-muted">{copy.feedTasks}</p>
               <p className="mt-2 text-3xl font-black text-ink">{feedInstructions.length}</p>
             </div>
-            <div className="rounded-2xl border border-slate-200 bg-white/90 p-3 text-brand-400"><Wheat size={18} /></div>
           </div>
         </div>
         <div className="rounded-2xl border border-ink/10 bg-surface/90 p-4 ">
-          <div className="flex items-start justify-between gap-3">
+          <div>
             <div>
               <p className="text-[10px] font-bold uppercase tracking-widest text-ink-muted">{copy.undoQueue}</p>
               <p className="mt-2 text-3xl font-black text-ink">{pendingDismissals.length}</p>
             </div>
-            <div className="rounded-2xl border border-slate-200 bg-white/90 p-3 text-brand-400"><CheckCircle2 size={18} /></div>
           </div>
         </div>
       </div>
@@ -203,8 +198,9 @@ export default function HerdsmanView() {
           <div className="card-machined p-8 bg-surface">
             {/* ── Today's Plan Module ── */}
 
-            <h3 className="font-bold text-brand text-xl flex items-center gap-2 mb-4 tracking-tight">
-              <ClipboardList size={20} className="text-accent" /> {copy.todaysPlan}
+            <h3 className="font-bold text-brand text-xl mb-4 tracking-tight">
+
+    {copy.todaysPlan}
             </h3>
             {/* OPTIMIZED: High-contrast slate weights, cleaner tracking, and crisp line spacing */}
             <p className="max-w-prose text-sm leading-7 font-semibold text-ink mb-6">
@@ -249,8 +245,9 @@ export default function HerdsmanView() {
           <div className="card-machined p-8 bg-surface">
             <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between mb-8">
               <div className="max-w-2xl">
-                <h3 className="font-bold text-brand text-xl flex items-center gap-2 tracking-tight">
-                  <Wheat size={22} className="text-accent" /> {copy.feedMix}
+                <h3 className="font-bold text-brand text-xl tracking-tight">
+
+    {copy.feedMix}
                 </h3>
                 <p className="mt-2 max-w-prose text-sm leading-7 font-semibold text-ink">
                   {copy.feedMixHint}
@@ -298,8 +295,9 @@ export default function HerdsmanView() {
 
         <div className="space-y-7">
           <div className="flex items-center justify-between gap-4">
-            <h3 className="font-bold text-brand text-lg flex items-center gap-2">
-              <AlertTriangle size={22} className="text-danger" /> {copy.needsAttention}
+            <h3 className="font-bold text-brand text-lg">
+
+    {copy.needsAttention}
             </h3>
             <span className="bg-danger text-white text-xs font-bold px-3 py-1.5 rounded-full whitespace-nowrap">
               {copy.alertCount(priorityAlerts.length)}
@@ -331,7 +329,7 @@ export default function HerdsmanView() {
                     disabled={feedTaskMutation.isPending}
                     className="flex items-center gap-1.5 text-xs font-bold text-brand hover:text-brand-dark transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
                   >
-                    {feedTaskMutation.isPending ? <Loader2 size={14} className="animate-spin" /> : <CheckCircle2 size={14} />} {copy.done}
+                    {feedTaskMutation.isPending && <Loader2 size={14} className="animate-spin" aria-hidden="true" />} {copy.done}
                   </button>
                 </div>
               </div>
@@ -363,8 +361,9 @@ export default function HerdsmanView() {
               <h4 className="font-bold text-brand text-base">{copy.readyToMilk}</h4>
               <p className="text-sm text-ink-muted mt-1.5">{copy.readyHint}</p>
             </div>
-            <Link to="/operations/clerk" className="btn-command flex items-center justify-center gap-2 py-2.5">
-              {copy.recordMilk} <ArrowRight size={18} />
+            <Link to="/operations/clerk" className="btn-command flex items-center justify-center py-2.5">
+
+    {copy.recordMilk}
             </Link>
           </div>
         </div>

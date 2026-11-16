@@ -1,4 +1,3 @@
-import { TrendingDown } from 'lucide-react';
 import { formatCostPerLitre } from '../../lib/feedCost';
 import { hasRowsToShow } from '../../lib/listLoadState';
 import { ListLoadNotices } from '../ui/ListLoadState';
@@ -27,8 +26,8 @@ export default function ProfitabilityChart({ trends, state = 'ready', error, onR
 
   return (
     <section className="card-machined flex flex-col p-5 sm:p-6" aria-label={TITLE}>
-      <h3 className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-wider text-ink-muted">
-        <TrendingDown size={16} aria-hidden="true" /> {TITLE}
+      <h3 className="text-[11px] font-semibold uppercase tracking-wider text-ink-muted">
+        {TITLE}
       </h3>
 
       {state !== 'ready' && (

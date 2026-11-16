@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Baby, Droplets, Loader2 } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { getApiErrorMessage, herdApi, productionApi } from '../../lib/backendApi';
 import { formatCowIdentity } from '../../lib/cowIdentity';
@@ -71,10 +71,7 @@ function CalfMilkFeedForm({ onClose, initialDate }) {
   return (
     <BaseModal closeOnBackdrop isOpen onClose={mutation.isPending ? undefined : onClose} title={copy.title}>
       <form onSubmit={handleSubmit} className="space-y-5">
-        <div className="flex items-center gap-3 border-b border-ink/10 pb-4">
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-brand/10 text-brand">
-            <Baby size={20} />
-          </div>
+        <div className="border-b border-ink/10 pb-4">
           <div>
             <p className="text-sm font-semibold text-ink">{copy.allocation}</p>
             <p className="text-xs text-ink-muted">{copy.allocationHint}</p>
@@ -165,7 +162,7 @@ function CalfMilkFeedForm({ onClose, initialDate }) {
             disabled={mutation.isPending || herdQuery.isLoading || activeCalves.length === 0}
             className="btn-command justify-center gap-2 disabled:cursor-not-allowed disabled:opacity-60"
           >
-            {mutation.isPending ? <Loader2 size={16} className="animate-spin" /> : <Droplets size={16} />}
+            {mutation.isPending && <Loader2 size={16} className="animate-spin" aria-hidden="true" />}
             {mutation.isPending ? copy.recording : copy.submit}
           </button>
         </div>

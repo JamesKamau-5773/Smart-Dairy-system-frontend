@@ -1,7 +1,7 @@
 import { useState, useMemo, useRef, useEffect } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import toast from 'react-hot-toast';
-import { ChevronDown, Upload } from 'lucide-react';
+import { ChevronDown } from 'lucide-react';
 import { validateForm, ValidationRules, getFirstErrorMessage } from '../../../lib/validation';
 import {
   normalizeSemenCode,
@@ -16,7 +16,6 @@ import { useTenant } from '../../../hooks/useTenant';
 import { todayLocalIso } from '../../../lib/localDate';
 import { reportError } from '../../../lib/telemetry';
 import { breedingCopy } from '../../../i18n/breeding';
-
 /**
  * LogAIServiceForm
  *
@@ -249,7 +248,7 @@ export default function LogAIServiceForm({
               className="absolute right-2 top-1/2 -translate-y-1/2 rounded p-1 text-ink-muted transition-colors hover:text-brand"
               aria-label={copy.toggleHerd}
             >
-              <ChevronDown size={16} />
+              <ChevronDown size={16} aria-hidden="true" />
             </button>
 
             {isCowPickerOpen && (
@@ -305,8 +304,9 @@ export default function LogAIServiceForm({
         </div>
 
         <div>
-          <label className="mb-1 flex items-center gap-1 text-xs font-bold uppercase tracking-wider text-ink-muted">
-            <Upload size={13} /> {copy.certificateImage}
+          <label className="mb-1 block text-xs font-bold uppercase tracking-wider text-ink-muted">
+
+      {copy.certificateImage}
           </label>
           <input
             type="file"

@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-import { ToggleLeft } from 'lucide-react';
 
 export default function DevToggle() {
   const [adminMode, setAdminMode] = useState(false);
@@ -12,7 +11,7 @@ export default function DevToggle() {
       onClick={() => setAdminMode((next) => !next)}
       title="Toggle dev admin mode"
     >
-      <ToggleLeft size={14} className="inline-block mr-2" /> Dev Admin: {adminMode ? 'ON' : 'OFF'}
+      Dev Admin: {adminMode ? 'ON' : 'OFF'}
     </button>
   );
 }

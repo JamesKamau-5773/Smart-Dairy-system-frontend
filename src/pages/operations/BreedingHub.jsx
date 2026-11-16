@@ -24,23 +24,7 @@ import {
 import { breedingApi, getApiErrorMessage, herdApi } from '../../lib/backendApi';
 import { formatCowIdentity, resolveCowIdentityFromHerd } from '../../lib/cowIdentity';
 import { useTenant } from '../../hooks/useTenant';
-import {
-  Dna,
-  TrendingUp,
-  Syringe,
-  CheckCircle2,
-  Stethoscope,
-  XCircle,
-  Flame,
-  Snowflake,
-  Plus,
-  Trash2,
-  ChevronRight,
-  ChevronDown,
-  ChevronUp,
-  Search,
-  Pencil,
-} from 'lucide-react';
+import { ChevronRight, ChevronDown, ChevronUp, Search } from 'lucide-react';
 import { toLocalIsoDate } from '../../lib/localDate';
 import { reportError } from '../../lib/telemetry';
 import { formatMonthYear } from '../../lib/dateFormat';
@@ -123,37 +107,36 @@ function BreedingHeader({ metrics, onLogService, onRecordHeat }) {
   return (
     <div className="flex flex-col gap-6 border-b border-ink/10 pb-6 md:flex-row md:items-end md:justify-between">
       <div>
-        <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-brand/10 bg-brand/5 px-3 py-1 text-[10px] font-bold uppercase tracking-widest text-brand">
-          <Dna size={12} /> {copy.eyebrow}
-        </div>
         <h2 className="m-0 font-sans text-3xl font-bold tracking-tight text-brand mb-4">
           {copy.titleStart} <span className="text-ink-muted">{copy.titleEnd}</span>
         </h2>
 
         {/* Compact KPI Chips */}
         <div className="flex flex-wrap items-center gap-3">
-          <div className="flex items-center gap-2 rounded-md bg-danger/10 px-3 py-1.5 text-xs font-bold text-danger border border-danger/20">
-            <Flame size={14} /> {copy.onHeat(metrics.onHeat)}
+          <div className="flex items-center rounded-md bg-danger/10 px-3 py-1.5 text-xs font-bold text-danger border border-danger/20">
+            {copy.onHeat(metrics.onHeat)}
           </div>
-          <div className="flex items-center gap-2 rounded-md bg-surface-raised px-3 py-1.5 text-xs font-bold text-ink-strong border border-ink/10">
-            <Stethoscope size={14} /> {copy.pendingChecks(metrics.pendingTotal, metrics.pendingDueNow)}
+          <div className="flex items-center rounded-md bg-surface-raised px-3 py-1.5 text-xs font-bold text-ink-strong border border-ink/10">
+            {copy.pendingChecks(metrics.pendingTotal, metrics.pendingDueNow)}
           </div>
-          <div className="flex items-center gap-2 rounded-md bg-brand/5 px-3 py-1.5 text-xs font-bold text-brand border border-brand/10">
-            <Snowflake size={14} /> {copy.straws(metrics.totalStraws ?? '—')}
+          <div className="flex items-center rounded-md bg-brand/5 px-3 py-1.5 text-xs font-bold text-brand border border-brand/10">
+            {copy.straws(metrics.totalStraws ?? '—')}
           </div>
         </div>
       </div>
 
       {/* Fixed Primary Action Button */}
       <div className="flex flex-wrap gap-2">
-        <button onClick={onRecordHeat} className="btn-secondary flex items-center gap-2 text-sm">
-          <Flame size={16} /> {copy.recordHeat}
+        <button onClick={onRecordHeat} className="btn-secondary flex items-center text-sm">
+
+  {copy.recordHeat}
         </button>
         <button
           onClick={onLogService}
-          className="btn-command flex items-center gap-2 text-sm bg-brand text-surface  hover:bg-brand-dark transition-colors"
+          className="btn-command flex items-center text-sm bg-brand text-surface  hover:bg-brand-dark transition-colors"
         >
-          <Syringe size={16} /> {copy.logService}
+
+  {copy.logService}
         </button>
       </div>
     </div>
@@ -180,8 +163,9 @@ function HeatAlerts({ alerts, onLogService }) {
 
   return (
     <div className="card-machined border-danger/20 bg-danger/5 p-6 ">
-      <h3 className="mb-4 flex items-center gap-2 text-sm font-bold uppercase tracking-wider text-danger">
-        <Flame size={18} /> {copy.heatAlerts}
+      <h3 className="mb-4 text-sm font-bold uppercase tracking-wider text-danger">
+
+  {copy.heatAlerts}
       </h3>
       <div className="space-y-3">
         {alerts.map((alert) => (
@@ -193,7 +177,8 @@ function HeatAlerts({ alerts, onLogService }) {
             </div>
             <div className="text-right">
               <button type="button" onClick={() => onLogService(alert)} className="btn-command px-3 py-2 text-xs">
-                <Syringe size={14} /> {copy.logAi}
+
+  {copy.logAi}
               </button>
             </div>
           </div>
@@ -254,14 +239,14 @@ function VetQueueItem({ log, onOutcome, onEdit, isUpdating }) {
               disabled={isUpdating}
               className="btn-danger gap-1 px-3 py-2 text-xs"
             >
-              <XCircle size={14} /> {isUpdating ? copy.saving : copy.markOpen}
+              {isUpdating ? copy.saving : copy.markOpen}
             </button>
             <button
               onClick={() => onOutcome(log.id, 'Pregnant')}
               disabled={isUpdating}
               className="btn-command gap-1 px-3 py-2 text-xs"
             >
-              <CheckCircle2 size={14} /> {isUpdating ? copy.saving : copy.confirmPregnant}
+              {isUpdating ? copy.saving : copy.confirmPregnant}
             </button>
           </div>
         ) : (
@@ -275,7 +260,8 @@ function VetQueueItem({ log, onOutcome, onEdit, isUpdating }) {
           className="btn-secondary inline-flex items-center gap-1 px-3 py-2 text-xs"
           aria-label={copy.editFor(formatCowLabel(log))}
         >
-          <Pencil size={14} /> {copy.edit}
+
+  {copy.edit}
         </button>
       </div>
     </div>
@@ -290,8 +276,9 @@ function SemenInventory({ stock, loadState, error, onRetry, onAddInventory, onRe
   return (
     <div className="card-machined bg-surface p-6 h-full border border-ink/5 ">
       <div className="flex items-center justify-between mb-6">
-        <h3 className="flex items-center gap-2 text-base font-bold text-brand">
-          <Snowflake size={18} className="text-accent" /> {copy.title}
+        <h3 className="text-base font-bold text-brand">
+
+  {copy.title}
         </h3>
       </div>
 
@@ -321,8 +308,9 @@ function SemenInventory({ stock, loadState, error, onRetry, onAddInventory, onRe
               </div>
               <div className="mb-3 font-mono text-[10px] text-ink-muted">{copy.code(bull.code)}</div>
 
-              <div className="flex items-center gap-2 text-xs font-semibold text-ink-strong">
-                <TrendingUp size={14} className="text-accent" /> {copy.bestFor(bull.improves)}
+              <div className="text-xs font-semibold text-ink-strong">
+
+  {copy.bestFor(bull.improves)}
               </div>
 
               <div className="mt-3 flex items-center gap-2">
@@ -338,7 +326,8 @@ function SemenInventory({ stock, loadState, error, onRetry, onAddInventory, onRe
                   onClick={() => onDeleteInventory(bull)}
                   className="inline-flex items-center gap-1 rounded-md border border-rose-200 bg-rose-50 px-2.5 py-1.5 text-[11px] font-bold text-rose-700 transition-colors hover:bg-rose-100"
                 >
-                  <Trash2 size={12} /> {copy.delete}
+
+  {copy.delete}
                 </button>
               </div>
             </div>
@@ -346,8 +335,9 @@ function SemenInventory({ stock, loadState, error, onRetry, onAddInventory, onRe
         })}
       </div>
 
-      <button onClick={onAddInventory} className="mt-6 flex w-full items-center justify-center gap-2 rounded-lg border-2 border-dashed border-ink/10 bg-surface-raised py-3 text-xs font-bold text-ink-muted transition-colors hover:border-brand/30 hover:text-brand">
-        <Plus size={14} /> {copy.addNew}
+      <button onClick={onAddInventory} className="mt-6 flex w-full items-center justify-center rounded-lg border-2 border-dashed border-ink/10 bg-surface-raised py-3 text-xs font-bold text-ink-muted transition-colors hover:border-brand/30 hover:text-brand">
+
+  {copy.addNew}
       </button>
     </div>
   );
@@ -636,8 +626,9 @@ export default function BreedingHub() {
 
           <div className="card-machined bg-surface p-6 border border-ink/5 ">
             <div className="mb-6 flex items-center justify-between border-b border-ink/10 pb-4">
-              <h3 className="flex items-center gap-2 text-base font-bold text-brand">
-                <Stethoscope size={18} className="text-brand-dark" /> {copy.pendingTitle}
+              <h3 className="text-base font-bold text-brand">
+
+  {copy.pendingTitle}
               </h3>
             </div>
 
@@ -666,14 +657,15 @@ export default function BreedingHub() {
 
             {/* Progressive Disclosure Scaffold */}
             <button onClick={() => setIsHistoryOpen(true)} className="mt-4 flex w-full items-center justify-center gap-1 py-2 text-xs font-bold text-brand hover:underline">
-              {copy.viewHistory} <ChevronRight size={14} />
+              {copy.viewHistory} <ChevronRight size={14} aria-hidden="true" />
             </button>
           </div>
 
           {/* BOTTOM: TRENDS / ROI */}
           <div className="card-machined bg-surface-raised p-6 border border-brand/10">
-            <h3 className="mb-6 flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-ink-muted">
-              <TrendingUp size={16} className="text-accent" /> {copy.geneticTitle}
+            <h3 className="mb-6 text-xs font-bold uppercase tracking-widest text-ink-muted">
+
+  {copy.geneticTitle}
             </h3>
 
             {geneticProgressLoadState === 'loading' ? (
@@ -780,8 +772,9 @@ export default function BreedingHub() {
           <SimpleModalSection title={copy.allChecks}>
             <div className="flex flex-col gap-3 border-b border-ink/10 pb-4 md:flex-row md:items-center md:justify-between">
               <div>
-                <div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest text-ink-muted">
-                  <Search size={12} /> {copy.searchAndFilters}
+                <div className="text-[10px] font-bold uppercase tracking-widest text-ink-muted">
+
+  {copy.searchAndFilters}
                 </div>
                 <p className="mt-1 text-sm leading-6 text-ink-muted">{copy.historyHint}</p>
               </div>
@@ -796,7 +789,7 @@ export default function BreedingHub() {
                   aria-expanded={historyControlsOpen}
                   className="inline-flex items-center gap-1.5 rounded-lg border border-ink/10 bg-surface px-3 py-1.5 text-xs font-semibold text-ink  transition-all hover:border-brand/20 hover:bg-brand/5 hover:text-brand"
                 >
-                  {historyControlsOpen ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
+                  {historyControlsOpen ? <ChevronUp size={12} aria-hidden="true" /> : <ChevronDown size={12} aria-hidden="true" />}
                   {historyControlsOpen ? copy.hideFilters : copy.showFilters}
                 </button>
               </div>
@@ -806,7 +799,7 @@ export default function BreedingHub() {
               <div className="space-y-4 pt-4">
                 <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
                   <div className="flex flex-1 items-center gap-2 rounded-lg border border-ink/10 bg-surface-raised px-3 py-2">
-                    <Search size={14} className="text-ink-muted" />
+                    <Search size={14} className="text-ink-muted" aria-hidden="true" />
                     <input
                       type="search"
                       value={historySearch}

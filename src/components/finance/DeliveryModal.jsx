@@ -1,5 +1,4 @@
 import { useState, useEffect, useMemo } from 'react';
-import { Save, Droplets } from 'lucide-react';
 import BaseModal from '../ui/BaseModal';
 import { todayLocalIso } from '../../lib/localDate';
 import { financeCopy } from '../../i18n/finance';
@@ -66,7 +65,6 @@ export default function DeliveryModal({ isOpen, onClose, onSave, delivery, custo
       isOpen
       onClose={onClose}
       title={isEditMode ? copy.editTitle : copy.logTitle}
-      icon={<Droplets size={16} />}
       size="xl"
       closeLabel={copy.close}
       onSubmit={handleSubmit}
@@ -80,7 +78,7 @@ export default function DeliveryModal({ isOpen, onClose, onSave, delivery, custo
             disabled={isSaving || !formData.date || !formData.liters_delivered || personalUseExceedsDelivered}
             className="flex items-center px-4 py-2 bg-brand text-white rounded-lg font-black text-xs uppercase  hover:bg-brand-dark disabled:bg-slate-300 disabled:cursor-not-allowed"
           >
-            <Save size={14} className="mr-2" /> {isEditMode ? copy.saveChanges : copy.log}
+            {isEditMode ? copy.saveChanges : copy.log}
           </button>
         </>
       )}

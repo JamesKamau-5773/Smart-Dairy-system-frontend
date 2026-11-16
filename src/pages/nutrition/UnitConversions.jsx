@@ -1,7 +1,6 @@
 import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Scale, Plus, ArrowRight } from 'lucide-react';
 import { getApiErrorMessage, inventoryApi, nutritionApi } from '../../lib/backendApi';
 import { offlineFailureMessage } from '../../lib/offlinePolicy';
 import { reportError } from '../../lib/telemetry';
@@ -18,7 +17,6 @@ const LABEL = 'block text-[11px] font-black uppercase tracking-widest text-ink-m
 
 const EmptyConversionsState = () => (
   <div className="border border-dashed border-ink/15 bg-surface-warm/30 rounded-xl p-8 flex flex-col items-center justify-center text-center animate-reveal">
-    <Scale className="w-8 h-8 text-ink-muted/40 mb-3" aria-hidden="true" />
     <h4 className="text-ink font-bold text-sm mb-1">{copy.emptyTitle}</h4>
     <p className="text-xs text-ink-muted">{copy.emptyText}</p>
   </div>
@@ -98,8 +96,7 @@ export default function UnitConversions() {
         </div>
 
         <div className="bg-surface rounded-2xl border border-ink/10 p-6 md:p-8">
-          <div className="flex items-center gap-2 mb-6 text-ink">
-            <Plus className="w-5 h-5 text-brand" aria-hidden="true" />
+          <div className="mb-6 text-ink">
             <h2 className="text-sm font-bold uppercase tracking-widest">{copy.addTitle}</h2>
           </div>
 
@@ -168,10 +165,9 @@ export default function UnitConversions() {
               <button
                 type="submit"
                 disabled={!isFormValid || saveConversion.isPending}
-                className="btn-command min-w-[160px] px-8 py-3.5 rounded-xl flex items-center justify-center gap-2 group disabled:opacity-60 transition-all bg-brand text-white hover:bg-brand/90 font-bold"
+                className="btn-command min-w-[160px] px-8 py-3.5 rounded-xl flex items-center justify-center disabled:opacity-60 transition-all bg-brand text-white hover:bg-brand/90 font-bold"
               >
                 {saveConversion.isPending ? copy.saving : copy.save}
-                <ArrowRight size={18} className="group-hover:translate-x-1 transition-transform" aria-hidden="true" />
               </button>
             </div>
           </form>

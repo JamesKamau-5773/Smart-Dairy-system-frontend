@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { CheckCircle2, Loader2, RefreshCw } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import AlertBanner from '../../components/ui/AlertBanner';
 import AuthLayout from '../../components/auth/AuthLayout';
@@ -136,7 +136,7 @@ export default function VerifyPhonePage() {
             <>
               <AlertBanner type="warning" title={ENDED[phase].title} message={ENDED[phase].message} />
               <SubmitButton type="button" onClick={getNewCode} retryIn={verification.resendIn} disabled={!online}>
-                <RefreshCw size={18} aria-hidden="true" /> {copy.startAgain}
+                {copy.startAgain}
               </SubmitButton>
             </>
           )}
@@ -238,7 +238,7 @@ function VerifiedStep({ refreshUser, onContinue }) {
         pending={state.status === 'refreshing'}
         onClick={() => (state.status === 'failed' ? setState({ status: 'refreshing', user: null, error: '' }) : onContinue(state.user))}
       >
-        {state.status === 'failed' ? common.tryAgain : <><CheckCircle2 size={18} aria-hidden="true" /> {common.continue}</>}
+        {state.status === 'failed' ? common.tryAgain : common.continue}
       </SubmitButton>
     </div>
   );

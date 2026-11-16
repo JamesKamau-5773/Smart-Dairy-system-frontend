@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Link, useParams } from 'react-router-dom';
-import { ArrowLeft, Activity, Calendar, Droplets, ShieldAlert, TrendingUp, Search, Filter, RotateCcw, ChevronDown } from 'lucide-react';
+import { ArrowLeft, Search, ChevronDown } from 'lucide-react';
 import { animalsApi, herdApi } from '../../lib/backendApi';
 import { normalizeAnimal } from '../../lib/animalUtils';
 import {
@@ -41,19 +41,9 @@ export function buildMilkYieldTrend(sessions, range = 'all') {
   return records.slice(-Number(range));
 }
 
-function MetricCard({ label, value, icon: Icon, tone = 'brand', loading = false }) {
-  const toneStyles = {
-    brand: 'bg-brand/10 text-brand',
-    accent: 'bg-accent/10 text-accent-dark',
-    success: 'bg-success/10 text-success',
-    danger: 'bg-danger/10 text-danger',
-  };
-
+function MetricCard({ label, value, loading = false }) {
   return (
-    <div className="card-machined p-5 bg-surface flex items-center gap-4">
-      <div className={`w-11 h-11 rounded-xl flex items-center justify-center ${toneStyles[tone] || toneStyles.brand}`}>
-        <Icon size={20} />
-      </div>
+    <div className="card-machined p-5 bg-surface">
       <div>
         <div className="text-[10px] uppercase tracking-widest text-ink-muted font-bold">{label}</div>
         {loading ? <Skeleton className="mt-1.5 h-6 w-20" /> : <div className="text-xl font-black text-ink">{value}</div>}
@@ -160,12 +150,9 @@ export default function MilkHistory() {
         <div className="flex items-center justify-between border-b border-ink/10 pb-5 gap-4">
           <div className="flex items-center gap-4 min-w-0">
           <Link to="/operations/yield" aria-label={copy.back} className="p-2 hover:bg-surface-raised rounded-lg text-ink-muted transition-colors">
-            <ArrowLeft size={20} />
+            <ArrowLeft size={20} aria-hidden="true" />
           </Link>
           <div className="min-w-0">
-            <div className="inline-flex items-center gap-2 px-3 py-1 bg-brand/5 text-brand text-[10px] font-bold uppercase tracking-widest rounded-full mb-1">
-              <Activity size={12} /> {copy.eyebrow}
-            </div>
             <h2 className="font-sans font-bold text-2xl tracking-tight text-brand m-0 truncate">
               {id} <span className="text-ink-muted">({resolvedHistory?.animal?.name || copy.unknownCow})</span>
             </h2>
@@ -180,16 +167,17 @@ export default function MilkHistory() {
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
-        <MetricCard loading={isLoading} label={copy.cow} value={resolvedHistory?.animal?.name || copy.unknownCow} icon={Droplets} />
-        <MetricCard loading={isLoading} label={copy.averageYield} value={averageYield} icon={TrendingUp} />
-        <MetricCard loading={isLoading} label={copy.peakYield} value={peakYield} icon={Calendar} />
-        <MetricCard loading={isLoading} label={copy.totalLogged} value={totalYield} icon={ShieldAlert} tone="accent" />
+        <MetricCard loading={isLoading} label={copy.cow} value={resolvedHistory?.animal?.name || copy.unknownCow} />
+        <MetricCard loading={isLoading} label={copy.averageYield} value={averageYield} />
+        <MetricCard loading={isLoading} label={copy.peakYield} value={peakYield} />
+        <MetricCard loading={isLoading} label={copy.totalLogged} value={totalYield} />
       </div>
 
       <section className="card-machined overflow-hidden bg-surface">
         <div className="flex flex-col gap-3 border-b border-ink/10 bg-surface-raised px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <h3 className="flex items-center gap-2 text-lg font-bold text-brand"><TrendingUp size={18} /> {copy.trendTitle}</h3>
+            <h3 className="text-lg font-bold text-brand">
+            {copy.trendTitle}</h3>
             <p className="mt-1 text-xs text-ink-muted">{copy.trendSubtitle(resolvedHistory?.animal?.name || copy.thisCow)}</p>
           </div>
           <div className="inline-flex rounded-lg border border-ink/10 bg-surface p-1" role="group" aria-label={copy.trendRange}>
@@ -238,18 +226,21 @@ export default function MilkHistory() {
             aria-expanded={filtersOpen}
             aria-controls="history-filter-panel"
           >
-            <Filter size={12} /> {copy.searchAndFilter}
+
+  {copy.searchAndFilter}
             <ChevronDown
               size={12}
+              aria-hidden="true"
               className={`text-ink-muted transition-transform duration-300 ease-out motion-reduce:transition-none ${filtersOpen ? 'rotate-180' : ''}`}
             />
           </button>
           <button
             type="button"
             onClick={clearFilters}
-            className="inline-flex items-center gap-2 text-xs font-semibold text-ink-muted hover:text-brand"
+            className="inline-flex items-center text-xs font-semibold text-ink-muted hover:text-brand"
           >
-            <RotateCcw size={14} /> {copy.resetFilters}
+
+  {copy.resetFilters}
           </button>
         </div>
 
@@ -259,7 +250,7 @@ export default function MilkHistory() {
               <label className="space-y-1 text-xs font-semibold text-ink-muted xl:col-span-2">
                 {copy.search}
                 <div className="relative">
-                  <Search size={14} className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-brand" />
+                  <Search size={14} className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-brand" aria-hidden="true" />
                   <input
                     type="text"
                     value={filters.search}
@@ -306,8 +297,7 @@ export default function MilkHistory() {
               </label>
             </div>
 
-            <div className="flex items-center gap-2 text-xs text-ink-muted">
-              <Search size={14} />
+            <div className="text-xs text-ink-muted">
               {copy.showing(filteredSessions.length, totalSessions)}
             </div>
           </div>
@@ -387,9 +377,6 @@ export default function MilkHistory() {
           </>
         ) : (
           <div className="p-10 text-center text-ink-muted bg-surface-warm/30">
-            <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-brand/10 text-brand mb-3">
-              <Search size={18} />
-            </div>
             <p className="font-semibold text-ink">{copy.noMatches}</p>
             <p className="text-sm mt-1 leading-6">{copy.noMatchesHint}</p>
             <button type="button" onClick={clearFilters} className="btn-command bg-surface-raised text-ink mt-4">

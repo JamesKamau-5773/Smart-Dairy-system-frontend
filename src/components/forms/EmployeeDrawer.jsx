@@ -1,9 +1,4 @@
 import { useState } from 'react';
-import {
-  BadgeDollarSign,
-  User,
-  HeartPulse,
-} from 'lucide-react';
 import BaseModal from '../ui/BaseModal';
 import ProfileStatusTab from './employeeDrawer/ProfileStatusTab';
 import FinancialsTab from './employeeDrawer/FinancialsTab';
@@ -12,9 +7,9 @@ import { formatKenyanPhoneInput, normalizeEmployeeRole, normalizeKenyanPhone } f
 import { staffCopy } from '../../i18n/staff';
 
 const tabs = [
-  { id: 'profile', icon: User },
-  { id: 'financials', icon: BadgeDollarSign },
-  { id: 'medical', icon: HeartPulse },
+  { id: 'profile' },
+  { id: 'financials' },
+  { id: 'medical' },
 ];
 
 function toNumber(value) {
@@ -127,20 +122,18 @@ export default function EmployeeDrawer({
       <div className="space-y-5 text-gray-900">
         <div className="flex gap-4 border-b border-gray-200">
           {tabs.map((tab) => {
-            const Icon = tab.icon;
-
             return (
               <button
                 key={tab.id}
                 type="button"
                 onClick={() => setActiveTab(tab.id)}
-                className={`inline-flex items-center gap-2 border-b-2 px-1 py-3 text-xs font-semibold uppercase tracking-[0.18em] transition-colors ${
+                className={`inline-flex items-center border-b-2 px-1 py-3 text-xs font-semibold uppercase tracking-[0.18em] transition-colors ${
                   activeTab === tab.id
                     ? 'border-brand text-gray-900'
                     : 'border-transparent text-gray-500 hover:text-gray-700'
                 }`}
               >
-                <Icon size={12} /> {staffCopy.drawer.tabs[tab.id]}
+                {staffCopy.drawer.tabs[tab.id]}
               </button>
             );
           })}

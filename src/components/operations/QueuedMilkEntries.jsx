@@ -1,5 +1,4 @@
 import { useQuery } from '@tanstack/react-query';
-import { AlertTriangle, Clock3 } from 'lucide-react';
 import { useOfflineQueue } from '../../hooks/useOfflineQueue';
 import { useTenant } from '../../hooks/useTenant';
 import { QUERY_KEYS } from '../../providers/QueryProvider';
@@ -33,8 +32,7 @@ export default function QueuedMilkEntries() {
   return (
     <section aria-labelledby="queued-milk-title" className="min-w-0 rounded-card border border-ink/10 bg-card">
       <div className="border-b border-ink/10 px-4 py-3 sm:px-6">
-        <h2 id="queued-milk-title" className="flex items-center gap-2 text-sm font-bold text-ink">
-          <Clock3 size={16} className="text-brand" aria-hidden="true" />
+        <h2 id="queued-milk-title" className="text-sm font-bold text-ink">
           {copy.title(rows.length)}
         </h2>
         <p className="mt-1 text-xs text-ink-muted">{copy.savedHere} {statusText}</p>
@@ -50,12 +48,12 @@ export default function QueuedMilkEntries() {
             <div className="flex shrink-0 items-center gap-3">
               <span className="font-mono text-sm font-semibold tabular-nums text-ink">{formatLitres(row.amount)}</span>
               {row.needsAttention ? (
-                <span className="inline-flex items-center gap-1 rounded-badge border border-danger-500/30 bg-danger-50 px-2 py-1 text-[10px] font-semibold text-danger-900">
-                  <AlertTriangle size={11} aria-hidden="true" /> {copy.needsAttention}
+                <span className="inline-flex items-center rounded-badge border border-danger-500/30 bg-danger-50 px-2 py-1 text-[10px] font-semibold text-danger-900">
+                  {copy.needsAttention}
                 </span>
               ) : (
-                <span className="inline-flex items-center gap-1 rounded-badge border border-warning-500/40 bg-warning-50 px-2 py-1 text-[10px] font-semibold text-ink">
-                  <Clock3 size={11} aria-hidden="true" /> {copy.notSent}
+                <span className="inline-flex items-center rounded-badge border border-warning-500/40 bg-warning-50 px-2 py-1 text-[10px] font-semibold text-ink">
+                  {copy.notSent}
                 </span>
               )}
             </div>

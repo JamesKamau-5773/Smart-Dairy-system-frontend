@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Trophy, ChevronDown, ChevronUp, ArrowRight, Info } from 'lucide-react';
+import { ChevronDown, ChevronUp } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { formatCostPerLitre, readFeedCostPerLitre } from '../../lib/feedCost';
 import { formatLitres } from '../../lib/numberFormat';
@@ -25,7 +25,6 @@ const proteinOf = (recipe) => {
  */
 const EmptyMixState = () => (
   <div className="flex flex-col items-center justify-center p-8 text-center">
-    <Info className="mb-3 h-8 w-8 text-ink-muted" />
     <h4 className="mb-1 font-semibold text-ink">{copy.emptyTitle}</h4>
     <p className="max-w-sm text-sm text-ink-muted">
       {copy.emptyText}
@@ -67,7 +66,7 @@ const FeedMixRow = ({ recipe, index, isExpanded, onToggle, onLoadToLab }) => {
             aria-expanded={isExpanded}
           >
             <span>{name}</span>
-            {isExpanded ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
+            {isExpanded ? <ChevronUp size={18} aria-hidden="true" /> : <ChevronDown size={18} aria-hidden="true" />}
           </button>
         </td>
         <td className="min-w-[180px] px-4 py-3 font-mono text-sm font-bold tabular-nums tracking-tight text-ink">{formatLitres(yieldAvg)}</td>
@@ -118,10 +117,9 @@ const FeedMixRow = ({ recipe, index, isExpanded, onToggle, onLoadToLab }) => {
                 type="button"
                 // Pass the ENTIRE recipe object up to the handler
                 onClick={(e) => onLoadToLab(e, recipe)}
-                className="group mt-2 flex w-fit items-center gap-1.5 text-sm font-bold text-ink underline transition-colors hover:text-brand"
+                className="group mt-2 flex w-fit items-center text-sm font-bold text-ink underline transition-colors hover:text-brand"
               >
                 {copy.loadIntoLab}
-                <ArrowRight size={14} className="group-hover:translate-x-1 transition-transform" />
               </button>
             </div>
           </div>
@@ -221,8 +219,7 @@ export default function TopRecipesList({ recipes, state = 'ready', error, onRetr
 
   return (
     <div className="card-machined p-5 sm:p-6 md:p-8">
-      <div className="flex items-center gap-2 mb-2">
-        <Trophy size={18} className="text-ink" />
+      <div className="mb-2">
         <h3 className="text-xs font-bold uppercase tracking-wider text-ink-muted">
           {copy.title}
         </h3>
@@ -272,7 +269,7 @@ export default function TopRecipesList({ recipes, state = 'ready', error, onRetr
           return <article key={recipeId || `mobile-${index}`} className="min-w-0 rounded-xl border border-ink/10 bg-surface p-4">
             <button type="button" onClick={() => handleToggle(recipeId)} aria-expanded={expanded} className="flex w-full min-w-0 items-center justify-between gap-3 text-left">
               <span className="min-w-0"><span className="block text-[10px] font-semibold uppercase tracking-wider text-ink-muted">{copy.rankN(index + 1)}</span><span className="mt-1 block break-words text-sm font-bold text-brand">{recipe?.name || copy.unnamed}</span></span>
-              {expanded ? <ChevronUp className="shrink-0 text-brand" size={18} /> : <ChevronDown className="shrink-0 text-brand" size={18} />}
+              {expanded ? <ChevronUp className="shrink-0 text-brand" size={18} aria-hidden="true" /> : <ChevronDown className="shrink-0 text-brand" size={18} aria-hidden="true" />}
             </button>
             <div className="mt-3 grid grid-cols-2 gap-3 rounded-lg bg-surface-raised p-3 text-xs">
               <div><p className="text-ink-muted">{copy.dailyMilk}</p><p className="mt-1 font-mono font-bold tabular-nums text-ink">{formatLitres(yieldAvg)}</p></div>

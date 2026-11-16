@@ -1,4 +1,4 @@
-import { ChevronDown, RotateCcw, Search, X } from 'lucide-react';
+import { ChevronDown, Search, X } from 'lucide-react';
 import { formatCount } from '../../lib/numberFormat';
 import { commonCopy } from '../../i18n/common';
 
@@ -54,7 +54,7 @@ export function FilterChips({ chips, onReset }) {
         </button>
       ))}
       <button type="button" onClick={onReset} className="inline-flex min-h-11 items-center gap-1 px-1 text-xs font-semibold text-ink-muted hover:text-brand sm:min-h-9">
-        <RotateCcw size={12} aria-hidden="true" /> {commonCopy.filters.reset}
+        {commonCopy.filters.reset}
       </button>
     </>
   );

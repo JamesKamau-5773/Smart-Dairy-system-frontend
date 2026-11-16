@@ -27,6 +27,33 @@ export const commonCopy = {
     close: 'Funga',
   },
 
+  controls: {
+    moreActions: 'Vitendo zaidi', // REVIEW
+    close: 'Funga',
+    back: 'Rudi',
+    showPassword: 'Onyesha nenosiri',
+    hidePassword: 'Ficha nenosiri',
+    increase: 'Ongeza',
+    decrease: 'Punguza',
+    showDetails: 'Onyesha maelezo',
+    hideDetails: 'Ficha maelezo',
+    dismiss: 'Funga ujumbe', // REVIEW
+    pickDate: (label) => `Chagua ${label.toLowerCase()} kwenye kalenda`, // REVIEW
+    dismissMilestone: 'Funga ujumbe wa hatua', // REVIEW
+    hideChecklist: 'Ficha orodha ya kuanza', // REVIEW
+    about: (label) => `Kuhusu ${label}`,
+    explainCostTypes: 'Eleza aina za gharama', // REVIEW
+    toggleSuggestions: 'Onyesha au ficha mapendekezo', // REVIEW
+    showConfirmPassword: 'Onyesha nenosiri la uthibitisho', // REVIEW
+    hideConfirmPassword: 'Ficha nenosiri la uthibitisho', // REVIEW
+    showPasswords: 'Onyesha manenosiri', // REVIEW
+    hidePasswords: 'Ficha manenosiri', // REVIEW
+    actionsFor: (name) => `Vitendo vya ${name}`, // REVIEW
+    previousMonth: 'Nenda mwezi uliopita', // REVIEW
+    nextMonth: 'Nenda mwezi ujao', // REVIEW
+    syncStatus: (online, pending) => `${online ? 'Mtandaoni' : 'Nje ya mtandao'}, mabadiliko ${pending} yanasubiri`, // REVIEW
+  },
+
   draft: {
     restored: 'Tumerudisha ulichokuwa ukiandika kabla programu haijafungwa.',
     startOver: 'Anza upya',

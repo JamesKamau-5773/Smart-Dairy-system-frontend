@@ -4,7 +4,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { financeApi, getApiErrorMessage } from '../../lib/backendApi';
 import { queuedOfflineMessage, isQueuedOffline, offlineFailureMessage } from '../../lib/offlinePolicy';
 import { reportError } from '../../lib/telemetry';
-import { Plus, Pencil, Trash2, Search, Users, MoreVertical } from 'lucide-react';
+import { Plus, Search, MoreVertical } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 
 import CustomerForm from '../../components/finance/CustomerForm.jsx';
@@ -18,7 +18,6 @@ import { QUERY_KEYS } from '../../providers/QueryProvider';
 import { getListLoadState, hasRowsToShow } from '../../lib/listLoadState';
 import { isFeatureEnabled } from '../../lib/featureFlags';
 import { customerTypeLabel, financeCopy } from '../../i18n/finance';
-
 const TABLE_COLUMNS = 4;
 
 // The first balance/rate field the backend sent; null (shown as "—") when none, never 0.
@@ -140,8 +139,7 @@ export default function CustomersPage() {
   return (
     <div className="animate-reveal space-y-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between rounded-card border border-brand-100 bg-brand-50 p-5">
-        <div className="flex items-center gap-4">
-          <div className="p-3 bg-white text-brand-700 rounded-lg border border-brand-100"><Users size={20} /></div>
+        <div>
           <div>
             <h2 className="font-sans font-bold text-2xl tracking-tight text-brand-900 m-0">
               {copy.title}
@@ -152,13 +150,13 @@ export default function CustomersPage() {
           </div>
         </div>
         <button type="button" onClick={handleAdd} className="flex items-center gap-2 rounded-button bg-brand-800 px-4 py-2 text-sm font-semibold text-white  transition-colors hover:bg-brand-900 w-full sm:w-auto justify-center">
-          <Plus size={16} /> {copy.addNew}
+          <Plus size={16} aria-hidden="true" /> {copy.addNew}
         </button>
       </div>
 
       <div className="card-machined p-4">
         <div className="relative">
-          <Search size={16} className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-brand" />
+          <Search size={16} className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-brand" aria-hidden="true" />
           <input
             type="text"
             placeholder={copy.searchPlaceholder}
@@ -243,11 +241,13 @@ export default function CustomersPage() {
                   <td className="p-4 text-right">
                     <Popover>
                       <PopoverTrigger asChild>
-                        <button type="button" className="inline-flex h-8 w-8 items-center justify-center rounded-button border border-slate-300 text-slate-600 hover:border-brand-400 hover:text-brand-700" aria-label={copy.actionsFor(customer.name)}><MoreVertical size={16} /></button>
+                        <button type="button" className="inline-flex h-8 w-8 items-center justify-center rounded-button border border-slate-300 text-slate-600 hover:border-brand-400 hover:text-brand-700" aria-label={copy.actionsFor(customer.name)}><MoreVertical size={16} aria-hidden="true" /></button>
                       </PopoverTrigger>
                       <PopoverContent align="end" className="w-40 p-1.5">
-                        <button type="button" onClick={() => handleEdit(customer)} className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm text-ink-900 hover:bg-brand-50"><Pencil size={14} /> {copy.edit}</button>
-                        {canDeleteCustomers && <button type="button" onClick={() => handleDelete(customer)} className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm text-danger hover:bg-danger/10"><Trash2 size={14} /> {copy.delete}</button>}
+                        <button type="button" onClick={() => handleEdit(customer)} className="flex w-full items-center rounded-md px-3 py-2 text-left text-sm text-ink-900 hover:bg-brand-50">
+        {copy.edit}</button>
+                        {canDeleteCustomers && <button type="button" onClick={() => handleDelete(customer)} className="flex w-full items-center rounded-md px-3 py-2 text-left text-sm text-danger hover:bg-danger/10">
+      {copy.delete}</button>}
                       </PopoverContent>
                     </Popover>
                   </td>

@@ -4,6 +4,7 @@ import { DayPicker, getDefaultClassNames } from "react-day-picker";
 import { cn } from "@/lib/utils"
 import { Button, buttonVariants } from "@/components/ui/button"
 import { ChevronLeftIcon, ChevronRightIcon, ChevronDownIcon } from "lucide-react"
+import { commonCopy } from "@/i18n/common"
 
 function Calendar({
   className,
@@ -14,6 +15,7 @@ function Calendar({
   locale,
   formatters,
   components,
+  labels,
   ...props
 }) {
   const defaultClassNames = getDefaultClassNames()
@@ -29,6 +31,12 @@ function Calendar({
       )}
       captionLayout={captionLayout}
       locale={locale}
+      // The month arrows are icon-only buttons; name them in the app's language.
+      labels={{
+        labelPrevious: () => commonCopy.controls.previousMonth,
+        labelNext: () => commonCopy.controls.nextMonth,
+        ...labels,
+      }}
       formatters={{
         formatMonthDropdown: (date) =>
           date.toLocaleString(locale?.code, { month: "short" }),

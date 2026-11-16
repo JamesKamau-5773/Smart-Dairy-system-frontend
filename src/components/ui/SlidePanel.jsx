@@ -42,12 +42,13 @@ export default function SlidePanel({ isOpen, onClose, title, subtitle, headerMet
             {headerMeta}
             {subtitle && <p className="mt-1 text-sm font-medium text-gray-500">{subtitle}</p>}
           </div>
-          <button 
+          <button
+            type="button"
             onClick={onClose}
             className="ml-4 shrink-0 rounded-md p-2 text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-900"
             aria-label={commonCopy.ui.close}
           >
-            <X size={20} />
+            <X size={20} aria-hidden="true" />
           </button>
         </div>
 

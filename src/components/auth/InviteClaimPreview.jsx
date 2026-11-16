@@ -1,5 +1,4 @@
 import { useMemo, useState } from 'react';
-import { Check, Copy, Link2 } from 'lucide-react';
 import { resolveInviteClaimUrl } from '../../lib/staffOnboarding';
 import { staffCopy } from '../../i18n/staff';
 
@@ -32,15 +31,14 @@ export default function InviteClaimPreview({
     <section className="rounded-2xl border border-ink/10 bg-surface-warm/35 p-4 ">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div className="space-y-1">
-          <p className="inline-flex items-center gap-2 rounded-full bg-brand/10 px-3 py-1 text-[10px] font-bold uppercase tracking-[0.16em] text-brand">
-            <Link2 size={12} /> {title}
+          <p className="inline-flex items-center rounded-full bg-brand/10 px-3 py-1 text-[10px] font-bold uppercase tracking-[0.16em] text-brand">
+            {title}
           </p>
           <p className="text-sm leading-6 text-ink-muted">{description}</p>
         </div>
 
         {claimUrl && (
-          <button type="button" onClick={handleCopy} className="btn-command relative inline-flex items-center gap-2 px-3 py-2 text-xs font-semibold" aria-label={staffCopy.claimLink.copyLabel}>
-            {copyState === 'copied' ? <Check size={14} /> : <Copy size={14} />}
+          <button type="button" onClick={handleCopy} className="btn-command relative inline-flex items-center px-3 py-2 text-xs font-semibold" aria-label={staffCopy.claimLink.copyLabel}>
             {copyState === 'copied' ? staffCopy.claimLink.copied : staffCopy.claimLink.copy}
             {copyState === 'copied' && <span role="status" className="absolute -top-9 right-0 rounded bg-emerald-700 px-2 py-1 text-[10px] text-white shadow">{staffCopy.claimLink.copiedToast}</span>}
           </button>

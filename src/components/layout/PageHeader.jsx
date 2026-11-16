@@ -1,25 +1,25 @@
+import { Plus } from 'lucide-react';
 import OverflowMenu from '../ui/OverflowMenu';
 import { commonCopy } from '../../i18n/common';
 
-const ActionButton = ({ action, variant, className = '' }) => {
-  const Icon = action.icon;
-  return (
-    <button
-      type="button"
-      onClick={action.onClick}
-      className={`${variant === 'primary' ? 'btn-command' : 'btn-secondary'} min-h-11 gap-2 px-4 text-sm ${className}`}
-    >
-      {Icon && <Icon size={16} aria-hidden="true" />} {action.label}
-    </button>
-  );
-};
+// Only the page's one primary create action carries an icon (a "+"); every other button is text.
+const ActionButton = ({ action, variant, className = '' }) => (
+  <button
+    type="button"
+    onClick={action.onClick}
+    className={`${variant === 'primary' ? 'btn-command' : 'btn-secondary'} min-h-11 gap-2 px-4 text-sm ${className}`}
+  >
+    {variant === 'primary' && action.create && <Plus size={16} aria-hidden="true" />}
+    {action.label}
+  </button>
+);
 
 /**
  * One row: page title (matching the sidebar and top bar), an optional one-line muted
  * description, and right-aligned actions. No panel, tint or icon tile.
  *
- * primaryAction: { label, icon?, onClick }
- * secondaryActions: [{ key, label, icon?, onClick }]
+ * primaryAction: { label, onClick, create? } (create: true shows the "+" for the page's create action)
+ * secondaryActions: [{ key, label, onClick }]
  * secondaryOnMobile: 'menu' moves secondary actions into ⋮ below md; 'inline' keeps them.
  */
 export default function PageHeader({ title, description, primaryAction, secondaryActions = [], secondaryOnMobile = 'menu' }) {
@@ -41,7 +41,7 @@ export default function PageHeader({ title, description, primaryAction, secondar
               label={commonCopy.ui.moreActions}
               size="h-11 w-11"
               bordered
-              items={secondaryActions.map((action) => ({ key: action.key, label: action.label, icon: action.icon, onSelect: action.onClick }))}
+              items={secondaryActions.map((action) => ({ key: action.key, label: action.label, onSelect: action.onClick }))}
             />
           </div>
         )}

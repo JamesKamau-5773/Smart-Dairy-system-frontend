@@ -3,7 +3,7 @@ import { useParams, Link } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'react-hot-toast';
 import { financeApi, getApiErrorMessage } from '../../lib/backendApi';
-import { User, Mail, Phone, MapPin, DollarSign, Receipt, ArrowLeft, Edit, Droplets, Plus, Pencil, Trash2, MoreVertical } from 'lucide-react';
+import { ArrowLeft, Plus, MoreVertical } from 'lucide-react';
 import { Skeleton } from '../../components/ui';
 import Confirmation, { useConfirmation } from '../../components/ui/Confirmation';
 import GroupedDateRows from '../../components/ui/GroupedDateRows';
@@ -16,10 +16,8 @@ import { financeCopy } from '../../i18n/finance';
 const copy = financeCopy.profile;
 // "KES 1,250.00" from a backend figure; "—" when it sent none (never shown as zero).
 const kes = (value) => formatMoneyText(value == null || value === '' ? null : Number(value));
-
-const ProfileDetail = ({ icon: Icon, label, value }) => (
-  <div className="flex items-start gap-4">
-    <Icon size={18} className="text-ink-muted mt-1 shrink-0" />
+const ProfileDetail = ({ label, value }) => (
+  <div>
     <div>
       <h4 className="text-xs font-bold uppercase tracking-wider text-ink-muted">{label}</h4>
       <p className="text-sm font-medium text-ink">{value || copy.notAvailable}</p>
@@ -59,11 +57,13 @@ const DeliveryRow = ({ delivery, onEdit, onDelete }) => {
       <td className="p-4 text-right">
         <Popover>
           <PopoverTrigger asChild>
-      <button type="button" className="inline-flex h-8 w-8 items-center justify-center rounded-button border border-brand/20 text-brand hover:border-brand-400 hover:bg-brand-50" aria-label={copy.actionsForDelivery(formatDate(delivery.date))}><MoreVertical size={16} /></button>
+      <button type="button" className="inline-flex h-8 w-8 items-center justify-center rounded-button border border-brand/20 text-brand hover:border-brand-400 hover:bg-brand-50" aria-label={copy.actionsForDelivery(formatDate(delivery.date))}><MoreVertical size={16} aria-hidden="true" /></button>
           </PopoverTrigger>
           <PopoverContent align="end" className="w-40 p-1.5">
-            <button type="button" onClick={() => onEdit(delivery)} className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm text-ink-900 hover:bg-brand-50"><Pencil size={14} /> {copy.edit}</button>
-            <button type="button" onClick={() => onDelete(delivery)} className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm text-brand-dark hover:bg-brand-50"><Trash2 size={14} /> {copy.delete}</button>
+            <button type="button" onClick={() => onEdit(delivery)} className="flex w-full items-center rounded-md px-3 py-2 text-left text-sm text-ink-900 hover:bg-brand-50">
+            {copy.edit}</button>
+            <button type="button" onClick={() => onDelete(delivery)} className="flex w-full items-center rounded-md px-3 py-2 text-left text-sm text-brand-dark hover:bg-brand-50">
+            {copy.delete}</button>
           </PopoverContent>
         </Popover>
       </td>
@@ -220,11 +220,8 @@ export default function CustomerProfile() {
       <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
         <div className="flex items-center gap-4">
           <Link to="/finance/buyers" aria-label={copy.back} className="p-2 rounded-md hover:bg-surface-raised transition-colors">
-            <ArrowLeft size={20} className="text-ink-muted" />
+            <ArrowLeft size={20} className="text-ink-muted" aria-hidden="true" />
           </Link>
-          <div className="p-3 bg-brand/10 rounded-full text-brand">
-            <User size={24} />
-          </div>
           <div>
             <h1 className="font-sans font-black text-3xl tracking-tight text-ink">{customer.name}</h1>
             <p className="text-sm font-medium text-ink-muted mt-1">
@@ -232,33 +229,37 @@ export default function CustomerProfile() {
             </p>
           </div>
         </div>
-        <Link to="/operations/customers" state={{ editCustomer: customer }} className="btn-secondary gap-2">
-          <Edit size={14} /> {copy.editCustomer}
+        <Link to="/operations/customers" state={{ editCustomer: customer }} className="btn-secondary">
+
+    {copy.editCustomer}
         </Link>
       </div>
 
       <div className="card-machined p-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-8">
-        <ProfileDetail icon={Phone} label={copy.phone} value={customer.phone_number} />
-        <ProfileDetail icon={User} label={copy.contactPerson} value={customer.contact_person} />
-        <ProfileDetail icon={Mail} label={copy.email} value={customer.email} />
-        <ProfileDetail icon={MapPin} label={copy.address} value={customer.address} />
+        <ProfileDetail label={copy.phone} value={customer.phone_number} />
+        <ProfileDetail label={copy.contactPerson} value={customer.contact_person} />
+        <ProfileDetail label={copy.email} value={customer.email} />
+        <ProfileDetail label={copy.address} value={customer.address} />
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <div className="card-machined p-6">
-          <h4 className="text-xs font-bold uppercase text-ink-muted flex items-center gap-2"><DollarSign size={14}/> {copy.currentBalance}</h4>
+          <h4 className="text-xs font-bold uppercase text-ink-muted">
+          {copy.currentBalance}</h4>
           <p className="mt-2 text-3xl font-black text-brand">
             {kes(customer.account_balance ?? customer.balance)}
           </p>
         </div>
         <div className="card-machined p-6">
-          <h4 className="text-xs font-bold uppercase text-ink-muted flex items-center gap-2"><Receipt size={14}/> {copy.agreedRate}</h4>
+          <h4 className="text-xs font-bold uppercase text-ink-muted">
+          {copy.agreedRate}</h4>
           <p className="text-3xl font-black mt-2 text-ink">
             {kes(customer.agreed_rate_per_liter ?? customer.agreed_rate)} / L
           </p>
         </div>
         <div className="card-machined p-6">
-          <h4 className="text-xs font-bold uppercase text-ink-muted flex items-center gap-2"><Droplets size={14}/> {copy.contractLitres}</h4>
+          <h4 className="text-xs font-bold uppercase text-ink-muted">
+          {copy.contractLitres}</h4>
           <p className="text-3xl font-black mt-2 text-ink">
             {customer.daily_contract_liters ? `${Number(customer.daily_contract_liters).toLocaleString(undefined, { maximumFractionDigits: 2 })} L` : copy.notAvailable}
           </p>
@@ -268,11 +269,12 @@ export default function CustomerProfile() {
 
       <div className="card-machined overflow-hidden !p-0">
         <div className="p-6 border-b border-ink/10 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-          <h3 className="font-bold text-lg text-ink flex items-center gap-2">
-            <Droplets size={18} className="text-brand" /> {copy.deliveries}
+          <h3 className="font-bold text-lg text-ink">
+
+    {copy.deliveries}
           </h3>
           <button type="button" onClick={handleAddDelivery} className="btn-command gap-2 self-start sm:self-auto">
-            <Plus size={14} /> {copy.logDelivery}
+            <Plus size={14} aria-hidden="true" /> {copy.logDelivery}
           </button>
         </div>
         <div className="hidden overflow-x-auto md:block">

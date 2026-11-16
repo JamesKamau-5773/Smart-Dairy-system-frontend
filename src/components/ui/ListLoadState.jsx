@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { AlertTriangle, CloudOff, Loader2, RefreshCw } from 'lucide-react';
+import { AlertTriangle, CloudOff, Loader2 } from 'lucide-react';
 import Skeleton from './Skeleton';
 import { getApiErrorMessage } from '../../lib/backendApi';
 import { commonCopy } from '../../i18n/common';
@@ -47,8 +47,8 @@ export function ListLoadMessage({ state, label, error, onRetry }) {
       <p className="font-semibold text-ink">{title}</p>
       <p className="text-sm leading-6 text-ink-muted">{detail}</p>
       {!isOffline && onRetry && (
-        <button type="button" onClick={() => onRetry()} className="btn-command inline-flex items-center gap-2">
-          <RefreshCw size={14} aria-hidden="true" /> {list.tryAgain}
+        <button type="button" onClick={() => onRetry()} className="btn-command inline-flex items-center">
+          {list.tryAgain}
         </button>
       )}
     </div>
@@ -65,8 +65,8 @@ export function StaleDataNotice({ label, error, onRetry }) {
           {commonCopy.list.stale(label)} {getApiErrorMessage(error, commonCopy.list.staleDetail)}
         </span>
       </span>
-      <button type="button" onClick={() => onRetry()} className="inline-flex items-center gap-1.5 text-sm font-semibold text-brand hover:underline">
-        <RefreshCw size={14} aria-hidden="true" /> {commonCopy.list.tryAgain}
+      <button type="button" onClick={() => onRetry()} className="inline-flex items-center text-sm font-semibold text-brand hover:underline">
+        {commonCopy.list.tryAgain}
       </button>
     </div>
   );

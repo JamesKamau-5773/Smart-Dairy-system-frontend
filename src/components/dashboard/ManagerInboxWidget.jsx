@@ -1,6 +1,6 @@
 import React from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { AlertTriangle, Settings } from 'lucide-react';
+import { AlertTriangle } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { safetyApi } from '../../lib/backendApi';
 import { useTenant } from '../../hooks/useTenant';
@@ -41,7 +41,6 @@ export default function ManagerInboxWidget() {
     <div className="space-y-6">
       {/* Header Section */}
       <div className="flex items-center gap-3">
-        <AlertTriangle className="text-danger" size={24} />
         <h2 className="text-xl font-bold text-ink">{copy.title}</h2>
         <span className="bg-danger text-surface text-xs font-bold px-3 py-1 rounded-full">
           {copy.count(activeAlerts.length)}
@@ -60,7 +59,7 @@ export default function ManagerInboxWidget() {
             
             {/* Icon */}
             <div className="p-3 bg-brand/5 rounded-xl text-brand ml-2">
-              <alert.icon size={20} />
+              <alert.icon size={20} aria-hidden="true" />
             </div>
 
             {/* Content */}
@@ -79,9 +78,9 @@ export default function ManagerInboxWidget() {
               <div className="mt-4">
                 <Link 
                   to={alert.actionLink}
-                  className="inline-flex items-center gap-1.5 px-4 py-2 bg-brand text-surface text-xs font-bold rounded-lg hover:bg-brand/90 transition-colors "
+                  className="inline-flex items-center px-4 py-2 bg-brand text-surface text-xs font-bold rounded-lg hover:bg-brand/90 transition-colors "
                 >
-                  <Settings size={14} /> {alert.actionText ?? copy.fallbackAction}
+                  {alert.actionText ?? copy.fallbackAction}
                 </Link>
               </div>
             </div>

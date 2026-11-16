@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useTenant } from '../hooks/useTenant';
 import { useAuth } from '../contexts/AuthContext';
-import { ChevronDown, LogOut, UserCircle, Menu } from 'lucide-react';
+import { ChevronDown, UserCircle, Menu } from 'lucide-react';
 import OfflineIndicator from '../components/ui/OfflineIndicator';
 import OfflineQueueInspector from '../components/ui/OfflineQueueInspector';
 import ThemeToggle from '../components/ui/ThemeToggle';
@@ -74,7 +74,7 @@ export default function Header({ onMenuClick = () => {} }) {
 
   return (
     <header className="sticky top-0 z-20 flex h-14 shrink-0 items-center gap-2 border-b border-ink/10 bg-surface/95 px-3 backdrop-blur sm:h-16 sm:gap-3 sm:px-6">
-      <button type="button" onClick={onMenuClick} className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-brand text-white md:hidden" aria-label={copy.openMenu}><Menu size={20} /></button>
+      <button type="button" onClick={onMenuClick} className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-brand text-white md:hidden" aria-label={copy.openMenu}><Menu size={20} aria-hidden="true" /></button>
       <h1 className="min-w-0 flex-1 truncate font-display text-sm font-semibold capitalize text-ink-900 sm:text-base">{pageTitle}</h1>
       <span className="max-w-[7.5rem] shrink-0 truncate rounded-full border border-brand/20 bg-brand-50 px-2 py-1 text-[10px] font-semibold text-brand-dark sm:max-w-none sm:px-3 sm:text-xs" aria-label={copy.activeWorkspace}>
         {activeFarm?.name || copy.farmFallback}
@@ -92,12 +92,13 @@ export default function Header({ onMenuClick = () => {} }) {
             // On phones the name is hidden; the label keeps it (and says what the button opens).
             aria-label={copy.accountMenu(currentUser?.name || copy.userFallback)}
           >
-            <UserCircle size={20} className="text-brand-400" />
+            {/* On phones this is the only visible content of the account button. */}
+            <UserCircle size={20} className="text-brand-400" aria-hidden="true" />
             <span className="hidden min-w-0 sm:block">
               <span className="block max-w-36 truncate text-xs font-bold">{currentUser?.name || copy.userFallback}</span>
               <span className="block text-[10px] font-semibold text-ink-600">{roleName(currentUser?.role) || copy.roleUnknown}</span>
             </span>
-            <ChevronDown size={14} className="text-ink-500" />
+            <ChevronDown size={14} className="text-ink-500" aria-hidden="true" />
           </button>
           {profileOpen && (
             <div className="absolute right-0 top-12 w-64 rounded-card border border-ink/10 bg-surface p-2 backdrop-blur" role="menu">
@@ -132,10 +133,10 @@ export default function Header({ onMenuClick = () => {} }) {
               <button
                 type="button"
                 onClick={handleLogout}
-                className="mt-1 flex w-full items-center gap-2 rounded-button px-3 py-2 text-sm font-semibold text-brand-dark hover:bg-brand-50"
+                className="mt-1 flex w-full items-center rounded-button px-3 py-2 text-sm font-semibold text-brand-dark hover:bg-brand-50"
                 role="menuitem"
               >
-                <LogOut size={16} /> {copy.signOut}
+                {copy.signOut}
               </button>
             </div>
           )}

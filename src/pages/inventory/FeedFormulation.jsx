@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Beaker, Tractor, Save, AlertCircle, XCircle } from 'lucide-react';
+import { AlertCircle } from 'lucide-react';
 import RecipeBuilder from '../nutrition/RecipeBuilder';
 import CreateBatchModal from '../../components/nutrition/CreateBatchModal';
 import FeedingGroupPlanner from '../../components/nutrition/FeedingGroupPlanner';
@@ -679,7 +679,7 @@ export default function FeedFormulation() {
       {/* Draft warning banner */}
       {importedDraft && (
         <div className="flex animate-fade-in items-start gap-3 rounded-xl border border-brand/20 bg-brand-50 p-4">
-          <AlertCircle className="mt-0.5 shrink-0 text-brand-dark" size={20} />
+          <AlertCircle className="mt-0.5 shrink-0 text-brand-dark" size={20} aria-hidden="true" />
           <div>
             <h4 className="text-sm font-bold text-brand-dark">{copy.draftTitle}</h4>
             <p className="text-sm font-medium text-ink/70 mt-1">
@@ -691,7 +691,7 @@ export default function FeedFormulation() {
 
       {routerState?.fromMilkLab && (
         <div className="bg-brand/5 border border-brand/20 p-4 rounded-xl flex items-start gap-3 animate-fade-in">
-          <AlertCircle className="text-brand shrink-0 mt-0.5" size={20} />
+          <AlertCircle className="text-brand shrink-0 mt-0.5" size={20} aria-hidden="true" />
           <div>
             <h4 className="font-bold text-brand text-sm">{copy.importedTitle}</h4>
             <p className="text-sm font-medium text-ink/70 mt-1">
@@ -714,7 +714,8 @@ export default function FeedFormulation() {
               : 'text-ink-muted hover:text-ink-strong'
           }`}
         >
-          <Beaker size={18} /> {copy.tabs.dairy_meal}
+
+  {copy.tabs.dairy_meal}
         </button>
         <button
           onClick={() => setActiveTab('main_meal')}
@@ -724,7 +725,8 @@ export default function FeedFormulation() {
               : 'text-ink-muted hover:text-ink-strong'
           }`}
         >
-          <Tractor size={18} /> {copy.tabs.main_meal}
+
+  {copy.tabs.main_meal}
         </button>
       </div>
 
@@ -735,8 +737,7 @@ export default function FeedFormulation() {
         <div className="lg:col-span-2">
           {recipe.length === 0 && !isInventoryLoading && !isRecipeLoading && !importedDraft ? (
             <div className="flex flex-col items-center justify-center h-full p-8 text-center border-2 border-dashed rounded-lg border-ink/20 bg-surface animate-in fade-in">
-              <Tractor size={48} className="text-ink-muted" />
-              <h3 className="mt-4 text-lg font-bold text-ink-strong">{copy.emptyTitle}</h3>
+              <h3 className="text-lg font-bold text-ink-strong">{copy.emptyTitle}</h3>
               <p className="mt-2 text-sm text-ink-muted max-w-sm">
                 {copy.emptyText}
               </p>
@@ -886,7 +887,6 @@ export default function FeedFormulation() {
                 disabled={saveRecipe.isPending || actionStates.save.disabled}
                 className="w-full bg-brand hover:bg-brand-dark text-white px-4 py-3 rounded-button font-bold text-sm transition-colors  flex items-center justify-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed"
               >
-                <Save size={18} />
                 {saveRecipe.isPending ? copy.saving : copy.save}
               </button>
               {!saveRecipe.isPending && <DisabledReason state={actionStates.save} />}
@@ -897,7 +897,8 @@ export default function FeedFormulation() {
                   onClick={handleDiscardDraft}
                   className="w-full bg-surface-raised hover:bg-ink/5 text-ink-strong px-4 py-3 rounded-button font-bold text-sm transition-colors flex items-center justify-center gap-2"
                 >
-                  <XCircle size={18} className="text-brand-dark" /> {copy.cancelDraft}
+
+  {copy.cancelDraft}
                 </button>
               )}
 

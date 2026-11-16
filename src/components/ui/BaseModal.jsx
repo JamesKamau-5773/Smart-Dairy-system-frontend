@@ -23,7 +23,6 @@ const WIDTHS = {
  * @param {() => void} props.onClose
  * @param {string} props.title Shown in the header and used as the dialog's accessible name.
  * @param {React.ReactNode} [props.subtitle]
- * @param {React.ReactNode} [props.icon] Shown before the title.
  * @param {keyof WIDTHS} [props.size] Maximum width; '2xl' by default.
  * @param {boolean} [props.closeOnBackdrop] Tapping outside closes it (off by default, so a
  *   stray tap can't lose a half-filled form).
@@ -46,7 +45,6 @@ export default function BaseModal({
   onClose,
   title,
   subtitle,
-  icon,
   size = '2xl',
   closeOnBackdrop = false,
   dismissible = true,
@@ -83,12 +81,9 @@ export default function BaseModal({
         className={`my-auto flex max-h-[calc(100dvh-1.5rem)] min-h-0 w-full ${WIDTHS[size] ?? WIDTHS['2xl']} flex-col overflow-hidden rounded-xl bg-white shadow-2xl outline-none sm:max-h-[90dvh]`}
       >
         <header className="flex shrink-0 items-start justify-between gap-4 border-b border-ink-200 p-4 sm:p-6">
-          <div className="flex min-w-0 items-start gap-3">
-            {icon && <span className="mt-0.5 shrink-0 text-brand" aria-hidden="true">{icon}</span>}
-            <div className="min-w-0">
-              <h2 id={titleId} className="break-words text-lg font-bold text-ink sm:text-xl">{title}</h2>
-              {subtitle && <p className="mt-1 text-sm text-ink-500">{subtitle}</p>}
-            </div>
+          <div className="min-w-0">
+            <h2 id={titleId} className="break-words text-lg font-bold text-ink sm:text-xl">{title}</h2>
+            {subtitle && <p className="mt-1 text-sm text-ink-500">{subtitle}</p>}
           </div>
           <button
             type="button"

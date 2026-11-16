@@ -1,4 +1,4 @@
-import { AlertTriangle, Wrench } from 'lucide-react';
+import { AlertTriangle } from 'lucide-react';
 import { feedCopy } from '../../i18n/feed';
 import { tone } from '../ui/tones';
 
@@ -30,9 +30,8 @@ export default function DataWarningList({ warnings, itemName, onApplyFix, pendin
                 type="button"
                 onClick={() => onApplyFix(warning.code)}
                 disabled={pendingCode !== null}
-                className="ml-2 inline-flex items-center gap-1 font-semibold text-brand underline-offset-4 hover:text-brand-dark hover:underline disabled:opacity-50"
+                className="ml-2 inline-flex items-center font-semibold text-brand underline-offset-4 hover:text-brand-dark hover:underline disabled:opacity-50"
               >
-                <Wrench size={12} aria-hidden="true" />
                 {pendingCode === warning.code ? copy.applying : copy.apply}
               </button>
             )}

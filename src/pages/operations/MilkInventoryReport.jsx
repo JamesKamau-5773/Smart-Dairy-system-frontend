@@ -4,7 +4,7 @@ import { format, subDays } from 'date-fns';
 import { formatDate, formatShortDate } from '@/lib/dateFormat';
 import { milkCopy } from '@/i18n/milk';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
-import { Droplets, Filter, Calendar as CalendarIcon, Table } from 'lucide-react';
+import { Calendar as CalendarIcon } from 'lucide-react';
 import { reportsApi } from '@/lib/backendApi';
 import { Skeleton } from '@/components/ui';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
@@ -12,7 +12,6 @@ import { Button } from '@/components/ui/button';
 import { Calendar } from '@/components/ui/calendar';
 import { cn } from '@/lib/utils';
 import GroupedDateRows from '@/components/ui/GroupedDateRows';
-
 
 export default function MilkInventoryReport() {
   const [date, setDate] = useState({
@@ -64,9 +63,6 @@ export default function MilkInventoryReport() {
     <div className="animate-reveal space-y-6 max-w-7xl mx-auto">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-end border-b border-ink/10 pb-6 gap-4">
         <div>
-          <div className="inline-flex items-center gap-2 px-3 py-1 bg-brand/5 text-brand border border-brand/10 text-[10px] font-bold uppercase tracking-widest rounded-full mb-3">
-            <Droplets size={12} /> {copy.eyebrow}
-          </div>
           <h1 className="font-sans font-black text-3xl tracking-tight text-ink m-0">
             {copy.title}
           </h1>
@@ -78,8 +74,9 @@ export default function MilkInventoryReport() {
 
       <div className="card-machined p-6">
         <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-4 border-b border-ink/10 pb-4">
-          <h3 className="font-sans font-bold text-xl text-brand flex items-center gap-2">
-            <Droplets size={20} className="text-accent" /> {copy.trend}
+          <h3 className="font-sans font-bold text-xl text-brand">
+
+            {copy.trend}
           </h3>
           <Popover>
             <PopoverTrigger asChild>
@@ -91,7 +88,7 @@ export default function MilkInventoryReport() {
                   !date && "text-muted-foreground"
                 )}
               >
-                <CalendarIcon className="mr-2 h-4 w-4" />
+                <CalendarIcon className="mr-2 h-4 w-4" aria-hidden="true" />
                 {date?.from ? (
                   date.to ? (
                     <>
@@ -167,8 +164,7 @@ export default function MilkInventoryReport() {
       </div>
 
       <div className="card-machined overflow-hidden !p-0">
-        <div className="p-6 border-b border-ink/10 flex items-center gap-2">
-          <Table size={18} className="text-brand" />
+        <div className="p-6 border-b border-ink/10">
           <h3 className="font-bold text-lg text-ink">{copy.dailyRecords}</h3>
         </div>
         <div className="hidden overflow-x-auto md:block">

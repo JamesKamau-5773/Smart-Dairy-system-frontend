@@ -1,4 +1,4 @@
-import { Check, WifiOff } from 'lucide-react';
+import { WifiOff } from 'lucide-react';
 import { authCopy } from '../../i18n/auth';
 import LanguageSwitch from '../ui/LanguageSwitch';
 
@@ -47,10 +47,7 @@ export default function AuthLayout({ headerAction, offline = false, children }) 
             </p>
             <ul className="mt-8 space-y-4 text-lg text-brand-50">
               {copy.benefits.map((benefit) => (
-                <li key={benefit} className="flex gap-3">
-                  <Check size={20} className="mt-1 shrink-0 text-brand-200" aria-hidden="true" />
-                  {benefit}
-                </li>
+                <li key={benefit}>{benefit}</li>
               ))}
             </ul>
           </aside>

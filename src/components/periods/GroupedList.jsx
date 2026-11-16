@@ -1,5 +1,4 @@
 import { Fragment, useEffect, useMemo, useRef, useState } from 'react';
-import { RefreshCw } from 'lucide-react';
 import { ancestorKeys, buildGroupTree, defaultOpenKeys, expandAll } from '../../lib/groupTree';
 import { GROUP_LEVELS } from '../../lib/periodTotals';
 import { todayLocalIso } from '../../lib/localDate';
@@ -109,8 +108,8 @@ export default function GroupedList({
     <div role="status" className="flex flex-wrap items-center justify-between gap-2 border-b border-ink/10 bg-ink-50 px-4 py-2 text-xs text-ink-muted">
       <span>{commonCopy.groups.totalsFailed}</span>
       {onRetryGroups && (
-        <button type="button" onClick={() => onRetryGroups()} className="inline-flex min-h-11 items-center gap-1 font-semibold text-brand hover:underline">
-          <RefreshCw size={12} aria-hidden="true" /> {commonCopy.list.tryAgain}
+        <button type="button" onClick={() => onRetryGroups()} className="inline-flex min-h-11 items-center font-semibold text-brand hover:underline">
+          {commonCopy.list.tryAgain}
         </button>
       )}
     </div>

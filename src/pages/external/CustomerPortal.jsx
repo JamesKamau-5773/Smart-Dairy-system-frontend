@@ -1,6 +1,6 @@
 import { useParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { AlertTriangle, Link2Off, Receipt } from 'lucide-react';
+import { AlertTriangle } from 'lucide-react';
 import { financeApi } from '../../lib/backendApi';
 import { normalizeStatement } from '../../lib/customerStatement';
 import { isFeatureEnabled } from '../../lib/featureFlags';
@@ -12,13 +12,16 @@ import { financeCopy } from '../../i18n/finance';
 const STATUS_NOT_FOUND = 404;
 const MAX_RETRIES = 2;
 
-function Notice({ icon: Icon, title, children }) {
+// Only the load-failure notice carries an icon: it marks an error, the others are plain information.
+function Notice({ isError = false, title, children }) {
   return (
     <main className="flex min-h-screen items-center justify-center bg-surface-warm p-4">
       <section aria-labelledby="statement-notice" className="mx-auto w-full max-w-md rounded-card border border-ink/10 bg-surface p-6 text-center sm:p-8">
-        <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-brand-50 text-brand">
-          <Icon size={22} aria-hidden="true" />
-        </div>
+        {isError && (
+          <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-brand-50 text-brand">
+            <AlertTriangle size={22} aria-hidden="true" />
+          </div>
+        )}
         <h1 id="statement-notice" className="text-xl font-bold text-ink">{title}</h1>
         <div className="mt-2 text-sm leading-6 text-ink-muted">{children}</div>
       </section>
@@ -47,7 +50,7 @@ export default function CustomerPortal() {
 
   if (!enabled) {
     return (
-      <Notice icon={Link2Off} title={copy.offTitle}>
+      <Notice title={copy.offTitle}>
         {copy.offMessage}
       </Notice>
     );
@@ -58,13 +61,13 @@ export default function CustomerPortal() {
   if (isError) {
     if (error?.response?.status === STATUS_NOT_FOUND) {
       return (
-        <Notice icon={Link2Off} title={copy.invalidTitle}>
+        <Notice title={copy.invalidTitle}>
           {copy.invalidMessage}
         </Notice>
       );
     }
     return (
-      <Notice icon={AlertTriangle} title={copy.failedTitle}>
+      <Notice isError title={copy.failedTitle}>
         <p>{copy.failedMessage}</p>
         <button type="button" onClick={() => refetch()} disabled={isFetching} className="btn-command mt-6 inline-flex justify-center">
           {isFetching ? copy.retrying : copy.retry}
@@ -84,8 +87,9 @@ export default function CustomerPortal() {
         </header>
 
         <section aria-labelledby="statement-balance" className="rounded-card border border-ink/10 bg-surface p-6">
-          <h2 id="statement-balance" className="flex items-center gap-2 text-sm font-semibold uppercase tracking-wide text-ink-muted">
-            <Receipt size={16} aria-hidden="true" /> {copy.balance}
+          <h2 id="statement-balance" className="text-sm font-semibold uppercase tracking-wide text-ink-muted">
+
+  {copy.balance}
           </h2>
           <p className="mt-3 font-mono text-3xl font-semibold tabular-nums text-ink-strong">{formatMoneyText(balance)}</p>
         </section>

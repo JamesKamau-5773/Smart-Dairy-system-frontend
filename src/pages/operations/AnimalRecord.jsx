@@ -1,10 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import toast from 'react-hot-toast';
-import {
-  Activity, Syringe, Baby, Calendar, Droplets,
-  HeartPulse, ShieldCheck, FileText, Filter, ArrowLeft, Download, Share2, Calculator, Plus, AlertCircle
-} from 'lucide-react';
+import { ArrowLeft } from 'lucide-react';
 import { Link, useLocation, useParams } from 'react-router-dom';
 import { Skeleton } from '../../components/ui';
 import AlertBanner from '../../components/ui/AlertBanner';
@@ -37,7 +34,6 @@ import { reportError } from '../../lib/telemetry';
 import { herdCopy } from '../../i18n/herd';
 import { healthCopy } from '../../i18n/health';
 import { breedingCopy } from '../../i18n/breeding';
-
 export default function AnimalPassport() {
   const copy = herdCopy.record;
   const form = copy.form;
@@ -322,12 +318,10 @@ export default function AnimalPassport() {
       <div className="flex items-center justify-between border-b border-ink/10 pb-4">
         <div className="flex items-center gap-4">
           <Link to="/operations/herd" aria-label={copy.back} className="p-2 hover:bg-surface-raised rounded-lg text-ink-muted transition-colors">
-            <ArrowLeft size={20} />
+            <ArrowLeft size={20} aria-hidden="true" />
           </Link>
+
           <div>
-            <div className="inline-flex items-center gap-2 px-3 py-1 bg-brand/5 text-brand text-[10px] font-bold uppercase tracking-widest rounded-full mb-1">
-              <Activity size={12} /> {copy.eyebrow}
-            </div>
             <h2 className="font-sans font-bold text-2xl tracking-tight text-brand m-0">
               {animalDisplayName}
             </h2>
@@ -337,17 +331,18 @@ export default function AnimalPassport() {
         <div className="flex items-center gap-2">
           <button
             onClick={handleWhatsAppShare}
-            className="px-4 py-2 rounded-lg text-sm font-bold border border-[#25D366]/30 bg-white text-[#128C7E]  transition-colors hover:border-[#25D366] hover:bg-[#25D366]/5 flex items-center gap-2"
+            className="px-4 py-2 rounded-lg text-sm font-bold border border-[#25D366]/30 bg-white text-[#128C7E]  transition-colors hover:border-[#25D366] hover:bg-[#25D366]/5 flex items-center"
           >
-            <Share2 size={16} /> {copy.shareWhatsApp}
+
+    {copy.shareWhatsApp}
           </button>
 
           <button
             onClick={handleGenerateCertificate}
             disabled={isGeneratingCertificate}
-            className="btn-command flex items-center gap-2 text-sm "
+            className="btn-command flex items-center text-sm "
           >
-            <FileText size={16} /> {isGeneratingCertificate ? copy.generating : copy.previewPdf}
+            {isGeneratingCertificate ? copy.generating : copy.previewPdf}
           </button>
         </div>
       </div>
@@ -375,8 +370,9 @@ export default function AnimalPassport() {
           <button type="button" onClick={() => setCertificatePreviewUrl(null)} className="btn-secondary px-4 py-2 text-sm">
             {copy.close}
           </button>
-          <button type="button" onClick={handleDownloadCertificate} className="btn-command flex items-center gap-2 px-4 py-2 text-sm">
-            <Download size={16} /> {copy.downloadPdf}
+          <button type="button" onClick={handleDownloadCertificate} className="btn-command flex items-center px-4 py-2 text-sm">
+
+    {copy.downloadPdf}
           </button>
         </div>
       </BaseModal>

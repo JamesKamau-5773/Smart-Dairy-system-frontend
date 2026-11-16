@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import { ImageOff } from 'lucide-react';
 import { useDataSaver } from '../../hooks/useDataSaver';
 import { commonCopy } from '../../i18n/common';
 
@@ -18,10 +17,9 @@ export default function CowPhoto({ src, alt, size, fallback = null, className = 
       <button
         type="button"
         onClick={() => setRevealed(true)}
-        className="flex h-full w-full flex-col items-center justify-center gap-0.5 text-brand hover:bg-brand-50"
+        className="flex h-full w-full items-center justify-center text-brand hover:bg-brand-50"
         title={commonCopy.photo.dataSaverHint}
       >
-        <ImageOff size={size > 70 ? 20 : 16} aria-hidden="true" />
         <span className="text-[10px] font-semibold leading-tight">{commonCopy.photo.show}</span>
       </button>
     );

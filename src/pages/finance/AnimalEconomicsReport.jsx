@@ -1,6 +1,6 @@
 import React from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Activity, AlertTriangle, CircleDollarSign, Milk, Sprout, Wallet } from 'lucide-react';
+import { AlertTriangle } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { herdApi, reportsApi } from '../../lib/backendApi';
 import MetricLabel from '../../components/finance/MetricLabel';
@@ -34,13 +34,12 @@ function toReadableLabel(value) {
   return value ? String(value).replaceAll('_', ' ') : copy.notRecorded;
 }
 
-const Metric = ({ label, explanation, amount, icon: Icon, cost = false }) => (
+const Metric = ({ label, explanation, amount, cost = false }) => (
   <div className="card-machined flex flex-col justify-between border border-slate-300 bg-white p-5 ">
-    <div className="mb-2 flex items-start justify-between gap-3 text-slate-700">
+    <div className="mb-2 text-slate-700">
       <span className="text-xs font-bold uppercase tracking-wider">
         <MetricLabel explanation={explanation}>{label}</MetricLabel>
       </span>
-      <Icon size={16} className="shrink-0 text-slate-900" />
     </div>
     <div className={cn('text-2xl font-black font-mono tabular-nums', getValueTone(amount, { cost }))}>
       <Money amount={amount} className="!font-mono" />
@@ -102,10 +101,7 @@ export default function AnimalEconomicsReport() {
   return (
     <div className="animate-reveal mx-auto max-w-7xl space-y-6">
       <div className="border-b border-slate-300 pb-6">
-        <div className="inline-flex items-center gap-2 rounded-full border border-slate-900 bg-slate-900 px-3 py-1 text-[10px] font-bold uppercase tracking-widest text-white">
-          <Activity size={12} /> {copy.eyebrow}
-        </div>
-        <h1 className="mt-3 font-sans text-3xl font-black tracking-tight text-slate-900">{copy.title}</h1>
+        <h1 className="font-sans text-3xl font-black tracking-tight text-slate-900">{copy.title}</h1>
         <p className="mt-2 max-w-2xl text-sm font-medium text-slate-700">
           {copy.subtitle}
         </p>
@@ -158,7 +154,7 @@ export default function AnimalEconomicsReport() {
               to={`/operations/animal/${encodeURIComponent(animalId)}?action=calving`}
               className="flex items-start gap-3 border-2 border-red-700 bg-white p-4 text-sm font-bold text-red-700  transition-colors hover:bg-red-700 hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-700"
             >
-              <AlertTriangle size={20} className="mt-0.5 shrink-0" />
+              <AlertTriangle size={20} className="mt-0.5 shrink-0" aria-hidden="true" />
               <span>{copy.missingCalving}</span>
             </Link>
           )}
@@ -168,20 +164,17 @@ export default function AnimalEconomicsReport() {
               label={copy.rearing}
               explanation={copy.rearingHelp}
               amount={data.rearing_cost?.amount_kes}
-              icon={Sprout}
               cost
             />
             <Metric
               label={copy.milkIncome}
               explanation={copy.milkIncomeHelp}
               amount={milk.amount_kes}
-              icon={Milk}
             />
             <Metric
               label={copy.profit}
               explanation={copy.profitHelp}
               amount={data.lifetime_net_contribution_kes}
-              icon={CircleDollarSign}
             />
           </div>
 
@@ -216,8 +209,9 @@ export default function AnimalEconomicsReport() {
 
           <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
             <section className="card-machined space-y-4 border border-slate-300 bg-white p-6 ">
-              <h2 className="flex items-center gap-2 border-b border-slate-300 pb-3 text-lg font-bold text-slate-900">
-                <Wallet size={18} className="text-slate-900" /> {copy.expenses}
+              <h2 className="border-b border-slate-300 pb-3 text-lg font-bold text-slate-900">
+
+  {copy.expenses}
               </h2>
               {Object.keys(data.costs_by_type_kes || {}).length === 0 ? (
                 <p className="text-sm font-bold text-red-700">{copy.noCosts}</p>

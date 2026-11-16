@@ -1,5 +1,5 @@
 import React from 'react';
-import { AlertTriangle, RefreshCw } from 'lucide-react';
+import { AlertTriangle } from 'lucide-react';
 import { SITE } from '../../landing/content';
 import { reportError } from '../../lib/telemetry';
 import { shellCopy } from '../../i18n/shell';
@@ -85,9 +85,8 @@ export default class ErrorBoundary extends React.Component {
               <button
                 type="button"
                 onClick={this.handleReset}
-                className="flex items-center justify-center gap-2 rounded-button bg-brand px-4 py-2.5 font-medium text-white transition-colors hover:bg-brand-dark"
+                className="flex items-center justify-center rounded-button bg-brand px-4 py-2.5 font-medium text-white transition-colors hover:bg-brand-dark"
               >
-                <RefreshCw size={18} aria-hidden="true" />
                 {copy.tryAgain}
               </button>
               <button

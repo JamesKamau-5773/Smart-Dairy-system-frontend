@@ -1,6 +1,5 @@
 import { useEffect, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { FileText, ImageOff } from 'lucide-react';
 import { financeApi } from '../../lib/backendApi';
 import { isPdfAttachment } from '../../lib/receiptAttachments';
 import { financeCopy } from '../../i18n/finance';
@@ -33,11 +32,11 @@ export default function AttachmentThumb({ attachment }) {
       className="group flex aspect-square w-full flex-col items-center justify-center overflow-hidden rounded-md border border-ink/15 bg-ink-50 text-ink-muted transition-colors hover:border-brand focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/30 disabled:cursor-default"
     >
       {file.isError ? (
-        <><ImageOff size={20} aria-hidden="true" /><span className="mt-1 px-1 text-[11px]">{copy.loadFailed}</span></>
+        <span className="px-1 text-[11px]">{copy.loadFailed}</span>
       ) : !objectUrl ? (
         <span className="h-full w-full animate-pulse bg-ink-100" aria-hidden="true" />
       ) : isPdf ? (
-        <><FileText size={22} className="text-brand" aria-hidden="true" /><span className="mt-1 line-clamp-2 px-1 text-[11px] text-ink">{label}</span></>
+        <><span className="text-xs font-bold text-brand">PDF</span><span className="mt-1 line-clamp-2 px-1 text-[11px] text-ink">{label}</span></>
       ) : (
         <img src={objectUrl} alt={label} className="h-full w-full object-cover" />
       )}

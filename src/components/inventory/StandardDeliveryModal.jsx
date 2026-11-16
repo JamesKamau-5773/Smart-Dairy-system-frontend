@@ -1,11 +1,12 @@
 import { useState } from 'react';
-import { ClipboardList, Minus, Plus, CheckCircle2, PackageCheck } from 'lucide-react';
+import { Minus, Plus } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { inventoryApi } from '../../lib/backendApi';
 import { getFeedErrorMessage } from '../../lib/feedErrors';
 import { EMPTY_RESTOCK, validateRestock } from '../../lib/restockForm';
 import { feedCopy } from '../../i18n/feed';
 import BaseModal from '../ui/BaseModal';
+import { commonCopy } from '../../i18n/common';
 
 const { restock: copy } = feedCopy;
 const fieldClass = 'w-full rounded-lg border border-slate-200 bg-white p-3 text-sm font-bold text-slate-800 outline-none focus:ring-2 focus:ring-brand/20';
@@ -69,7 +70,6 @@ export default function StandardDeliveryModal({ isOpen, onClose, item, onRestock
       isOpen
       onClose={onClose}
       title={item ? feedCopy.inventory.delivery.restockTitle : feedCopy.inventory.delivery.batchTitle}
-      icon={<ClipboardList size={20} />}
       closeLabel="Close restock form"
       footerActions={(
         <>
@@ -86,7 +86,6 @@ export default function StandardDeliveryModal({ isOpen, onClose, item, onRestock
             disabled={quantity <= 0 || !selectedItem || isSubmitting}
             className="flex items-center gap-2 px-6 py-3 rounded-xl font-black text-xs uppercase transition-all  bg-brand text-white hover:bg-brand-dark disabled:bg-slate-200 disabled:text-slate-400 disabled:cursor-not-allowed"
           >
-            <CheckCircle2 size={16} />
             {feedCopy.inventory.delivery.confirm}
           </button>
         </>
@@ -103,10 +102,9 @@ export default function StandardDeliveryModal({ isOpen, onClose, item, onRestock
           <div className="p-5 bg-brand/5 border border-brand/20 rounded-xl flex items-center justify-between">
             <div>
               <div className="flex items-center gap-2 mb-1">
-                <PackageCheck size={16} className="text-brand" />
                 <span className="font-black text-brand text-lg">{selectedItem?.name ?? feedCopy.inventory.delivery.selected}</span>
               </div>
-              <div className="text-[11px] font-bold text-slate-500 uppercase tracking-wider ml-6">
+              <div className="text-[11px] font-bold text-slate-500 uppercase tracking-wider ">
                 {feedCopy.inventory.delivery.sku(selectedItem?.sku || feedCopy.inventory.delivery.notAssigned)}
               </div>
             </div>
@@ -165,9 +163,10 @@ export default function StandardDeliveryModal({ isOpen, onClose, item, onRestock
           <button 
             type="button"
             onClick={decreaseAmount}
+            aria-label={commonCopy.controls.decrease}
             className="w-12 h-12 flex items-center justify-center rounded-full border border-slate-200 bg-white text-slate-400 hover:text-slate-600 hover:border-slate-300 transition-all "
           >
-            <Minus size={20} />
+            <Minus size={20} aria-hidden="true" />
           </button>
 
           <div className="flex min-w-[100px] items-baseline justify-center gap-2">
@@ -189,9 +188,10 @@ export default function StandardDeliveryModal({ isOpen, onClose, item, onRestock
           <button 
             type="button"
             onClick={() => increaseAmount(1)}
+            aria-label={commonCopy.controls.increase}
             className="w-12 h-12 flex items-center justify-center rounded-full border border-slate-200 bg-white text-slate-400 hover:text-slate-600 hover:border-slate-300 transition-all "
           >
-            <Plus size={20} />
+            <Plus size={20} aria-hidden="true" />
           </button>
         </div>
 

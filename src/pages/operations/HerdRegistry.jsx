@@ -2,23 +2,7 @@ import { useMemo, useState, useRef, useEffect } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import toast from 'react-hot-toast';
-import {
-  BookOpen,
-  Calendar,
-  ChevronDown,
-  ChevronUp,
-  Filter,
-  Scale,
-  Search,
-  ShieldCheck,
-  AlertCircle,
-  Plus,
-  Trash2,
-  Pencil,
-  ImagePlus,
-  Upload,
-  MoreVertical,
-} from 'lucide-react';
+import { ChevronDown, ChevronUp, Search, AlertCircle, MoreVertical } from 'lucide-react';
 import { Skeleton } from '../../components/ui';
 import BaseModal from '../../components/ui/BaseModal';
 import AlertBanner from '../../components/ui/AlertBanner';
@@ -509,7 +493,6 @@ export default function HerdRegistry() {
   const herdSuggestions = herdSearch.trim() && visibleHerd.length === 0 ? getHerdSearchSuggestions(herdState, herdSearch) : [];
   const emptyHerdContent = (
     <div className="flex flex-col items-center gap-2">
-      <AlertCircle size={24} className="text-ink-muted" aria-hidden="true" />
       <p className="text-sm font-medium text-ink-muted">
         {hasActiveFilters ? copy.noMatches : copy.empty}
       </p>
@@ -533,8 +516,9 @@ export default function HerdRegistry() {
           {copy.clearFilters}
         </button>
       ) : (
-        <button type="button" onClick={() => setIsAddOpen(true)} className="btn-command mt-2 inline-flex items-center gap-2">
-          <Plus size={16} aria-hidden="true" /> {copy.addFirst}
+        <button type="button" onClick={() => setIsAddOpen(true)} className="btn-command mt-2 inline-flex items-center">
+
+      {copy.addFirst}
         </button>
       )}
     </div>
@@ -549,9 +533,6 @@ export default function HerdRegistry() {
       {/* ── HEADER ── */}
       <div className="flex flex-col gap-4 border-b border-ink/10 pb-6 md:flex-row md:items-end md:justify-between">
         <div>
-          <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-brand/10 bg-brand/5 px-3 py-1 text-[10px] font-bold uppercase tracking-widest text-brand">
-            <BookOpen size={12} /> {copy.eyebrow}
-          </div>
           <h2 className="m-0 font-sans text-3xl font-bold tracking-tight text-brand">
             {copy.titleStart} <span className="text-ink-muted">{copy.titleEnd}</span>
           </h2>
@@ -652,8 +633,7 @@ export default function HerdRegistry() {
         {/* Controls */}
         <div className="mb-6 rounded-2xl border border-ink/10 bg-surface/90 p-4 ">
           <div className="flex flex-col gap-3 border-b border-ink/10 pb-4 lg:flex-row lg:items-center lg:justify-between">
-            <div className="flex items-center gap-2 text-ink-strong font-bold text-sm">
-              <Filter size={18} className="text-ink-strong" />
+            <div className="text-ink-strong font-bold text-sm">
               <span className="leading-none">{copy.organize}</span>
             </div>
 
@@ -667,7 +647,7 @@ export default function HerdRegistry() {
                 aria-expanded={controlsOpen}
                 className="inline-flex items-center gap-1.5 rounded-lg border border-ink/10 bg-surface px-3 py-1.5 text-xs font-semibold text-ink  transition-all hover:border-brand/20 hover:bg-brand/5 hover:text-brand"
               >
-                {controlsOpen ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
+                {controlsOpen ? <ChevronUp size={12} aria-hidden="true" /> : <ChevronDown size={12} aria-hidden="true" />}
                 {controlsOpen ? copy.hideFilters : copy.showFilters}
               </button>
             </div>
@@ -676,7 +656,7 @@ export default function HerdRegistry() {
           {controlsOpen && (
             <div className="flex flex-col gap-3 pt-4 lg:flex-row lg:items-center">
               <div className="flex items-center gap-2 rounded-lg border border-ink/20 bg-surface/95 px-3 py-2 lg:min-w-[280px]">
-                <Search size={16} className="text-ink-muted" />
+                <Search size={16} className="text-ink-muted" aria-hidden="true" />
                 <input
                   ref={searchInputRef}
                   type="search"
@@ -689,7 +669,6 @@ export default function HerdRegistry() {
               </div>
 
               <div className="flex items-center gap-2 rounded-lg border border-ink/20 bg-surface/95 px-3 py-2">
-                <Scale size={16} className="text-ink-strong" />
                 <label className="text-xs font-bold uppercase tracking-wider text-ink-strong" htmlFor="herd-sort">
                   {copy.sortBy}
                 </label>
@@ -704,7 +683,7 @@ export default function HerdRegistry() {
                   <option value="breed">{copy.sort.breed}</option>
                   <option value="status">{copy.sort.status}</option>
                 </select>
-                <ChevronDown size={14} className="text-ink-strong" />
+                <ChevronDown size={14} className="text-ink-strong" aria-hidden="true" />
               </div>
 
               <div className="flex flex-wrap items-center gap-2">
@@ -832,16 +811,13 @@ export default function HerdRegistry() {
                       <td className="px-3 py-2.5 text-sm text-ink-muted">{cow.breed}</td>
                       <td className="px-3 py-2.5 text-sm text-ink-muted">{formatDate(cow.lastCalved)}</td>
                       <td className="px-3 py-2.5 text-sm text-ink-muted">
-                        <div className="flex items-center gap-2">
-                          <Calendar size={14} className="text-ink-muted" />
-                          {formatAge(cow.ageMonths)}
-                        </div>
+                        {formatAge(cow.ageMonths)}
                       </td>
                       <td className="px-3 py-2.5">
                         <span
-                          className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-bold ${statusTone(cow.status)}`}
+                          className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-bold ${statusTone(cow.status)}`}
                         >
-                          <ShieldCheck size={12} /> {herdStatusLabel(cow.status)}
+                          {herdStatusLabel(cow.status)}
                         </span>
                       </td>
                       <td className="px-3 py-2.5 text-xs text-ink-muted">
@@ -869,11 +845,13 @@ export default function HerdRegistry() {
                           </Link>
                           <Popover>
                             <PopoverTrigger asChild>
-                              <button type="button" className="inline-flex h-8 w-8 items-center justify-center rounded-button border border-slate-300 text-slate-600 hover:border-brand-400 hover:text-brand-700" aria-label={copy.actionsFor(cow.name)}><MoreVertical size={16} /></button>
+                              <button type="button" className="inline-flex h-8 w-8 items-center justify-center rounded-button border border-slate-300 text-slate-600 hover:border-brand-400 hover:text-brand-700" aria-label={copy.actionsFor(cow.name)}><MoreVertical size={16} aria-hidden="true" /></button>
                             </PopoverTrigger>
                             <PopoverContent align="end" className="w-40 p-1.5">
-                              <button type="button" onClick={() => handleOpenEdit(cow)} className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm text-ink-900 hover:bg-brand-50"><Pencil size={14} /> {copy.edit}</button>
-                              <button type="button" onClick={() => handleDeleteCow(routeId, cow.name, cow.id)} className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm text-danger hover:bg-danger/10"><Trash2 size={14} /> {copy.delete}</button>
+                              <button type="button" onClick={() => handleOpenEdit(cow)} className="flex w-full items-center rounded-md px-3 py-2 text-left text-sm text-ink-900 hover:bg-brand-50">
+            {copy.edit}</button>
+                              <button type="button" onClick={() => handleDeleteCow(routeId, cow.name, cow.id)} className="flex w-full items-center rounded-md px-3 py-2 text-left text-sm text-danger hover:bg-danger/10">
+            {copy.delete}</button>
                             </PopoverContent>
                           </Popover>
                         </div>
@@ -944,7 +922,7 @@ export default function HerdRegistry() {
             />
             {formErrors.tagNumber && (
               <p id="tag-number-error" className="mt-1 text-xs text-rose-600 flex items-center gap-1">
-                <AlertCircle size={12} /> {formErrors.tagNumber}
+                <AlertCircle size={12} aria-hidden="true" /> {formErrors.tagNumber}
               </p>
             )}
           </div>
@@ -994,7 +972,7 @@ export default function HerdRegistry() {
             />
             {formErrors.dateOfBirth && (
               <p id="date-of-birth-error" className="mt-1 text-xs text-rose-600 flex items-center gap-1">
-                <AlertCircle size={12} /> {formErrors.dateOfBirth}
+                <AlertCircle size={12} aria-hidden="true" /> {formErrors.dateOfBirth}
               </p>
             )}
           </div>
@@ -1114,7 +1092,7 @@ export default function HerdRegistry() {
                   src={editingCow?.photoUrl}
                   alt={form.photoAlt(editingCow?.name)}
                   size={80}
-                  fallback={<ImagePlus size={28} aria-hidden="true" />}
+                  fallback={<span className="text-xs font-semibold text-ink-muted">No photo</span>}
                 />
               </div>
               <div className="min-w-0 flex-1">
@@ -1145,19 +1123,19 @@ export default function HerdRegistry() {
                   type="button"
                   onClick={handleDeletePhoto}
                   disabled={isPhotoSaving}
-                  className="btn-secondary inline-flex items-center gap-2 text-danger disabled:opacity-50"
+                  className="btn-secondary inline-flex items-center text-danger disabled:opacity-50"
                 >
-                  <Trash2 size={15} aria-hidden="true" /> {form.removePhoto}
+
+      {form.removePhoto}
                 </button>
               )}
               <button
                 type="button"
                 onClick={handleUploadPhoto}
                 disabled={!editPhotoFile || isPhotoSaving || isPhotoPreparing}
-                className="btn-command inline-flex items-center gap-2 disabled:opacity-50"
+                className="btn-command inline-flex items-center disabled:opacity-50"
                 aria-busy={isPhotoSaving}
               >
-                <Upload size={15} aria-hidden="true" />
                 {isPhotoSaving
                   ? form.uploading(photoUploadProgress)
                   : editingCow?.photoUrl ? form.replacePhoto : form.uploadPhoto}
@@ -1184,7 +1162,7 @@ export default function HerdRegistry() {
             />
             {editFormErrors.tagNumber && (
               <p id="edit-tag-number-error" className="mt-1 text-xs text-rose-600 flex items-center gap-1">
-                <AlertCircle size={12} /> {editFormErrors.tagNumber}
+                <AlertCircle size={12} aria-hidden="true" /> {editFormErrors.tagNumber}
               </p>
             )}
           </div>
@@ -1231,7 +1209,7 @@ export default function HerdRegistry() {
             />
             {editFormErrors.dateOfBirth && (
               <p id="edit-date-of-birth-error" className="mt-1 text-xs text-rose-600 flex items-center gap-1">
-                <AlertCircle size={12} /> {editFormErrors.dateOfBirth}
+                <AlertCircle size={12} aria-hidden="true" /> {editFormErrors.dateOfBirth}
               </p>
             )}
           </div>

@@ -2,11 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { useFocusTrap } from '../hooks/useFocusTrap';
 import { DESKTOP_QUERY, useMediaQuery } from '../hooks/useMediaQuery';
 import { NavLink, useLocation } from 'react-router-dom';
-import {
-  LayoutDashboard, Beaker, Pill, Package, Wallet, X,
-  Users, Dna, Landmark, ShieldCheck, BookHeart, BookOpen, Activity,
-  Wheat, ChevronRight, ChevronDown, FileWarning, ClipboardList, TrendingUp, Droplets, Utensils
-} from 'lucide-react';
+import { X, ChevronRight, ChevronDown } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import FarmSwitcher from './FarmSwitcher';
 import { canSeeBuyers, canSeeLedger, canSeeProductionLog, UNIT_HELPER_ROLES } from '../lib/navAccess';
@@ -58,82 +54,82 @@ export default function Sidebar({ mobileOpen = false, setMobileOpen = () => {} }
     {
       id: 'platform',
       items: [
-        { label: copy.items.systemAdmin, to: '/system-admin/dashboard', icon: LayoutDashboard, visible: isPlatformAdmin },
+        { label: copy.items.systemAdmin, to: '/system-admin/dashboard', visible: isPlatformAdmin },
       ],
     },
     {
       id: 'cooperative',
       items: [
-        { label: copy.items.memberOnboarding, to: '/cooperative-admin/members', icon: Users, visible: canManageMemberAccess },
+        { label: copy.items.memberOnboarding, to: '/cooperative-admin/members', visible: canManageMemberAccess },
       ],
     },
     {
       id: null,
       items: [
-        { label: copy.items.commandCenter, to: '/dashboard', icon: LayoutDashboard, visible: showCommandCenter },
+        { label: copy.items.commandCenter, to: '/dashboard', visible: showCommandCenter },
       ],
     },
     {
       id: 'operations',
       items: [
-        { label: copy.items.production, to: '/operations/yield', icon: Beaker, visible: canSeeProductionLog(currentUser) },
-        { label: copy.items.milkUsage, to: '/operations/milk-usage', icon: Droplets, visible: hasPageAccess(currentUser, 'production') },
-        { label: copy.items.dailyRoutine, to: '/operations/routine', icon: Activity, visible: hasPageAccess(currentUser, 'tasks') },
-        { label: copy.items.farmTasks, to: '/tasks', icon: Activity, visible: canViewHerdsmanView && hasPageAccess(currentUser, 'tasks') },
+        { label: copy.items.production, to: '/operations/yield', visible: canSeeProductionLog(currentUser) },
+        { label: copy.items.milkUsage, to: '/operations/milk-usage', visible: hasPageAccess(currentUser, 'production') },
+        { label: copy.items.dailyRoutine, to: '/operations/routine', visible: hasPageAccess(currentUser, 'tasks') },
+        { label: copy.items.farmTasks, to: '/tasks', visible: canViewHerdsmanView && hasPageAccess(currentUser, 'tasks') },
       ],
     },
     {
       id: 'herd',
       items: [
-        { label: copy.items.cowRegister, to: '/operations/herd', icon: BookOpen, visible: hasPageAccess(currentUser, 'herd') },
-        { label: copy.items.breeding, to: '/operations/breeding', icon: Dna, visible: canViewBreeding && hasPageAccess(currentUser, 'breeding') },
-        { label: copy.items.medical, to: '/operations/records', icon: BookHeart, visible: hasPageAccess(currentUser, 'medical') },
+        { label: copy.items.cowRegister, to: '/operations/herd', visible: hasPageAccess(currentUser, 'herd') },
+        { label: copy.items.breeding, to: '/operations/breeding', visible: canViewBreeding && hasPageAccess(currentUser, 'breeding') },
+        { label: copy.items.medical, to: '/operations/records', visible: hasPageAccess(currentUser, 'medical') },
         // NEW: Added Milk Drop Reports right under Medical Records
-        { label: copy.items.milkDrops, to: '/operations/milk-drop-reports', icon: FileWarning, visible: hasPageAccess(currentUser, 'medical') },
+        { label: copy.items.milkDrops, to: '/operations/milk-drop-reports', visible: hasPageAccess(currentUser, 'medical') },
       ],
     },
     {
       id: 'feeding',
       items: [
-        { label: copy.items.todayFeeding, to: '/feeding', icon: Utensils, visible: Boolean(currentUser) && hasPageAccess(currentUser, 'feeding') },
-        { label: copy.items.feedDashboard, to: '/feed-nutrition', icon: Wheat, visible: canViewFeedNutrition && hasPageAccess(currentUser, 'feed'), exact: true },
-        { label: copy.items.feedMixes, to: '/feed-nutrition/mix', icon: Dna, visible: canViewFeedNutrition && hasPageAccess(currentUser, 'feed') },
+        { label: copy.items.todayFeeding, to: '/feeding', visible: Boolean(currentUser) && hasPageAccess(currentUser, 'feeding') },
+        { label: copy.items.feedDashboard, to: '/feed-nutrition', visible: canViewFeedNutrition && hasPageAccess(currentUser, 'feed'), exact: true },
+        { label: copy.items.feedMixes, to: '/feed-nutrition/mix', visible: canViewFeedNutrition && hasPageAccess(currentUser, 'feed') },
         // Inventory filtered to feed: one page, two ways in (Feeding and Finance & Supply).
-        { label: copy.items.ingredients, to: '/operations/inventory', query: { category: FEED_CATEGORY }, icon: Package, visible: showAdminControls && hasPageAccess(currentUser, 'inventory') },
-        { label: copy.items.milkLab, to: '/operations/lab', icon: Pill, visible: canViewFeedNutrition && hasPageAccess(currentUser, 'feed') },
+        { label: copy.items.ingredients, to: '/operations/inventory', query: { category: FEED_CATEGORY }, visible: showAdminControls && hasPageAccess(currentUser, 'inventory') },
+        { label: copy.items.milkLab, to: '/operations/lab', visible: canViewFeedNutrition && hasPageAccess(currentUser, 'feed') },
         // Straight to the page (not the old /settings redirect), shown only to the roles its route allows.
-        { label: copy.items.unitHelpers, to: '/operations/unit-conversions', icon: BookOpen, visible: hasRole(currentUser, UNIT_HELPER_ROLES) && hasPageAccess(currentUser, 'feed') },
+        { label: copy.items.unitHelpers, to: '/operations/unit-conversions', visible: hasRole(currentUser, UNIT_HELPER_ROLES) && hasPageAccess(currentUser, 'feed') },
       ],
     },
     {
       id: 'finance',
       items: [
-        { label: copy.items.buyers, to: '/finance/buyers', icon: Users, visible: canSeeBuyers(currentUser) },
-        { label: copy.items.customers, to: '/operations/customers', icon: Users, visible: canViewCustomers && hasPageAccess(currentUser, 'customers') },
-        { label: copy.items.inventory, to: '/operations/inventory', icon: Package, visible: showAdminControls && hasPageAccess(currentUser, 'inventory') },
-        { label: copy.items.ledger, to: '/finance/ledger', icon: Wallet, visible: canSeeLedger(currentUser) },
+        { label: copy.items.buyers, to: '/finance/buyers', visible: canSeeBuyers(currentUser) },
+        { label: copy.items.customers, to: '/operations/customers', visible: canViewCustomers && hasPageAccess(currentUser, 'customers') },
+        { label: copy.items.inventory, to: '/operations/inventory', visible: showAdminControls && hasPageAccess(currentUser, 'inventory') },
+        { label: copy.items.ledger, to: '/finance/ledger', visible: canSeeLedger(currentUser) },
       ],
     },
     {
       id: 'reports',
       items: [
-        { label: copy.items.farmReports, to: '/operations/reports', icon: TrendingUp, visible: canViewMilkReport && hasPageAccess(currentUser, 'reports') },
-        { label: copy.items.customerValue, to: '/finance/reports/dairy-unit-economics', icon: TrendingUp, visible: showAdminControls && hasPageAccess(currentUser, 'reports') },
-        { label: copy.items.cowProfit, to: '/finance/reports/animal-economics', icon: TrendingUp, visible: showAdminControls && hasPageAccess(currentUser, 'reports') },
-        { label: copy.items.milkInventory, to: '/operations/reports/milk-inventory', icon: ClipboardList, visible: canViewMilkReport && hasPageAccess(currentUser, 'reports') },
+        { label: copy.items.farmReports, to: '/operations/reports', visible: canViewMilkReport && hasPageAccess(currentUser, 'reports') },
+        { label: copy.items.customerValue, to: '/finance/reports/dairy-unit-economics', visible: showAdminControls && hasPageAccess(currentUser, 'reports') },
+        { label: copy.items.cowProfit, to: '/finance/reports/animal-economics', visible: showAdminControls && hasPageAccess(currentUser, 'reports') },
+        { label: copy.items.milkInventory, to: '/operations/reports/milk-inventory', visible: canViewMilkReport && hasPageAccess(currentUser, 'reports') },
       ],
     },
     {
       id: 'compliance',
       items: [
-        { label: copy.items.safety, to: '/operations/safety', icon: ShieldCheck, visible: canViewMilkReport && hasPageAccess(currentUser, 'safety') },
+        { label: copy.items.safety, to: '/operations/safety', visible: canViewMilkReport && hasPageAccess(currentUser, 'safety') },
       ],
     },
     {
       id: 'hr',
       items: [
-        { label: copy.items.staff, to: '/hr/staff', icon: Users, visible: canViewStaffRegistry && hasPageAccess(currentUser, 'staff') },
-        { label: copy.items.payroll, to: '/hr/payroll', icon: Landmark, visible: canViewPayroll && hasPageAccess(currentUser, 'payroll') },
+        { label: copy.items.staff, to: '/hr/staff', visible: canViewStaffRegistry && hasPageAccess(currentUser, 'staff') },
+        { label: copy.items.payroll, to: '/hr/payroll', visible: canViewPayroll && hasPageAccess(currentUser, 'payroll') },
       ],
     },
   ];
@@ -194,7 +190,7 @@ export default function Sidebar({ mobileOpen = false, setMobileOpen = () => {} }
         <h1 className="m-0 font-display text-lg font-semibold leading-tight text-white">
           {SITE.name}
         </h1>
-        <button type="button" onClick={() => setMobileOpen(false)} className="inline-flex h-10 w-10 items-center justify-center rounded-lg text-white hover:bg-white/10 md:hidden" aria-label={copy.closeMenu}><X size={20} /></button>
+        <button type="button" onClick={() => setMobileOpen(false)} className="inline-flex h-10 w-10 items-center justify-center rounded-lg text-white hover:bg-white/10 md:hidden" aria-label={copy.closeMenu}><X size={20} aria-hidden="true" /></button>
       </div>
 
       <FarmSwitcher />
@@ -204,25 +200,24 @@ export default function Sidebar({ mobileOpen = false, setMobileOpen = () => {} }
         {visibleGroups.map((group) => (
           <div key={group.id || 'core'} className="flex flex-col gap-2">
             {group.title && (
-              <div className="px-2">
+              <div>
+                {/* px-4 matches the items' 14px padding plus their 2px active border. */}
                 <button
                   type="button"
                   onClick={() => mobileOpen && toggleGroup(group.id)}
-                  className={`w-full px-2 py-1.5 flex items-center justify-between text-xs font-bold tracking-wider uppercase rounded-md md:px-4 md:py-0 md:cursor-default transition-colors ${activeGroupId === group.id ? 'text-ink-700' : 'text-ink-400'}`}
+                  className={`w-full px-4 py-1.5 flex items-center justify-between text-xs font-bold tracking-wider uppercase rounded-md md:py-0 md:cursor-default transition-colors ${activeGroupId === group.id ? 'text-ink-700' : 'text-ink-400'}`}
                   aria-expanded={mobileOpen ? !isGroupCollapsed(group.id) : true}
                   aria-label={copy.toggleSection(group.title)}
                 >
                   <span>{group.title}</span>
                   <span className="md:hidden">
-                    {isGroupCollapsed(group.id) ? <ChevronRight size={14} /> : <ChevronDown size={14} />}
+                    {isGroupCollapsed(group.id) ? <ChevronRight size={14} aria-hidden="true" /> : <ChevronDown size={14} aria-hidden="true" />}
                   </span>
                 </button>
               </div>
             )}
             <div className={`flex-col gap-2 ${group.id && isGroupCollapsed(group.id) ? 'hidden md:flex' : 'flex'}`}>
               {group.items.map((item) => {
-                const Icon = item.icon;
-
                 const itemIsActive = isNavItemActive(item, location, allNavItems);
 
                 return (
@@ -233,13 +228,14 @@ export default function Sidebar({ mobileOpen = false, setMobileOpen = () => {} }
                     onClick={() => setMobileOpen(false)}
                     aria-current={itemIsActive ? 'page' : undefined}
                     // Active state comes from isNavItemActive, which also reads the query.
-                    className={`flex items-center px-4 py-3 min-h-[44px] font-sans font-semibold text-sm transition-colors duration-100 border-l-2 rounded-md relative ${
+                    // Hover is a plain light background only; the left border belongs to the active item.
+                    className={`flex items-center pl-3.5 pr-4 py-3 min-h-[44px] font-sans font-semibold text-sm transition-colors duration-100 border-l-2 rounded-md relative ${
                       itemIsActive
-                        ? 'border-brand-400 bg-ink-900 pl-4 text-white'
-                        : 'border-transparent text-ink-600 hover:border-brand-400/50 hover:bg-brand-50 hover:text-ink-900'
+                        ? 'border-brand-400 bg-ink-900 text-white'
+                        : 'border-transparent text-ink-600 hover:bg-ink-100 hover:text-ink-900'
                     }`}
                   >
-                    <Icon size={18} className={`mr-3 shrink-0 ${itemIsActive ? 'text-brand-400' : 'text-ink-600'}`} /> {item.label}
+                    {item.label}
                   </NavLink>
                 );
               })}

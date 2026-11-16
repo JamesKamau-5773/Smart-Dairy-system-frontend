@@ -21,7 +21,6 @@ import FieldError from '../ui/FieldError';
 import { fieldErrorProps } from '../ui/fieldErrorProps';
 import { useServerFieldErrors } from '../../hooks/useServerFieldErrors';
 import { financeCopy } from '../../i18n/finance';
-
 // A ledger draft is worth keeping once any amount, party, item or note has been typed.
 const isLedgerDraftEmpty = (values) => !['amount', 'party', 'item_name', 'description', 'reference_code', 'customer_id', 'income_source']
   .some((field) => String(values?.[field] ?? '').trim());
