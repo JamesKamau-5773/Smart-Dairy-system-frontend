@@ -64,7 +64,7 @@ test('feed setup journey on a phone', async ({ page }) => {
     await page.goto('/feed-nutrition/mix');
     const share = page.getByLabel('Maize Germ percentage');
     await share.fill('90');
-    await expect(page.getByRole('button', { name: /Save As Current Feed Mix/ })).toBeDisabled();
+    await expect(page.getByRole('button', { name: /Save as current feed mix/i })).toBeDisabled();
     await expect(page.getByText(/Change them to exactly 100% first/).first()).toBeVisible();
 
     // A real backend may list other ingredients for a new farm; give them 0%.
@@ -73,7 +73,7 @@ test('feed setup journey on a phone', async ({ page }) => {
     await share.fill('100');
     await page.getByLabel('Use this mix for').selectOption('lactating');
     await page.getByLabel('Concentrate per cow per day (kg)').fill('4');
-    await page.getByRole('button', { name: /Save As Current Feed Mix/ }).click();
+    await page.getByRole('button', { name: /Save as current feed mix/i }).click();
     await expect(page.getByText('Mix saved as the current feed mix.')).toBeVisible();
   });
 
