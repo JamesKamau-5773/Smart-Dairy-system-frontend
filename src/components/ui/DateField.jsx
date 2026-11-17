@@ -98,7 +98,7 @@ export default function DateField({ label, value = '', onChange, min, max, requi
           </PopoverContent>
         </Popover>
       </div>
-      {error && <p id={errorId} className="mt-1.5 text-xs text-danger-900">{error}</p>}
+      {error && <p id={errorId} className="mt-1.5 text-meta text-danger-900">{error}</p>}
     </div>
   );
 }

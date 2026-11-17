@@ -77,10 +77,10 @@ export default function VerifyPhonePage() {
   return (
     <AuthLayout offline={!online}>
       <header className="mb-6">
-        <h1 className="text-2xl font-bold tracking-tight text-ink-900 sm:text-3xl">
+        <h1 className="text-page-title text-ink-900">
           {accountPhone ? copy.title : copy.titleAdd}
         </h1>
-        <p className="mt-2 text-sm text-ink-muted">{accountPhone ? copy.subtitle : copy.subtitleAdd}</p>
+        <p className="mt-2 text-body text-ink-muted">{accountPhone ? copy.subtitle : copy.subtitleAdd}</p>
       </header>
 
       {phase === 'verified' ? (
@@ -107,17 +107,17 @@ export default function VerifyPhonePage() {
       ) : (
         <div className="space-y-5">
           <div className="flex items-center justify-between gap-3 rounded-card border border-brand/10 bg-brand/5 px-4 py-3">
-            <span className="min-w-0 text-sm text-ink-muted">
+            <span className="min-w-0 text-body text-ink-muted">
               {copy.numberLabel}{' '}
-              <span className="font-mono font-semibold text-ink-900">{displayPhone(verification.verification?.phone_number ?? accountPhone)}</span>
+              <span className="text-body-strong text-ink-900 tabular-nums">{displayPhone(verification.verification?.phone_number ?? accountPhone)}</span>
             </span>
-            <button type="button" onClick={changeNumber} className="shrink-0 text-sm font-semibold text-brand underline-offset-4 hover:underline">
+            <button type="button" onClick={changeNumber} className="shrink-0 text-control text-brand underline-offset-4 hover:underline">
               {copy.changeNumber}
             </button>
           </div>
 
           {(phase === 'idle' || phase === 'starting') && (
-            <p role="status" className="flex items-center gap-2 text-sm text-ink-muted">
+            <p role="status" className="flex items-center gap-2 text-body text-ink-muted">
               <Loader2 size={18} className="animate-spin" aria-hidden="true" /> {copy.starting}
             </p>
           )}
@@ -152,11 +152,11 @@ export default function VerifyPhonePage() {
         </div>
       )}
 
-      <p className="mt-6 border-t border-ink/10 pt-6 text-center text-sm text-ink-muted">
+      <p className="mt-6 border-t border-ink/10 pt-6 text-center text-body text-ink-muted">
         {isGated ? (
-          <button type="button" onClick={logout} className="font-semibold text-brand underline-offset-4 hover:underline">{copy.signOut}</button>
+          <button type="button" onClick={logout} className="text-control text-brand underline-offset-4 hover:underline">{copy.signOut}</button>
         ) : (
-          <Link to="/app" className="font-semibold text-brand underline-offset-4 hover:underline">{copy.later}</Link>
+          <Link to="/app" className="text-body-strong text-brand underline-offset-4 hover:underline">{copy.later}</Link>
         )}
       </p>
     </AuthLayout>
@@ -168,7 +168,7 @@ function PendingStep({ verification, online, openedWhatsApp, onOpen, onResend })
 
   return (
     <div className="space-y-5">
-      <ol className="list-decimal space-y-1 pl-5 text-sm text-ink-900">
+      <ol className="list-decimal space-y-1 pl-5 text-body text-ink-900">
         <li>{copy.step1}</li>
         <li>{copy.step2}</li>
       </ol>
@@ -182,12 +182,12 @@ function PendingStep({ verification, online, openedWhatsApp, onOpen, onResend })
       />
 
       {online ? (
-        <div role="status" className="flex items-start gap-3 rounded-card border border-ink/10 p-4 text-sm">
+        <div role="status" className="flex items-start gap-3 rounded-card border border-ink/10 p-4 text-body">
           <Loader2 size={18} className="mt-0.5 shrink-0 animate-spin text-brand" aria-hidden="true" />
           <span>
-            <span className="block font-semibold text-ink-900">{copy.waiting}</span>
+            <span className="block text-body-strong text-ink-900">{copy.waiting}</span>
             <span className="block text-ink-muted">{copy.waitingHint}</span>
-            {expiresIn > 0 && <span className="mt-1 block text-xs text-ink-muted">{copy.expiresIn(formatClock(expiresIn))}</span>}
+            {expiresIn > 0 && <span className="mt-1 block text-meta text-ink-muted">{copy.expiresIn(formatClock(expiresIn))}</span>}
           </span>
         </div>
       ) : (
@@ -196,11 +196,11 @@ function PendingStep({ verification, online, openedWhatsApp, onOpen, onResend })
 
       <div className="flex flex-col gap-2 sm:flex-row">
         {openedWhatsApp && (
-          <button type="button" onClick={checkNow} className="btn-secondary flex-1 text-sm font-semibold" disabled={!online}>
+          <button type="button" onClick={checkNow} className="btn-secondary flex-1 text-control" disabled={!online}>
             {copy.checkNow}
           </button>
         )}
-        <button type="button" onClick={onResend} className="btn-ghost flex-1 text-sm" disabled={resendIn > 0 || !online}>
+        <button type="button" onClick={onResend} className="btn-ghost flex-1 text-control" disabled={resendIn > 0 || !online}>
           {resendIn > 0 ? copy.resendIn(resendIn) : copy.resend}
         </button>
       </div>

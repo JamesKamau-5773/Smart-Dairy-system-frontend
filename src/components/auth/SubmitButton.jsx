@@ -18,7 +18,7 @@ export default function SubmitButton({
   return (
     <button
       type={type}
-      className={`btn-command w-full gap-2 py-4 text-base ${className}`}
+      className={`btn-command w-full gap-2 py-4 text-control ${className}`}
       disabled={pending || retryIn > 0 || disabled}
       aria-busy={pending || undefined}
       {...props}

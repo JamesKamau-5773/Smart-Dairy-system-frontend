@@ -18,12 +18,13 @@ import Money from '../components/ui/Money';
 import { swahiliGreeting } from '../lib/welcomeProgress';
 import { dashboardCopy } from '../i18n/dashboard';
 import { Skeleton } from '@/components/ui';
+import { shellCopy } from '../i18n/shell';
 
 const SummaryCard = ({ title, value, unit, loading = false }) => (
   <div className="glass-panel p-6 flex flex-col justify-between min-h-[180px] relative overflow-hidden group">
     <div className="flex justify-between items-start z-10">
       <div className="space-y-1">
-        <span className="font-sans text-[11px] font-bold uppercase tracking-wider text-ink-muted">
+        <span className="text-label text-ink-muted">
           {title}
         </span>
         <div className="h-1 w-8 bg-brand rounded-full"></div>
@@ -35,9 +36,9 @@ const SummaryCard = ({ title, value, unit, loading = false }) => (
         <Skeleton className="h-12 w-3/5" />
       ) : (
         <>
-          <div className="flex min-w-0 items-baseline break-words font-sans text-2xl font-black tracking-tight text-brand sm:text-3xl">
+          <div className="flex min-w-0 items-baseline break-words text-stat-value text-brand">
             {value}
-            <span className="text-sm ml-2 font-bold text-ink-muted">{unit}</span>
+            <span className="text-body-strong ml-2 text-ink-muted">{unit}</span>
           </div>
         </>
       )}
@@ -143,8 +144,8 @@ export default function CommandCenter() {
       
       <div className="flex justify-between items-end border-b border-ink/10 pb-4">
         <div>
-          <h2 className="font-sans font-bold text-3xl tracking-tight text-brand m-0">{copy.title}</h2>
-          <p className="font-sans text-sm text-ink-muted mt-1">{swahiliGreeting()} · {copy.liveData}</p>
+          <h1 className="text-page-title text-brand m-0">{/* The sidebar's label for this page: one key for both. */}{shellCopy.nav.items.commandCenter}</h1>
+          <p className="text-body text-ink-muted mt-1">{swahiliGreeting()} · {copy.liveData}</p>
         </div>
       </div>
 
@@ -169,7 +170,7 @@ export default function CommandCenter() {
       </section>
 
       {hasSummaryError && (
-        <section className="rounded-xl border border-brand/20 bg-brand-50 px-4 py-3 text-sm text-brand-dark">
+        <section className="rounded-xl border border-brand/20 bg-brand-50 px-4 py-3 text-body text-brand-dark">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <p>
               {copy.totalsFailed}
@@ -178,7 +179,7 @@ export default function CommandCenter() {
               type="button"
               onClick={handleRetrySummary}
               disabled={isRetryingSummary}
-              className="inline-flex items-center justify-center rounded-lg border border-brand/30 bg-surface px-3 py-1.5 text-xs font-bold uppercase tracking-wider text-brand-dark transition hover:bg-brand-50 disabled:cursor-not-allowed disabled:opacity-60"
+              className="inline-flex items-center justify-center rounded-lg border border-brand/30 bg-surface px-3 py-1.5 text-control text-brand-dark transition hover:bg-brand-50 disabled:cursor-not-allowed disabled:opacity-60"
             >
               {isRetryingSummary ? copy.retrying : copy.retry}
             </button>
@@ -188,27 +189,27 @@ export default function CommandCenter() {
 
       <section className="grid grid-cols-2 gap-3 md:grid-cols-3 md:gap-4">
         <div className="card-machined bg-surface p-5 border border-ink/5">
-          <p className="text-xs font-bold text-ink-muted uppercase tracking-wider">{copy.revenue}</p>
-          <h3 className="mt-2 break-words text-xl font-black text-brand sm:text-2xl">
+          <p className="text-label text-ink-muted">{copy.revenue}</p>
+          <p className="mt-2 break-words text-stat-value text-brand">
             {summaryQuery.isLoading ? copy.loading : hasSummaryError ? copy.unavailable : kesOrDash(summary?.revenue_total_kes)}
-          </h3>
+          </p>
           {summary?.revenue_breakdown?.report_sales_revenue_kes != null && (
-            <p className="mt-2 text-[11px] leading-4 text-ink-muted">
+            <p className="mt-2 text-meta text-ink-muted">
               {copy.reportReference(Number(summary.revenue_breakdown.report_sales_revenue_kes).toLocaleString())}
             </p>
           )}
         </div>
         <div className="card-machined bg-surface p-5 border border-ink/5">
-          <p className="text-xs font-bold text-ink-muted uppercase tracking-wider">{copy.feedCost}</p>
-          <h3 className="mt-2 break-words text-xl font-black text-ink sm:text-2xl">
+          <p className="text-label text-ink-muted">{copy.feedCost}</p>
+          <p className="mt-2 break-words text-stat-value text-ink">
             {summaryQuery.isLoading ? copy.loading : hasSummaryError ? copy.unavailable : kesOrDash(summary?.feed_cost_total_kes)}
-          </h3>
+          </p>
         </div>
         <div className="card-machined bg-brand/5 p-5 border-2 border-brand/20 ">
-          <p className="text-xs font-bold text-brand uppercase tracking-wider">{copy.profit}</p>
-          <h3 className="mt-2 break-words text-xl font-black text-brand sm:text-2xl">
+          <p className="text-label text-brand">{copy.profit}</p>
+          <p className="mt-2 break-words text-stat-value text-brand">
             {summaryQuery.isLoading ? copy.loading : hasSummaryError ? copy.unavailable : kesOrDash(summary?.net_margin_kes)}
-          </h3>
+          </p>
         </div>
       </section>
 
@@ -219,18 +220,18 @@ export default function CommandCenter() {
         <SummaryCard title={copy.milkRemaining} value={summaryQuery.isLoading ? '—' : (summary?.remaining_milk_liters ?? 0).toFixed(1)} unit={copy.liters} loading={summaryQuery.isLoading} />
         <SummaryCard title={copy.cowsMilked} value={cowsMilked ?? '—'} unit={copy.cows} loading={summaryQuery.isLoading} />
         <SummaryCard title={copy.averagePerCow} value={averageYieldPerCow ?? '—'} unit={copy.perCow} loading={summaryQuery.isLoading} />
-        <SummaryCard title={copy.profitPerLiter} value={summaryQuery.isLoading ? '—' : <Money amount={profitPerLiter} currency={summary?.currency ?? 'KES'} />} loading={summaryQuery.isLoading} />
+        <SummaryCard title={copy.profitPerLiter} value={summaryQuery.isLoading ? '—' : <Money amount={profitPerLiter} currency={summary?.currency ?? 'KES'} size="stat-value" />} loading={summaryQuery.isLoading} />
       </section>
 
       <div className="card-machined bg-surface p-8 border border-ink/10">
         <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-8 gap-4">
-          <h3 className="font-sans font-bold text-xl text-brand">
+          <h2 className="text-section-title text-brand">
 
             {copy.trendTitle}
-          </h3>
+          </h2>
           <div className="inline-flex rounded-lg border border-ink/10 bg-surface p-1" role="group" aria-label={copy.trendRange}>
             {[['30', copy.ranges[30]], ['90', copy.ranges[90]], ['all', copy.ranges.all]].map(([value, label]) => (
-              <button key={value} type="button" onClick={() => selectTrendRange(value)} aria-pressed={selectedRange === value} className={`rounded-md px-3 py-1.5 text-xs font-semibold transition-colors ${selectedRange === value ? 'bg-brand text-surface' : 'text-ink-muted hover:bg-surface-raised hover:text-brand'}`}>
+              <button key={value} type="button" onClick={() => selectTrendRange(value)} aria-pressed={selectedRange === value} className={`rounded-md px-3 py-1.5 text-control transition-colors ${selectedRange === value ? 'bg-brand text-surface' : 'text-ink-muted hover:bg-surface-raised hover:text-brand'}`}>
                 {label}
               </button>
             ))}

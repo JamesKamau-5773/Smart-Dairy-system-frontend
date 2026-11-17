@@ -41,8 +41,8 @@ export default function ManagerInboxWidget() {
     <div className="space-y-6">
       {/* Header Section */}
       <div className="flex items-center gap-3">
-        <h2 className="text-xl font-bold text-ink">{copy.title}</h2>
-        <span className="bg-danger text-surface text-xs font-bold px-3 py-1 rounded-full">
+        <h2 className="text-section-title text-ink">{copy.title}</h2>
+        <span className="bg-danger text-surface text-badge px-3 py-1 rounded-full">
           {copy.count(activeAlerts.length)}
         </span>
       </div>
@@ -65,12 +65,12 @@ export default function ManagerInboxWidget() {
             {/* Content */}
             <div className="flex-1">
               <div className="flex justify-between items-start">
-                <h4 className="font-bold text-brand text-base">{alert.title ?? copy.fallbackTitle}</h4>
-                <span className="text-[10px] font-bold uppercase tracking-widest text-ink/40 bg-brand/5 px-2 py-1 rounded-md">
+                <h3 className="text-section-title text-brand">{alert.title ?? copy.fallbackTitle}</h3>
+                <span className="text-badge text-ink/40 bg-brand/5 px-2 py-1 rounded-md">
                   {alert.time ?? copy.fallbackTime}
                 </span>
               </div>
-              <p className="text-sm text-ink-muted mt-1 leading-relaxed max-w-lg">
+              <p className="text-body text-ink-muted mt-1 max-w-lg">
                 {alert.message}
               </p>
               
@@ -78,7 +78,7 @@ export default function ManagerInboxWidget() {
               <div className="mt-4">
                 <Link 
                   to={alert.actionLink}
-                  className="inline-flex items-center px-4 py-2 bg-brand text-surface text-xs font-bold rounded-lg hover:bg-brand/90 transition-colors "
+                  className="inline-flex items-center px-4 py-2 bg-brand text-surface text-meta rounded-lg hover:bg-brand/90 transition-colors "
                 >
                   {alert.actionText ?? copy.fallbackAction}
                 </Link>
@@ -87,7 +87,7 @@ export default function ManagerInboxWidget() {
             
             {/* High-Contrast Status Badge */}
             <div className="flex flex-col items-end">
-              <span className="text-[10px] font-bold uppercase tracking-widest text-danger-dark bg-danger/10 border border-danger/20 px-2 py-1 rounded-md">
+              <span className="text-badge text-danger-dark bg-danger/10 border border-danger/20 px-2 py-1 rounded-md">
                 {alert.status ?? copy.fallbackStatus}
               </span>
             </div>

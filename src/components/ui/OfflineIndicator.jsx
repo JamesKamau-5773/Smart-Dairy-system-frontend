@@ -9,7 +9,7 @@ export default function OfflineIndicator({ onOpenInspector } = {}) {
     <button
       type="button"
       onClick={onOpenInspector}
-      className="flex h-10 items-center gap-2 rounded-button border border-brand/20 bg-surface px-3 text-sm font-semibold text-ink hover:border-brand hover:bg-brand-50"
+      className="flex h-10 items-center gap-2 rounded-button border border-brand/20 bg-surface px-3 text-control text-ink hover:border-brand hover:bg-brand-50"
       title={commonCopy.ui.syncStatus}
       aria-label={commonCopy.controls.syncStatus(online, pending)}
     >
@@ -19,7 +19,7 @@ export default function OfflineIndicator({ onOpenInspector } = {}) {
       </span>
       <span className="hidden sm:inline">{online ? 'Online' : 'Offline'}</span>
       {pending > 0 ? (
-        <span className="min-w-5 rounded-full bg-brand-50 px-1.5 py-0.5 text-center text-xs font-bold text-brand-dark">
+        <span className="min-w-5 rounded-full bg-brand-50 px-1.5 py-0.5 text-center text-badge text-brand-dark">
           {pending}
         </span>
       ) : null}

@@ -7,7 +7,7 @@ export default function DevToggle() {
 
   return (
     <button
-      className={`ml-2 text-xs ${adminMode ? 'btn-command' : 'btn-secondary'}`}
+      className={`ml-2 text-control ${adminMode ? 'btn-command' : 'btn-secondary'}`}
       onClick={() => setAdminMode((next) => !next)}
       title="Toggle dev admin mode"
     >

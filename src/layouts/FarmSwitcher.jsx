@@ -25,12 +25,12 @@ export default function FarmSwitcher() {
 
   return (
     <div className="p-4 border-b border-ink/10 bg-surface-raised">
-      <label htmlFor="workspace-switcher" className="block font-sans font-medium text-xs tracking-normal text-ink mb-2">
+      <label htmlFor="workspace-switcher" className="block text-field-label text-ink mb-2">
         Active Workspace
       </label>
       <select
         id="workspace-switcher"
-        className="input-brutalist cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed text-brand font-medium"
+        className="input-brutalist cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed text-brand text-control"
         value={String(activeFarm.id)}
         onChange={(e) => switchFarm(e.target.value)}
         disabled={isSwitching}
@@ -43,11 +43,11 @@ export default function FarmSwitcher() {
       </select>
 
       {switchError && !isSwitching && (
-        <p role="alert" className="mt-2 text-xs font-medium text-danger">{switchError}</p>
+        <p role="alert" className="mt-2 text-meta text-danger">{switchError}</p>
       )}
 
       {isSwitching && (
-        <div className="text-xs font-sans mt-2 animate-pulse text-brand font-medium">
+        <div className="text-meta mt-2 animate-pulse text-brand">
           Switching farm context…
         </div>
       )}

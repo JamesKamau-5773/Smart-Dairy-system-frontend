@@ -22,8 +22,8 @@ function Notice({ isError = false, title, children }) {
             <AlertTriangle size={22} aria-hidden="true" />
           </div>
         )}
-        <h1 id="statement-notice" className="text-xl font-bold text-ink">{title}</h1>
-        <div className="mt-2 text-sm leading-6 text-ink-muted">{children}</div>
+        <h1 id="statement-notice" className="text-page-title text-ink">{title}</h1>
+        <div className="mt-2 text-body text-ink-muted">{children}</div>
       </section>
     </main>
   );
@@ -82,33 +82,33 @@ export default function CustomerPortal() {
     <main className="flex min-h-screen justify-center bg-surface-warm p-4 md:p-8">
       <div className="w-full max-w-4xl space-y-6">
         <header className="border-b border-ink/10 pb-6">
-          <p className="text-xs font-semibold uppercase tracking-wide text-ink-muted">{copy.eyebrow(SITE.name)}</p>
-          <h1 className="mt-2 break-words text-2xl font-bold text-ink sm:text-3xl">{customerName ?? '—'}</h1>
+          <p className="text-label text-ink-muted">{copy.eyebrow(SITE.name)}</p>
+          <h1 className="mt-2 break-words text-page-title text-ink">{customerName ?? '—'}</h1>
         </header>
 
         <section aria-labelledby="statement-balance" className="rounded-card border border-ink/10 bg-surface p-6">
-          <h2 id="statement-balance" className="text-sm font-semibold uppercase tracking-wide text-ink-muted">
+          <h2 id="statement-balance" className="text-section-title text-ink-muted">
 
   {copy.balance}
           </h2>
-          <p className="mt-3 font-mono text-3xl font-semibold tabular-nums text-ink-strong">{formatMoneyText(balance)}</p>
+          <p className="mt-3 text-stat-value tabular-nums text-ink-strong">{formatMoneyText(balance)}</p>
         </section>
 
         <section aria-labelledby="statement-transactions" className="overflow-hidden rounded-card border border-ink/10 bg-surface">
-          <h2 id="statement-transactions" className="border-b border-ink/10 p-4 text-lg font-semibold text-ink sm:p-6">{copy.transactions}</h2>
+          <h2 id="statement-transactions" className="border-b border-ink/10 p-4 text-section-title text-ink sm:p-6">{copy.transactions}</h2>
           {transactions.length === 0 ? (
-            <p className="p-6 text-sm text-ink-muted">{copy.noTransactions}</p>
+            <p className="p-6 text-body text-ink-muted">{copy.noTransactions}</p>
           ) : (
             <ul className="divide-y divide-ink/10">
               {transactions.map((tx, index) => (
                 <li key={tx.id ?? index} className="flex items-start justify-between gap-4 p-4 sm:px-6">
                   <div className="min-w-0">
-                    <p className="break-words text-sm font-medium text-ink">{tx.description ?? '—'}</p>
-                    <p className="mt-1 text-xs text-ink-muted">
+                    <p className="break-words text-body text-ink">{tx.description ?? '—'}</p>
+                    <p className="mt-1 text-meta text-ink-muted">
                       {tx.date ?? '—'}{tx.reference ? ` · ${tx.reference}` : ''}
                     </p>
                   </div>
-                  <p className="shrink-0 font-mono text-sm font-semibold tabular-nums text-ink">{formatMoneyText(tx.amount)}</p>
+                  <p className="shrink-0 text-body-strong tabular-nums text-ink">{formatMoneyText(tx.amount)}</p>
                 </li>
               ))}
             </ul>

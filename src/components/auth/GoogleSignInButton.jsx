@@ -24,7 +24,7 @@ export default function GoogleSignInButton({ next, disabled = false }) {
 
   if (disabled) {
     return (
-      <button type="button" className="btn-secondary w-full gap-3 py-3.5 text-base font-semibold" disabled>
+      <button type="button" className="btn-secondary w-full gap-3 py-3.5 text-control" disabled>
         <GoogleMark /> {authCopy.google.continue}
       </button>
     );
@@ -35,7 +35,7 @@ export default function GoogleSignInButton({ next, disabled = false }) {
       href={authApi.googleStartUrl({ next })}
       onClick={() => setRedirecting(true)}
       aria-busy={redirecting || undefined}
-      className="btn-secondary w-full gap-3 py-3.5 text-base font-semibold"
+      className="btn-secondary w-full gap-3 py-3.5 text-control"
     >
       {redirecting
         ? <><Loader2 size={18} className="animate-spin" aria-hidden="true" /> {authCopy.google.redirecting}</>

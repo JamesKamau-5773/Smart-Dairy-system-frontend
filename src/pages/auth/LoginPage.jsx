@@ -74,13 +74,13 @@ export default function LoginPage() {
   return (
     <AuthLayout
       offline={!online}
-      headerAction={<Link to="/register" className="btn-secondary text-sm">{common.createAccount}</Link>}
+      headerAction={<Link to="/register" className="btn-secondary text-control">{common.createAccount}</Link>}
     >
       <header className="mb-6">
-        <h1 className="text-2xl font-bold tracking-tight text-ink-900 sm:text-3xl">
+        <h1 className="text-page-title text-ink-900">
           {rememberedLogin ? copy.titleReturning : copy.title}
         </h1>
-        <p className="mt-2 text-sm text-ink-muted">
+        <p className="mt-2 text-body text-ink-muted">
           {rememberedLogin ? copy.subtitleReturning : copy.subtitle}
         </p>
       </header>
@@ -100,10 +100,10 @@ export default function LoginPage() {
       <form onSubmit={handleSubmit} noValidate className="space-y-5">
         {rememberedLogin ? (
           <div className="flex items-center justify-between gap-3 rounded-card border border-brand/10 bg-brand/5 px-4 py-3">
-            <span className="flex min-w-0 items-center text-sm font-semibold text-ink-900">
-              <span className="truncate font-mono">{maskIdentifier(rememberedLogin)}</span>
+            <span className="flex min-w-0 items-center text-body-strong text-ink-900">
+              <span className="truncate tabular-nums">{maskIdentifier(rememberedLogin)}</span>
             </span>
-            <button type="button" onClick={switchAccount} className="shrink-0 text-sm font-semibold text-brand underline-offset-4 hover:underline">
+            <button type="button" onClick={switchAccount} className="shrink-0 text-control text-brand underline-offset-4 hover:underline">
               {copy.notYou}
             </button>
             {/* Lets password managers pair the saved password with this account. */}
@@ -139,7 +139,7 @@ export default function LoginPage() {
           />
           <Link
             to="/forgot-password"
-            className="mt-2 inline-flex min-h-11 items-center text-sm font-semibold text-brand underline-offset-4 hover:underline"
+            className="mt-2 inline-flex min-h-11 items-center text-body-strong text-brand underline-offset-4 hover:underline"
           >
             {copy.forgotPassword}
           </Link>
@@ -153,9 +153,9 @@ export default function LoginPage() {
       <AuthDivider />
       <GoogleSignInButton next="/app" disabled={!online} />
 
-      <p className="mt-6 border-t border-ink/10 pt-6 text-center text-sm text-ink-muted">
+      <p className="mt-6 border-t border-ink/10 pt-6 text-center text-body text-ink-muted">
         {copy.newHere}{' '}
-        <Link to="/register" className="font-semibold text-brand underline-offset-4 hover:underline">{copy.createFarmAccount}</Link>
+        <Link to="/register" className="text-body-strong text-brand underline-offset-4 hover:underline">{copy.createFarmAccount}</Link>
       </p>
     </AuthLayout>
   );

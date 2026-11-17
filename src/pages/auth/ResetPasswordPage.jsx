@@ -92,14 +92,14 @@ export default function ResetPasswordPage() {
       <meta name="referrer" content="no-referrer" />
 
       <header className="mb-6">
-        <h1 className="text-2xl font-bold tracking-tight text-ink-900 sm:text-3xl">
+        <h1 className="text-page-title text-ink-900">
           {linkState === 'invalid' ? copy.invalidTitle : copy.title}
         </h1>
-        {linkState !== 'invalid' && <p className="mt-2 text-sm text-ink-muted">{copy.subtitle}</p>}
+        {linkState !== 'invalid' && <p className="mt-2 text-body text-ink-muted">{copy.subtitle}</p>}
       </header>
 
       {linkState === 'checking' && (
-        <p role="status" className="flex items-center gap-2 text-sm text-ink-muted">
+        <p role="status" className="flex items-center gap-2 text-body text-ink-muted">
           <Loader2 size={18} className="animate-spin" aria-hidden="true" /> {copy.checking}
         </p>
       )}
@@ -113,8 +113,8 @@ export default function ResetPasswordPage() {
 
       {linkState === 'invalid' && (
         <div className="space-y-5">
-          <p className="text-sm text-ink-muted">{copy.invalid}</p>
-          <Link to="/forgot-password" className="btn-command w-full py-4 text-base">{copy.requestNew}</Link>
+          <p className="text-body text-ink-muted">{copy.invalid}</p>
+          <Link to="/forgot-password" className="btn-command w-full py-4 text-control">{copy.requestNew}</Link>
         </div>
       )}
 
@@ -150,8 +150,8 @@ export default function ResetPasswordPage() {
         </form>
       )}
 
-      <p className="mt-6 border-t border-ink/10 pt-6 text-center text-sm text-ink-muted">
-        <Link to="/login" className="font-semibold text-brand underline-offset-4 hover:underline">{common.backToLogin}</Link>
+      <p className="mt-6 border-t border-ink/10 pt-6 text-center text-body text-ink-muted">
+        <Link to="/login" className="text-body-strong text-brand underline-offset-4 hover:underline">{common.backToLogin}</Link>
       </p>
     </AuthLayout>
   );

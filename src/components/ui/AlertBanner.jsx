@@ -14,7 +14,7 @@ const VARIANTS = {
   success: { Icon: CheckCircle2, role: 'status', ariaLive: 'polite' },
 };
 
-const linkBase = 'inline-flex min-h-8 items-center gap-1 rounded-sm text-sm font-semibold underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/30';
+const linkBase = 'inline-flex min-h-8 items-center gap-1 rounded-sm text-control underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/30';
 
 /** Ticking seconds until an auto-dismissing banner closes. */
 function Countdown({ duration, onDone }) {
@@ -28,7 +28,7 @@ function Countdown({ duration, onDone }) {
 
   return (
     <span
-      className="rounded-badge bg-ink-100 px-1.5 py-0.5 text-xs tabular-nums text-ink-muted"
+      className="rounded-badge bg-ink-100 px-1.5 py-0.5 text-badge tabular-nums text-ink-muted"
       aria-label={`Closes in ${tick} second${tick !== 1 ? 's' : ''}`}
     >
       {tick}s
@@ -124,15 +124,15 @@ export default function AlertBanner({
         )}
 
         <div className="min-w-0 flex-1">
-          {title && <p className={`text-sm font-semibold ${look.title}`}>{title}</p>}
-          {message && <p className={`text-sm leading-relaxed ${title ? 'mt-0.5' : ''} ${look.message}`}>{message}</p>}
+          {title && <p className={`text-body-strong ${look.title}`}>{title}</p>}
+          {message && <p className={`text-body ${title ? 'mt-0.5' : ''} ${look.message}`}>{message}</p>}
 
           {details && (
             <div className="mt-2">
-              <button type="button" onClick={() => setOpen((current) => !current)} aria-expanded={open} className="text-xs font-semibold text-ink-muted hover:text-ink">
+              <button type="button" onClick={() => setOpen((current) => !current)} aria-expanded={open} className="text-control text-ink-muted hover:text-ink">
                 {open ? 'Hide details' : 'More details'}
               </button>
-              {open && <p className="mt-1.5 text-xs leading-relaxed text-ink-muted">{details}</p>}
+              {open && <p className="mt-1.5 text-meta text-ink-muted">{details}</p>}
             </div>
           )}
 

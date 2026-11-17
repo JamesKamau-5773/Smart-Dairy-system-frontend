@@ -81,7 +81,7 @@ export default function GoogleSignupForm({ next, online }) {
 
   if (pending.status === 'loading') {
     return (
-      <p role="status" className="flex items-center gap-2 text-sm text-ink-muted">
+      <p role="status" className="flex items-center gap-2 text-body text-ink-muted">
         <Loader2 size={18} className="animate-spin" aria-hidden="true" /> {copy.signupLoading}
       </p>
     );
@@ -100,8 +100,8 @@ export default function GoogleSignupForm({ next, online }) {
 
   return (
     <form onSubmit={handleSubmit} noValidate className="space-y-5">
-      <h2 className="text-xl font-bold tracking-tight text-ink-900">{copy.signupTitle}</h2>
-      <p className="text-sm text-ink-muted">{copy.signupSubtitle(pending.data.email)}</p>
+      <h2 className="text-section-title text-ink-900">{copy.signupTitle}</h2>
+      <p className="text-body text-ink-muted">{copy.signupSubtitle(pending.data.email)}</p>
 
       <TextField
         id="google-signup-name"

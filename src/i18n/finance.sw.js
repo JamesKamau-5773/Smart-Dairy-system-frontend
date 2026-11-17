@@ -227,7 +227,7 @@ export const financeCopy = {
     toSave: (fields) => `Ili kuhifadhi, ongeza ${fields}.`,
     cancel: 'Ghairi',
     saving: 'Inahifadhi...',
-    logIncome: 'Rekodi Mapato',
+    logIncome: 'Rekodi mapato',
     logExpense: 'Rekodi Matumizi',
     dateReceived: 'Tarehe ya kupokea',
     incomeAmount: 'Kiasi cha mapato (KES)',

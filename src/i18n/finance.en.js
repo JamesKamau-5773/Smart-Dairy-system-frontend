@@ -228,7 +228,7 @@ export const financeCopy = {
     toSave: (fields) => `To save, add ${fields}.`,
     cancel: 'Cancel',
     saving: 'Saving...',
-    logIncome: 'Log Income',
+    logIncome: 'Log income',
     logExpense: 'Log Expense',
     dateReceived: 'Date received',
     incomeAmount: 'Income amount (KES)',

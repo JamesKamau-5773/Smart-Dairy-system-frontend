@@ -69,8 +69,8 @@ export default function ClaimAccountPage() {
       <div className="mx-auto flex min-h-[85vh] max-w-xl items-center">
         <section className="w-full rounded-2xl border border-[#5a3b8d]/20 bg-white/90 p-8 ">
           <header className="mb-7 text-center">
-            <h1 className="text-3xl font-black tracking-tight text-[#372257]">{copy.title}</h1>
-            <p className="mt-2 text-sm text-[#563f79]">{copy.subtitle}</p>
+            <h1 className="text-page-title text-[#372257]">{copy.title}</h1>
+            <p className="mt-2 text-body text-[#563f79]">{copy.subtitle}</p>
           </header>
 
           {message.text && (
@@ -82,10 +82,10 @@ export default function ClaimAccountPage() {
           {claimedAccount ? (
             <div className="space-y-5">
               <AlertBanner type="success" title={copy.activatedTitle} message={copy.activatedText} />
-              <div className="rounded-lg border border-[#5a3b8d]/20 bg-[#faf7ff] p-4 text-sm text-[#2f1d4d]">
-                <p className="text-xs font-semibold uppercase tracking-wider text-[#5f4a82]">{copy.username}</p>
-                <p className="mt-1 select-all font-mono text-lg font-bold">{claimedAccount.username}</p>
-                {claimedAccount.phoneNumber && <p className="mt-2 text-xs text-[#563f79]">{copy.registeredPhone(claimedAccount.phoneNumber)}</p>}
+              <div className="rounded-lg border border-[#5a3b8d]/20 bg-[#faf7ff] p-4 text-body text-[#2f1d4d]">
+                <p className="text-label text-[#5f4a82]">{copy.username}</p>
+                <p className="mt-1 select-all text-body-strong tabular-nums">{claimedAccount.username}</p>
+                {claimedAccount.phoneNumber && <p className="mt-2 text-meta text-[#563f79]">{copy.registeredPhone(claimedAccount.phoneNumber)}</p>}
               </div>
               <button type="button" className="btn-command w-full" onClick={() => navigate(getDefaultLandingPath(claimedAccount.user), { replace: true })}>
                 {copy.continue}
@@ -93,19 +93,19 @@ export default function ClaimAccountPage() {
             </div>
           ) : (
           <form onSubmit={handleClaim} className="space-y-4">
-            <label className="block text-xs font-semibold uppercase tracking-[0.12em] text-[#5f4a82]">
+            <label className="block text-field-label text-[#5f4a82]">
               {copy.inviteToken}
               <input
-                className="mt-2 w-full rounded-lg border border-[#5a3b8d]/20 bg-[#faf7ff] px-4 py-3 text-sm text-[#2f1d4d] outline-none"
+                className="mt-2 w-full rounded-lg border border-[#5a3b8d]/20 bg-[#faf7ff] px-4 py-3 text-control text-[#2f1d4d] outline-none"
                 value={token}
                 readOnly
               />
             </label>
 
-            <label className="block text-xs font-semibold uppercase tracking-[0.12em] text-[#5f4a82]">
+            <label className="block text-field-label text-[#5f4a82]">
               {copy.chooseUsername}
               <input
-                className="mt-2 w-full rounded-lg border border-[#5a3b8d]/20 bg-[#faf7ff] px-4 py-3 text-sm text-[#2f1d4d] outline-none focus:border-[#5a3b8d] focus:ring-2 focus:ring-[#5a3b8d]/20"
+                className="mt-2 w-full rounded-lg border border-[#5a3b8d]/20 bg-[#faf7ff] px-4 py-3 text-control text-[#2f1d4d] outline-none focus:border-[#5a3b8d] focus:ring-2 focus:ring-[#5a3b8d]/20"
                 value={username}
                 onChange={(event) => setUsername(event.target.value.toLowerCase())}
                 minLength={3}
@@ -115,16 +115,16 @@ export default function ClaimAccountPage() {
                 required
                 title={copy.usernameRule}
               />
-              <span className="mt-1 block text-[11px] font-normal normal-case tracking-normal text-[#6b5b86]">{copy.usernameHint}</span>
+              <span className="mt-1 block text-meta normal-case text-[#6b5b86]">{copy.usernameHint}</span>
             </label>
 
-            <label className="block text-xs font-semibold uppercase tracking-[0.12em] text-[#5f4a82]">
+            <label className="block text-field-label text-[#5f4a82]">
               {copy.newPassword}
               <div className="relative mt-2">
                 <input
                   type={showPassword ? 'text' : 'password'}
                   autoComplete="new-password"
-                  className="w-full rounded-lg border border-[#5a3b8d]/20 bg-[#faf7ff] py-3 pl-4 pr-12 text-sm text-[#2f1d4d] outline-none focus:border-[#5a3b8d] focus:ring-2 focus:ring-[#5a3b8d]/20"
+                  className="w-full rounded-lg border border-[#5a3b8d]/20 bg-[#faf7ff] py-3 pl-4 pr-12 text-control text-[#2f1d4d] outline-none focus:border-[#5a3b8d] focus:ring-2 focus:ring-[#5a3b8d]/20"
                   value={password}
                   onChange={(event) => setPassword(event.target.value)}
                   required
@@ -141,13 +141,13 @@ export default function ClaimAccountPage() {
               </div>
             </label>
 
-            <label className="block text-xs font-semibold uppercase tracking-[0.12em] text-[#5f4a82]">
+            <label className="block text-field-label text-[#5f4a82]">
               {copy.confirmPassword}
               <div className="relative mt-2">
                 <input
                   type={showConfirmPassword ? 'text' : 'password'}
                   autoComplete="new-password"
-                  className="w-full rounded-lg border border-[#5a3b8d]/20 bg-[#faf7ff] py-3 pl-4 pr-12 text-sm text-[#2f1d4d] outline-none focus:border-[#5a3b8d] focus:ring-2 focus:ring-[#5a3b8d]/20"
+                  className="w-full rounded-lg border border-[#5a3b8d]/20 bg-[#faf7ff] py-3 pl-4 pr-12 text-control text-[#2f1d4d] outline-none focus:border-[#5a3b8d] focus:ring-2 focus:ring-[#5a3b8d]/20"
                   value={confirmPassword}
                   onChange={(event) => setConfirmPassword(event.target.value)}
                   required

@@ -9,7 +9,8 @@
 // Output: docs/audit/screens/<label>-<page>-<width>.png (or SCREENS_OUT_DIR)
 // Pages: SCREENS_PAGES=register,home,ledger,production-log,reports,inventory,record-milk,herd,breeding,medical,milk-drops,animal,milk-history
 //   milk-usage,routine,tasks,feeding,feed-planner,feed-mixes,milk-lab,units,
-//   buyers,customers,customer-profile,customer-value,cow-profit,milk-inventory,safety,staff,payroll
+//   buyers,customers,customer-profile,customer-value,cow-profit,milk-inventory,safety,staff,payroll,
+//   login,not-found,ledger-entry
 //   (default: ledger,production-log,reports)
 import { chromium } from '@playwright/test';
 import { mkdirSync } from 'node:fs';
@@ -26,9 +27,13 @@ const ROUTES = { register: '/register', home: null, ledger: '/finance/ledger', '
   'feed-mixes': '/feed-nutrition/mix', 'milk-lab': '/operations/lab', units: '/operations/unit-conversions',
   buyers: '/finance/buyers', customers: '/operations/customers', 'customer-profile': '/finance/customers/4',
   'customer-value': '/finance/reports/dairy-unit-economics', 'cow-profit': '/finance/reports/animal-economics', 'milk-inventory': '/operations/reports/milk-inventory',
-  safety: '/operations/safety', staff: '/hr/staff', payroll: '/hr/payroll' };
+  safety: '/operations/safety', staff: '/hr/staff', payroll: '/hr/payroll',
+  login: '/login', 'not-found': '/no-such-page', 'ledger-entry': '/finance/ledger' };
 // Pages shot after a click on the loaded route (a form opened over it).
-const OPEN = { 'record-milk': (page) => page.getByRole('button', { name: /Record milk/i }).first().click() };
+const OPEN = {
+  'record-milk': (page) => page.getByRole('button', { name: /Record milk/i }).first().click(),
+  'ledger-entry': (page) => page.getByRole('button', { name: /Log income/i }).first().click(),
+};
 const PAGES = (process.env.SCREENS_PAGES ?? 'ledger,production-log,reports').split(',').map((name) => name.trim()).filter(Boolean);
 const unknownPage = PAGES.find((name) => !(name in ROUTES));
 if (unknownPage) throw new Error(`Unknown page "${unknownPage}". Known: ${Object.keys(ROUTES).join(', ')}`);
@@ -360,6 +365,10 @@ async function capture(browser, width, height) {
     await page.setViewportSize({ width, height });
   };
 
+  if (PAGES.includes('login')) {
+    await page.goto(`${BASE_URL}/login`);
+    await shoot('login');
+  }
   await page.goto(`${BASE_URL}/register`);
   if (PAGES.includes('register')) await shoot('register');
   await page.getByLabel('Farm name').fill('Shamba');
@@ -370,7 +379,7 @@ async function capture(browser, width, height) {
   if (PAGES.includes('home')) await shoot('home');
 
   for (const name of PAGES.filter((page) => ROUTES[page])) {
-    if (name === 'register') continue;
+    if (name === 'register' || name === 'login') continue;
     await page.goto(`${BASE_URL}${ROUTES[name]}`);
     if (OPEN[name]) {
       await page.waitForLoadState('networkidle');

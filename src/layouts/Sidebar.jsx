@@ -157,7 +157,9 @@ export default function Sidebar({ mobileOpen = false, setMobileOpen = () => {} }
                 <button
                   type="button"
                   onClick={() => toggleGroup(group.id)}
-                  className={`group w-full px-4 py-1.5 flex items-center justify-between text-xs font-extrabold tracking-wider uppercase rounded-md transition-colors hover:bg-ink-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-400 ${activeGroupId === group.id ? 'text-brand-700' : 'text-ink-900'}`}
+                  // Their collapsing, hover and colours; the label role (500) instead of extrabold, so the
+                  // headers stand out by colour within the 400/500/600 weights.
+                  className={`group w-full px-4 py-1.5 flex items-center justify-between text-label rounded-md transition-colors hover:bg-ink-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-400 ${activeGroupId === group.id ? 'text-brand-700' : 'text-ink-900'}`}
                   aria-expanded={!isGroupCollapsed(group.id)}
                   aria-label={copy.toggleSection(group.title)}
                 >
@@ -181,7 +183,7 @@ export default function Sidebar({ mobileOpen = false, setMobileOpen = () => {} }
                     aria-current={itemIsActive ? 'page' : undefined}
                     // Active state comes from activeNavRoute, which also reads the query.
                     // Hover is a plain light background only; the left border belongs to the active item.
-                    className={`flex items-center pl-3.5 pr-4 py-3 min-h-[44px] font-sans font-semibold text-sm transition-colors duration-100 border-l-2 rounded-md relative ${
+                    className={`flex items-center pl-3.5 pr-4 py-3 min-h-[44px] text-body-strong transition-colors duration-100 border-l-2 rounded-md relative ${
                       itemIsActive
                         ? 'border-brand-400 bg-ink-900 text-white'
                         : 'border-transparent text-ink-600 hover:bg-ink-100 hover:text-ink-900'

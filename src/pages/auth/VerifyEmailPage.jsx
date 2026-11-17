@@ -54,7 +54,7 @@ export default function VerifyEmailPage() {
       <meta name="referrer" content="no-referrer" />
 
       {status === 'checking' && !error && (
-        <p role="status" className="flex items-center gap-2 text-sm text-ink-muted">
+        <p role="status" className="flex items-center gap-2 text-body text-ink-muted">
           <Loader2 size={18} className="animate-spin" aria-hidden="true" /> {copy.checking}
         </p>
       )}
@@ -73,7 +73,7 @@ export default function VerifyEmailPage() {
             title={status === 'verified' ? copy.successTitle : copy.invalidTitle}
             message={status === 'verified' ? copy.success : copy.invalid}
           />
-          <Link to={signedIn ? '/app' : '/login'} className="btn-command w-full py-4 text-base">
+          <Link to={signedIn ? '/app' : '/login'} className="btn-command w-full py-4 text-control">
             {signedIn ? copy.continueApp : common.logIn}
           </Link>
         </div>

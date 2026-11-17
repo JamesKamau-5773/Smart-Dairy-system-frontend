@@ -55,19 +55,19 @@ export default function OfflineQueueInspector({ isOpen, onClose } = {}) {
   return (
     <BaseModal closeOnBackdrop isOpen={isOpen} onClose={onClose} title={commonCopy.queue.title}>
       <div className="space-y-4">
-        <p className="text-sm text-ink-muted">{commonCopy.queue.intro}</p>
+        <p className="text-body text-ink-muted">{commonCopy.queue.intro}</p>
         <div className="max-h-80 space-y-2 overflow-y-auto">
-          {items.length === 0 && <div className="text-sm text-ink-muted">{commonCopy.queue.empty}</div>}
+          {items.length === 0 && <div className="text-body text-ink-muted">{commonCopy.queue.empty}</div>}
           {items.map((item) => (
             <div key={item.id} className="flex items-start justify-between gap-3 rounded-lg border border-ink/10 bg-surface p-3">
-              <div className="min-w-0 text-sm">
-                <div className="flex items-center gap-2 font-bold text-ink-900">
+              <div className="min-w-0 text-body">
+                <div className="flex items-center gap-2 text-body-strong text-ink-900">
                   {item.status === 'NEEDS_ATTENTION' && <AlertTriangle size={16} className="shrink-0 text-warning-700" aria-hidden="true" />}
                   <span className="truncate">{operationLabel(item)}</span>
                 </div>
-                <div className="mt-1 text-xs text-ink-muted">{new Date(item.createdAt).toLocaleString()}</div>
+                <div className="mt-1 text-meta text-ink-muted">{new Date(item.createdAt).toLocaleString()}</div>
                 {item.lastError ? (
-                  <p className="mt-2 text-xs text-danger-900">
+                  <p className="mt-2 text-meta text-danger-900">
                     {item.status === 'NEEDS_ATTENTION'
                       ? commonCopy.queue.rejected(item.lastError.message)
                       : item.lastError.message}
@@ -75,11 +75,11 @@ export default function OfflineQueueInspector({ isOpen, onClose } = {}) {
                 ) : null}
               </div>
               {confirmingId === item.id ? (
-                <div className="flex shrink-0 flex-col items-end gap-1.5 text-xs">
-                  <span className="font-semibold text-danger-900">{commonCopy.queue.removeQuestion}</span>
+                <div className="flex shrink-0 flex-col items-end gap-1.5 text-meta">
+                  <span className="text-body-strong text-danger-900">{commonCopy.queue.removeQuestion}</span>
                   <div className="flex gap-2">
-                    <button type="button" onClick={() => setConfirmingId(null)} className="btn-secondary h-8 px-3 text-xs">{commonCopy.queue.keep}</button>
-                    <button type="button" onClick={() => handleRemove(item.id)} className="h-8 rounded-button bg-danger-500 px-3 text-xs font-semibold text-white hover:bg-danger-900">{commonCopy.queue.remove}</button>
+                    <button type="button" onClick={() => setConfirmingId(null)} className="btn-secondary h-8 px-3 text-control">{commonCopy.queue.keep}</button>
+                    <button type="button" onClick={() => handleRemove(item.id)} className="h-8 rounded-button bg-danger-500 px-3 text-control text-white hover:bg-danger-900">{commonCopy.queue.remove}</button>
                   </div>
                 </div>
               ) : (

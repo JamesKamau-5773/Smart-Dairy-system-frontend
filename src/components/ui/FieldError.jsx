@@ -14,5 +14,5 @@
 export default function FieldError({ id, message }) {
   if (!message) return null;
   // A span, so it can sit inside a <label> as well as after an input.
-  return <span id={`${id}-error`} className="mt-1.5 block text-sm font-medium text-danger">{message}</span>;
+  return <span id={`${id}-error`} className="mt-1.5 block text-body text-danger">{message}</span>;
 }

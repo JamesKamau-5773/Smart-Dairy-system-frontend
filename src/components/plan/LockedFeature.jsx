@@ -24,8 +24,8 @@ export default function LockedFeature({ feature, title, children }) {
 
   return (
     <section aria-labelledby={`locked-${feature}`} className="mx-auto max-w-md rounded-card border border-ink/10 bg-surface p-6 text-center sm:p-8">
-      <h2 id={`locked-${feature}`} className="text-lg font-bold text-ink">{copy.lockedTitle(title)}</h2>
-      <p className="mt-2 text-sm leading-6 text-ink-muted">
+      <h2 id={`locked-${feature}`} className="text-section-title text-ink">{copy.lockedTitle(title)}</h2>
+      <p className="mt-2 text-body text-ink-muted">
         {plan?.name ? copy.lockedNamedPlan(plan.name, title) : copy.lockedPlan(title)}{' '}
         {copy.lockedUpgrade}
       </p>
@@ -34,7 +34,7 @@ export default function LockedFeature({ feature, title, children }) {
           {copy.seePlans}
         </a>
       ) : (
-        <p className="mt-6 text-sm font-semibold text-ink">
+        <p className="mt-6 text-body-strong text-ink">
           {copy.callToUpgrade} <a href={`tel:${String(SITE.phone).replace(/\s/g, '')}`} className="text-brand underline">{SITE.phoneDisplay}</a>.
         </p>
       )}

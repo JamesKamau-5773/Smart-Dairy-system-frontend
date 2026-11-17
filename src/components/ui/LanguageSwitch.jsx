@@ -26,7 +26,7 @@ export default function LanguageSwitch({ full = false }) {
           aria-pressed={locale === code}
           aria-label={full ? undefined : name}
           onClick={() => setLocale(code)}
-          className={`min-h-9 min-w-10 rounded-md px-2.5 text-xs font-bold transition-colors ${
+          className={`min-h-9 min-w-10 rounded-md px-2.5 text-control transition-colors ${
             locale === code ? 'bg-brand text-white' : 'text-ink-muted hover:bg-brand-50 hover:text-ink'
           } ${full ? 'flex-1' : ''}`}
         >

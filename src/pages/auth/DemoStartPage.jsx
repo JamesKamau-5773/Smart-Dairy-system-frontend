@@ -70,7 +70,7 @@ export default function DemoStartPage() {
   return (
     <AuthLayout offline={!online}>
       {!error ? (
-        <p role="status" className="flex items-center justify-center gap-3 py-12 text-base font-semibold text-ink-900">
+        <p role="status" className="flex items-center justify-center gap-3 py-12 text-body-strong text-ink-900">
           <Loader2 size={20} className="animate-spin text-brand" aria-hidden="true" />
           {copy.starting}
         </p>
@@ -80,10 +80,10 @@ export default function DemoStartPage() {
           <SubmitButton type="button" onClick={retry} retryIn={retryIn}>
             {copy.retry}
           </SubmitButton>
-          <div className="flex flex-wrap items-center justify-between gap-3 text-sm">
+          <div className="flex flex-wrap items-center justify-between gap-3 text-body">
             <Link to="/register" className="btn-secondary">{copy.createFarm}</Link>
             {/* Plain link: "/" is the static landing page, outside the SPA router. */}
-            <a href="/" className="font-semibold text-brand underline-offset-4 hover:underline">{copy.backHome}</a>
+            <a href="/" className="text-body-strong text-brand underline-offset-4 hover:underline">{copy.backHome}</a>
           </div>
         </div>
       )}

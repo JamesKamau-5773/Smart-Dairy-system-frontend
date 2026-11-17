@@ -39,6 +39,9 @@ export const PAGES_WITH_OWN_HEADING = Object.freeze([
   '/operations/safety',
   '/hr/staff',
   '/hr/payroll',
+  // Phase 6: dashboards.
+  '/dashboard',
+  '/member/dashboard',
 ]);
 
 const segments = (path) => path.split('/').filter(Boolean);

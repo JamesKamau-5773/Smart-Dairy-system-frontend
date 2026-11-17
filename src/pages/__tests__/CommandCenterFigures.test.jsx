@@ -47,19 +47,19 @@ describe('Dashboard: today’s figures', () => {
     api.production.summary.mockResolvedValue({ production_total_liters: 84.5, cows_milked: 7, avg_per_cow: 12.1, profit_per_liter: 18 });
     renderDashboard();
 
-    await waitFor(() => expect(cardValue('Total Milk (Today)')).toContain('84.5'));
-    expect(cardValue('Cows Milked')).toContain('7');
-    expect(cardValue('Avg. per Cow')).toContain('12.1');
+    await waitFor(() => expect(cardValue('Total milk (today)')).toContain('84.5'));
+    expect(cardValue('Cows milked')).toContain('7');
+    expect(cardValue('Avg. per cow')).toContain('12.1');
   });
 
   it('shows "—" when the summary can’t be loaded, instead of summing rows on the phone', async () => {
     api.production.summary.mockRejectedValue(Object.assign(new Error('HTTP 503'), { response: { status: 503, data: {} } }));
     renderDashboard();
 
-    await waitFor(() => expect(cardValue('Total Milk (Today)')).toContain('—'));
-    expect(cardValue('Total Milk (Today)')).not.toContain('12.5');
-    expect(cardValue('Cows Milked')).toContain('—');
-    expect(cardValue('Avg. per Cow')).toContain('—');
+    await waitFor(() => expect(cardValue('Total milk (today)')).toContain('—'));
+    expect(cardValue('Total milk (today)')).not.toContain('12.5');
+    expect(cardValue('Cows milked')).toContain('—');
+    expect(cardValue('Avg. per cow')).toContain('—');
   });
 
   it('draws the chart from the backend’s daily totals, without downloading every milk record', async () => {
