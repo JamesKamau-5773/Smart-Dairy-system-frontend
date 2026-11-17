@@ -64,7 +64,7 @@ export default function ReceiptPhotosModal({ transaction, title, canUpload, onCl
       <div className="space-y-4">
         {error && <AlertBanner type="danger" message={error} compact />}
         {attachments.length === 0 ? (
-          <p className="text-sm text-ink-muted">{copy.empty}</p>
+          <p className="text-body text-ink-muted">{copy.empty}</p>
         ) : (
           <ul className="grid grid-cols-3 gap-2 sm:grid-cols-5">
             {attachments.map((attachment) => <li key={attachment.id}><AttachmentThumb attachment={attachment} /></li>)}
@@ -73,22 +73,22 @@ export default function ReceiptPhotosModal({ transaction, title, canUpload, onCl
 
         {canUpload && (
           isFull ? (
-            <p className="text-xs text-ink-muted">{copy.full(maxPerEntry)}</p>
+            <p className="text-meta text-ink-muted">{copy.full(maxPerEntry)}</p>
           ) : (
             <div className="space-y-2">
               <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-                <button type="button" onClick={() => cameraInput.current?.click()} disabled={upload.isPending} className="btn-command text-sm">
+                <button type="button" onClick={() => cameraInput.current?.click()} disabled={upload.isPending} className="btn-command">
 
     {copy.takePhoto}
                 </button>
-                <button type="button" onClick={() => fileInput.current?.click()} disabled={upload.isPending} className="btn-secondary text-sm">
+                <button type="button" onClick={() => fileInput.current?.click()} disabled={upload.isPending} className="btn-secondary">
 
     {copy.choose}
                 </button>
               </div>
               <input ref={cameraInput} type="file" accept="image/*" capture="environment" onChange={handleFile} className="sr-only" tabIndex={-1} aria-hidden="true" />
               <input ref={fileInput} type="file" accept={RECEIPT_ACCEPT} onChange={handleFile} className="sr-only" tabIndex={-1} aria-hidden="true" />
-              <p className="text-xs text-ink-muted" role="status">
+              <p className="text-meta text-ink-muted" role="status">
                 {upload.isPending
                   ? copy.uploading(progress)
                   : copy.hint(maxPerEntry, formatPhotoSize(maxBytes))}

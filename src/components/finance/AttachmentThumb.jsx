@@ -32,11 +32,11 @@ export default function AttachmentThumb({ attachment }) {
       className="group flex aspect-square w-full flex-col items-center justify-center overflow-hidden rounded-md border border-ink/15 bg-ink-50 text-ink-muted transition-colors hover:border-brand focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/30 disabled:cursor-default"
     >
       {file.isError ? (
-        <span className="px-1 text-[11px]">{copy.loadFailed}</span>
+        <span className="px-1 text-meta">{copy.loadFailed}</span>
       ) : !objectUrl ? (
         <span className="h-full w-full animate-pulse bg-ink-100" aria-hidden="true" />
       ) : isPdf ? (
-        <><span className="text-xs font-bold text-brand">PDF</span><span className="mt-1 line-clamp-2 px-1 text-[11px] text-ink">{label}</span></>
+        <><span className="text-body-strong text-brand">PDF</span><span className="mt-1 line-clamp-2 break-all px-1 text-meta text-ink">{label}</span></>
       ) : (
         <img src={objectUrl} alt={label} className="h-full w-full object-cover" />
       )}

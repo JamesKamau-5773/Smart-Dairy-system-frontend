@@ -53,14 +53,14 @@ export default function GroupedDataTable({
           <tbody className="bg-card" aria-busy={isLoading}>
             {isLoading ? <TableSkeletonRows columns={columns.length} />
               : hasRows ? <GroupedList {...listProps} variant="table" columns={columns} renderRecord={renderRow} />
-                : <tr><td colSpan={columns.length} className="p-10 text-center text-sm text-ink-muted !font-sans">{empty}</td></tr>}
+                : <tr><td colSpan={columns.length} className="p-10 text-center text-body text-ink-muted">{empty}</td></tr>}
           </tbody>
         </table>
       </div>
       <div className="xl:hidden" aria-busy={isLoading}>
         {isLoading ? <div className="divide-y divide-ink/10"><CardSkeletons /></div>
           : hasRows ? <GroupedList {...listProps} variant="cards" renderRecord={renderCard} />
-            : <div className="p-6 text-center text-sm text-ink-muted">{empty}</div>}
+            : <div className="p-6 text-center text-body text-ink-muted">{empty}</div>}
       </div>
     </>
   );

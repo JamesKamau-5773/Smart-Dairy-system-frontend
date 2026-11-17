@@ -1,8 +1,8 @@
 import { ChevronRight } from 'lucide-react';
 import { cellClass } from '../data/DataTable';
-import { LEVEL_INDENT, LEVEL_STYLES } from './groupLevels';
+import { LEVEL_INDENT, LEVEL_STYLES, LEVEL_TYPE } from './groupLevels';
 
-const missing = <span className="font-mono text-sm text-ink-muted">—</span>;
+const missing = <span className="text-body tabular-nums text-ink-muted">—</span>;
 
 function Toggle({ node, isOpen, onToggle, ariaLabel, children, className = '' }) {
   return (
@@ -13,7 +13,7 @@ function Toggle({ node, isOpen, onToggle, ariaLabel, children, className = '' })
       aria-label={ariaLabel}
       data-group-key={node.key}
       data-group-keys={node.keys.join(' ')}
-      className={`flex w-full min-w-0 items-center gap-2 !rounded-none text-left ${LEVEL_INDENT[node.level]} ${className}`}
+      className={`flex w-full min-w-0 items-center gap-2 !rounded-none text-left ${LEVEL_TYPE[node.level]} ${LEVEL_INDENT[node.level]} ${className}`}
     >
       <ChevronRight
         size={node.level === 'year' ? 16 : 14}

@@ -1,5 +1,6 @@
 /* eslint-disable react-refresh/only-export-components */
 import { useState } from 'react';
+import { cn } from '../../lib/utils';
 
 /* ─── Currency metadata ─────────────────────────────────────────────────── */
 const CURRENCY_META = {
@@ -61,7 +62,9 @@ export function formatMoneyText(amount, currency = 'KES') {
  *  animate       boolean                    — bounce animation on value change
  *  compact       boolean                    — abbreviate large numbers (1.2M, 45K)
  *  blurred       boolean                    — privacy mask (toggle with click)
- *  size          'xs'|'sm'|'md'|'lg'|'xl'  — preset text size
+ *  size          'body'|'stat-value'        — type role (default 'body'); the symbol and
+ *                                              decimals share it. Pass text-body-strong in
+ *                                              className for a bold body figure.
  *  className     string
  */
 export default function Money({
@@ -74,7 +77,7 @@ export default function Money({
   animate   = false,
   compact   = false,
   blurred   = false,
-  size      = 'md',
+  size      = 'body',
   className = '',
 }) {
   const [hidden, setHidden] = useState(blurred);
@@ -100,15 +103,9 @@ export default function Money({
   const formatted  = compactFormatted ?? formatValue(absAmount, currency);
   const { integer, decimal } = formatted ? splitAmount(formatted) : { integer: '—', decimal: '' };
 
-  /* ── Size scale ─────────────────────────────────────────────────────── */
-  const sizes = {
-    xs: { wrap: 'text-xs',  symbol: 'text-[9px]',  decimal: 'text-[10px]' },
-    sm: { wrap: 'text-sm',  symbol: 'text-[10px]', decimal: 'text-xs'     },
-    md: { wrap: 'text-sm',  symbol: 'text-xs',     decimal: 'text-sm'     },
-    lg: { wrap: 'text-xl',  symbol: 'text-sm',     decimal: 'text-base'   },
-    xl: { wrap: 'text-3xl', symbol: 'text-base',   decimal: 'text-xl'     },
-  };
-  const sz = sizes[size] ?? sizes.md;
+  /* ── Type role ──────────────────────────────────────────────────────── */
+  // The older preset names (xs–xl) still map onto the two roles until every caller moves.
+  const role = size === 'stat-value' || size === 'lg' || size === 'xl' ? 'text-stat-value' : 'text-body';
 
   /* ── Color classes ──────────────────────────────────────────────────── */
   // The sign is always shown with the colour, so colour is never the only signal.
@@ -131,19 +128,19 @@ export default function Money({
     <span
       title={hidden ? 'Click to reveal' : formatMoneyText(amount, currency)}
       onClick={blurred ? () => setHidden(h => !h) : undefined}
-      className={[
-        'inline-flex items-baseline gap-0.5 font-mono tabular-nums',
+      className={cn(
+        'inline-flex items-baseline gap-0.5 tabular-nums',
         'transition-all duration-200',
-        sz.wrap,
+        role,
         colorClass,
-        blurred ? 'cursor-pointer' : '',
-        animate ? 'transition-colors' : '',
+        blurred && 'cursor-pointer',
+        animate && 'transition-colors',
         className,
-      ].filter(Boolean).join(' ')}
+      )}
     >
       {/* Sign */}
       {sign && (
-        <span className={`${sz.symbol} -mr-0.5 font-semibold leading-none self-center`}>
+        <span className="-mr-0.5">
           <span aria-hidden="true">{sign}</span>
           <span className="sr-only">{isNeg ? 'minus ' : 'plus '}</span>
         </span>
@@ -152,7 +149,7 @@ export default function Money({
       {/* Currency symbol */}
       {showCurrency && (
         <span
-          className={`${sz.symbol} font-semibold opacity-70 leading-none self-center mr-0.5`}
+          className="mr-0.5 opacity-70"
           aria-label={currency}
         >
           {meta.symbol || currency}
@@ -164,15 +161,15 @@ export default function Money({
         {/* Integer part */}
         <span>{integer}</span>
 
-        {/* Decimal part — visually de-emphasised */}
+        {/* Decimal part: same size, de-emphasised by colour only */}
         {decimal && (
-          <span className={`${sz.decimal} opacity-60`}>{decimal}</span>
+          <span className="opacity-60">{decimal}</span>
         )}
       </span>
 
       {/* Compact suffix */}
       {compact && compactFormatted && (
-        <span className={`${sz.symbol} opacity-60 ml-0.5`} aria-hidden="true" />
+        <span className="ml-0.5 opacity-60" aria-hidden="true" />
       )}
     </span>
   );

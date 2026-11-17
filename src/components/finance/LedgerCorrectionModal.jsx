@@ -40,18 +40,18 @@ export default function LedgerCorrectionModal({ kind, transaction, onClose, onSu
     <BaseModal isOpen onClose={isPending ? () => {} : onClose} title={text.title} subtitle={text.effect}>
       <form onSubmit={submit} noValidate className="space-y-4">
         {error && <AlertBanner type="danger" title={copy.notCorrected} message={error} compact />}
-        <dl className="grid grid-cols-2 gap-x-4 gap-y-2 rounded-lg bg-surface-raised p-3 text-sm">
+        <dl className="grid grid-cols-2 gap-x-4 gap-y-2 rounded-lg bg-surface-raised p-3 text-body">
           <dt className="text-ink-muted">{text.what}</dt>
-          <dd className="text-right font-semibold text-ink">{transaction.item_name || transaction.description || transaction.category}</dd>
+          <dd className="text-right text-body-strong text-ink">{transaction.item_name || transaction.description || transaction.category}</dd>
           <dt className="text-ink-muted">{copy.recordedAmount}</dt>
-          <dd className="text-right font-semibold text-ink"><Money amount={transaction.amount} /></dd>
+          <dd className="text-right text-body-strong text-ink"><Money amount={transaction.amount} className="text-body-strong" /></dd>
         </dl>
 
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <div className="form-control">
             <label htmlFor="correction-amount" className="label-text">{copy.amount}</label>
             <input id="correction-amount" value={amountText} onChange={(event) => setAmountText(event.target.value)} inputMode="decimal" className="input-machined tabular-nums" aria-invalid={Boolean(amountError)} aria-describedby="correction-amount-hint" />
-            <span id="correction-amount-hint" className="mt-1 block text-xs text-ink-muted">
+            <span id="correction-amount-hint" className="mt-1 block text-meta text-ink-muted">
               {amountError || copy.amountHint}
             </span>
           </div>
@@ -67,7 +67,7 @@ export default function LedgerCorrectionModal({ kind, transaction, onClose, onSu
               <select id="correction-cost-class" value={resolvedCostClass} onChange={(event) => setCostClass(event.target.value)} className="input-machined" required>
                 {categories.costClasses.map(([value, label]) => <option key={value} value={value}>{label}</option>)}
               </select>
-              {categories.describe(resolvedCostClass) && <span className="mt-1 block text-xs text-ink-muted">{categories.describe(resolvedCostClass)}</span>}
+              {categories.describe(resolvedCostClass) && <span className="mt-1 block text-meta text-ink-muted">{categories.describe(resolvedCostClass)}</span>}
             </div>
           )}
         </div>
@@ -75,10 +75,10 @@ export default function LedgerCorrectionModal({ kind, transaction, onClose, onSu
         <div className="form-control">
           <label htmlFor="correction-reason" className="label-text">{copy.reason}</label>
           <textarea id="correction-reason" value={reason} onChange={(event) => setReason(event.target.value)} className="input-machined" rows="2" placeholder={copy.reasonPlaceholder} required />
-          <span className="mt-1 block text-xs text-ink-muted">{copy.reasonHint}</span>
+          <span className="mt-1 block text-meta text-ink-muted">{copy.reasonHint}</span>
         </div>
 
-        {!hasChange && amount !== null && <p className="text-xs text-ink-muted" role="status">{copy.noChange}</p>}
+        {!hasChange && amount !== null && <p className="text-meta text-ink-muted" role="status">{copy.noChange}</p>}
 
         <div className="flex justify-end gap-3 border-t border-ink/10 pt-4">
           <button type="button" onClick={onClose} disabled={isPending} className="btn-secondary">{copy.cancel}</button>

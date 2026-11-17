@@ -160,9 +160,9 @@ describe('FinancialLedger summaries', () => {
     expect(expense[4].textContent).toMatch(/^−minus 15,025\.00$/);
     expect(expense[4].querySelector('.text-money-negative')).toBeTruthy();
     expect(table.querySelector('.text-money-positive')).toBeNull();
-    // Posted is normal and gets no badge; other statuses do.
+    // Posted is normal and gets no badge; other statuses do, in sentence case from the copy.
     expect(income[5].textContent).toBe('');
-    expect(expense[5].textContent).toBe('pending');
+    expect(expense[5].textContent).toBe('Pending');
   });
 
   it('takes a date range from the address for the table, the group totals and the strip', async () => {

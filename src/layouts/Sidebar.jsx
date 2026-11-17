@@ -187,9 +187,9 @@ export default function Sidebar({ mobileOpen = false, setMobileOpen = () => {} }
 
       {/* Logo Block */}
       <div className="flex h-16 shrink-0 items-center justify-between border-b border-ink/10 bg-ink-900 px-4 md:px-6">
-        <h1 className="m-0 font-display text-lg font-semibold leading-tight text-white">
+        <p className="m-0 text-body-strong text-white">
           {SITE.name}
-        </h1>
+        </p>
         <button type="button" onClick={() => setMobileOpen(false)} className="inline-flex h-10 w-10 items-center justify-center rounded-lg text-white hover:bg-white/10 md:hidden" aria-label={copy.closeMenu}><X size={20} aria-hidden="true" /></button>
       </div>
 

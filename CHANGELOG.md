@@ -4,6 +4,20 @@ What changed for farmers and staff using Maziwa Smart. Newest first.
 
 ## Unreleased
 
+### Clearer text on the Production Log, Ledger and Farm Reports (typography phase 2)
+
+- **The three pages use the new type scale.** Page titles are larger, summary figures are one
+  size (20px), and no text on these pages is smaller than 12px. Small grey text such as
+  record counts and references went up from 10–11px to 13px.
+- **Money is the same size from symbol to decimals.** "KES" and the cents are no longer in
+  tiny print; they are only shown in a lighter colour.
+- On a phone, the Ledger's summary shows one figure per line so a full amount is never cut
+  off.
+- Statuses such as "Pending" are written in sentence case in English and Kiswahili, instead of
+  being capitalised by the browser.
+- Field names above inputs on these pages (and in their forms) are small capitals, like the
+  table headings.
+
 ### One typeface (typography phase 1)
 
 - **The app uses one typeface, Inter, served with the app.** It no longer downloads three fonts

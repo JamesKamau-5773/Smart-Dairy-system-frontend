@@ -119,6 +119,12 @@ h6 {
   time {
     font-variant-numeric: tabular-nums;
   }
+
+  /* The browser default is bolder (700); the type system stops at 600. */
+  b,
+  strong {
+    font-weight: var(--type-body-strong-weight);
+  }
 }
 
 ::selection {
@@ -186,6 +192,11 @@ h6 {
 
   .billing-card__eyebrow {
     @apply text-label text-ink-muted;
+  }
+
+  /* A form field's name, above its input. */
+  .label-text {
+    @apply text-label;
   }
 
   .billing-card__muted {

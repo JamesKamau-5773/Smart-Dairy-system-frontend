@@ -204,7 +204,7 @@
   }
 
   .btn-secondary {
-    @apply inline-flex items-center justify-center;
+    @apply inline-flex items-center justify-center text-control;
     min-height: 40px;
     padding: 0.62rem 1rem;
     background: rgba(255, 255, 255, 0.82);
@@ -220,7 +220,7 @@
   }
 
   .btn-danger {
-    @apply inline-flex items-center justify-center;
+    @apply inline-flex items-center justify-center text-control;
     min-height: 40px;
     padding: 0.62rem 1rem;
     background: rgba(239, 68, 68, 0.08);
