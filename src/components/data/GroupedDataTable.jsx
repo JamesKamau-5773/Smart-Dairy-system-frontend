@@ -18,6 +18,11 @@ import { CardSkeletons, ListLoadMessage, SlowLoadingHint, StaleDataNotice, Table
  * loadState:   'loading' | 'ready' | 'stale' | 'error' | 'offline'  (lib/listLoadState)
  * focus:       { key, nonce } opens that group and scrolls to it
  * empty:       what to show when the loaded result has no rows
+ * tableFrom:   'xl' (default) or 'md': the width the table starts at; cards below it, so
+ *              phones never scroll sideways
+ * scroll:      true lets the table scroll sideways when narrower than `tableClassName`'s
+ *              min width (only from `tableFrom` up)
+ * headerVariant, tableClassName: passed to TableHead / added to the <table>
  */
 export default function GroupedDataTable({
   columns,
@@ -35,6 +40,10 @@ export default function GroupedDataTable({
   onRetry,
   rowsLabel,
   empty,
+  tableFrom = 'xl',
+  scroll = false,
+  headerVariant = 'brand',
+  tableClassName = '',
 }) {
   const isLoading = loadState === 'loading';
   const isUnavailable = loadState === 'offline' || loadState === 'error';
@@ -43,13 +52,18 @@ export default function GroupedDataTable({
 
   if (isUnavailable) return <ListLoadMessage state={loadState} label={rowsLabel} error={error} onRetry={onRetry} />;
 
+  // Literal class names, so Tailwind keeps them.
+  const breakpoint = tableFrom === 'md'
+    ? { table: 'hidden md:block', cards: 'md:hidden' }
+    : { table: 'hidden xl:block', cards: 'xl:hidden' };
+
   return (
     <>
       {isLoading && <SlowLoadingHint label={rowsLabel} />}
       {loadState === 'stale' && <StaleDataNotice label={rowsLabel} error={error} onRetry={onRetry} />}
-      <div className="hidden xl:block">
-        <table className="w-full table-fixed border-collapse text-left">
-          <TableHead columns={columns} />
+      <div className={`${breakpoint.table} ${scroll ? 'overflow-x-auto' : ''}`}>
+        <table className={`w-full table-fixed border-collapse text-left ${tableClassName}`}>
+          <TableHead columns={columns} variant={headerVariant} />
           <tbody className="bg-card" aria-busy={isLoading}>
             {isLoading ? <TableSkeletonRows columns={columns.length} />
               : hasRows ? <GroupedList {...listProps} variant="table" columns={columns} renderRecord={renderRow} />
@@ -57,7 +71,7 @@ export default function GroupedDataTable({
           </tbody>
         </table>
       </div>
-      <div className="xl:hidden" aria-busy={isLoading}>
+      <div className={breakpoint.cards} aria-busy={isLoading}>
         {isLoading ? <div className="divide-y divide-ink/10"><CardSkeletons /></div>
           : hasRows ? <GroupedList {...listProps} variant="cards" renderRecord={renderCard} />
             : <div className="p-6 text-center text-body text-ink-muted">{empty}</div>}

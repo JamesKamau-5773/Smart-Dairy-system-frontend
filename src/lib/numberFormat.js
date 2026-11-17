@@ -39,6 +39,15 @@ export function formatLitres(value, { unit = true } = {}) {
   return unit ? `${formatted} L` : formatted;
 }
 
+/** A signed litres difference the backend sent: "+0.4 L", "−2.1 L", "0.0 L"; "—" when unknown. */
+export function formatSignedLitres(value) {
+  if (value === null || value === undefined || value === '') return '—';
+  const number = Number(value);
+  if (!Number.isFinite(number)) return '—';
+  const sign = number > 0 ? '+' : number < 0 ? '−' : '';
+  return `${sign}${formatLitres(Math.abs(number))}`;
+}
+
 /** Whole counts with separators; "—" when unknown. */
 export function formatCount(value) {
   if (value === null || value === undefined || value === '') return '—';

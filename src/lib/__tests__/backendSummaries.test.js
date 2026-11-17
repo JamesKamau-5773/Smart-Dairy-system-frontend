@@ -24,14 +24,23 @@ describe('herdApi.summary', () => {
 });
 
 describe('productionApi.yieldTotals', () => {
-  it('reads the all-time milk totals from the yield list summary', async () => {
-    vi.spyOn(apiClient, 'get').mockResolvedValue({ data: { items: [], summary: { total_records: 12, total_volume: 1306.4 } } });
-    expect(await productionApi.yieldTotals()).toEqual({ totalRecords: 12, totalLitres: 1306.4 });
+  it('reads the milk totals and status counts from the yield list summary', async () => {
+    const get = vi.spyOn(apiClient, 'get').mockResolvedValue({ data: { items: [], summary: {
+      total_records: 12, total_volume: 1306.4, verified_count: 9, recorded_count: 1, flagged_count: 2, isolated_count: 0,
+      // Older aliases are ignored: pending is the backend's RECORDED count.
+      pending_count: 99,
+    } } });
+    expect(await productionApi.yieldTotals({ date_from: '2026-01-01' })).toEqual({
+      totalRecords: 12, totalLitres: 1306.4, verified: 9, pending: 1, flagged: 2, isolated: 0,
+    });
+    expect(get).toHaveBeenCalledWith('/production/yield', { params: { date_from: '2026-01-01', page: 1, per_page: 1 } });
   });
 
   it('keeps missing totals unknown', async () => {
     vi.spyOn(apiClient, 'get').mockResolvedValue({ data: { items: [] } });
-    expect(await productionApi.yieldTotals()).toEqual({ totalRecords: null, totalLitres: null });
+    expect(await productionApi.yieldTotals()).toEqual({
+      totalRecords: null, totalLitres: null, verified: null, pending: null, flagged: null, isolated: null,
+    });
   });
 });
 

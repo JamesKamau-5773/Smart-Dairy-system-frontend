@@ -148,7 +148,14 @@ export function normalizeBreedingLog(log = {}) {
     daysPostAI,
     status,
     notes: log.note ?? log.notes ?? '',
+    // When the backend last changed the record. TODO(BR-025): confirm `updated_at` is sent.
+    updatedAt: log.updatedAt ?? log.updated_at ?? null,
   };
+}
+
+/** "Malaika · KE-0046": how a breeding record names its cow. */
+export function formatBreedingCowLabel(log = {}) {
+  return formatCowIdentity({ cowName: log.cowName, cowTag: log.cowTag });
 }
 
 export function filterBreedingHistory(history, filter = 'All', searchTerm = '') {
@@ -159,8 +166,8 @@ export function filterBreedingHistory(history, filter = 'All', searchTerm = '') 
     .filter((entry) => !normalizedSearch || [entry.cowName, entry.cowTag, entry.cowId]
       .some((value) => String(value ?? '').toLowerCase().includes(normalizedSearch)))
     .slice()
-    // Newest AI service first. Breeding logs have no update time from the backend.
-    .sort((left, right) => new Date(right.aiDate) - new Date(left.aiDate));
+    // Newest AI service first (YYYY-MM-DD compares as text); records without an AI date last.
+    .sort((left, right) => String(right.aiDate ?? '').localeCompare(String(left.aiDate ?? '')));
 }
 
 export function normalizeHerdOption(cow = {}) {

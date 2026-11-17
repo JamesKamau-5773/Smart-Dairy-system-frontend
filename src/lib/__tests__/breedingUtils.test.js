@@ -105,6 +105,21 @@ describe('breedingUtils', () => {
     expect(filterBreedingHistory(records, 'Failed').map((record) => record.id)).toEqual([1]);
   });
 
+  it('lists history newest AI service first, records without an AI date last', () => {
+    const records = [
+      { id: 1, status: 'Open', aiDate: '2025-12-05' },
+      { id: 2, status: 'Open', aiDate: '' },
+      { id: 3, status: 'Open', aiDate: '2026-01-22' },
+    ];
+
+    expect(filterBreedingHistory(records).map((record) => record.id)).toEqual([3, 1, 2]);
+  });
+
+  it('reads the update time from the backend and leaves it empty when not sent', () => {
+    expect(normalizeBreedingLog({ id: 1, updated_at: '2026-01-25T08:00:00Z' }).updatedAt).toBe('2026-01-25T08:00:00Z');
+    expect(normalizeBreedingLog({ id: 1 }).updatedAt).toBeNull();
+  });
+
   it('enriches a system cow ID with the farmer-facing name and ear tag', () => {
     const log = normalizeBreedingLog({ cow_id: 46 });
     const herdOptions = [normalizeHerdOption({ id: 46, tag_number: 'KE-0046', name: 'Malaika' })];

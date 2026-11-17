@@ -4,8 +4,11 @@
  */
 export const productionCopy = {
   title: 'Production Log',
-  recordMilk: 'Record milk',
-  feedCalf: 'Feed calf',
+  eyebrow: 'Production Interface',
+  heading: { lead: 'Daily', rest: 'Milk Log' },
+  description: 'Review milk entries, keep withdrawals visible, and work from a single place with filters and edit history.',
+  recordMilk: 'Record Milk',
+  feedCalf: 'Feed Calf',
   rowsLabel: 'milk records',
   sectionLabel: 'Milk entries',
   searchLabel: 'Search by cow name or ear tag',
@@ -14,13 +17,25 @@ export const productionCopy = {
   session: 'Session',
 
   columns: {
+    lead: '',
     session: 'Session',
-    milker: 'Milker',
     cow: 'Cow',
+    morning: 'Morning',
+    midday: 'Midday',
+    evening: 'Evening',
+    milker: 'Milker',
     litres: 'Litres',
+    total: 'Total (L)',
     status: 'Status',
+    vsAvg: 'vs 5-day Avg',
+    recordedBy: 'Recorded By',
     actions: 'Actions',
   },
+  // Who entered a record when there is no user (BR-019): the backend's `recorded_via`.
+  recordedVia: { app: 'App', whatsapp: 'WhatsApp', import: 'Import', system: 'System' },
+  showing: (shown, total) => (total == null
+    ? `${shown} ${shown === 1 ? 'record' : 'records'}`
+    : shown === total ? `Showing all ${total} of ${total} records` : `Showing ${shown} of ${total} records`),
   sessions: { morning: 'Morning', afternoon: 'Afternoon', evening: 'Evening', unknown: 'Unknown' },
   statuses: { Verified: 'Verified', Pending: 'Pending', Flagged: 'Flagged', Isolated: 'Kept apart' },
 
@@ -43,17 +58,18 @@ export const productionCopy = {
   medicineTitle: 'Cows on medicine: do not mix their milk',
   medicineMessage: (count) => `${count} ${count === 1 ? 'cow is' : 'cows are'} in a withdrawal period. Their milk entries are restricted so the batch isn’t contaminated.`,
 
-  summary: {
+  tiles: {
     label: 'Milk totals',
-    totalMilk: 'Total milk',
-    avgPerDay: 'Avg per day',
-    available: 'Available',
-    noEntries: 'No entries',
-    lastEntry: 'last entry',
+    totalVolume: 'Total Volume',
+    verified: 'Verified Entries',
+    pending: 'Pending Entries',
+    flagged: 'Flagged Entries',
   },
+
   group: {
     noun: ['entry', 'entries'],
     entries: (count, formatted) => `${formatted} ${count === 1 ? 'entry' : 'entries'}`,
+    entriesWord: (count) => (count === 1 ? 'entry' : 'entries'),
     describe: (litres) => litres,
   },
 
@@ -69,14 +85,16 @@ export const productionCopy = {
   },
 
   calves: {
-    title: 'Recent calf feedings',
+    title: 'Recent calf milk allocations',
+    // "53 feedings · 310.00 L allocated"; each part is the backend's or "—".
+    totals: (count, formattedCount, litres) => `${formattedCount} ${count === 1 ? 'feeding' : 'feedings'} · ${litres} allocated`,
     viewAll: 'View all',
     loading: 'Loading calf feedings…',
     failed: 'Couldn’t load calf feedings.',
     empty: 'No calf feedings recorded.',
     date: 'Date',
     calf: 'Calf',
-    litres: 'Litres',
+    litres: 'Milk Consumed',
     notes: 'Notes',
   },
 };
