@@ -52,9 +52,6 @@ export const shellCopy = {
       buyers: 'Buyer List',
       ledger: 'Ledger',
       milkUsage: 'Milk Usage',
-      feedMixing: 'Feed Mixing',
-      clinical: 'Clinical Registry',
-      stock: 'Stock Registry',
     },
   },
 

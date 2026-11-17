@@ -51,9 +51,6 @@ export const shellCopy = {
       buyers: 'Orodha ya Wanunuzi',
       ledger: 'Daftari la Hesabu',
       milkUsage: 'Matumizi ya Maziwa',
-      feedMixing: 'Kuchanganya Chakula',
-      clinical: 'Rekodi za Matibabu',
-      stock: 'Bidhaa za Stoo', // REVIEW
     },
   },
 

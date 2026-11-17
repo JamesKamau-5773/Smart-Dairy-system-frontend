@@ -13,6 +13,7 @@ import { isQueuedOffline, queuedOfflineMessage } from '../../lib/offlinePolicy';
 import LABELS from '../../lib/labels';
 import { useTenant } from '../../hooks/useTenant';
 import { feedCopy } from '../../i18n/feed';
+import RecordedValue from '../../components/ui/RecordedValue';
 
 const { today: copy } = feedCopy;
 
@@ -60,7 +61,10 @@ export default function TodayFeedingPage() {
         <p className="mt-1 text-body text-ink-muted">{copy.subtitle}</p>
         {today?.totals && (
           <p className="mt-2 text-meta text-ink-muted">
-            {copy.totals(today.totals.total_active_animals ?? 0, kg(today.totals.total_daily_feed_kg))}
+            {/* Figures the backend didn't send show as "—", never as 0. */}
+            <RecordedValue value={today.totals.total_active_animals} format={copy.animalCount} missingLabel={copy.animalsNotRecorded} />
+            {' · '}
+            <RecordedValue value={today.totals.total_daily_feed_kg} format={(value) => copy.feedNeeded(kg(value))} missingLabel={copy.feedNotRecorded} />
           </p>
         )}
       </header>

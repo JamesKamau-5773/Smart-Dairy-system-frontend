@@ -25,7 +25,7 @@ export const staffCopy = {
     breeding: 'Breeding and genetics',
     medical: 'Medical records and veterinary care',
     feeding: 'Daily feeding (no costs or recipes)',
-    feed: 'Feed planning, costs and milk lab (includes daily feeding)',
+    feed: 'Feed planning, costs and the Milk Feeding Planner (includes daily feeding)',
     customers: 'Customer and buyer management',
     finance: 'Ledger and financial reports',
     inventory: 'Inventory',

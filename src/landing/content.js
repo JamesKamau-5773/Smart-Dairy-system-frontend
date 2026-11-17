@@ -163,7 +163,7 @@ export const DASHBOARD_PREVIEW = {
   menu: [
     { items: ['Command Center'], active: 'Command Center' },
     { group: 'Operations', items: ['Production Log', 'Milk Usage', 'Daily Routine', 'Farm Task View'] },
-    { group: 'Herd Management', items: ['Cow Register', 'Breeding & Genetics', 'Medical Records', 'Milk Drop Alerts'] },
+    { group: 'Herd Management', items: ['Cow Register', 'AI & Pregnancy', 'Medical Records', 'Milk Drop Alerts'] },
     { group: 'Feed Planning', items: ['Feed Planner', 'Feed Mixing Planner'] },
     { group: 'Finance & Supply', items: ['Buyers List'] },
   ],

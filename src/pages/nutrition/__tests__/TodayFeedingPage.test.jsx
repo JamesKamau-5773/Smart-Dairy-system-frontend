@@ -49,6 +49,19 @@ describe('TodayFeedingPage', () => {
     expect(document.body.textContent).not.toMatch(/KES/);
   });
 
+  it('shows the backend totals, and "—" with "not recorded" for screen readers when it sends none', async () => {
+    renderPage();
+    expect(await screen.findByText(/12 animals/)).toBeTruthy();
+    expect(screen.getByText(/87\.6 kg feed needed today/)).toBeTruthy();
+    cleanup();
+
+    api.feedingToday.mockResolvedValue({ ...plan, totals: { total_active_animals: null, total_daily_feed_kg: null } });
+    renderPage();
+    expect(await screen.findByText('Number of animals not recorded')).toBeTruthy();
+    expect(screen.getByText('Feed needed today not recorded')).toBeTruthy();
+    expect(document.body.textContent).not.toMatch(/0 animals|0 kg feed needed/);
+  });
+
   it('records one feeding in one tap, on the farm’s local date', async () => {
     renderPage();
     const fed = await screen.findByRole('button', { name: 'Fed' });
