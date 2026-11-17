@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useRef, useState } from 'react';
 import { useFocusTrap } from '../hooks/useFocusTrap';
 import { DESKTOP_QUERY, useMediaQuery } from '../hooks/useMediaQuery';
 import { Link, useLocation } from 'react-router-dom';
@@ -14,26 +14,12 @@ import { SITE } from '../landing/content';
 
 const { nav: copy } = shellCopy;
 
+const PHONE_FOLDED_GROUPS = new Set(['herd', 'feeding', 'finance', 'reports', 'compliance', 'hr']);
+
 export default function Sidebar({ mobileOpen = false, setMobileOpen = () => {} }) {
   const { currentUser } = useAuth();
   const location = useLocation();
   const [collapsedGroups, setCollapsedGroups] = useState({});
-
-  // Sections that start folded on phones, by id (titles change with the language).
-  const mobileDefaultCollapsedGroups = () => ({
-    herd: true,
-    feeding: true,
-    finance: true,
-    reports: true,
-    compliance: true,
-    hr: true,
-  });
-
-  useEffect(() => {
-    if (mobileOpen && Object.keys(collapsedGroups).length === 0) {
-      setCollapsedGroups(mobileDefaultCollapsedGroups());
-    }
-  }, [mobileOpen]);
 
   const showAdminControls = canViewAdminControls(currentUser);
   const canViewBreeding = true;
@@ -100,14 +86,27 @@ export default function Sidebar({ mobileOpen = false, setMobileOpen = () => {} }
   const activeItem = activeNavRoute(location, allNavItems);
   const activeGroupId = activeItem?.group ?? null;
 
-  const isGroupCollapsed = (groupId) =>
-    mobileOpen && Boolean(groupId) && Boolean(collapsedGroups[groupId]);
+  // Moving to a page in a section the user folded unfolds it, so the current page's link is never hidden.
+  const [shownActiveGroupId, setShownActiveGroupId] = useState(activeGroupId);
+  if (activeGroupId !== shownActiveGroupId) {
+    setShownActiveGroupId(activeGroupId);
+    if (activeGroupId && collapsedGroups[activeGroupId]) {
+      setCollapsedGroups((prev) => ({ ...prev, [activeGroupId]: false }));
+    }
+  }
 
-  const toggleGroup = (groupKey) => {
-    setCollapsedGroups((prev) => ({
-      ...prev,
-      [groupKey]: !prev[groupKey],
-    }));
+  // collapsedGroups holds only the sections the user folded or unfolded; the rest use the default.
+  // Desktop starts with every section open. The phone drawer starts with these folded, by id
+  // (titles change with the language), except the one holding the current page.
+  const isGroupCollapsed = (groupId) => {
+    if (!groupId) return false;
+    if (groupId in collapsedGroups) return collapsedGroups[groupId];
+    return mobileOpen && groupId !== activeGroupId && PHONE_FOLDED_GROUPS.has(groupId);
+  };
+
+  const toggleGroup = (groupId) => {
+    const next = !isGroupCollapsed(groupId);
+    setCollapsedGroups((prev) => ({ ...prev, [groupId]: next }));
   };
 
   // The phone drawer: Escape closes it and Tab stays inside while it's open.
@@ -157,19 +156,20 @@ export default function Sidebar({ mobileOpen = false, setMobileOpen = () => {} }
                 {/* px-4 matches the items' 14px padding plus their 2px active border. */}
                 <button
                   type="button"
-                  onClick={() => mobileOpen && toggleGroup(group.id)}
-                  className={`w-full px-4 py-1.5 flex items-center justify-between text-xs font-bold tracking-wider uppercase rounded-md md:py-0 md:cursor-default transition-colors ${activeGroupId === group.id ? 'text-ink-700' : 'text-ink-400'}`}
-                  aria-expanded={mobileOpen ? !isGroupCollapsed(group.id) : true}
+                  onClick={() => toggleGroup(group.id)}
+                  className={`group w-full px-4 py-1.5 flex items-center justify-between text-xs font-extrabold tracking-wider uppercase rounded-md transition-colors hover:bg-ink-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-400 ${activeGroupId === group.id ? 'text-brand-700' : 'text-ink-900'}`}
+                  aria-expanded={!isGroupCollapsed(group.id)}
                   aria-label={copy.toggleSection(group.title)}
                 >
                   <span>{group.title}</span>
-                  <span className="md:hidden">
+                  <span className="text-ink-400 group-hover:text-ink-600">
                     {isGroupCollapsed(group.id) ? <ChevronRight size={14} aria-hidden="true" /> : <ChevronDown size={14} aria-hidden="true" />}
                   </span>
                 </button>
               </div>
             )}
-            <div className={`flex-col gap-2 ${group.id && isGroupCollapsed(group.id) ? 'hidden md:flex' : 'flex'}`}>
+            {!isGroupCollapsed(group.id) && (
+            <div className="flex flex-col gap-2">
               {group.items.map((item) => {
                 const itemIsActive = activeItem?.id === item.id;
 
@@ -192,6 +192,7 @@ export default function Sidebar({ mobileOpen = false, setMobileOpen = () => {} }
                 );
               })}
             </div>
+            )}
           </div>
         ))}
       </nav>

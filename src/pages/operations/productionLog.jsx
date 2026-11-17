@@ -4,7 +4,7 @@ import { useAuth } from "../../contexts/AuthContext";
 import { canViewAdminControls } from "../../lib/roles";
 import { QUERY_KEYS } from "../../providers/QueryProvider";
 import { getApiErrorMessage, productionApi, safetyApi } from "../../lib/backendApi";
-import { AlertTriangle } from "lucide-react";
+import { AlertTriangle, Filter } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import FastMilkLog from "../../components/operations/FastMilkLog";
@@ -12,31 +12,29 @@ import QueuedMilkEntries from "../../components/operations/QueuedMilkEntries";
 import CalfMilkFeedModal from "../../components/operations/CalfMilkFeedModal";
 import RecentCalfFeedings from "../../components/operations/RecentCalfFeedings";
 import Confirmation, { useConfirmation } from "../../components/ui/Confirmation";
-import PageHeader from "../../components/layout/PageHeader";
-import DataSection from "../../components/data/DataSection";
+import ProductionLogHeader from "../../components/operations/ProductionLogHeader";
+import ProductionSummaryTiles from "../../components/operations/ProductionSummaryTiles";
+import MilkStatusBadge from "../../components/operations/MilkStatusBadge";
 import { SURFACE } from "../../components/data/surface";
 import { cellClass } from "../../components/data/DataTable";
 import GroupedDataTable from "../../components/data/GroupedDataTable";
-import SummaryStrip from "../../components/data/SummaryStrip";
-import { FilterChips, ResultCount, Toolbar, ToolbarSearch } from "../../components/data/Toolbar";
+import { FilterChips, Toolbar, ToolbarSearch } from "../../components/data/Toolbar";
 import OverflowMenu from "../../components/ui/OverflowMenu";
 import ToolbarDateRange from "../../components/data/ToolbarDateRange";
-import { productionGroupConfig, productionSummaryConfig, summaryIsEmpty, summaryNotice, summaryScope } from "../../components/periods/periodConfigs";
+import { productionGroupConfig } from "../../components/periods/periodConfigs";
 import { useInvalidateProduction } from "../../hooks/usePeriodTotals";
 import { useProductionData } from "../../hooks/useProductionData";
-import { formatLitres } from "../../lib/numberFormat";
+import { formatLitres, formatSignedLitres } from "../../lib/numberFormat";
 import { currentYearRange } from "../../lib/periodTotals";
 import { formatDateRange } from "../../lib/dateFormat";
 import toast from "react-hot-toast";
 import { productionCopy as copy, sessionLabel } from "../../i18n/production";
 import { commonCopy } from "../../i18n/common";
-import { formatDate } from "../../lib/herdUtils";
 import { formatCowIdentity } from "../../lib/cowIdentity";
 import { Link } from "react-router-dom";
 import { todayLocalIso, toLocalIsoDate } from '../../lib/localDate';
 import { reportError } from '../../lib/telemetry';
 import { ISO_DATE_FILTER, useUrlFilters } from '../../hooks/useUrlFilters';
-import { enumLabel } from '../../lib/enumLabel';
 
 const AMOUNT_FIELD_CANDIDATES = [
   'amount',
@@ -105,17 +103,27 @@ function normalizeStatus(raw) {
 const getBucket = (row) => row.bucket;
 
 // One column definition for the header, rows and group rows (litres totals line up).
-// Fixed widths sized to their content for every column but Milker, which takes what's
-// left, so nothing moves as groups open and close. Litres sit right beside Cow.
-// Headers are read at render so they follow the language.
+// Each row is one milking record, as the backend sends it: its litres sit in its own session
+// column and in Total (L). Fixed widths for every column but Milker, which takes what's
+// left; the table scrolls sideways below its minimum width. Headers follow the language.
 const COLUMN_LAYOUT = [
-  { id: 'session', width: 'w-[7rem]' },
-  { id: 'cow', width: 'w-[14rem]' },
-  { id: 'litres', align: 'right', width: 'w-[6rem]' },
-  { id: 'milker' },
-  { id: 'status', width: 'w-[7.5rem]' },
-  { id: 'actions', align: 'right', width: 'w-[9.5rem]' },
+  { id: 'lead', width: 'w-12' },
+  { id: 'cow', width: 'w-[11rem]' },
+  { id: 'morning', align: 'right', width: 'w-[5rem]' },
+  { id: 'midday', align: 'right', width: 'w-[5rem]' },
+  { id: 'evening', align: 'right', width: 'w-[5rem]' },
+  { id: 'milker', align: 'right' },
+  { id: 'total', align: 'right', width: 'w-[6rem]', headerClassName: 'text-ink-900' },
+  { id: 'status', align: 'center', width: 'w-[8rem]' },
+  { id: 'vsAvg', align: 'right', width: 'w-[7rem]' },
+  { id: 'recordedBy', width: 'w-[7.5rem]' },
+  { id: 'actions', align: 'right', width: 'w-[5rem]', headerClassName: 'pr-6' },
 ];
+// From md up the table keeps its full width and scrolls sideways; phones get cards instead.
+const TABLE_MIN_WIDTH = 'min-w-[1140px]';
+// The session columns, by the backend's session value ("Midday"; older rows may say "Afternoon").
+const SESSION_COLUMN = { morning: 'morning', midday: 'midday', afternoon: 'midday', evening: 'evening' };
+const sessionColumnOf = (session) => SESSION_COLUMN[String(session ?? '').trim().toLowerCase()] ?? null;
 const column = Object.fromEntries(COLUMN_LAYOUT.map((entry) => [entry.id, entry]));
 // Kept in the address (Back, reload and shared links keep them). The search is a cow's
 // name or tag, which is safe in a URL.
@@ -163,6 +171,13 @@ function normalizeYieldRow(row) {
     amount: amountCandidate.value,
     session: row?.session ?? row?.milking_session ?? row?.milkingSession ?? null,
     status: normalizeStatus(row?.status),
+    // TODO(BR-026): this record's litres against the cow's 5-day average, and whether the
+    // backend counts it as a significant drop. "—" until sent.
+    vsAvgLitres: row?.vs_avg_litres ?? null,
+    significantDrop: row?.significant_drop === true,
+    // TODO(BR-019): who entered the record (a person) or how (`recorded_via`). "—" until sent.
+    recordedBy: row?.recorded_by_name ?? null,
+    recordedVia: row?.recorded_via ?? null,
   };
 }
 
@@ -173,20 +188,10 @@ const formatMilker = (value) => {
   return digits.length === 12 && digits.startsWith('254') ? `+254 ${digits.slice(3, 6)} ${digits.slice(6, 9)} ${digits.slice(9)}` : milker;
 };
 
-// Verified is the normal state, so only other statuses get a badge.
-const StatusChip = ({ status }) => (status === 'Verified' ? null : status ? (
-  <span
-    className={`inline-flex items-center gap-1 rounded-badge border px-2 py-1 text-badge ${
-      status === 'Verified'
-        ? 'border-brand/20 bg-brand/5 text-brand'
-        : status === 'Pending'
-          ? 'border-brand-200 bg-brand-50 text-brand-800'
-          : 'border-brand/20 bg-brand/10 text-brand-dark'
-    }`}
-  >
-    {enumLabel(copy.statuses, status)}
-  </span>
-) : <span className="text-meta text-ink-muted">—</span>);
+const recordedByText = (row) => row.recordedBy
+  || copy.recordedVia[String(row.recordedVia ?? '').toLowerCase()]
+  || row.recordedVia
+  || '—';
 
 export default function YieldLog() {
   const { tenantId, farmId } = useTenant();
@@ -202,7 +207,7 @@ export default function YieldLog() {
   const confirmation = useConfirmation();
   const { filters, setFilter: updateFilter, setFilters: updateFilters, resetFilters: clearFilters, hasActiveFilters: hasUrlFilters } = useUrlFilters(EMPTY_FILTERS, { allowed: FILTER_VALUES });
   const [filtersOpen, setFiltersOpen] = useState(hasUrlFilters);
-  const COLUMNS = COLUMN_LAYOUT.map((entry) => ({ ...entry, header: copy.columns[entry.id] }));
+  const COLUMNS = COLUMN_LAYOUT.map((entry) => ({ ...entry, header: copy.columns[entry.id], headerClassName: `!px-4 !py-3 ${entry.headerClassName ?? ''}` }));
 
   // Every filter runs on the server, and one hook requests the rows, the group totals and
   // the summary strip with the same params, so all three agree.
@@ -212,7 +217,7 @@ export default function YieldLog() {
   const dateRange = chosenRange ?? currentYearRange(todayLocalIso());
   const chosenDay = chosenRange && chosenRange.from === chosenRange.to ? chosenRange.from : '';
   const setRange = (next) => updateFilters({ from: next?.from ?? '', to: next?.to ?? '', date: '' });
-  const { rows: yieldRows, groupTotals, summary: productionSummary } = useProductionData({
+  const { rows: yieldRows, totals: yieldTotals, groupTotals, summary: productionSummary } = useProductionData({
     filters: { search: filters.cowId.trim(), session: filters.session },
     range: dateRange,
   });
@@ -220,15 +225,16 @@ export default function YieldLog() {
   const yieldRowsRaw = yieldRows.data;
   const yieldRowsError = yieldRows.error;
   const hasYieldRowsError = yieldRows.isError;
-  const [groupFocus, setGroupFocus] = useState(null);
 
+  // Calf feedings with the backend's totals. Under the dispositions key, so a new feeding
+  // refetches it, with its own suffix because the shape differs from the plain list.
   const {
-    data: milkDispositions = [],
+    data: calfFeedings,
     isLoading: isLoadingMilkDispositions,
     error: milkDispositionsError,
   } = useQuery({
-    queryKey: QUERY_KEYS.MILK_DISPOSITIONS(tenantId, farmId),
-    queryFn: () => productionApi.listMilkDispositions(),
+    queryKey: [...QUERY_KEYS.MILK_DISPOSITIONS(tenantId, farmId), 'with-totals'],
+    queryFn: () => productionApi.listMilkDispositionsWithTotals(),
     enabled: !!tenantId && !!farmId,
   });
 
@@ -369,113 +375,110 @@ export default function YieldLog() {
     }
   };
 
-  const actionsMenu = (row, size) => (
+  const actionsMenu = (row, size = 'h-8 w-8') => (
     <OverflowMenu
       label={copy.actionsFor(formatCowIdentity({ cowName: row.cowName, cowTag: row.cowId }))}
       size={size}
-      bordered
       items={[
+        canVerify && row.status !== 'Verified' && { key: 'verify', label: copy.verify, onSelect: () => handleVerifyEntry(row) },
         { key: 'edit', label: copy.edit, onSelect: () => openEditLog(row) },
         { key: 'delete', label: copy.delete, tone: 'danger', onSelect: () => handleDeleteFromTable(row) },
       ]}
     />
   );
 
-  const tableLink = 'text-ink underline-offset-2 hover:text-brand hover:underline focus-visible:text-brand focus-visible:underline focus-visible:outline-none';
-  const cowLink = (row, className) => (
-    <Link to={`/operations/animal/${row.animalRefId ?? row.cowId}/milk-history`} className={className}>
+  const cowLink = (row) => (
+    <Link
+      to={`/operations/animal/${row.animalRefId ?? row.cowId}/milk-history`}
+      className="truncate text-ink-900 underline-offset-2 hover:text-brand hover:underline focus-visible:text-brand focus-visible:underline focus-visible:outline-none"
+    >
       {formatCowIdentity({ cowName: row.cowName, cowTag: row.cowId })}
     </Link>
   );
 
-  // Desktop row (44px). The day group above it carries the date.
-  const renderRow = (row) => (
-    <tr key={row.id} className="h-11 border-b border-ink/5 hover:bg-ink-50">
-      <td className={cellClass(column.session, '!py-1 text-body text-ink')}>{sessionLabel(row.session)}</td>
-      <td className={cellClass(column.cow, '!py-1 text-body')}><span className="block truncate">{cowLink(row, tableLink)}</span></td>
-      <td className={cellClass(column.litres, '!py-1 text-body tabular-nums text-ink')}>{formatLitres(row.amount, { unit: false })}</td>
-      <td className={cellClass(column.milker, '!py-1 text-body text-ink')}><span className="block truncate">{formatMilker(row.milker)}</span></td>
-      <td className={cellClass(column.status, '!py-1')}><StatusChip status={row.status} /></td>
-      <td className={cellClass(column.actions, '!py-1')}>
-        <div className="inline-flex items-center gap-2">
-          {canVerify && row.status !== 'Verified' && (
-            <button type="button" onClick={() => handleVerifyEntry(row)} className="inline-flex h-8 items-center gap-1 !rounded-input border border-ink/10 px-2.5 text-control text-brand hover:bg-ink-50">
-              {copy.verify}
-            </button>
-          )}
-          {actionsMenu(row, 'h-8 w-8')}
-        </div>
-      </td>
-    </tr>
-  );
+  // A drop the backend counts as significant is red and strong.
+  const vsAvgClass = (row) => (row.significantDrop ? 'text-body-strong text-danger-900' : 'text-body text-ink-500');
 
-  // Inside a day group the card doesn't repeat the date; ⋮ sits in the top row.
+  // One milking record. The day group above it carries the date.
+  const td = (id, extra = '') => cellClass(column[id], `!px-4 !py-3 whitespace-nowrap ${extra}`);
+  const litres = (row) => formatLitres(row.amount, { unit: false });
+  const renderRow = (row) => {
+    const sessionColumn = sessionColumnOf(row.session);
+    return (
+      <tr key={row.id} className="border-b border-ink-100 bg-card text-body transition-colors hover:bg-ink-50">
+        <td className={td('lead')} />
+        <td className={td('cow')}>
+          <div className="flex min-w-0 items-center gap-2 text-body-strong text-ink-900">
+            <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-brand" aria-hidden="true" />
+            {cowLink(row)}
+          </div>
+        </td>
+        {['morning', 'midday', 'evening'].map((id) => (
+          <td key={id} className={td(id, 'tabular-nums text-ink-700')}>{sessionColumn === id ? litres(row) : ''}</td>
+        ))}
+        <td className={td('milker', 'truncate text-meta tabular-nums text-ink-500')}>{formatMilker(row.milker)}</td>
+        <td className={td('total', 'text-body-strong tabular-nums text-ink-900')}>{litres(row)}</td>
+        <td className={td('status')}><MilkStatusBadge status={row.status} /></td>
+        <td className={td('vsAvg', `tabular-nums ${vsAvgClass(row)}`)}>
+          {formatSignedLitres(row.vsAvgLitres)}
+        </td>
+        <td className={td('recordedBy', 'truncate text-meta text-ink-600')}>{recordedByText(row)}</td>
+        <td className={td('actions', 'pr-6')}>
+          <div className="inline-flex text-ink-400 hover:text-brand">{actionsMenu(row)}</div>
+        </td>
+      </tr>
+    );
+  };
+
+  // Phones: one card per milking record (no sideways scrolling). The day group above it
+  // carries the date; the same fields as the table row.
   const renderCard = (row) => (
-    <article key={row.id} className="min-w-0 space-y-2 bg-card p-4">
+    <article key={row.id} className="min-w-0 space-y-3 bg-card p-4">
       <div className="flex min-w-0 items-start gap-3">
         <div className="min-w-0 flex-1">
-          {cowLink(row, 'break-words text-body-strong text-brand')}
-          <p className="mt-1 text-meta text-ink-muted">{sessionLabel(row.session)}</p>
+          <div className="flex min-w-0 items-center gap-2 text-body-strong text-ink-900">
+            <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-brand" aria-hidden="true" />
+            {cowLink(row)}
+          </div>
+          <p className="mt-1 text-meta text-ink-500">{sessionLabel(row.session)}</p>
         </div>
-        <p className="shrink-0 pt-0.5 text-right text-body-strong tabular-nums text-brand">{formatLitres(row.amount)}</p>
+        <p className="shrink-0 pt-0.5 text-stat-value text-ink-900">{formatLitres(row.amount)}</p>
         {actionsMenu(row, 'h-11 w-11')}
       </div>
-      <div className="flex min-w-0 flex-wrap items-center justify-between gap-x-3 gap-y-2 border-t border-ink/10 pt-2 text-meta">
-        <span className="min-w-0 break-all text-ink-muted">{copy.milker} <span className="text-ink">{formatMilker(row.milker)}</span></span>
-        <span className="flex items-center gap-2">
-          <StatusChip status={row.status} />
-          {canVerify && row.status !== 'Verified' && <button type="button" onClick={() => handleVerifyEntry(row)} className="min-h-11 rounded-lg border border-brand/20 px-3 text-control text-brand">{copy.verify}</button>}
-        </span>
-      </div>
+      <dl className="m-0 grid grid-cols-2 gap-x-3 gap-y-2 border-t border-ink-100 pt-3 text-meta">
+        <div className="min-w-0">
+          <dt className="text-ink-500">{copy.columns.status}</dt>
+          <dd className="m-0 mt-1"><MilkStatusBadge status={row.status} /></dd>
+        </div>
+        <div className="min-w-0">
+          <dt className="text-ink-500">{copy.columns.vsAvg}</dt>
+          <dd className={`m-0 mt-1 tabular-nums ${vsAvgClass(row)}`}>{formatSignedLitres(row.vsAvgLitres)}</dd>
+        </div>
+        <div className="min-w-0">
+          <dt className="text-ink-500">{copy.columns.milker}</dt>
+          <dd className="m-0 mt-1 break-all tabular-nums text-ink-700">{formatMilker(row.milker)}</dd>
+        </div>
+        <div className="min-w-0">
+          <dt className="text-ink-500">{copy.columns.recordedBy}</dt>
+          <dd className="m-0 mt-1 break-words text-ink-700">{recordedByText(row)}</dd>
+        </div>
+      </dl>
     </article>
   );
 
   const hasMilkRowsToShow = yieldRows.loadState === 'ready' || yieldRows.loadState === 'stale';
-  // No entries for these filters: one line, never a row of zeros, and only when the table
-  // is empty too. The last entry's date (from the API) opens that day in the table: its
-  // month up to that day, with the other filters cleared.
-  const lastEntryDate = summary?.current?.lastEntryDate;
-  const showLastEntry = () => {
-    updateFilters({ cowId: '', session: 'all', date: '', from: `${lastEntryDate.slice(0, 7)}-01`, to: lastEntryDate });
-    setGroupFocus({ key: lastEntryDate, nonce: Date.now() });
-  };
-  const stripEmpty = summaryIsEmpty(summary) && hasMilkRowsToShow && milkRows.length === 0 && (
-    <span>
-      {copy.summary.noEntries}
-      {/* TODO(BR-022): `last_entry_date` is requested from the backend; only "No entries" until then. */}
-      {lastEntryDate && (
-        <>
-          {' · '}{copy.summary.lastEntry}{' '}
-          <button type="button" onClick={showLastEntry} className="inline text-body-strong text-brand underline-offset-2 hover:underline">
-            {formatDate(lastEntryDate)}
-          </button>
-        </>
-      )}
-    </span>
-  );
+  const totalRecords = yieldTotals.data?.totalRecords ?? null;
 
   return (
-    <div className="mx-auto max-w-7xl space-y-4">
+    <div className="mx-auto max-w-7xl space-y-6">
       <Confirmation {...confirmation} />
-      <PageHeader
-        title={copy.title}
-        primaryAction={{ label: copy.recordMilk, create: true, onClick: openCreateLog }}
-        secondaryActions={[{ key: 'calf', label: copy.feedCalf, onClick: () => setShowCalfMilkFeed(true) }]}
-        secondaryOnMobile="inline"
-      />
+      <ProductionLogHeader onRecordMilk={openCreateLog} onFeedCalf={() => setShowCalfMilkFeed(true)} />
 
-      <SummaryStrip
-        label={copy.summary.label}
-        items={summary ? productionSummaryConfig.items(summary) : []}
-        scope={summaryScope(dateRange, { isDefault: !chosenRange })}
-        empty={stripEmpty}
-        notice={summaryNotice(productionSummary)}
-        link={{ to: '/operations/reports/milk-inventory' }}
-        loadState={productionSummary.loadState}
-        hasData={Boolean(summary)}
-        error={productionSummary.error}
-        asOf={productionSummary.asOf}
-        onRetry={productionSummary.refetch}
+      <ProductionSummaryTiles
+        litres={summary?.current?.litres ?? null}
+        litresLoading={productionSummary.loadState === 'loading'}
+        counts={yieldTotals.data}
+        countsLoading={yieldTotals.loadState === 'loading'}
       />
 
       {showFastLog && (
@@ -495,6 +498,15 @@ export default function YieldLog() {
         initialDate={chosenDay}
       />
 
+      <RecentCalfFeedings
+        records={(calfFeedings?.items ?? []).slice(0, 5)}
+        count={calfFeedings?.count ?? null}
+        totalLitres={calfFeedings?.totalLitres ?? null}
+        isLoading={isLoadingMilkDispositions}
+        error={milkDispositionsError}
+        viewAllHref="/operations/milk-usage"
+      />
+
       {hardlocks?.length > 0 && (
         <div role="status" className={`${SURFACE} flex items-start gap-3 p-3 sm:p-4`}>
           <AlertTriangle size={18} className="mt-0.5 shrink-0 text-brand-dark" aria-hidden="true" />
@@ -507,40 +519,37 @@ export default function YieldLog() {
 
       <QueuedMilkEntries />
 
-      <DataSection
-        label={copy.sectionLabel}
-        toolbar={(
-          <>
-            <Toolbar end={hasMilkRowsToShow && <ResultCount count={milkRows.length} noun={copy.group.noun} />}>
-              <ToolbarSearch label={copy.searchLabel} value={filters.cowId} onChange={(value) => updateFilter('cowId', value)} placeholder={copy.searchPlaceholder} />
-              <button
-                type="button"
-                onClick={() => setFiltersOpen((prev) => !prev)}
-                aria-expanded={filtersOpen}
-                aria-controls="production-filter-panel"
-                className="inline-flex min-h-11 items-center gap-1.5 !rounded-input border border-ink/15 px-3 text-control text-ink hover:bg-ink-50 sm:min-h-9"
-              >
-                {commonCopy.filters.filters}
-              </button>
-              <ToolbarDateRange range={dateRange} onChange={setRange} maxDate={todayLocalIso()} />
-              <FilterChips chips={activeChips} onReset={clearFilters} />
-            </Toolbar>
-            {filtersOpen && (
-              <div id="production-filter-panel" className="grid grid-cols-1 gap-3 pb-2 pt-1 sm:grid-cols-2">
-                <label className="space-y-1 text-field-label text-ink-muted">
-                  {copy.session}
-                  <select value={filters.session} onChange={(e) => updateFilter('session', e.target.value)} className="input-machined">
-                    <option value="all">{commonCopy.filters.all}</option>
-                    <option value="Morning">{copy.sessions.morning}</option>
-                    <option value="Midday">{copy.sessions.afternoon}</option>
-                    <option value="Evening">{copy.sessions.evening}</option>
-                  </select>
-                </label>
-              </div>
-            )}
-          </>
-        )}
-      >
+      <section aria-label={copy.sectionLabel} className="flex flex-col overflow-hidden rounded-xl border border-ink/10 bg-card shadow-sm">
+        <div className="border-b border-ink-200 bg-ink-50/50 p-4">
+          <Toolbar end={hasMilkRowsToShow && <p role="status" className="m-0 whitespace-nowrap text-meta text-ink-500">{copy.showing(milkRows.length, totalRecords)}</p>}>
+            <ToolbarSearch label={copy.searchLabel} value={filters.cowId} onChange={(value) => updateFilter('cowId', value)} placeholder={copy.searchPlaceholder} />
+            <button
+              type="button"
+              onClick={() => setFiltersOpen((prev) => !prev)}
+              aria-expanded={filtersOpen}
+              aria-controls="production-filter-panel"
+              className="inline-flex min-h-11 items-center gap-2 whitespace-nowrap rounded-md border border-ink-300 bg-card px-3 text-control text-ink-700 shadow-sm transition-colors hover:bg-ink-50 sm:min-h-9"
+            >
+              <Filter size={16} className="text-ink-400" aria-hidden="true" /> {commonCopy.filters.filters}
+            </button>
+            <ToolbarDateRange range={dateRange} onChange={setRange} maxDate={todayLocalIso()} />
+            <FilterChips chips={activeChips} onReset={clearFilters} />
+          </Toolbar>
+          {filtersOpen && (
+            <div id="production-filter-panel" className="grid grid-cols-1 gap-3 pb-2 pt-3 sm:grid-cols-2">
+              <label className="space-y-1 text-field-label text-ink-muted">
+                {copy.session}
+                <select value={filters.session} onChange={(e) => updateFilter('session', e.target.value)} className="input-machined">
+                  <option value="all">{commonCopy.filters.all}</option>
+                  <option value="Morning">{copy.sessions.morning}</option>
+                  <option value="Midday">{copy.sessions.afternoon}</option>
+                  <option value="Evening">{copy.sessions.evening}</option>
+                </select>
+              </label>
+            </div>
+          )}
+        </div>
+
         <GroupedDataTable
           columns={COLUMNS}
           rows={milkRows}
@@ -551,21 +560,17 @@ export default function YieldLog() {
           config={productionGroupConfig}
           renderRow={renderRow}
           renderCard={renderCard}
-          focus={groupFocus}
+          tableFrom="md"
+          scroll
+          headerVariant="neutral"
+          tableClassName={TABLE_MIN_WIDTH}
           loadState={yieldRows.loadState}
           error={yieldRowsError}
           onRetry={yieldRows.refetch}
           rowsLabel={copy.rowsLabel}
           empty={emptyMessage}
         />
-      </DataSection>
-
-      <RecentCalfFeedings
-        records={milkDispositions.slice(0, 5)}
-        isLoading={isLoadingMilkDispositions}
-        error={milkDispositionsError}
-        viewAllHref="/operations/milk-usage"
-      />
+      </section>
     </div>
   );
 }

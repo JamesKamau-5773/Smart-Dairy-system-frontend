@@ -36,6 +36,8 @@ vi.mock('../../../lib/backendApi', async (importOriginal) => {
       getPeriodSummary: vi.fn().mockResolvedValue({}),
       getGroupTotals: vi.fn().mockResolvedValue({ groups: [] }),
       listMilkDispositions: resolvesEmpty(),
+      listMilkDispositionsWithTotals: vi.fn().mockResolvedValue({ items: [], count: 0, totalLitres: null }),
+      yieldTotals: vi.fn().mockResolvedValue({ totalRecords: null, totalLitres: null, verified: null, pending: null, flagged: null, isolated: null }),
       createYield: resolvesEmpty(),
       deleteYield: resolvesEmpty(),
       verifyYield: resolvesEmpty(),

@@ -22,6 +22,7 @@ Everything below is open. Suggested order:
 5. **Data the browser still works out for itself:** BR-002, BR-003, BR-004, BR-008, BR-009,
    BR-011, BR-012, BR-013, and the open questions in `docs/contracts/period-totals.md`.
    **Summary strips and the dashboard chart: BR-021, BR-022, BR-023.**
+   **Production Log and breeding fields shown as "—" until sent: BR-025, BR-026, BR-027.**
 6. **Language: BR-018, BR-024** (receipt status values in the contract).
 7. **Safe saves and missing features:** BR-005, BR-006, BR-007, BR-010.
 
@@ -532,6 +533,23 @@ Found while checking `GET /api/production/yield` (`app/api/operations.py`, `prod
    confirm `Morning` / `Midday` / `Evening` is the only set the API accepts and returns. The
    session filter compares case-insensitively, which the frontend now relies on.
 
+**Update 2026-11-17.** The backend source at `4f70b5e` already does items 1 and 2:
+`ProductionFilters.from_args` applies `status`, and the yield list's `summary` counts
+`verified_count`, `recorded_count`, `flagged_count` and `isolated_count` for the same filters and
+dates. The Production Log's tiles (Verified, Pending, Flagged Entries) now read them from
+`GET /api/production/yield?<filters>&page=1&per_page=1` (Pending = `recorded_count`). Please
+confirm that code is deployed; until it is, the tiles show the old, wrong figures.
+
+Item 3 now has a column: the Production Log shows **Milker** and **Recorded By** separately.
+Today `milker_name` is the name of the user in `recorded_by`, so the two are always the same
+person. Please send on each row:
+
+- `milker_name`: who milked the cow (may differ from who typed it in),
+- `recorded_by_name`: who entered the record, or null when no user did,
+- `recorded_via`: `app` | `whatsapp` | `import` | `system`.
+
+Recorded By shows `recorded_by_name`, else the `recorded_via` label, else "—".
+
 ---
 
 ## BR-020 — Who may use unit helpers
@@ -677,3 +695,56 @@ Requests:
 
 When this is done, the frontend adds `financeCopy.receipt.statuses` in en and sw, an entry in
 `BACKEND_STATUS_ENUMS` in the status-strings test, and drops the TODO in `ReceiptPreview.jsx`.
+
+## BR-025 — Breeding logs: `updated_at` on each record
+
+**Status:** Open · **Raised:** 2026-11-17 · **Frontend:** `lib/breedingUtils.js` (`TODO(BR-025)`), `pages/operations/BreedingHub.jsx` (Historical Checks)
+
+Historical Checks has an "Updated" column. It used to show the day the page was opened for every
+record, and grouped every record under the current month because of it. It now groups by the AI
+service date and shows the record's own `updated_at`, or "—" when there isn't one.
+
+`GET /api/operations/breeding-logs` should include, on each record, when it was last changed (a
+vet outcome recorded, an edit), as an ISO 8601 timestamp:
+
+```json
+{ "id": 88, "insemination_date": "2026-01-22", "status": "Pregnant", "updated_at": "2026-02-20T09:00:00Z" }
+```
+
+If it is already sent under another name, say which and the frontend will read that instead.
+
+---
+
+## BR-026 — Milk records: change against the cow's 5-day average
+
+**Status:** Open · **Raised:** 2026-11-17 · **Frontend:** `pages/operations/productionLog.jsx` (`TODO(BR-026)`, the "vs 5-day Avg" column)
+
+The Production Log has a **vs 5-day Avg** column, with a significant drop in bold red. The
+frontend never works this out; it shows "—" until the backend sends it. On each row of
+`GET /api/production/yield`:
+
+```json
+{ "id": 812, "session": "Evening", "amount": "13.8", "vs_avg_litres": "-2.1", "significant_drop": true }
+```
+
+- `vs_avg_litres`: this record's litres minus the cow's average for **the same session** over the
+  5 previous days that have a record for it (signed, 1 dp string), or null when there are fewer
+  than the backend's minimum. Please confirm the window and whether it is days or records.
+- `significant_drop`: true when the backend's milk-drop rule counts this record as a drop (the
+  same rule as `GET /api/production/milk-drop-alerts`, so the two agree).
+
+---
+
+## BR-027 — Calf feedings: total litres
+
+**Status:** Open · **Raised:** 2026-11-17 · **Frontend:** `lib/backendApi.js` (`listMilkDispositionsWithTotals`, `TODO(BR-027)`), `components/operations/RecentCalfFeedings.jsx`
+
+The Production Log's "Recent calf milk allocations" card reads "53 feedings · 310.00 L allocated".
+`GET /api/production/milk-dispositions` already sends `count`; it shows "— allocated" until the
+litres total is sent too:
+
+```json
+{ "items": [ … ], "count": 53, "total_liters": "310.0" }
+```
+
+`total_liters`: the sum of `liters` for the same filters (`date`, `calf_id`), 1 dp string.

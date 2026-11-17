@@ -17,6 +17,7 @@ import {
 import {
   enrichBreedingLogCowIdentity,
   filterBreedingHistory,
+  formatBreedingCowLabel,
   normalizeBreedingLog,
   normalizeHerdOption,
   normalizeSemenInventory,
@@ -24,83 +25,15 @@ import {
 import { breedingApi, getApiErrorMessage, herdApi } from '../../lib/backendApi';
 import { formatCowIdentity, resolveCowIdentityFromHerd } from '../../lib/cowIdentity';
 import { useTenant } from '../../hooks/useTenant';
-import { ChevronRight, ChevronDown, ChevronUp, Search } from 'lucide-react';
+import { ChevronRight } from 'lucide-react';
 import { toLocalIsoDate } from '../../lib/localDate';
+import { groupHistoryByMonth, outcomeLabel } from '../../lib/breedingHistory';
+import { SemenSourceBadge } from '../../components/breeding/BreedingBadges';
+import BreedingHistoryFilters from '../../components/breeding/BreedingHistoryFilters';
+import BreedingHistoryList from '../../components/breeding/BreedingHistoryList';
 import { reportError } from '../../lib/telemetry';
-import { formatMonthYear } from '../../lib/dateFormat';
 import { breedingCopy } from '../../i18n/breeding';
 import { shellCopy } from '../../i18n/shell';
-import { PHONE_QUERY, useMediaQuery } from '../../hooks/useMediaQuery';
-import { commonCopy } from '../../i18n/common';
-
-/**
- * NOTE: The following components should be extracted into their own files
- * under `src/components/breeding/` to improve code organization and reusability.
- */
-// The outcome label and the "awaiting vet" note are worded when shown, in the chosen language.
-// Breeding logs carry no "last updated" time from the backend, so history is grouped and sorted
-// by the AI date instead of a date made up on the phone.
-function createHistoryEntry(log, status = 'Pending', notes = '') {
-  return {
-    ...log,
-    status,
-    notes,
-    expectedCalvingDate: log.expectedCalvingDate ?? null,
-  };
-}
-
-const outcomeLabel = (status) => breedingCopy.outcomes[status] ?? breedingCopy.outcomes.Pending;
-const historyNotes = (entry) => entry.notes || (entry.status === 'Pending' ? breedingCopy.hub.awaitingVet : '');
-
-function getStatusTone(status) {
-  if (status === 'Pregnant') return 'border-emerald-500/30 bg-emerald-500/10 text-emerald-700';
-  if (status === 'Open') return 'border-rose-500/30 bg-rose-500/10 text-rose-600';
-  if (status === 'Failed') return 'border-red-700/25 bg-red-600/10 text-red-800';
-  return 'border-brand/20 bg-brand/10 text-brand';
-}
-
-function formatSemenSource(source = 'farm_stock') {
-  if (source === 'unknown') return breedingCopy.sources.unknown;
-  return source === 'vet_provided' ? breedingCopy.sources.vet_provided : breedingCopy.sources.farm_stock;
-}
-
-function getSemenSourceTone(source = 'farm_stock') {
-  if (source === 'unknown') {
-    return 'border-ink/20 bg-surface-raised text-ink-muted';
-  }
-  return source === 'vet_provided'
-    ? 'border-amber-500/30 bg-amber-500/10 text-amber-700'
-    : 'border-sky-500/30 bg-sky-500/10 text-sky-700';
-}
-
-function formatCowLabel(log = {}) {
-  return formatCowIdentity({ cowName: log.cowName, cowTag: log.cowTag });
-}
-
-function getMonthLabel(dateValue) {
-  return formatMonthYear(dateValue, breedingCopy.hub.unknownMonth);
-}
-
-function groupHistoryByMonth(history) {
-  return history.reduce((groups, entry) => {
-    const monthLabel = getMonthLabel(entry.aiDate);
-
-    if (!groups.has(monthLabel)) {
-      groups.set(monthLabel, []);
-    }
-
-    groups.get(monthLabel).push(entry);
-    return groups;
-  }, new Map());
-}
-
-function HistoryStatusBadge({ status }) {
-  return (
-    <span className={`inline-flex rounded-full border px-2 py-1 text-badge ${getStatusTone(status)}`}>
-      {outcomeLabel(status)}
-    </span>
-  );
-}
 
 // ============================================================================
 // COMPONENT 1: Page Header & KPI Chips (Responsibility: High-level context & Global Actions)
@@ -204,7 +137,7 @@ function VetQueueItem({ log, onOutcome, onEdit, isUpdating }) {
       isReady ? 'border-brand/20 bg-surface' : 'border-ink/5 bg-surface/50 opacity-80'
     }`}>
       <div>
-        <h3 className={`text-section-title ${isReady ? 'text-brand' : 'text-ink-strong'}`}>{formatCowLabel(log)}</h3>
+        <h3 className={`text-section-title ${isReady ? 'text-brand' : 'text-ink-strong'}`}>{formatBreedingCowLabel(log)}</h3>
         <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-meta text-ink-muted tabular-nums [&>span]:whitespace-nowrap">
           <span>{copy.served(log.aiDate || '--')}</span>
           <span aria-hidden="true">•</span>
@@ -222,9 +155,7 @@ function VetQueueItem({ log, onOutcome, onEdit, isUpdating }) {
             </>
           )}
           <span aria-hidden="true">•</span>
-          <span className={`rounded-full border px-2 py-0.5 text-badge ${getSemenSourceTone(log.semenSource)}`}>
-            {formatSemenSource(log.semenSource)}
-          </span>
+          <SemenSourceBadge source={log.semenSource} />
         </div>
       </div>
 
@@ -262,7 +193,7 @@ function VetQueueItem({ log, onOutcome, onEdit, isUpdating }) {
           type="button"
           onClick={() => onEdit(log)}
           className="btn-secondary ml-auto inline-flex items-center gap-1 whitespace-nowrap px-3 py-2 text-control"
-          aria-label={copy.editFor(formatCowLabel(log))}
+          aria-label={copy.editFor(formatBreedingCowLabel(log))}
         >
 
   {copy.edit}
@@ -351,8 +282,6 @@ function SemenInventory({ stock, loadState, error, onRetry, onAddInventory, onRe
 // MAIN ORCHESTRATOR COMPONENT
 // ============================================================================
 export default function BreedingHub() {
-  // Inputs are 16px on phones, so the long search hint would be cut off there.
-  const isPhone = useMediaQuery(PHONE_QUERY);
   const copy = breedingCopy.hub;
   const { tenantId, farmId } = useTenant();
   const queryClient = useQueryClient();
@@ -461,10 +390,7 @@ export default function BreedingHub() {
       .map((log) => enrichBreedingLogCowIdentity(log, herdOptions));
   }, [breedingLogsData, herdOptions]);
 
-  const vetHistory = useMemo(
-    () => (normalizedBreedingLogs ?? []).map((log) => createHistoryEntry(log, log.status, log.notes)),
-    [normalizedBreedingLogs],
-  );
+  const vetHistory = normalizedBreedingLogs ?? [];
   const vetQueue = useMemo(
     () => (normalizedBreedingLogs ?? []).filter((log) => log.status === 'Pending'),
     [normalizedBreedingLogs],
@@ -571,8 +497,6 @@ export default function BreedingHub() {
 
   const filteredHistory = filterBreedingHistory(vetHistory, historyFilter, historySearch);
   const groupedHistory = groupHistoryByMonth(filteredHistory);
-  const hasActiveHistoryFilters = historyFilter !== 'All' || historySearch.trim() !== '';
-  const activeHistoryControlCount = [historySearch.trim(), historyFilter !== 'All'].filter(Boolean).length;
 
   const handleDeleteInventory = async (bull) => {
     if (!bull?.id) {
@@ -773,179 +697,26 @@ export default function BreedingHub() {
         />
       </BaseModal>
 
-      <BaseModal closeOnBackdrop isOpen={isHistoryOpen} onClose={() => setIsHistoryOpen(false)} title={copy.historyTitle}>
-        <div className="space-y-4">
-          <SimpleModalSection title={copy.allChecks}>
-            <div className="flex flex-col gap-3 border-b border-ink/10 pb-4 md:flex-row md:items-center md:justify-between">
-              <div>
-                <div className="text-label text-ink-muted">
+      <BaseModal
+        closeOnBackdrop
+        size="4xl"
+        isOpen={isHistoryOpen}
+        onClose={() => setIsHistoryOpen(false)}
+        title={copy.historyTitle}
+        footerActions={<button type="button" onClick={() => setIsHistoryOpen(false)} className="btn-command px-4 py-2 text-control">{copy.close}</button>}
+      >
+        <SimpleModalSection title={copy.allChecks}>
+          <BreedingHistoryFilters
+            filter={historyFilter}
+            search={historySearch}
+            open={historyControlsOpen}
+            onFilterChange={setHistoryFilter}
+            onSearchChange={setHistorySearch}
+            onToggle={() => setHistoryControlsOpen((current) => !current)}
+          />
 
-  {copy.searchAndFilters}
-                </div>
-                <p className="mt-1 text-body text-ink-muted">{copy.historyHint}</p>
-              </div>
-
-              <div className="flex items-center gap-2">
-                <span className="rounded-full border border-ink/10 bg-surface-warm/60 px-3 py-1 text-badge text-ink-muted">
-                  {copy.activeFilters(activeHistoryControlCount)}
-                </span>
-                <button
-                  type="button"
-                  onClick={() => setHistoryControlsOpen((current) => !current)}
-                  aria-expanded={historyControlsOpen}
-                  className="inline-flex items-center gap-1.5 rounded-lg border border-ink/10 bg-surface px-3 py-1.5 text-control text-ink transition-all hover:border-brand/20 hover:bg-brand/5 hover:text-brand"
-                >
-                  {historyControlsOpen ? <ChevronUp size={12} aria-hidden="true" /> : <ChevronDown size={12} aria-hidden="true" />}
-                  {historyControlsOpen ? copy.hideFilters : copy.showFilters}
-                </button>
-              </div>
-            </div>
-
-            {historyControlsOpen && (
-              <div className="space-y-4 pt-4">
-                <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-                  <div className="flex flex-1 items-center gap-2 rounded-lg border border-ink/10 bg-surface-raised px-3 py-2">
-                    <Search size={14} className="text-ink-muted" aria-hidden="true" />
-                    <input
-                      type="search"
-                      value={historySearch}
-                      onChange={(event) => setHistorySearch(event.target.value)}
-                      aria-label={copy.historySearch}
-                      placeholder={isPhone ? commonCopy.filters.searchShort : copy.historySearch}
-                      className="w-full bg-transparent text-control text-ink-strong outline-none placeholder:text-ink-muted"
-                    />
-                  </div>
-
-                  <div className="flex items-center gap-2">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setHistoryFilter('All');
-                        setHistorySearch('');
-                      }}
-                      className={`rounded-lg border px-3 py-2 text-control transition-colors ${
-                        hasActiveHistoryFilters
-                          ? 'border-brand/20 bg-brand/5 text-brand hover:bg-brand/10'
-                          : 'border-ink/10 bg-surface-raised text-ink-muted'
-                      }`}
-                    >
-                      {copy.clearFilters}
-                    </button>
-                  </div>
-                </div>
-
-                <div className="flex flex-wrap gap-2">
-                  {[
-                    { value: 'All', label: copy.all },
-                    { value: 'Pregnant', label: breedingCopy.statuses.Pregnant },
-                    { value: 'Open', label: breedingCopy.statuses.Open },
-                    { value: 'Pending', label: breedingCopy.statuses.Pending },
-                    { value: 'Failed', label: breedingCopy.statuses.Failed },
-                  ].map(({ value, label }) => (
-                    <button
-                      key={value}
-                      type="button"
-                      onClick={() => setHistoryFilter(value)}
-                      className={`rounded-full border px-3 py-1.5 text-control transition-colors ${
-                        historyFilter === value
-                          ? 'border-brand bg-brand text-surface'
-                          : 'border-ink/10 bg-surface-raised text-ink-muted hover:border-brand/20 hover:text-brand'
-                      }`}
-                    >
-                      {label}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            <div className="max-h-[420px] overflow-y-auto pr-1">
-              {filteredHistory.length === 0 && (
-                <div className="rounded-lg border border-dashed border-ink/10 bg-surface/50 p-6 text-center text-body text-ink-muted">
-                  {copy.noHistoryMatches}
-                </div>
-              )}
-
-              {Array.from(groupedHistory.entries()).map(([monthLabel, entries]) => (
-                <div key={monthLabel} className="mb-4 space-y-2 last:mb-0">
-                  <div className="sticky top-0 z-10 flex items-center justify-between rounded-md border border-ink/10 bg-surface px-3 py-2 text-label text-brand ">
-                    <span>{monthLabel}</span>
-                    <span className="rounded-full bg-brand/5 px-2 py-0.5 text-badge text-brand">
-                      {copy.recordCount(entries.length)}
-                    </span>
-                  </div>
-
-                  {/* Phones: one card per AI record, like the other lists. */}
-                  <ul className="space-y-2 md:hidden">
-                    {entries.map((entry) => (
-                      <li key={entry.id} className="min-w-0 rounded-lg border border-ink/10 bg-surface-raised p-3">
-                        <div className="flex min-w-0 items-start justify-between gap-3">
-                          <div className="min-w-0">
-                            <p className="break-words text-body-strong text-ink-strong">{formatCowLabel(entry)}</p>
-                            {historyNotes(entry) && <p className="mt-1 break-words text-meta text-ink-muted">{historyNotes(entry)}</p>}
-                          </div>
-                          <HistoryStatusBadge status={entry.status} />
-                        </div>
-                        <dl className="mt-3 grid grid-cols-2 gap-x-3 gap-y-2 border-t border-ink/10 pt-2 text-meta">
-                          <div className="min-w-0"><dt className="text-ink-muted">{copy.columns.aiDate}</dt><dd className="text-ink">{entry.aiDate || '—'}</dd></div>
-                          <div className="min-w-0"><dt className="text-ink-muted">{copy.columns.bull}</dt><dd className="break-words text-ink">{entry.sireCode || '—'}</dd></div>
-                          <div className="min-w-0"><dt className="text-ink-muted">{copy.columns.expectedCalving}</dt><dd className="text-ink">{entry.expectedCalvingDate || '—'}</dd></div>
-                          <div className="col-span-2 min-w-0">
-                            <dt className="sr-only">{copy.columns.source}</dt>
-                            <dd>
-                              <span className={`inline-flex rounded-full border px-2 py-1 text-badge ${getSemenSourceTone(entry.semenSource)}`}>
-                                {formatSemenSource(entry.semenSource)}
-                              </span>
-                            </dd>
-                          </div>
-                        </dl>
-                      </li>
-                    ))}
-                  </ul>
-
-                  <div className="hidden overflow-hidden rounded-lg border border-ink/10 bg-surface-raised md:block">
-                    <table className="w-full border-collapse text-left">
-                      <thead className="bg-surface/70">
-                        <tr>
-                          <th className="px-2 py-1.5 text-label text-ink-muted">{copy.columns.cow}</th>
-                          <th className="px-2 py-1.5 text-label text-ink-muted">{copy.columns.aiDate}</th>
-                          <th className="px-2 py-1.5 text-label text-ink-muted">{copy.columns.bull}</th>
-                          <th className="px-2 py-1.5 text-label text-ink-muted">{copy.columns.expectedCalving}</th>
-                          <th className="px-2 py-1.5 text-label text-ink-muted">{copy.columns.source}</th>
-                          <th className="px-2 py-1.5 text-label text-ink-muted">{copy.columns.status}</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {entries.map((entry) => (
-                          <tr key={entry.id} className="border-t border-ink/5 align-top hover:bg-surface/50">
-                            <td className="px-2 py-2">
-                              <div className="text-body-strong text-ink-strong">{formatCowLabel(entry)}</div>
-                              {historyNotes(entry) && <div className="mt-1 text-meta text-ink-muted">{historyNotes(entry)}</div>}
-                            </td>
-                            <td className="px-2 py-2 text-body text-ink-muted">{entry.aiDate || '—'}</td>
-                            <td className="px-2 py-2 text-body text-ink-muted">{entry.sireCode || '—'}</td>
-                            <td className="px-2 py-2 text-body text-ink-muted">{entry.expectedCalvingDate || '—'}</td>
-                            <td className="px-2 py-2">
-                              <span className={`inline-flex rounded-full border px-2 py-1 text-badge ${getSemenSourceTone(entry.semenSource)}`}>
-                                {formatSemenSource(entry.semenSource)}
-                              </span>
-                            </td>
-                            <td className="px-2 py-2">
-                              <HistoryStatusBadge status={entry.status} />
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </SimpleModalSection>
-          <div className="flex justify-end pt-2">
-            <button type="button" onClick={() => setIsHistoryOpen(false)} className="btn-command px-4 py-2 text-control">{copy.close}</button>
-          </div>
-        </div>
+          <BreedingHistoryList groups={groupedHistory} />
+        </SimpleModalSection>
       </BaseModal>
 
       <BaseModal closeOnBackdrop isOpen={isInventoryOpen} onClose={() => setIsInventoryOpen(false)} title={copy.addInventoryTitle}>

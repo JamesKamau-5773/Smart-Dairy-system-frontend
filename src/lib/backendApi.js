@@ -957,16 +957,21 @@ export const productionApi = {
     });
   },
   /**
-   * The backend's all-time milk totals for the farm (from the yield list's `summary`):
-   * `{ totalRecords, totalLitres }`, each null when the backend didn't send it.
+   * The backend's milk totals from the yield list's `summary`, for `filters` (the same params
+   * as listYield; none = the whole farm, all time). Each value is null when not sent.
+   * `{ totalRecords, totalLitres, verified, pending, flagged, isolated }`; pending is the
+   * backend's RECORDED (recorded, not yet verified).
    */
-  yieldTotals() {
-    return apiClient.get('/production/yield', { params: { page: 1, per_page: 1 } }).then((response) => {
+  yieldTotals(filters = {}) {
+    return apiClient.get('/production/yield', { params: { ...filters, page: 1, per_page: 1 } }).then((response) => {
       const summary = response.data?.summary ?? {};
-      const numberOrNull = (value) => (value === null || value === undefined || value === '' ? null : Number(value));
       return {
         totalRecords: numberOrNull(summary.total_records),
         totalLitres: numberOrNull(summary.total_volume ?? summary.totalVolume),
+        verified: numberOrNull(summary.verified_count),
+        pending: numberOrNull(summary.recorded_count),
+        flagged: numberOrNull(summary.flagged_count),
+        isolated: numberOrNull(summary.isolated_count),
       };
     });
   },
@@ -974,8 +979,18 @@ export const productionApi = {
     return apiClient.post('/production/yield', buildProductionYieldPayload(payload), config).then((response) => toObject(response.data));
   },
   listMilkDispositions(params = {}) {
-    return apiClient.get('/production/milk-dispositions', { params })
-      .then((response) => toArray(response.data).map(normalizeMilkDisposition));
+    return productionApi.listMilkDispositionsWithTotals(params).then((result) => result.items);
+  },
+  /**
+   * Calf feedings plus the backend's totals for them: `{ items, count, totalLitres }`.
+   * TODO(BR-027): `total_liters` is requested; null until the backend sends it.
+   */
+  listMilkDispositionsWithTotals(params = {}) {
+    return apiClient.get('/production/milk-dispositions', { params }).then((response) => ({
+      items: toArray(response.data).map(normalizeMilkDisposition),
+      count: numberOrNull(response.data?.count),
+      totalLitres: numberOrNull(response.data?.total_liters ?? response.data?.total_litres),
+    }));
   },
   createMilkDisposition(payload) {
     return apiClient.post('/production/milk-dispositions', buildCalfMilkFeedPayload(payload))

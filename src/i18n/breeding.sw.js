@@ -71,8 +71,7 @@ export const breedingCopy = {
     noHistoryMatches: 'Hakuna rekodi inayolingana na kichujio ulichochagua.',
     recordCount: (count) => (count === 1 ? 'rekodi 1' : `rekodi ${count}`),
     unknownMonth: 'Mwezi haujulikani',
-    columns: { cow: 'Ng’ombe', aiDate: 'Tarehe ya AI', bull: 'Fahali', expectedCalving: 'Tarehe ya kuzaa', source: 'Chanzo', status: 'Hali' },
-    awaitingVet: 'Inasubiri muda wa kupimwa na daktari',
+    columns: { cow: 'Ng’ombe', aiDate: 'Tarehe ya AI', bull: 'Fahali', expectedCalving: 'Tarehe ya kuzaa', source: 'Chanzo', status: 'Hali', updated: 'Imesasishwa' }, // REVIEW: updated
     close: 'Funga',
     addInventoryTitle: 'Ongeza akiba mpya',
     restockTitle: 'Ongeza akiba ya mbegu',

@@ -8,7 +8,7 @@ import { useProductionGroupTotals, useProductionSummary } from './usePeriodTotal
 
 /**
  * Everything the Production Log shows, from one set of filters: the milk rows, the group
- * totals and the summary strip, all requested with the same params so they agree.
+ * totals, the summary and the status counts, all requested with the same params so they agree.
  * Rows come back as the API sent them; the page maps them for display.
  *
  * filters: { search, session }  ('all' and '' mean no filter)
@@ -24,6 +24,14 @@ export function useProductionData({ filters, range }) {
     placeholderData: keepPreviousData,
   });
 
+  // Record and status counts from the yield list's `summary` (verified, pending, flagged…).
+  // Under the rows' key, so saving a record refetches them too.
+  const totalsQuery = useQuery({
+    queryKey: [...QUERY_KEYS.YIELD_ROWS(tenantId, farmId), 'totals', tableParams],
+    queryFn: () => productionApi.yieldTotals(tableParams),
+    placeholderData: keepPreviousData,
+  });
+
   const groupTotals = useProductionGroupTotals(tableParams, { levels: TABLE_GROUP_LEVELS });
   const summary = useProductionSummary({ range, filters });
 
@@ -34,6 +42,11 @@ export function useProductionData({ filters, range }) {
       error: rowsQuery.error,
       isError: rowsQuery.isError,
       refetch: rowsQuery.refetch,
+    },
+    totals: {
+      data: totalsQuery.data ?? null,
+      loadState: getListLoadState({ status: totalsQuery.status, fetchStatus: totalsQuery.fetchStatus, data: totalsQuery.data }),
+      refetch: totalsQuery.refetch,
     },
     groupTotals,
     summary,

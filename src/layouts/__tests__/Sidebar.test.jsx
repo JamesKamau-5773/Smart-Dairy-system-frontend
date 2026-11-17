@@ -81,6 +81,40 @@ describe('Sidebar', () => {
   });
 });
 
+describe('Sidebar section headers', () => {
+  const farmer = { name: 'Farmer', role: 'FARMER', tenant_id: 't1', farm_id: 'f1', farm_name: 'F1' };
+
+  it('fold and unfold their section on desktop', async () => {
+    const { fireEvent } = await import('@testing-library/react');
+    renderAs(farmer);
+    const herd = screen.getByRole('button', { name: 'Toggle Herd Management section' });
+    expect(herd.getAttribute('aria-expanded')).toBe('true');
+    expect(screen.getByRole('link', { name: 'Cow Register' })).toBeTruthy();
+
+    fireEvent.click(herd);
+    expect(herd.getAttribute('aria-expanded')).toBe('false');
+    expect(screen.queryByRole('link', { name: 'Cow Register' })).toBeNull();
+
+    fireEvent.click(herd);
+    expect(screen.getByRole('link', { name: 'Cow Register' })).toBeTruthy();
+  });
+
+  it('keep the current page visible when the phone drawer opens', () => {
+    window.matchMedia = (query) => ({ matches: false, media: query, addEventListener() {}, removeEventListener() {} });
+    useAuth.mockReturnValue({ currentUser: farmer });
+    render(
+      <MemoryRouter initialEntries={['/operations/herd']}>
+        <Sidebar mobileOpen setMobileOpen={() => {}} />
+      </MemoryRouter>
+    );
+    // Herd Management folds by default on phones, but it holds the current page.
+    expect(screen.getByRole('link', { name: 'Cow Register' })).toBeTruthy();
+    // Feeding still starts folded.
+    expect(screen.getByRole('button', { name: 'Toggle Feeding section' }).getAttribute('aria-expanded')).toBe('false');
+    window.matchMedia = desktopWidth;
+  });
+});
+
 describe('Sidebar phone drawer', () => {
   const farmer = { name: 'Farmer', role: 'FARMER', tenant_id: 't1', farm_id: 'f1', farm_name: 'F1' };
 
@@ -92,15 +126,15 @@ describe('Sidebar phone drawer', () => {
     document.body.appendChild(opener);
     opener.focus();
 
-    const { unmount } = render(<MemoryRouter><Sidebar mobileOpen setMobileOpen={setMobileOpen} /></MemoryRouter>);
+    const { container, unmount } = render(<MemoryRouter><Sidebar mobileOpen setMobileOpen={setMobileOpen} /></MemoryRouter>);
     const close = screen.getByRole('button', { name: 'Close navigation menu' });
     // Focus moves into the drawer when it opens.
     expect(document.activeElement).toBe(close);
 
     // Shift+Tab from the first control wraps to the last one, not out to the page.
     fireEvent.keyDown(document, { key: 'Tab', shiftKey: true });
-    const links = screen.getAllByRole('link');
-    expect(document.activeElement).toBe(links[links.length - 1]);
+    const controls = container.querySelectorAll('aside a, aside button');
+    expect(document.activeElement).toBe(controls[controls.length - 1]);
     fireEvent.keyDown(document, { key: 'Tab' });
     expect(document.activeElement).toBe(close);
 

@@ -51,26 +51,33 @@ export const ledgerGroupConfig = {
 };
 
 const entriesText = (count) => (count == null ? '—' : productionCopy.group.entries(count, formatCount(count)));
-const litresValue = (value) => <span className="tabular-nums">{formatLitres(value)}</span>;
-
-export const productionSummaryConfig = {
-  // TODO(BR-022): "Available" (`available_litres`) is left out, not shown as "—", until the
-  // backend confirms the field; add it back here as a third item when it does.
-  items: ({ current }) => [
-    { key: 'litres', label: productionCopy.summary.totalMilk, value: litresValue(current.litres) },
-    { key: 'avg', label: productionCopy.summary.avgPerDay, value: litresValue(current.avgLitresPerDay) },
-  ],
-};
+// "563 entries" by the group label. "—" when the API sent no count.
+const entriesMeta = (count) => (
+  <span className="ml-2 shrink-0 truncate text-meta tabular-nums text-ink-400">
+    {count == null ? '—' : formatCount(count)} {productionCopy.group.entriesWord(count ?? 0)}
+  </span>
+);
 
 export const productionGroupConfig = {
   levels: TABLE_GROUP_LEVELS,
   get noun() { return productionCopy.group.noun; },
-  // Desktop table: litres under the Litres column (the header names the unit), the entry
+  // Grey-tinted group rows with brand labels; deeper levels are lighter and further in.
+  levelStyles: {
+    year: 'border-t-2 border-ink-200 bg-ink-50 text-body-strong text-brand',
+    month: 'bg-ink-50/50 text-body-strong text-brand',
+    day: 'bg-ink-50/30 text-body-strong text-brand',
+  },
+  // Set again on the toggle button, which doesn't inherit the row's type role.
+  levelType: { year: 'text-body-strong', month: 'text-body-strong', day: 'text-body-strong' },
+  levelIndent: { year: 'pl-4', month: 'pl-8', day: 'pl-12' },
+  chevronClassName: 'text-brand',
+  cellClassName: '!px-4',
+  // Desktop table: litres under the Total (L) column (the header names the unit), the entry
   // count next to the label.
   columnTotals: {
-    litres: (totals) => <span className="text-body-strong tabular-nums text-ink">{formatLitres(totals.litres, { unit: false })}</span>,
+    total: (totals) => <span className="whitespace-nowrap text-body-strong tabular-nums text-brand">{formatLitres(totals.litres, { unit: false })}</span>,
   },
-  labelMeta: (totals) => <span className="shrink-0 truncate text-meta text-ink-muted">· {entriesText(totals.entries)}</span>,
+  labelMeta: (totals) => entriesMeta(totals.entries),
   renderSummary: (totals) => (
     <span className="flex flex-col items-end">
       <span className="text-body-strong tabular-nums text-ink">{formatLitres(totals.litres)}</span>

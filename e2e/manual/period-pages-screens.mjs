@@ -195,6 +195,8 @@ const YIELD = [
   { id: 1, date: '2026-11-06', session: 'morning', milker_name: '254712345678', cow_tag: 'KE-0046', cow_name: 'Malaika wa Kwanza', amount: '14.5', status: 'VERIFIED', bucket: bucketOf('2026-11-06') },
   { id: 2, date: '2026-11-06', session: 'evening', milker_name: 'Wanjiru', cow_tag: 'KE-0012', cow_name: 'Neema', amount: '9.0', status: 'RECORDED', bucket: bucketOf('2026-11-06') },
 ];
+// The yield list's `summary` (status counts for the same filters), as the backend sends it.
+const YIELD_SUMMARY = { total_records: 2, total_volume: 23.5, verified_count: 1, recorded_count: 1, flagged_count: 0, isolated_count: 0 };
 
 // ── Herd fixtures (typography phase 3) ─────────────────────────────────────────
 const COWS = [
@@ -298,7 +300,7 @@ function handle(method, path, params, body) {
   if (path === '/finance/categories') return [200, CATEGORIES];
   if (path === '/production/summary') return [200, PRODUCTION_SUMMARY];
   if (path === '/production/group-totals') return [200, PRODUCTION_GROUPS];
-  if (path === '/production/yield') return [200, YIELD];
+  if (path === '/production/yield') return [200, { items: YIELD, summary: YIELD_SUMMARY, meta: { pages: 1 } }];
   if (path === '/herd') return [200, HERD];
   if (path === '/herd/1' || path === '/animals/1') return [200, COWS[0]];
   if (path === '/animals/1/milk-history') return [200, MILK_HISTORY];
@@ -311,7 +313,7 @@ function handle(method, path, params, body) {
   if (path === '/feed/recipes') return [200, RECIPES];
   if (path === '/units/conversions') return [200, CONVERSIONS];
   if (path === '/routine/plans') return [200, ROUTINE];
-  if (path === '/production/milk-dispositions') return [200, DISPOSITIONS];
+  if (path === '/production/milk-dispositions') return [200, { items: DISPOSITIONS, count: DISPOSITIONS.length }];
   if (path === '/finance/customers') return [200, CUSTOMERS];
   if (path === '/finance/customers/4') return [200, CUSTOMERS[0]];
   if (path === '/finance/deliveries') return [200, DELIVERIES];
