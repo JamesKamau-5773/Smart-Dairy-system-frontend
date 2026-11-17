@@ -38,6 +38,14 @@ describe('top bar title and the page h1', () => {
     expect(screen.getByText('AI & Pregnancy')).toBeTruthy();
   });
 
+  it('names Medical Records, Inventory and Feed Mixes by their sidebar labels, not old names', () => {
+    for (const [path, title] of [['/operations/records', 'Medical Records'], ['/operations/inventory', 'Inventory'], ['/feed-nutrition/mix', 'Feed Mixes']]) {
+      renderAt(path);
+      expect(screen.getByText(title)).toBeTruthy();
+      cleanup();
+    }
+  });
+
   it('matches whole paths, with :id standing for one segment', () => {
     expect(pageOwnsHeading('/finance/ledger/')).toBe(true);
     expect(pageOwnsHeading('/operations/reports/milk-inventory')).toBe(false);

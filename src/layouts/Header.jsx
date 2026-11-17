@@ -67,9 +67,9 @@ export default function Header({ onMenuClick = () => {} }) {
       : pathname.startsWith('/finance/buyers') ? copy.titles.buyers
         : pathname.startsWith('/finance/ledger') ? copy.titles.ledger
           : pathname.startsWith('/operations/milk-usage') ? copy.titles.milkUsage
-            : pathname.startsWith('/feed-nutrition/mix') ? copy.titles.feedMixing
-              : pathname.startsWith('/operations/records') ? copy.titles.clinical
-                : pathname.startsWith('/operations/inventory') ? copy.titles.stock
+            : pathname.startsWith('/feed-nutrition/mix') ? shellCopy.nav.items.feedMixes
+              : pathname.startsWith('/operations/records') ? shellCopy.nav.items.medical
+                : pathname.startsWith('/operations/inventory') ? shellCopy.nav.items.inventory
                   // Same keys as the sidebar labels, so the three titles never differ.
                   : pathname === '/operations/herd' ? shellCopy.nav.items.cowRegister
                     : pathname.startsWith('/operations/breeding') ? shellCopy.nav.items.breeding
