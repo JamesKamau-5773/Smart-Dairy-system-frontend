@@ -116,7 +116,7 @@ describe('unknown figures are shown as "—", never as zero', () => {
       { id: 2, name: 'Unknown' },
     ]);
     renderPage(BuyersList);
-    const total = (await screen.findByText('Total Outstanding')).closest('div.group');
+    const total = (await screen.findByText('Total outstanding')).closest('div.group');
     expect(within(total).getByText('—')).toBeTruthy();
     expect(screen.getAllByText('Balance unknown').length).toBeGreaterThan(0);
   });
@@ -127,7 +127,7 @@ describe('unknown figures are shown as "—", never as zero', () => {
       { id: 2, name: 'In credit', account_balance: -200 },
     ]);
     renderPage(BuyersList);
-    const total = (await screen.findByText('Total Outstanding')).closest('div.group');
+    const total = (await screen.findByText('Total outstanding')).closest('div.group');
     expect(within(total).getByText('KES 500.00')).toBeTruthy();
   });
 });
@@ -186,7 +186,7 @@ describe('Buyer statements on WhatsApp', () => {
     fireEvent.click(screen.getAllByRole('button', { name: /WhatsApp/ }).at(-1));
 
     const text = decodeURIComponent(new URL(open.mock.calls[0][0]).searchParams.get('text'));
-    expect(text).toMatch(/^Maziwa Smart - Customer Statement/);
+    expect(text).toMatch(/^Maziwa Smart - Customer statement/);
     expect(text).not.toMatch(/Jivu/);
     // A valid number opens the buyer's chat directly (phone.js format).
     expect(new URL(open.mock.calls[0][0]).pathname).toBe('/254712345678');

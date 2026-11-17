@@ -60,12 +60,12 @@ describe('AnimalEconomicsReport', () => {
 
     await waitFor(() => {
       expect(reportsApi.getAnimalEconomics).toHaveBeenCalledWith('cow-1');
-      expect(screen.getByText('Total Profit (Income minus Costs)')).toBeTruthy();
-      expect(screen.getByRole('button', { name: 'About Cost to Raise (Before Calving)' })).toBeTruthy();
-      expect(screen.getByRole('button', { name: 'About Total Milk Income' })).toBeTruthy();
-      expect(screen.getByRole('button', { name: 'About Total Profit (Income minus Costs)' })).toBeTruthy();
+      expect(screen.getByText('Total profit (income minus costs)')).toBeTruthy();
+      expect(screen.getByRole('button', { name: 'About Cost to raise (before calving)' })).toBeTruthy();
+      expect(screen.getByRole('button', { name: 'About Total milk income' })).toBeTruthy();
+      expect(screen.getByRole('button', { name: 'About Total profit (income minus costs)' })).toBeTruthy();
       expect(screen.getByLabelText('Animal summary').textContent).toContain('profit after recorded costs');
-      expect(screen.getByText('Record Completeness')).toBeTruthy();
+      expect(screen.getByText('Record completeness')).toBeTruthy();
     });
   });
 
@@ -98,6 +98,6 @@ describe('AnimalEconomicsReport', () => {
       name: 'Missing first calving date. Click here to add it to calculate exact costs.',
     });
     expect(alertLink.getAttribute('href')).toBe('/operations/animal/cow-1?action=calving');
-    expect(screen.getByText('Missing Data')).toBeTruthy();
+    expect(screen.getByText('Missing data')).toBeTruthy();
   });
 });

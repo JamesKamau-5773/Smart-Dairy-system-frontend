@@ -4,6 +4,19 @@ What changed for farmers and staff using Maziwa Smart. Newest first.
 
 ## Unreleased
 
+### Clearer text on the buyer, stock and report pages (typography phase 5a)
+
+- **Buyer List, Customer Management, customer profiles, Inventory, Customer Value & Profit, Cow
+  Profitability and the Milk Inventory Report use the new type scale.** Each title is the page's
+  name in the menu: "Buyer List" (was "Customer Billing"), "Cow Profitability" (was "Cost to Raise
+  vs. Total Earnings") and "Inventory" (was "Stock Registry").
+- Field names, buttons and figures are written in sentence case in English and Kiswahili. On a
+  phone, the search boxes say just "Search".
+- Cost types and record checks the app has no wording for yet are shown as a sentence, never as a
+  raw code.
+- In Kiswahili, the Milk Feeding Planner is "Mpango wa Maziwa na Ulishaji" everywhere (the menu
+  called it a calf milk plan).
+
 ### Clearer text on the operations and feeding pages (typography phase 4)
 
 - **Milk Usage, Daily Routine, Farm Task View, Today's Feeding, Feed Stock & Costs, Feed Mixes,

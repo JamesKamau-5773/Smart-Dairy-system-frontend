@@ -20,7 +20,7 @@ export default function MetricLabel({ children, explanation }) {
         <span
           id={tooltipId}
           role="tooltip"
-          className="pointer-events-none invisible absolute left-1/2 top-full z-30 mt-2 w-56 -translate-x-1/2 rounded-md bg-slate-950 px-3 py-2 text-left text-xs font-medium normal-case leading-relaxed text-white opacity-0  transition-opacity group-hover:visible group-hover:opacity-100 group-focus-within:visible group-focus-within:opacity-100"
+          className="pointer-events-none invisible absolute left-1/2 top-full z-30 mt-2 w-56 -translate-x-1/2 rounded-md bg-slate-950 px-3 py-2 text-left text-badge normal-case text-white opacity-0 transition-opacity group-hover:visible group-hover:opacity-100 group-focus-within:visible group-focus-within:opacity-100"
         >
           {explanation}
         </span>

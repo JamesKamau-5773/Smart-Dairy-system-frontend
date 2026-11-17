@@ -27,14 +27,14 @@ test('feed setup journey on a phone', async ({ page }) => {
 
   await test.step('add a feed item without a SKU', async () => {
     await page.goto('/operations/inventory');
-    await page.getByRole('button', { name: /Add to Feedstore|Register your first item/ }).first().click();
+    await page.getByRole('button', { name: /Add to feedstore|Register your first item/i }).first().click();
     const dialog = page.getByRole('dialog').last();
     await dialog.locator('input[name="name"]').fill('Maize Germ');
     await dialog.locator('input[name="currentStock"]').fill('200');
     await dialog.locator('input[name="proteinGramsPerKg"]').fill('10');
     await dialog.locator('input[name="energyMjPerKg"]').fill('12');
     await dialog.locator('input[name="costPerKg"]').fill('32');
-    await dialog.getByRole('button', { name: /Save Resource/ }).click();
+    await dialog.getByRole('button', { name: /Save resource/i }).click();
     await expect(itemCard('Maize Germ')).toBeVisible();
   });
 
@@ -43,11 +43,11 @@ test('feed setup journey on a phone', async ({ page }) => {
     const dialog = page.getByRole('dialog', { name: 'Restock resource' });
     await dialog.getByLabel(/Quantity delivered/).fill('23.5');
     await dialog.getByLabel(/Also record this purchase/).check();
-    await dialog.getByRole('button', { name: /Confirm Delivery/ }).click();
+    await dialog.getByRole('button', { name: /Confirm delivery/i }).click();
     await expect(dialog.getByText('Enter the price per kg to record the expense.')).toBeVisible();
     await dialog.getByLabel(/Price paid per kg/).fill('34');
     await dialog.getByLabel(/Supplier/).fill('Unga Feeds');
-    await dialog.getByRole('button', { name: /Confirm Delivery/ }).click();
+    await dialog.getByRole('button', { name: /Confirm delivery/i }).click();
     await expect(itemCard('Maize Germ')).toContainText('223.5');
   });
 

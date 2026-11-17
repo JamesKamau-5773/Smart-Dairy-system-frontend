@@ -27,6 +27,14 @@ export const PAGES_WITH_OWN_HEADING = Object.freeze([
   '/operations/feed-formulation',
   '/operations/lab',
   '/operations/unit-conversions',
+  // Phase 5a: finance, supply and reports.
+  '/finance/buyers',
+  '/operations/customers',
+  '/finance/customers/:customerId',
+  '/operations/inventory',
+  '/finance/reports/dairy-unit-economics',
+  '/finance/reports/animal-economics',
+  '/operations/reports/milk-inventory',
 ]);
 
 const segments = (path) => path.split('/').filter(Boolean);

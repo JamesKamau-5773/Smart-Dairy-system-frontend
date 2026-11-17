@@ -21,6 +21,8 @@ import { SITE } from '../../landing/content';
 import { normalizeKenyanPhone } from '../../lib/phone';
 import { customerTypeLabel, financeCopy } from '../../i18n/finance';
 import { shellCopy } from '../../i18n/shell';
+import { PHONE_QUERY, useMediaQuery } from '../../hooks/useMediaQuery';
+import { commonCopy } from '../../i18n/common';
 // "KES 1,250.00"; "—" when the backend sent no figure (unknown is never shown as zero).
 const formatKes = formatMoneyText;
 
@@ -41,13 +43,13 @@ const balanceStatus = (balance) => {
  */
 const KPIWidget = ({ title, value, subtitle, valueColor = "text-brand", state = 'ready' }) => (
   <div className="group relative overflow-hidden rounded-card border border-slate-200 border-t-[4px] border-t-brand-400 bg-white/90 p-6 backdrop-blur">
-    <h3 className="mb-4 text-[11px] font-black uppercase tracking-widest text-slate-600">
+    <p className="mb-4 text-label text-slate-600">
       {title}
-    </h3>
-    <StatValue state={state} label={financeCopy.buyers.listLabel} className={`mb-1 break-words font-mono text-2xl font-bold tabular-nums sm:text-3xl ${valueColor}`}>
+    </p>
+    <StatValue state={state} label={financeCopy.buyers.listLabel} className={`mb-1 break-words text-stat-value tabular-nums ${valueColor}`}>
       {value}
     </StatValue>
-    <p className="text-xs font-medium text-slate-600">{subtitle}</p>
+    <p className="text-meta text-slate-600">{subtitle}</p>
   </div>
 );
 
@@ -58,6 +60,8 @@ const BUYER_FILTERS = { status: 'all' };
 const BUYER_FILTER_VALUES = { status: ['all', 'outstanding', 'settled'] };
 
 export default function BuyersList() {
+  // Inputs are 16px on phones, so the long search hint would be cut off there.
+  const isPhone = useMediaQuery(PHONE_QUERY);
   const copy = financeCopy.buyers;
   const statementCopy = financeCopy.statement;
   const queryClient = useQueryClient();
@@ -197,10 +201,10 @@ export default function BuyersList() {
       <div className="mb-8 flex flex-col items-start justify-between gap-4 rounded-card border border-slate-200 border-l-[4px] border-l-brand-400 bg-white/90 p-5 backdrop-blur md:flex-row md:items-center">
         <div>
           <div>
-            <h1 className="m-0 font-display text-2xl font-bold text-ink-900">
+            <h1 className="m-0 text-page-title text-ink-900">
               {shellCopy.nav.items.buyers}
             </h1>
-            <p className="mt-1 max-w-xl text-sm text-slate-600">
+            <p className="mt-1 max-w-xl text-body text-slate-600">
               {copy.subtitle}
             </p>
           </div>
@@ -210,7 +214,7 @@ export default function BuyersList() {
         {safeCustomers.length > 0 && (
           <button 
             onClick={() => setIsAddPanelOpen(true)}
-            className="flex items-center gap-2 rounded-button bg-brand-700 px-6 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-brand-900 w-full md:w-auto justify-center"
+            className="flex items-center gap-2 rounded-button bg-brand-700 px-6 py-2.5 text-control text-white transition-colors hover:bg-brand-900 w-full md:w-auto justify-center"
           >
             <Plus size={18} aria-hidden="true" />
             {copy.addNew}
@@ -252,8 +256,9 @@ export default function BuyersList() {
                   <Search className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-brand" size={17} aria-hidden="true" />
                   <input
                     type="search"
-                    placeholder={copy.searchPlaceholder}
-                    className="h-10 w-full rounded-input border border-ink/20 bg-surface pl-10 pr-3 text-sm font-medium text-ink placeholder:text-ink-muted focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/30"
+                    aria-label={copy.searchPlaceholder}
+                    placeholder={isPhone ? commonCopy.filters.searchShort : copy.searchPlaceholder}
+                    className="h-10 w-full rounded-input border border-ink/20 bg-surface pl-10 pr-3 text-control text-ink placeholder:text-ink-muted focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/30"
                     value={searchTerm}
                     onChange={(event) => setSearchTerm(event.target.value)}
                   />
@@ -263,7 +268,7 @@ export default function BuyersList() {
                   <select
                     value={statusFilter}
                     onChange={(event) => setStatusFilter(event.target.value)}
-                    className="h-10 w-full appearance-none rounded-input border border-ink/20 bg-surface pl-3 pr-9 text-sm font-semibold text-ink focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/30"
+                    className="h-10 w-full appearance-none rounded-input border border-ink/20 bg-surface pl-3 pr-9 text-control text-ink focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/30"
                     aria-label={copy.status}
                   >
                     <option value="all">{copy.allStatuses}</option>
@@ -275,12 +280,12 @@ export default function BuyersList() {
                   <button
                     type="button"
                     onClick={shareSelectedStatements}
-                    className="inline-flex h-10 items-center justify-center rounded-button bg-brand-700 px-4 font-mono text-sm font-semibold tabular-nums text-white hover:bg-brand-900 lg:ml-auto"
+                    className="inline-flex h-10 items-center justify-center rounded-button bg-brand-700 px-4 text-control tabular-nums text-white hover:bg-brand-900 lg:ml-auto"
                   >
                     {copy.shareSelected(selectedCustomerIds.length)}
                   </button>
                 )}
-                <p className={`font-mono text-xs font-semibold tabular-nums text-slate-600 ${selectedCustomerIds.length === 0 ? 'lg:ml-auto' : ''}`}>
+                <p className={`text-meta tabular-nums text-slate-600 ${selectedCustomerIds.length === 0 ? 'lg:ml-auto' : ''}`}>
                   {copy.showing(filteredCustomers.length, safeCustomers.length)}
                 </p>
               </div>
@@ -290,7 +295,7 @@ export default function BuyersList() {
               <div className="hidden overflow-x-auto md:block">
                 <table className="w-full min-w-[1040px] border-collapse text-left">
                   <thead className="border-b border-slate-300">
-                    <tr className="text-xs font-bold uppercase tracking-wider text-slate-600">
+                    <tr className="text-label text-slate-600">
                       <th className="w-12 px-4 py-2.5">
                         <input
                           type="checkbox"
@@ -329,19 +334,19 @@ export default function BuyersList() {
                             />
                           </td>
                           <td className="px-3 py-2.5">
-                            <div className="font-semibold text-ink-900">{buyer?.name || financeCopy.statement.unnamed}</div>
-                            <div className="mt-0.5 text-xs text-ink-600">{customerTypeLabel(buyer?.type)}</div>
+                            <div className="text-body-strong text-ink-900">{buyer?.name || financeCopy.statement.unnamed}</div>
+                            <div className="mt-0.5 text-meta text-ink-600">{customerTypeLabel(buyer?.type)}</div>
                           </td>
-                          <td className="px-3 py-2.5 font-mono text-xs font-semibold tabular-nums text-ink-800">{id}</td>
-                          <td className="px-3 py-2.5 font-mono text-xs font-semibold tabular-nums text-ink-800">{contact}</td>
-                          <td className="px-3 py-2.5 text-right font-mono text-xs font-semibold tabular-nums text-ink-900">
+                          <td className="px-3 py-2.5 text-meta tabular-nums text-ink-800">{id}</td>
+                          <td className="px-3 py-2.5 text-meta tabular-nums text-ink-800">{contact}</td>
+                          <td className="px-3 py-2.5 text-right text-meta tabular-nums text-ink-900">
                             {formatKes(rate)}/L
                           </td>
-                          <td className="px-3 py-2.5 text-right font-mono text-xs font-bold tabular-nums text-brand">
+                          <td className="px-3 py-2.5 text-right text-meta tabular-nums text-brand">
                             {formatKes(balance)}
                           </td>
                           <td className="px-3 py-2.5">
-                            <span className="inline-flex items-center rounded-badge border border-brand/20 bg-brand-50 px-2 py-1 text-[11px] font-bold text-brand-dark">
+                            <span className="inline-flex items-center rounded-badge border border-brand/20 bg-brand-50 px-2 py-1 text-badge text-brand-dark">
                               {balanceStatus(balance)}
                             </span>
                           </td>
@@ -359,7 +364,7 @@ export default function BuyersList() {
                               <PopoverContent align="end" className="w-52 rounded-card border border-slate-200 bg-white/95 p-1.5  backdrop-blur">
                                 <Link
                                   to={`/finance/customers/${id}`}
-                                  className="flex items-center rounded-button px-3 py-2 text-sm font-semibold text-ink-900 hover:bg-brand-50 hover:text-brand-900"
+                                  className="flex items-center rounded-button px-3 py-2 text-body-strong text-ink-900 hover:bg-brand-50 hover:text-brand-900"
                                 >
 
       {copy.openStatement}
@@ -367,7 +372,7 @@ export default function BuyersList() {
                                 <button
                                   type="button"
                                   onClick={() => shareCustomerStatement(buyer)}
-                                  className="flex w-full items-center gap-2 rounded-button px-3 py-2 text-left text-sm font-semibold text-ink-900 hover:bg-brand-50 hover:text-brand-900"
+                                  className="flex w-full items-center gap-2 rounded-button px-3 py-2 text-left text-control text-ink-900 hover:bg-brand-50 hover:text-brand-900"
                                 >
 
       {copy.shareWhatsApp}
@@ -381,8 +386,8 @@ export default function BuyersList() {
                     {filteredCustomers.length === 0 && (
                       <tr>
                         <td colSpan={8} className="px-6 py-16 text-center">
-                          <p className="font-display font-bold text-ink-900">{copy.noMatchesTitle}</p>
-                          <p className="mt-1 text-sm font-medium text-ink-600">{copy.noMatchesHint}</p>
+                          <p className="text-body-strong text-ink-900">{copy.noMatchesTitle}</p>
+                          <p className="mt-1 text-body text-ink-600">{copy.noMatchesHint}</p>
                           {buyerSuggestionChips}
                         </td>
                       </tr>
@@ -403,29 +408,29 @@ export default function BuyersList() {
                         <div className="flex min-w-0 items-start gap-2">
                           <input type="checkbox" checked={isSelected} onChange={() => toggleCustomer(id)} className="mt-1 h-4 w-4 shrink-0 accent-brand" aria-label={copy.select(buyer?.name || copy.buyer)} />
                           <div className="min-w-0">
-                            <p className="break-words font-semibold text-ink">{buyer?.name || financeCopy.statement.unnamed}</p>
-                            <p className="mt-0.5 text-xs text-ink-muted">{copy.typeAndId(customerTypeLabel(buyer?.type), id)}</p>
+                            <p className="break-words text-body-strong text-ink">{buyer?.name || financeCopy.statement.unnamed}</p>
+                            <p className="mt-0.5 text-meta text-ink-muted">{copy.typeAndId(customerTypeLabel(buyer?.type), id)}</p>
                           </div>
                         </div>
-                        <span className="shrink-0 rounded-badge border border-brand/20 bg-brand-50 px-2 py-1 text-[10px] font-bold text-brand-dark">{balanceStatus(balance)}</span>
+                        <span className="shrink-0 rounded-badge border border-brand/20 bg-brand-50 px-2 py-1 text-badge text-brand-dark">{balanceStatus(balance)}</span>
                       </div>
-                      <dl className="grid grid-cols-2 gap-x-3 gap-y-2 border-t border-ink/10 pt-3 text-xs">
-                        <div className="min-w-0"><dt className="text-ink-muted">{copy.agreedRate}</dt><dd className="mt-1 break-words font-mono font-semibold text-ink">{formatKes(rate)}/L</dd></div>
-                        <div className="min-w-0"><dt className="text-ink-muted">{copy.currentBalance}</dt><dd className="mt-1 break-words font-mono font-bold text-brand">{formatKes(balance)}</dd></div>
+                      <dl className="grid grid-cols-2 gap-x-3 gap-y-2 border-t border-ink/10 pt-3 text-meta">
+                        <div className="min-w-0"><dt className="text-ink-muted">{copy.agreedRate}</dt><dd className="mt-1 break-words text-body-strong text-ink tabular-nums">{formatKes(rate)}/L</dd></div>
+                        <div className="min-w-0"><dt className="text-ink-muted">{copy.currentBalance}</dt><dd className="mt-1 break-words text-body-strong text-brand tabular-nums">{formatKes(balance)}</dd></div>
                       </dl>
                       <div className="flex min-w-0 flex-wrap items-center justify-between gap-2 border-t border-ink/10 pt-3">
-                        <p className="min-w-0 flex-1 break-all text-xs text-ink-muted">{contact}</p>
+                        <p className="min-w-0 flex-1 break-all text-meta text-ink-muted">{contact}</p>
                         <div className="flex shrink-0 gap-2">
-                          <Link to={`/finance/customers/${id}`} className="inline-flex min-h-10 items-center rounded-button border border-brand/20 px-2.5 text-xs font-semibold text-brand-dark hover:bg-brand-50">
+                          <Link to={`/finance/customers/${id}`} className="inline-flex min-h-10 items-center rounded-button border border-brand/20 px-2.5 text-meta text-brand-dark hover:bg-brand-50">
           {copy.statement}</Link>
-                          <button type="button" onClick={() => shareCustomerStatement(buyer)} className="inline-flex min-h-10 items-center rounded-button bg-brand px-2.5 text-xs font-semibold text-white hover:bg-brand-dark">
+                          <button type="button" onClick={() => shareCustomerStatement(buyer)} className="inline-flex min-h-10 items-center rounded-button bg-brand px-2.5 text-control text-white hover:bg-brand-dark">
           {copy.whatsApp}</button>
                         </div>
                       </div>
                     </article>
                   );
                 })}
-                {filteredCustomers.length === 0 && <div className="p-6 text-center text-sm text-ink-muted"><p>{copy.noMatches}</p>{buyerSuggestionChips}</div>}
+                {filteredCustomers.length === 0 && <div className="p-6 text-center text-body text-ink-muted"><p>{copy.noMatches}</p>{buyerSuggestionChips}</div>}
               </div>
             </section>
           </div>
@@ -446,15 +451,15 @@ export default function BuyersList() {
         {/* First-time empty state: only once the backend has answered with no buyers. */}
         {showBuyers && safeCustomers.length === 0 && (
           <div className="mx-auto mt-12 flex max-w-3xl animate-fade-in flex-col items-center justify-center rounded-card border border-slate-200 bg-white/90 p-12 text-center backdrop-blur">
-            <h2 className="text-xl font-black text-ink mb-2">{copy.emptyTitle}</h2>
-            <p className="text-sm text-ink-muted max-w-md mb-8 leading-relaxed">
+            <h2 className="text-section-title text-ink mb-2">{copy.emptyTitle}</h2>
+            <p className="text-body text-ink-muted max-w-md mb-8">
               {copy.emptyHint}
             </p>
 
             <div className="flex flex-col sm:flex-row items-center gap-4 w-full sm:w-auto">
               <button 
                 onClick={() => setIsAddPanelOpen(true)}
-                className="w-full sm:w-auto flex items-center justify-center gap-2 bg-brand-700 text-white px-6 py-3 rounded-button font-bold text-sm hover:bg-brand-900 transition-colors"
+                className="w-full sm:w-auto flex items-center justify-center gap-2 bg-brand-700 text-white px-6 py-3 rounded-button text-control hover:bg-brand-900 transition-colors"
               >
                 <Plus size={18} aria-hidden="true" /> {copy.addFirst}
               </button>

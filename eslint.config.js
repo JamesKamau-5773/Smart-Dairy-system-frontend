@@ -63,6 +63,19 @@ const TYPOGRAPHY_MIGRATED = [
   'src/components/operations/MilkDispositionHistory.jsx',
   'src/components/ui/InlineNotice.jsx',
   'src/lib/feedingGroups.js',
+  // Phase 5a: finance, supply and reports.
+  'src/pages/finance/BuyersList.jsx',
+  'src/pages/finance/CustomerProfile.jsx',
+  'src/pages/operations/Customers.jsx',
+  'src/pages/inventory/InventoryRegistry.jsx',
+  'src/pages/finance/DairyUnitEconomicsReport.jsx',
+  'src/pages/finance/AnimalEconomicsReport.jsx',
+  'src/pages/operations/MilkInventoryReport.jsx',
+  'src/components/finance/CustomerForm.jsx',
+  'src/components/finance/DeliveryModal.jsx',
+  'src/components/finance/MetricLabel.jsx',
+  'src/components/inventory/**',
+  'src/components/ui/RecordedValue.jsx',
 ]
 // Allowed raw values: the tokens file and the Tailwind configs that define the old scale,
 // the landing page until its own phase (it keeps its fluid display sizes), copy, and tests.

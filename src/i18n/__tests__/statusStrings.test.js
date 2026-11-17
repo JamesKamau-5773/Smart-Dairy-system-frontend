@@ -66,6 +66,11 @@ const BACKEND_STATUS_ENUMS = [
     values: ['Lactating', 'Dry', 'Heifer', 'Calf', 'Cow', 'Sold', 'Died'],
     file: '../herd.en.js', exportName: 'herdCopy', path: ['statuses'],
   },
+  {
+    name: 'AnimalCostType (cow profitability cost lines, ledger animal cost type)',
+    values: ['PURCHASE', 'CALF_FEED', 'HEIFER_FEED', 'BREEDING', 'VETERINARY', 'LABOR', 'HOUSING', 'OVERHEAD', 'OTHER'],
+    file: '../finance.en.js', exportName: 'financeCopy', path: ['ledgerForm', 'animalCostTypes'],
+  },
   // ReceiptStatus is not published in the API contract yet (BACKEND_REQUESTS.md, BR-024); the
   // receipt shows a humanised value until it is, and gets an entry here then.
 ];

@@ -19,20 +19,20 @@ const kes = (value) => formatMoneyText(value == null || value === '' ? null : Nu
 const ProfileDetail = ({ label, value }) => (
   <div>
     <div>
-      <h4 className="text-xs font-bold uppercase tracking-wider text-ink-muted">{label}</h4>
-      <p className="text-sm font-medium text-ink">{value || copy.notAvailable}</p>
+      <p className="text-label text-ink-muted">{label}</p>
+      <p className="text-body text-ink">{value || copy.notAvailable}</p>
     </div>
   </div>
 );
 
 const TransactionRow = ({ tx }) => (
     <tr className="hover:bg-surface-raised transition-colors">
-      <td className="p-4 text-sm text-ink-muted">{formatDate(tx.date)}</td>
-      <td className="p-4 text-sm font-medium text-ink">{tx.description || tx.category || copy.notAvailable}</td>
-      <td className="p-4 text-right text-sm font-bold text-brand">
+      <td className="p-4 text-body text-ink-muted">{formatDate(tx.date)}</td>
+      <td className="p-4 text-body text-ink">{tx.description || tx.category || copy.notAvailable}</td>
+      <td className="p-4 text-right text-body-strong text-brand">
         {kes(tx.amount)}
       </td>
-      <td className="p-4 text-sm text-ink-muted text-right">{tx.reference || copy.notAvailable}</td>
+      <td className="p-4 text-body text-ink-muted text-right">{tx.reference || copy.notAvailable}</td>
     </tr>
 );
 
@@ -47,11 +47,11 @@ const DeliveryRow = ({ delivery, onEdit, onDelete }) => {
 
   return (
     <tr className="hover:bg-surface-raised transition-colors">
-      <td className="p-4 text-sm text-ink-muted">{formatDate(delivery.date)}</td>
-      <td className="p-4 text-sm font-medium text-ink text-right">{delivered.toFixed(1)} L</td>
-      <td className="p-4 text-sm font-medium text-ink-muted text-right">{personalUse.toFixed(1)} L</td>
-      <td className="p-4 text-sm font-bold text-ink text-right">{Number(billableLiters).toFixed(1)} L</td>
-      <td className="p-4 text-sm font-bold text-brand text-right">
+      <td className="p-4 text-body text-ink-muted">{formatDate(delivery.date)}</td>
+      <td className="p-4 text-body text-ink text-right">{delivered.toFixed(1)} L</td>
+      <td className="p-4 text-body text-ink-muted text-right">{personalUse.toFixed(1)} L</td>
+      <td className="p-4 text-body-strong text-ink text-right">{Number(billableLiters).toFixed(1)} L</td>
+      <td className="p-4 text-body-strong text-brand text-right">
         {kes(amount)}
       </td>
       <td className="p-4 text-right">
@@ -60,9 +60,9 @@ const DeliveryRow = ({ delivery, onEdit, onDelete }) => {
       <button type="button" className="inline-flex h-8 w-8 items-center justify-center rounded-button border border-brand/20 text-brand hover:border-brand-400 hover:bg-brand-50" aria-label={copy.actionsForDelivery(formatDate(delivery.date))}><MoreVertical size={16} aria-hidden="true" /></button>
           </PopoverTrigger>
           <PopoverContent align="end" className="w-40 p-1.5">
-            <button type="button" onClick={() => onEdit(delivery)} className="flex w-full items-center rounded-md px-3 py-2 text-left text-sm text-ink-900 hover:bg-brand-50">
+            <button type="button" onClick={() => onEdit(delivery)} className="flex w-full items-center rounded-md px-3 py-2 text-left text-control text-ink-900 hover:bg-brand-50">
             {copy.edit}</button>
-            <button type="button" onClick={() => onDelete(delivery)} className="flex w-full items-center rounded-md px-3 py-2 text-left text-sm text-brand-dark hover:bg-brand-50">
+            <button type="button" onClick={() => onDelete(delivery)} className="flex w-full items-center rounded-md px-3 py-2 text-left text-control text-brand-dark hover:bg-brand-50">
             {copy.delete}</button>
           </PopoverContent>
         </Popover>
@@ -198,8 +198,8 @@ export default function CustomerProfile() {
   if (isErrorCustomer) {
     return (
       <div className="card-machined border border-brand/20 bg-brand-50 p-8 text-center text-brand-dark">
-        <h2 className="font-bold text-lg">{copy.loadErrorTitle}</h2>
-        <p className="mt-2 text-sm">{customerError.message || copy.loadErrorMessage}</p>
+        <h1 className="text-page-title">{copy.loadErrorTitle}</h1>
+        <p className="mt-2 text-body">{customerError.message || copy.loadErrorMessage}</p>
         <Link to="/finance/buyers" className="btn-secondary mt-4">{copy.backToBuyers}</Link>
       </div>
     );
@@ -208,8 +208,8 @@ export default function CustomerProfile() {
   if (!customer) {
     return (
       <div className="card-machined p-8 text-center">
-        <h2 className="font-bold text-lg">{copy.notFoundTitle}</h2>
-        <p className="mt-2 text-sm">{copy.notFoundMessage}</p>
+        <h1 className="text-page-title">{copy.notFoundTitle}</h1>
+        <p className="mt-2 text-body">{copy.notFoundMessage}</p>
         <Link to="/finance/buyers" className="btn-secondary mt-4">{copy.backToBuyers}</Link>
       </div>
     );
@@ -223,8 +223,8 @@ export default function CustomerProfile() {
             <ArrowLeft size={20} className="text-ink-muted" aria-hidden="true" />
           </Link>
           <div>
-            <h1 className="font-sans font-black text-3xl tracking-tight text-ink">{customer.name}</h1>
-            <p className="text-sm font-medium text-ink-muted mt-1">
+            <h1 className="text-page-title text-ink">{customer.name}</h1>
+            <p className="text-body text-ink-muted mt-1">
               {copy.subtitle}
             </p>
           </div>
@@ -244,35 +244,35 @@ export default function CustomerProfile() {
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <div className="card-machined p-6">
-          <h4 className="text-xs font-bold uppercase text-ink-muted">
-          {copy.currentBalance}</h4>
-          <p className="mt-2 text-3xl font-black text-brand">
+          <p className="text-label text-ink-muted">
+          {copy.currentBalance}</p>
+          <p className="mt-2 text-stat-value text-brand">
             {kes(customer.account_balance ?? customer.balance)}
           </p>
         </div>
         <div className="card-machined p-6">
-          <h4 className="text-xs font-bold uppercase text-ink-muted">
-          {copy.agreedRate}</h4>
-          <p className="text-3xl font-black mt-2 text-ink">
+          <p className="text-label text-ink-muted">
+          {copy.agreedRate}</p>
+          <p className="text-stat-value mt-2 text-ink">
             {kes(customer.agreed_rate_per_liter ?? customer.agreed_rate)} / L
           </p>
         </div>
         <div className="card-machined p-6">
-          <h4 className="text-xs font-bold uppercase text-ink-muted">
-          {copy.contractLitres}</h4>
-          <p className="text-3xl font-black mt-2 text-ink">
+          <p className="text-label text-ink-muted">
+          {copy.contractLitres}</p>
+          <p className="text-stat-value mt-2 text-ink">
             {customer.daily_contract_liters ? `${Number(customer.daily_contract_liters).toLocaleString(undefined, { maximumFractionDigits: 2 })} L` : copy.notAvailable}
           </p>
-          <p className="text-xs text-ink-muted mt-1">{copy.contractHint}</p>
+          <p className="text-meta text-ink-muted mt-1">{copy.contractHint}</p>
         </div>
       </div>
 
       <div className="card-machined overflow-hidden !p-0">
         <div className="p-6 border-b border-ink/10 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-          <h3 className="font-bold text-lg text-ink">
+          <h2 className="text-section-title text-ink">
 
     {copy.deliveries}
-          </h3>
+          </h2>
           <button type="button" onClick={handleAddDelivery} className="btn-command gap-2 self-start sm:self-auto">
             <Plus size={14} aria-hidden="true" /> {copy.logDelivery}
           </button>
@@ -281,12 +281,12 @@ export default function CustomerProfile() {
           <table className="w-full text-left">
             <thead className="bg-surface-raised">
               <tr>
-                <th className="p-4 font-sans text-xs font-semibold uppercase tracking-wider text-ink-muted">{copy.deliveryColumns.date}</th>
-                <th className="p-4 font-sans text-xs font-semibold uppercase tracking-wider text-ink-muted text-right">{copy.deliveryColumns.delivered}</th>
-                <th className="p-4 font-sans text-xs font-semibold uppercase tracking-wider text-ink-muted text-right">{copy.deliveryColumns.personalUse}</th>
-                <th className="p-4 font-sans text-xs font-semibold uppercase tracking-wider text-ink-muted text-right">{copy.deliveryColumns.billable}</th>
-                <th className="p-4 font-sans text-xs font-semibold uppercase tracking-wider text-ink-muted text-right">{copy.deliveryColumns.amount}</th>
-                <th className="p-4 font-sans text-xs font-semibold uppercase tracking-wider text-ink-muted text-right">{copy.deliveryColumns.actions}</th>
+                <th className="p-4 text-label text-ink-muted">{copy.deliveryColumns.date}</th>
+                <th className="p-4 text-label text-ink-muted text-right">{copy.deliveryColumns.delivered}</th>
+                <th className="p-4 text-label text-ink-muted text-right">{copy.deliveryColumns.personalUse}</th>
+                <th className="p-4 text-label text-ink-muted text-right">{copy.deliveryColumns.billable}</th>
+                <th className="p-4 text-label text-ink-muted text-right">{copy.deliveryColumns.amount}</th>
+                <th className="p-4 text-label text-ink-muted text-right">{copy.deliveryColumns.actions}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-ink/5">
@@ -314,38 +314,38 @@ export default function CustomerProfile() {
           </table>
         </div>
         <div className="divide-y divide-ink/10 md:hidden">
-          {isLoadingDeliveries ? <p className="p-5 text-sm text-ink-muted">{copy.loadingDeliveries}</p> : deliveries.length ? deliveries.map((delivery) => {
+          {isLoadingDeliveries ? <p className="p-5 text-body text-ink-muted">{copy.loadingDeliveries}</p> : deliveries.length ? deliveries.map((delivery) => {
             const delivered = Number(delivery.liters_delivered) || 0;
             const personalUse = Number(delivery.personal_consumption_liters) || 0;
             const billable = delivery.billable_liters ?? delivered;
             const amount = delivery.amount ?? delivery.billed_amount;
             return (
               <article key={delivery.id} className="min-w-0 space-y-3 p-4">
-                <div className="flex items-start justify-between gap-3"><time className="text-xs text-ink-muted">{formatDate(delivery.date)}</time><span className="text-right font-mono text-sm font-bold text-brand">{kes(amount)}</span></div>
-                <dl className="grid grid-cols-2 gap-3 border-t border-ink/10 pt-3 text-xs">
-                  <div><dt className="text-ink-muted">{copy.delivered}</dt><dd className="mt-1 font-semibold text-ink">{delivered.toFixed(1)} L</dd></div>
-                  <div><dt className="text-ink-muted">{copy.personalUse}</dt><dd className="mt-1 font-semibold text-ink">{personalUse.toFixed(1)} L</dd></div>
-                  <div><dt className="text-ink-muted">{copy.billable}</dt><dd className="mt-1 font-semibold text-ink">{Number(billable).toFixed(1)} L</dd></div>
+                <div className="flex items-start justify-between gap-3"><time className="text-meta text-ink-muted">{formatDate(delivery.date)}</time><span className="text-right text-body-strong text-brand tabular-nums">{kes(amount)}</span></div>
+                <dl className="grid grid-cols-2 gap-3 border-t border-ink/10 pt-3 text-meta">
+                  <div><dt className="text-ink-muted">{copy.delivered}</dt><dd className="mt-1 text-body-strong text-ink">{delivered.toFixed(1)} L</dd></div>
+                  <div><dt className="text-ink-muted">{copy.personalUse}</dt><dd className="mt-1 text-body-strong text-ink">{personalUse.toFixed(1)} L</dd></div>
+                  <div><dt className="text-ink-muted">{copy.billable}</dt><dd className="mt-1 text-body-strong text-ink">{Number(billable).toFixed(1)} L</dd></div>
                 </dl>
-                <div className="flex justify-end gap-2"><button type="button" onClick={() => handleEditDelivery(delivery)} className="rounded-lg border border-brand/20 px-3 py-2 text-xs font-semibold text-brand">{copy.edit}</button><button type="button" onClick={() => handleDeleteDelivery(delivery)} className="rounded-lg border border-brand/20 px-3 py-2 text-xs font-semibold text-brand-dark">{copy.delete}</button></div>
+                <div className="flex justify-end gap-2"><button type="button" onClick={() => handleEditDelivery(delivery)} className="rounded-lg border border-brand/20 px-3 py-2 text-control text-brand">{copy.edit}</button><button type="button" onClick={() => handleDeleteDelivery(delivery)} className="rounded-lg border border-brand/20 px-3 py-2 text-control text-brand-dark">{copy.delete}</button></div>
               </article>
             );
-          }) : <p className="p-5 text-sm text-ink-muted">{copy.noDeliveries}</p>}
+          }) : <p className="p-5 text-body text-ink-muted">{copy.noDeliveries}</p>}
         </div>
       </div>
 
       <div className="card-machined overflow-hidden !p-0">
         <div className="p-6 border-b border-ink/10">
-          <h3 className="font-bold text-lg text-ink">{copy.transactions}</h3>
+          <h2 className="text-section-title text-ink">{copy.transactions}</h2>
         </div>
         <div className="hidden overflow-x-auto md:block">
           <table className="w-full text-left">
             <thead className="bg-surface-raised">
               <tr>
-                <th className="p-4 font-sans text-xs font-semibold uppercase tracking-wider text-ink-muted">{copy.transactionColumns.date}</th>
-                <th className="p-4 font-sans text-xs font-semibold uppercase tracking-wider text-ink-muted">{copy.transactionColumns.description}</th>
-                <th className="p-4 font-sans text-xs font-semibold uppercase tracking-wider text-ink-muted text-right">{copy.transactionColumns.amount}</th>
-                <th className="p-4 font-sans text-xs font-semibold uppercase tracking-wider text-ink-muted text-right">{copy.transactionColumns.reference}</th>
+                <th className="p-4 text-label text-ink-muted">{copy.transactionColumns.date}</th>
+                <th className="p-4 text-label text-ink-muted">{copy.transactionColumns.description}</th>
+                <th className="p-4 text-label text-ink-muted text-right">{copy.transactionColumns.amount}</th>
+                <th className="p-4 text-label text-ink-muted text-right">{copy.transactionColumns.reference}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-ink/5">
@@ -366,13 +366,13 @@ export default function CustomerProfile() {
           </table>
         </div>
         <div className="divide-y divide-ink/10 md:hidden">
-          {isLoadingTransactions ? <p className="p-5 text-sm text-ink-muted">{copy.loadingTransactions}</p> : transactions.length ? transactions.map((tx) => (
+          {isLoadingTransactions ? <p className="p-5 text-body text-ink-muted">{copy.loadingTransactions}</p> : transactions.length ? transactions.map((tx) => (
             <article key={tx.id} className="min-w-0 space-y-2 p-4">
-              <div className="flex items-start justify-between gap-3"><time className="text-xs text-ink-muted">{formatDate(tx.date)}</time><span className="shrink-0 text-right font-mono text-sm font-bold text-brand">{kes(tx.amount)}</span></div>
-              <p className="break-words text-sm font-medium text-ink">{tx.description || tx.category || copy.notAvailable}</p>
-              <p className="break-all text-xs text-ink-muted">{copy.reference(tx.reference || copy.notAvailable)}</p>
+              <div className="flex items-start justify-between gap-3"><time className="text-meta text-ink-muted">{formatDate(tx.date)}</time><span className="shrink-0 text-right text-body-strong text-brand tabular-nums">{kes(tx.amount)}</span></div>
+              <p className="break-words text-body text-ink">{tx.description || tx.category || copy.notAvailable}</p>
+              <p className="break-all text-meta text-ink-muted">{copy.reference(tx.reference || copy.notAvailable)}</p>
             </article>
-          )) : <p className="p-5 text-sm text-ink-muted">{copy.noTransactions}</p>}
+          )) : <p className="p-5 text-body text-ink-muted">{copy.noTransactions}</p>}
         </div>
       </div>
 

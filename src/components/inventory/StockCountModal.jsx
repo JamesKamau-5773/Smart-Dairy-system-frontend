@@ -44,7 +44,7 @@ export default function StockCountModal({ item, onClose, onSubmit }) {
     <BaseModal isOpen onClose={onClose} title={copy.title} subtitle={copy.subtitle(item.name, stock, unit)}>
       <form onSubmit={submit} noValidate className="space-y-4">
         <div>
-          <label htmlFor="stock-count-value" className="mb-1.5 block text-[10px] font-black uppercase tracking-widest text-ink-muted">{`${copy.counted} (${unit})`}</label>
+          <label htmlFor="stock-count-value" className="mb-1.5 block text-field-label text-ink-muted">{`${copy.counted} (${unit})`}</label>
           <input
             id="stock-count-value"
             type="number"
@@ -58,20 +58,20 @@ export default function StockCountModal({ item, onClose, onSubmit }) {
             }}
             aria-invalid={error ? true : undefined}
             aria-describedby="stock-count-hint"
-            className="w-full rounded-lg border border-ink/15 bg-card p-3 text-sm font-bold text-ink outline-none focus:ring-2 focus:ring-brand/20"
+            className="w-full rounded-lg border border-ink/15 bg-card p-3 text-control text-ink outline-none focus:ring-2 focus:ring-brand/20"
           />
-          <p id="stock-count-hint" className="mt-1.5 text-xs text-ink-muted">{copy.countHint}</p>
-          {error && <p className="mt-1 text-xs font-semibold text-danger">{error}</p>}
+          <p id="stock-count-hint" className="mt-1.5 text-meta text-ink-muted">{copy.countHint}</p>
+          {error && <p className="mt-1 text-meta text-danger">{error}</p>}
         </div>
 
         {difference && (
-          <p role="status" className={`rounded-lg p-3 text-sm font-semibold ${difference.kind === 'loss' ? tone('attention').surface : tone('info').surface} text-ink`}>
+          <p role="status" className={`rounded-lg p-3 text-body-strong ${difference.kind === 'loss' ? tone('attention').surface : tone('info').surface} text-ink`}>
             {difference.kind === 'match' ? copy.preview.match : copy.preview[difference.kind](difference.difference, unit)}
           </p>
         )}
 
-        {!online && <p className="text-xs font-semibold text-ink-muted">{copy.onlineOnly}</p>}
-        {submitError && <p role="alert" className="text-xs font-semibold text-danger">{submitError}</p>}
+        {!online && <p className="text-meta text-ink-muted">{copy.onlineOnly}</p>}
+        {submitError && <p role="alert" className="text-meta text-danger">{submitError}</p>}
         <SubmitButton pending={pending} pendingLabel={copy.submitting} disabled={!online}>{copy.submit}</SubmitButton>
       </form>
     </BaseModal>
