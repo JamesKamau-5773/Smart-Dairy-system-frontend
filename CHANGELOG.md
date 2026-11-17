@@ -4,6 +4,19 @@ What changed for farmers and staff using Maziwa Smart. Newest first.
 
 ## Unreleased
 
+### Clearer text on the herd pages (typography phase 3)
+
+- **Cow Register, Breeding, Medical Records, Low milk alerts, the cow record and milk history
+  use the new type scale.** Each page title is the page's main heading, summary figures are one
+  size, and nothing is smaller than 12px.
+- Field names, statuses and buttons are written in sentence case in English and Kiswahili
+  ("Save record", "Under treatment", "Mirija 6 kwenye tangi") instead of capitals. Column
+  headings and small section headings keep their capitals.
+- A status the app has no wording for yet is shown as a sentence ("ON_HOLD" → "On hold") rather
+  than as the raw code.
+- Pending vet checks and the medical records table no longer squeeze dates and buttons onto
+  several lines.
+
 ### Clearer text on the Production Log, Ledger and Farm Reports (typography phase 2)
 
 - **The three pages use the new type scale.** Page titles are larger, summary figures are one

@@ -17,6 +17,7 @@ import Skeleton from '../../components/ui/Skeleton';
 import { CardSkeletons, ListLoadMessage, SlowLoadingHint, TableSkeletonRows } from '../../components/ui/ListLoadState';
 import { getListLoadState } from '../../lib/listLoadState';
 import { CartesianGrid, Legend, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
+import { enumLabel } from '../../lib/enumLabel';
 
 // TODO(BR-013): the daily totals for the chart are added up here from the cow's sessions; the
 // backend should return the daily series with the history.
@@ -45,8 +46,8 @@ function MetricCard({ label, value, loading = false }) {
   return (
     <div className="card-machined p-5 bg-surface">
       <div>
-        <div className="text-[10px] uppercase tracking-widest text-ink-muted font-bold">{label}</div>
-        {loading ? <Skeleton className="mt-1.5 h-6 w-20" /> : <div className="text-xl font-black text-ink">{value}</div>}
+        <div className="text-label text-ink-muted">{label}</div>
+        {loading ? <Skeleton className="mt-1.5 h-6 w-20" /> : <div className="text-stat-value text-ink">{value}</div>}
       </div>
     </div>
   );
@@ -137,7 +138,7 @@ export default function MilkHistory() {
   if (!isLoading && !resolvedHistory) {
     return (
       <div className="animate-reveal space-y-6 max-w-6xl mx-auto">
-        <div className="rounded-2xl border border-dashed border-ink/10 bg-surface p-6 text-sm text-ink-muted">
+        <div className="rounded-2xl border border-dashed border-ink/10 bg-surface p-6 text-body text-ink-muted">
           {copy.empty}
         </div>
       </div>
@@ -153,15 +154,15 @@ export default function MilkHistory() {
             <ArrowLeft size={20} aria-hidden="true" />
           </Link>
           <div className="min-w-0">
-            <h2 className="font-sans font-bold text-2xl tracking-tight text-brand m-0 truncate">
+            <h1 className="text-page-title text-brand m-0 truncate">
               {id} <span className="text-ink-muted">({resolvedHistory?.animal?.name || copy.unknownCow})</span>
-            </h2>
-            <p className="text-sm text-ink-muted mt-1">{copy.subtitle}</p>
+            </h1>
+            <p className="text-body text-ink-muted mt-1">{copy.subtitle}</p>
           </div>
           </div>
           <div className="hidden sm:block text-right">
-            <p className="text-[10px] font-bold uppercase tracking-widest text-ink-muted">{copy.totalMilkings}</p>
-            <p className="text-2xl font-black text-ink">{totalSessions}</p>
+            <p className="text-label text-ink-muted">{copy.totalMilkings}</p>
+            <p className="text-stat-value text-ink">{totalSessions}</p>
           </div>
         </div>
       </div>
@@ -176,13 +177,13 @@ export default function MilkHistory() {
       <section className="card-machined overflow-hidden bg-surface">
         <div className="flex flex-col gap-3 border-b border-ink/10 bg-surface-raised px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <h3 className="text-lg font-bold text-brand">
-            {copy.trendTitle}</h3>
-            <p className="mt-1 text-xs text-ink-muted">{copy.trendSubtitle(resolvedHistory?.animal?.name || copy.thisCow)}</p>
+            <h2 className="text-section-title text-brand">
+            {copy.trendTitle}</h2>
+            <p className="mt-1 text-meta text-ink-muted">{copy.trendSubtitle(resolvedHistory?.animal?.name || copy.thisCow)}</p>
           </div>
           <div className="inline-flex rounded-lg border border-ink/10 bg-surface p-1" role="group" aria-label={copy.trendRange}>
             {[['30', copy.ranges[30]], ['90', copy.ranges[90]], ['all', copy.ranges.all]].map(([value, label]) => (
-              <button key={value} type="button" onClick={() => setTrendRange(value)} aria-pressed={trendRange === value} className={`rounded-md px-3 py-1.5 text-xs font-semibold transition-colors ${trendRange === value ? 'bg-brand text-surface' : 'text-ink-muted hover:bg-surface-raised hover:text-brand'}`}>
+              <button key={value} type="button" onClick={() => setTrendRange(value)} aria-pressed={trendRange === value} className={`rounded-md px-3 py-1.5 text-control transition-colors ${trendRange === value ? 'bg-brand text-surface' : 'text-ink-muted hover:bg-surface-raised hover:text-brand'}`}>
                 {label}
               </button>
             ))}
@@ -195,8 +196,8 @@ export default function MilkHistory() {
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={trendData} margin={{ top: 5, right: 20, left: -10, bottom: 5 }}>
                 <CartesianGrid strokeDasharray="3 3" strokeOpacity={0.2} />
-                <XAxis dataKey="label" tick={{ fontSize: 12 }} />
-                <YAxis tick={{ fontSize: 12 }} unit=" L" />
+                <XAxis dataKey="label" />
+                <YAxis unit=" L" />
                 <Tooltip
                   formatter={(value) => [`${Number(value).toFixed(1)} L`, copy.dailyProduction]}
                   labelFormatter={(label) => copy.dateLabel(label)}
@@ -212,7 +213,7 @@ export default function MilkHistory() {
               </LineChart>
             </ResponsiveContainer>
           ) : (
-            <div className="flex h-full items-center justify-center text-sm text-ink-muted">{copy.noTrend}</div>
+            <div className="flex h-full items-center justify-center text-body text-ink-muted">{copy.noTrend}</div>
           )}
         </div>
       </section>
@@ -222,7 +223,7 @@ export default function MilkHistory() {
           <button
             type="button"
             onClick={() => setFiltersOpen((prev) => !prev)}
-            className="inline-flex items-center gap-1.5 rounded-lg border border-ink/10 bg-surface px-3 py-1.5 text-xs font-semibold text-ink  transition-all hover:border-brand/20 hover:bg-brand/5 hover:text-brand"
+            className="inline-flex items-center gap-1.5 rounded-lg border border-ink/10 bg-surface px-3 py-1.5 text-control text-ink transition-all hover:border-brand/20 hover:bg-brand/5 hover:text-brand"
             aria-expanded={filtersOpen}
             aria-controls="history-filter-panel"
           >
@@ -237,7 +238,7 @@ export default function MilkHistory() {
           <button
             type="button"
             onClick={clearFilters}
-            className="inline-flex items-center text-xs font-semibold text-ink-muted hover:text-brand"
+            className="inline-flex items-center text-control text-ink-muted hover:text-brand"
           >
 
   {copy.resetFilters}
@@ -247,7 +248,7 @@ export default function MilkHistory() {
         {filtersOpen && (
           <div id="history-filter-panel" className="space-y-4">
             <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3">
-              <label className="space-y-1 text-xs font-semibold text-ink-muted xl:col-span-2">
+              <label className="space-y-1 text-field-label text-ink-muted xl:col-span-2">
                 {copy.search}
                 <div className="relative">
                   <Search size={14} className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-brand" aria-hidden="true" />
@@ -260,7 +261,7 @@ export default function MilkHistory() {
                   />
                 </div>
               </label>
-              <label className="space-y-1 text-xs font-semibold text-ink-muted">
+              <label className="space-y-1 text-field-label text-ink-muted">
                 {copy.date}
                 <input
                   type="date"
@@ -269,7 +270,7 @@ export default function MilkHistory() {
                   className="input-machined"
                 />
               </label>
-              <label className="space-y-1 text-xs font-semibold text-ink-muted">
+              <label className="space-y-1 text-field-label text-ink-muted">
                 {copy.status}
                 <select
                   value={filters.status}
@@ -282,7 +283,7 @@ export default function MilkHistory() {
                   <option value="flagged">{productionCopy.statuses.Flagged}</option>
                 </select>
               </label>
-              <label className="space-y-1 text-xs font-semibold text-ink-muted">
+              <label className="space-y-1 text-field-label text-ink-muted">
                 {copy.session}
                 <select
                   value={filters.session}
@@ -297,7 +298,7 @@ export default function MilkHistory() {
               </label>
             </div>
 
-            <div className="text-xs text-ink-muted">
+            <div className="text-meta text-ink-muted">
               {copy.showing(filteredSessions.length, totalSessions)}
             </div>
           </div>
@@ -307,10 +308,10 @@ export default function MilkHistory() {
       <div className="card-machined overflow-hidden !p-0">
         <div className="flex flex-col items-start justify-between gap-2 border-b border-ink/10 bg-surface-raised p-5 sm:flex-row sm:items-center sm:gap-4">
           <div>
-            <h3 className="font-bold text-brand text-lg m-0">{copy.recordsTitle}</h3>
-            <p className="text-sm text-ink-muted">{copy.recordsSubtitle}</p>
+            <h2 className="text-section-title text-brand m-0">{copy.recordsTitle}</h2>
+            <p className="text-body text-ink-muted">{copy.recordsSubtitle}</p>
           </div>
-          <div className="text-xs font-bold uppercase tracking-widest text-ink-muted">{resolvedHistory?.animal?.breed || resolvedHistory?.breed || copy.notAvailable}</div>
+          <div className="text-meta text-ink-muted">{resolvedHistory?.animal?.breed || resolvedHistory?.breed || copy.notAvailable}</div>
         </div>
 
         {isLoading ? (
@@ -325,11 +326,11 @@ export default function MilkHistory() {
               <table className="w-full min-w-[680px] border-collapse text-left">
                 <thead>
                   <tr className="bg-brand text-white">
-                    <th className="p-4 text-xs uppercase tracking-[0.12em]">{copy.columns.date}</th>
-                    <th className="p-4 text-xs uppercase tracking-[0.12em]">{copy.columns.session}</th>
-                    <th className="p-4 text-xs uppercase tracking-[0.12em]">{copy.columns.milker}</th>
-                    <th className="p-4 text-right text-xs uppercase tracking-[0.12em]">{copy.columns.liters}</th>
-                    <th className="p-4 text-center text-xs uppercase tracking-[0.12em]">{copy.columns.status}</th>
+                    <th className="p-4 text-label">{copy.columns.date}</th>
+                    <th className="p-4 text-label">{copy.columns.session}</th>
+                    <th className="p-4 text-label">{copy.columns.milker}</th>
+                    <th className="p-4 text-right text-label">{copy.columns.liters}</th>
+                    <th className="p-4 text-center text-label">{copy.columns.status}</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-ink/5 bg-surface">
@@ -341,13 +342,13 @@ export default function MilkHistory() {
                     renderGroupMeta={(items) => copy.dayMeta(items.length, items.reduce((sum, item) => sum + Number(item.liters || 0), 0).toFixed(1))}
                     renderItem={(entry, index) => (
                       <tr key={`${entry.date}-${entry.session}-${index}`} className="transition-colors hover:bg-surface-raised">
-                        <td className="p-4 text-sm font-medium text-ink-muted">{entry.date}</td>
-                        <td className="p-4 text-sm font-semibold text-ink">{sessionLabel(entry.session)}</td>
-                        <td className="p-4 text-sm font-medium text-ink">{entry.milker}</td>
-                        <td className="p-4 text-right text-sm font-black tabular-nums text-brand">{entry.liters} L</td>
+                        <td className="p-4 text-body text-ink-muted">{entry.date}</td>
+                        <td className="p-4 text-body-strong text-ink">{sessionLabel(entry.session)}</td>
+                        <td className="p-4 text-body text-ink">{entry.milker}</td>
+                        <td className="p-4 text-right text-body-strong tabular-nums text-brand">{entry.liters} L</td>
                         <td className="p-4 text-center">
-                          <span className="inline-flex items-center gap-1 rounded border border-brand/20 bg-brand-50 px-2 py-1 text-[11px] font-medium text-brand-dark">
-                            {productionCopy.statuses[entry.status] ?? entry.status}
+                          <span className="inline-flex items-center gap-1 rounded border border-brand/20 bg-brand-50 px-2 py-1 text-badge text-brand-dark">
+                            {enumLabel(productionCopy.statuses, entry.status)}
                           </span>
                         </td>
                       </tr>
@@ -362,14 +363,14 @@ export default function MilkHistory() {
                 <article key={`${entry.date}-${entry.session}-${index}`} className="min-w-0 space-y-3 p-4">
                   <div className="flex min-w-0 items-start justify-between gap-3">
                     <div className="min-w-0">
-                      <time className="text-xs text-ink-muted">{entry.date}</time>
-                      <h4 className="mt-1 break-words font-semibold text-ink">{copy.sessionTitle(sessionLabel(entry.session))}</h4>
+                      <time className="text-meta text-ink-muted">{entry.date}</time>
+                      <h3 className="mt-1 break-words text-section-title text-ink">{copy.sessionTitle(sessionLabel(entry.session))}</h3>
                     </div>
-                    <span className="shrink-0 rounded border border-brand/20 bg-brand-50 px-2 py-1 text-[10px] font-semibold text-brand-dark">{productionCopy.statuses[entry.status] ?? entry.status}</span>
+                    <span className="shrink-0 rounded border border-brand/20 bg-brand-50 px-2 py-1 text-badge text-brand-dark">{enumLabel(productionCopy.statuses, entry.status)}</span>
                   </div>
-                  <dl className="grid grid-cols-2 gap-3 border-t border-ink/10 pt-3 text-xs">
-                    <div className="min-w-0"><dt className="text-ink-muted">{copy.columns.milker}</dt><dd className="mt-1 break-words font-medium text-ink">{entry.milker || '—'}</dd></div>
-                    <div className="min-w-0"><dt className="text-ink-muted">{copy.columns.liters}</dt><dd className="mt-1 break-words font-mono font-bold tabular-nums text-brand">{entry.liters} L</dd></div>
+                  <dl className="grid grid-cols-2 gap-3 border-t border-ink/10 pt-3 text-meta">
+                    <div className="min-w-0"><dt className="text-ink-muted">{copy.columns.milker}</dt><dd className="mt-1 break-words text-ink">{entry.milker || '—'}</dd></div>
+                    <div className="min-w-0"><dt className="text-ink-muted">{copy.columns.liters}</dt><dd className="mt-1 break-words text-body-strong tabular-nums text-brand">{entry.liters} L</dd></div>
                   </dl>
                 </article>
               ))}
@@ -377,8 +378,8 @@ export default function MilkHistory() {
           </>
         ) : (
           <div className="p-10 text-center text-ink-muted bg-surface-warm/30">
-            <p className="font-semibold text-ink">{copy.noMatches}</p>
-            <p className="text-sm mt-1 leading-6">{copy.noMatchesHint}</p>
+            <p className="text-body-strong text-ink">{copy.noMatches}</p>
+            <p className="text-body mt-1">{copy.noMatchesHint}</p>
             <button type="button" onClick={clearFilters} className="btn-command bg-surface-raised text-ink mt-4">
               {copy.clearFilters}
             </button>

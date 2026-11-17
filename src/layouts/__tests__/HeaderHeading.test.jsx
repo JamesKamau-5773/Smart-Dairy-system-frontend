@@ -26,12 +26,15 @@ describe('top bar title and the page h1', () => {
   });
 
   it('stays the h1 on pages that have no heading of their own yet', () => {
-    renderAt('/operations/herd');
+    renderAt('/feeding');
     expect(screen.getByRole('heading', { level: 1 })).toBeTruthy();
   });
 
-  it('matches exact paths only', () => {
+  it('matches whole paths, with :id standing for one segment', () => {
     expect(pageOwnsHeading('/finance/ledger/')).toBe(true);
     expect(pageOwnsHeading('/operations/reports/milk-inventory')).toBe(false);
+    expect(pageOwnsHeading('/operations/animal/42')).toBe(true);
+    expect(pageOwnsHeading('/operations/animal/42/milk-history')).toBe(true);
+    expect(pageOwnsHeading('/operations/animal/42/other')).toBe(false);
   });
 });

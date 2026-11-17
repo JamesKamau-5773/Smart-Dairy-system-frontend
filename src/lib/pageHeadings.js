@@ -1,15 +1,31 @@
 // Pages that render their own <h1> (PageHeader or a page heading). On these the top bar shows
 // its title as plain text, so the page has exactly one h1. Every other page keeps the top-bar
-// h1 until it gets its own (typography phase 7). Exact paths: a sub-page such as
-// /operations/reports/milk-inventory is a different page with its own entry.
+// h1 until it gets its own (typography phase 7). Whole paths only: a sub-page such as
+// /operations/reports/milk-inventory is a different page with its own entry. A `:name`
+// segment matches any one segment, as in the route.
 export const PAGES_WITH_OWN_HEADING = Object.freeze([
+  // Phase 2 pilot
   '/operations/yield',
   '/finance/ledger',
   '/operations/reports',
+  // Phase 3: herd management
+  '/operations/herd',
+  '/operations/breeding',
+  '/operations/records',
+  '/operations/milk-drop-reports',
+  '/operations/animal/:id',
+  '/operations/animal/:id/milk-history',
 ]);
+
+const segments = (path) => path.split('/').filter(Boolean);
+
+const matches = (pattern, parts) => {
+  const want = segments(pattern);
+  return want.length === parts.length && want.every((segment, index) => segment.startsWith(':') || segment === parts[index]);
+};
 
 /** True when the page at `pathname` provides its own h1. */
 export function pageOwnsHeading(pathname) {
-  const path = pathname.length > 1 ? pathname.replace(/\/+$/, '') : pathname;
-  return PAGES_WITH_OWN_HEADING.includes(path);
+  const parts = segments(pathname);
+  return PAGES_WITH_OWN_HEADING.some((pattern) => matches(pattern, parts));
 }

@@ -56,7 +56,7 @@ export default function LogHeatObservationForm({ herdOptions = [], onSuccess, on
   return (
     <form className="space-y-5" onSubmit={handleSubmit}>
       <div>
-        <label className="mb-1 block text-xs font-bold uppercase tracking-wider text-ink-muted">{copy.cow}</label>
+        <label className="mb-1 block text-field-label text-ink-muted">{copy.cow}</label>
         <select className="input-machined w-full" value={cowId} onChange={(event) => setCowId(event.target.value)} required>
           <option value="">{copy.selectCow}</option>
           {herdOptions.map((cow) => <option key={cow.id} value={cow.id}>{cow.display}</option>)}
@@ -65,11 +65,11 @@ export default function LogHeatObservationForm({ herdOptions = [], onSuccess, on
 
       <div className="grid gap-4 md:grid-cols-2">
         <div>
-          <label className="mb-1 block text-xs font-bold uppercase tracking-wider text-ink-muted">{copy.observedAt}</label>
+          <label className="mb-1 block text-field-label text-ink-muted">{copy.observedAt}</label>
           <input type="datetime-local" className="input-machined w-full" value={observedAt} onChange={(event) => setObservedAt(event.target.value)} required />
         </div>
         <div>
-          <label className="mb-1 block text-xs font-bold uppercase tracking-wider text-ink-muted">{copy.intensity}</label>
+          <label className="mb-1 block text-field-label text-ink-muted">{copy.intensity}</label>
           <select className="input-machined w-full" value={intensity} onChange={(event) => setIntensity(event.target.value)}>
             <option value="LOW">{breedingCopy.intensities.LOW}</option>
             <option value="MEDIUM">{breedingCopy.intensities.MEDIUM}</option>
@@ -79,10 +79,10 @@ export default function LogHeatObservationForm({ herdOptions = [], onSuccess, on
       </div>
 
       <fieldset>
-        <legend className="mb-2 text-xs font-bold uppercase tracking-wider text-ink-muted">{copy.signs}</legend>
+        <legend className="mb-2 text-field-label text-ink-muted">{copy.signs}</legend>
         <div className="grid gap-2 sm:grid-cols-2">
           {HEAT_SIGNS.map((value) => (
-            <label key={value} className="flex items-center gap-2 rounded-md border border-ink/10 p-3 text-sm font-semibold text-ink-strong">
+            <label key={value} className="flex items-center gap-2 rounded-md border border-ink/10 p-3 text-field-label text-ink-strong">
               <input type="checkbox" checked={signs.includes(value)} onChange={() => toggleSign(value)} />
               {breedingCopy.heatSigns[value]}
             </label>
@@ -91,11 +91,11 @@ export default function LogHeatObservationForm({ herdOptions = [], onSuccess, on
       </fieldset>
 
       <div>
-        <label className="mb-1 block text-xs font-bold uppercase tracking-wider text-ink-muted">{copy.notes}</label>
+        <label className="mb-1 block text-field-label text-ink-muted">{copy.notes}</label>
         <textarea className="input-machined min-h-24 w-full" value={notes} onChange={(event) => setNotes(event.target.value)} />
       </div>
 
-      <button type="submit" disabled={isSaving} className="btn-command w-full py-2.5 text-sm disabled:opacity-50">
+      <button type="submit" disabled={isSaving} className="btn-command w-full py-2.5 text-control disabled:opacity-50">
         {isSaving ? copy.recording : copy.submit}
       </button>
     </form>

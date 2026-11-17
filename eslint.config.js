@@ -34,6 +34,19 @@ const TYPOGRAPHY_MIGRATED = [
   'src/components/finance/ReceiptPhotosModal.jsx',
   'src/components/finance/AttachmentThumb.jsx',
   'src/lib/enumLabel.js',
+  // Phase 3: herd management.
+  'src/pages/operations/HerdRegistry.jsx',
+  'src/pages/operations/BreedingHub.jsx',
+  'src/pages/operations/MedicalRecords.jsx',
+  'src/pages/operations/MilkDropReports.jsx',
+  'src/pages/operations/AnimalRecord.jsx',
+  'src/pages/operations/MilkHistory.jsx',
+  'src/components/forms/breeding/**',
+  'src/components/operations/animalRecord/**',
+  'src/components/ui/CowPhoto.jsx',
+  'src/components/ui/GroupedDateRows.jsx',
+  'src/components/ui/SearchSuggestions.jsx',
+  'src/components/ui/DraftRestoredNotice.jsx',
 ]
 // Allowed raw values: the tokens file and the Tailwind configs that define the old scale,
 // the landing page until its own phase (it keeps its fluid display sizes), copy, and tests.
