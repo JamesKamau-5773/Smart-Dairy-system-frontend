@@ -22,6 +22,7 @@ import { useTenant } from '../../hooks/useTenant';
 import { herdCopy, herdStatusLabel } from '../../i18n/herd';
 import { useUrlFilters } from '../../hooks/useUrlFilters';
 import AnimalAge from '../../components/operations/AnimalAge';
+import { shellCopy } from '../../i18n/shell';
 import {
   formatDate,
   statusTone,
@@ -536,7 +537,8 @@ export default function HerdRegistry() {
       <div className="flex flex-col gap-4 border-b border-ink/10 pb-6 md:flex-row md:items-end md:justify-between">
         <div>
           <h1 className="m-0 text-page-title text-brand">
-            {copy.titleStart} <span className="text-ink-muted">{copy.titleEnd}</span>
+            {/* The sidebar's label for this page: one key for both. */}
+            {shellCopy.nav.items.cowRegister}
           </h1>
           <p className="mt-2 text-body text-ink-muted">
             {copy.subtitle}

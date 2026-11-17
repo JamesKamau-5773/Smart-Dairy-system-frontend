@@ -17,8 +17,6 @@ export const breedingCopy = {
 
   hub: {
     eyebrow: 'Herd reproduction',
-    titleStart: 'AI &',
-    titleEnd: 'Pregnancy',
     onHeat: (count) => `${count} on heat`,
     pendingChecks: (total, due) => `${plural(total, { one: '{n} check pending', other: '{n} checks pending' })} · ${due} due`,
     straws: (count) => plural(count, { one: '{n} straw in tank', other: '{n} straws in tank' }),

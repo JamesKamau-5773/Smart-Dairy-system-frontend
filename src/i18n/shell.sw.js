@@ -81,7 +81,7 @@ export const shellCopy = {
       dailyRoutine: 'Ratiba ya Kila Siku',
       farmTasks: 'Kazi za Shambani',
       cowRegister: 'Daftari la Ng’ombe',
-      breeding: 'Uzalishaji na Vizazi', // REVIEW: "Breeding & Genetics"
+      breeding: 'AI na Mimba',
       medical: 'Rekodi za Matibabu',
       milkDrops: 'Tahadhari za Maziwa Kupungua',
       todayFeeding: 'Ulishaji wa Leo',

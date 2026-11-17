@@ -29,6 +29,7 @@ import { toLocalIsoDate } from '../../lib/localDate';
 import { reportError } from '../../lib/telemetry';
 import { formatMonthYear } from '../../lib/dateFormat';
 import { breedingCopy } from '../../i18n/breeding';
+import { shellCopy } from '../../i18n/shell';
 
 /**
  * NOTE: The following components should be extracted into their own files
@@ -108,7 +109,8 @@ function BreedingHeader({ metrics, onLogService, onRecordHeat }) {
     <div className="flex flex-col gap-6 border-b border-ink/10 pb-6 md:flex-row md:items-end md:justify-between">
       <div>
         <h1 className="m-0 text-page-title text-brand mb-4">
-          {copy.titleStart} <span className="text-ink-muted">{copy.titleEnd}</span>
+          {/* The sidebar's label for this page: one key for both. */}
+          {shellCopy.nav.items.breeding}
         </h1>
 
         {/* Compact KPI Chips */}

@@ -51,7 +51,7 @@ export const herdCopy = {
     healthSaved: (tag) => `Rekodi ya matibabu imehifadhiwa kwa ${tag} — inaonekana pia kwenye Rekodi za Matibabu.`,
     breedingBuildFailed: 'Imeshindwa kutengeneza rekodi sahihi ya uzalishaji kutoka kwa taarifa ulizoweka.',
     certificateUploadFailed: 'Huduma ya AI imehifadhiwa, lakini cheti hakikuweza kupakiwa. Tafadhali jaribu kukiambatisha tena.',
-    breedingSaved: (tag, withCertificate) => `Rekodi ya uzalishaji imehifadhiwa kwa ${tag}${withCertificate ? ' pamoja na cheti' : ''} — inaonekana pia kwenye Uzalishaji na Vizazi.`,
+    breedingSaved: (tag, withCertificate) => `Rekodi ya uzalishaji imehifadhiwa kwa ${tag}${withCertificate ? ' pamoja na cheti' : ''} — inaonekana pia kwenye AI na Mimba.`,
     birthRecorded: (tag) => `Uzazi umerekodiwa kwa ${tag}. Rekodi ya mnyama imesasishwa.`,
     eventLogged: (type, tag) => `Tukio la ${type.toLowerCase()} limerekodiwa kwa ${tag}.`,
     saveFailed: 'Imeshindwa kuhifadhi tukio hili. Angalia taarifa kisha ujaribu tena.',
@@ -160,8 +160,6 @@ export const herdCopy = {
 
   registry: {
     eyebrow: 'Orodha ya mifugo',
-    titleStart: 'Mifugo',
-    titleEnd: 'Yangu',
     subtitle: 'Orodha kamili ya wanyama wote kwenye boma lako na hali yao ya sasa.',
     totalAnimals: 'Wanyama wote',
     milking: 'Wanaokamuliwa',

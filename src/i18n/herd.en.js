@@ -52,7 +52,7 @@ export const herdCopy = {
     healthSaved: (tag) => `Medical record saved for ${tag} — also visible on Medical Records.`,
     breedingBuildFailed: 'Unable to build a valid breeding log from the entered details.',
     certificateUploadFailed: 'AI service was saved, but the certificate could not be uploaded. Please retry the attachment.',
-    breedingSaved: (tag, withCertificate) => `Breeding log saved for ${tag}${withCertificate ? ' with certificate attached' : ''} — also visible on Breeding & Genetics.`,
+    breedingSaved: (tag, withCertificate) => `Breeding log saved for ${tag}${withCertificate ? ' with certificate attached' : ''} — also visible on AI & Pregnancy.`,
     birthRecorded: (tag) => `Birth recorded for ${tag}. The animal record is up to date.`,
     eventLogged: (type, tag) => `Logged ${type.toLowerCase()} event for ${tag}.`,
     saveFailed: 'Could not save this event. Check the details and try again.',
@@ -163,8 +163,6 @@ export const herdCopy = {
 
   registry: {
     eyebrow: 'Herd list',
-    titleStart: 'My',
-    titleEnd: 'Herd',
     subtitle: 'A complete list of all animals in your boma and their current status.',
     totalAnimals: 'Total animals',
     milking: 'Milking',

@@ -20,8 +20,6 @@ export const breedingCopy = {
 
   hub: {
     eyebrow: 'Uzazi wa mifugo',
-    titleStart: 'AI na',
-    titleEnd: 'Mimba',
     onHeat: (count) => `${count} wako kwenye joto`, // REVIEW: "on heat" = joto
     pendingChecks: (total, due) => `${plural(total, { one: 'Kipimo {n} kinasubiri', other: 'Vipimo {n} vinasubiri' })} · ${plural(due, { one: '{n} kimefika', other: '{n} vimefika' })}`,
     straws: (count) => plural(count, { one: 'Mrija {n} kwenye tangi', other: 'Mirija {n} kwenye tangi' }), // REVIEW: straws (semen)

@@ -70,6 +70,9 @@ export default function Header({ onMenuClick = () => {} }) {
             : pathname.startsWith('/feed-nutrition/mix') ? copy.titles.feedMixing
               : pathname.startsWith('/operations/records') ? copy.titles.clinical
                 : pathname.startsWith('/operations/inventory') ? copy.titles.stock
+                  // Same keys as the sidebar labels, so the three titles never differ.
+                  : pathname === '/operations/herd' ? shellCopy.nav.items.cowRegister
+                    : pathname.startsWith('/operations/breeding') ? shellCopy.nav.items.breeding
                   : pathname.split('/').filter(Boolean).pop()?.replaceAll('-', ' ') || copy.farmFallback;
 
   // The page's one h1 is its own heading where it has one; the top bar's title is then plain text.
