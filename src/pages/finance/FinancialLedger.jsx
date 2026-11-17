@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useMutation } from '@tanstack/react-query';
-import { ChevronDown, Minus, Paperclip, PencilLine, Plus, ReceiptText } from 'lucide-react';
+import { ChevronDown } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useTenant } from '../../hooks/useTenant';
 import { useAuth } from '../../contexts/AuthContext';
@@ -222,9 +222,9 @@ const FinancialLedger = () => {
         label={copy.actionsFor(partyOf(tx), formatDate(tx.date, copy.noDate))}
         size={size}
         items={[
-          tx.receipt_available && tx.receipt?.id && { key: 'receipt', label: copy.viewReceipt, icon: ReceiptText, onSelect: () => openReceipt(tx) },
-          (photoCount || canUploadReceipts) && { key: 'photos', label: photoCount ? copy.photos(photoCount) : copy.addPhoto, icon: Paperclip, onSelect: () => setPhotosFor(tx) },
-          correctableAs(tx) && { key: 'correct', label: copy.correct, icon: PencilLine, onSelect: () => openCorrection(tx) },
+          tx.receipt_available && tx.receipt?.id && { key: 'receipt', label: copy.viewReceipt, onSelect: () => openReceipt(tx) },
+          (photoCount || canUploadReceipts) && { key: 'photos', label: photoCount ? copy.photos(photoCount) : copy.addPhoto, onSelect: () => setPhotosFor(tx) },
+          correctableAs(tx) && { key: 'correct', label: copy.correct, onSelect: () => openCorrection(tx) },
         ]}
       />
     );
@@ -320,8 +320,8 @@ const FinancialLedger = () => {
   const openForm = (type) => setModalTransactionType(type);
   const addActions = (
     <div className="flex flex-wrap gap-2">
-      <button type="button" onClick={() => openForm('income')} className="btn-command min-h-11 gap-2 px-4 text-sm"><Plus size={16} aria-hidden="true" /> {copy.logIncome}</button>
-      <button type="button" onClick={() => openForm('expense')} className="btn-secondary min-h-11 gap-2 px-4 text-sm"><Minus size={16} aria-hidden="true" /> {copy.logExpense}</button>
+      <button type="button" onClick={() => openForm('income')} className="btn-command min-h-11 gap-2 px-4 text-sm">{copy.logIncome}</button>
+      <button type="button" onClick={() => openForm('expense')} className="btn-secondary min-h-11 gap-2 px-4 text-sm">{copy.logExpense}</button>
     </div>
   );
   const emptyMessage = hasActiveFilters
@@ -342,8 +342,8 @@ const FinancialLedger = () => {
     <div className="mx-auto max-w-7xl animate-reveal space-y-4">
       <PageHeader
         title={copy.title}
-        primaryAction={{ label: copy.logIncome, icon: Plus, onClick: () => openForm('income') }}
-        secondaryActions={[{ key: 'expense', label: copy.logExpense, icon: Minus, onClick: () => openForm('expense') }]}
+        primaryAction={{ label: copy.logIncome, create: true, onClick: () => openForm('income') }}
+        secondaryActions={[{ key: 'expense', label: copy.logExpense, onClick: () => openForm('expense') }]}
       />
 
       <SummaryStrip

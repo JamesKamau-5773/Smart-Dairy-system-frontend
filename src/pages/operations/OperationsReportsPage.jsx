@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { ChartColumn, ChevronDown, Check, DollarSign, Droplets, Filter, Layers3, RotateCcw, Search, TrendingUp, Wallet } from 'lucide-react';
+import { ChevronDown, Check, Search } from 'lucide-react';
 import { format } from 'date-fns';
 import { Button } from '@/components/ui/button';
 import { useQuery } from '@tanstack/react-query';
@@ -110,18 +110,11 @@ function combineDashboardData({
   };
 }
 
-function SummaryCard({ label, value, icon: Icon, accentClass = 'text-brand' }) {
+function SummaryCard({ label, value }) {
   return (
     <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm transition-shadow hover:shadow-md">
-      <div className="flex items-center justify-between gap-3">
-        <div>
-          <p className="text-xs font-bold uppercase tracking-wider text-slate-500">{label}</p>
-          <p className="mt-2 font-sans text-2xl font-black text-slate-900 tabular-nums">{value}</p>
-        </div>
-        <div className={cn('rounded-full bg-slate-50 p-3', accentClass)}>
-          <Icon size={20} />
-        </div>
-      </div>
+      <p className="text-xs font-bold uppercase tracking-wider text-slate-500">{label}</p>
+      <p className="mt-2 font-sans text-2xl font-black text-slate-900 tabular-nums">{value}</p>
     </div>
   );
 }
@@ -262,14 +255,14 @@ export default function OperationsReportsPage() {
   const summary = dashboardData?.summary ?? normalizeSummary({ summary: {} });
 
   const cards = [
-    { key: 'income', label: copy.cards.income, value: formatCurrency(summary.total_income), icon: DollarSign, accentClass: 'text-emerald-600' },
-    { key: 'expenses', label: copy.cards.expenses, value: formatCurrency(summary.total_costs), icon: Wallet, accentClass: 'text-rose-600' },
-    { key: 'amountPaid', label: copy.cards.amountPaid, value: formatCurrency(summary.total_amount_paid), icon: TrendingUp, accentClass: 'text-cyan-600' },
-    { key: 'balance', label: copy.cards.balance, value: formatCurrency(summary.outstanding_receivables), icon: ChartColumn, accentClass: 'text-amber-600' },
-    { key: 'milkProduced', label: copy.cards.milkProduced, value: formatLitresFigure(summary.total_produced), icon: Droplets, accentClass: 'text-sky-600' },
-    { key: 'milkSold', label: copy.cards.milkSold, value: formatLitresFigure(summary.total_sold), icon: Layers3, accentClass: 'text-emerald-600' },
-    { key: 'unsoldMilk', label: copy.cards.unsoldMilk, value: formatLitresFigure(summary.total_unsold), icon: Layers3, accentClass: 'text-rose-600' },
-    { key: 'netProfit', label: copy.cards.netProfit, value: formatCurrency(summary.net_profit), icon: TrendingUp, accentClass: 'text-violet-600' },
+    { key: 'income', label: copy.cards.income, value: formatCurrency(summary.total_income) },
+    { key: 'expenses', label: copy.cards.expenses, value: formatCurrency(summary.total_costs) },
+    { key: 'amountPaid', label: copy.cards.amountPaid, value: formatCurrency(summary.total_amount_paid) },
+    { key: 'balance', label: copy.cards.balance, value: formatCurrency(summary.outstanding_receivables) },
+    { key: 'milkProduced', label: copy.cards.milkProduced, value: formatLitresFigure(summary.total_produced) },
+    { key: 'milkSold', label: copy.cards.milkSold, value: formatLitresFigure(summary.total_sold) },
+    { key: 'unsoldMilk', label: copy.cards.unsoldMilk, value: formatLitresFigure(summary.total_unsold) },
+    { key: 'netProfit', label: copy.cards.netProfit, value: formatCurrency(summary.net_profit) },
   ];
 
   const selectedPeriodLabel = REPORT_PERIODS.find((item) => item.key === period)?.label ?? copy.periods.custom;
@@ -279,9 +272,6 @@ export default function OperationsReportsPage() {
       
       {/* HEADER SECTION */}
       <div className="border-b border-slate-200 pb-5">
-        <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-brand/10 bg-brand/5 px-3 py-1 text-[10px] font-bold uppercase tracking-widest text-brand">
-          <ChartColumn size={12} /> {copy.badge}
-        </div>
         <h1 className="m-0 font-sans text-3xl font-black tracking-tight text-slate-900">{copy.title}</h1>
         <p className="mt-2 max-w-xl text-sm font-medium text-slate-500">
           {copy.subtitle}
@@ -292,7 +282,6 @@ export default function OperationsReportsPage() {
       <div className="rounded-xl border border-sky-200 bg-white shadow-sm">
         <div className="flex items-center justify-between border-b border-sky-100 px-4 py-3">
           <div className="flex items-center gap-2 text-sm font-bold text-sky-800">
-            <Filter size={16} />
             {copy.filterTitle}
           </div>
           <button
@@ -300,7 +289,6 @@ export default function OperationsReportsPage() {
             onClick={handleResetFilters}
             className="flex items-center gap-1.5 text-sm font-medium text-slate-500 transition-colors hover:text-slate-900"
           >
-            <RotateCcw size={14} />
             {copy.resetFilters}
           </button>
         </div>
@@ -470,9 +458,9 @@ export default function OperationsReportsPage() {
                 </button>
               </div>
               <div className="mt-5 grid gap-4 sm:grid-cols-3">
-                <SummaryCard label={copy.revenue} value={formatCurrency(buyerSummary.revenue_kes)} icon={DollarSign} accentClass="text-emerald-600 bg-emerald-50" />
-                <SummaryCard label={copy.cards.amountPaid} value={formatCurrency(buyerSummary.amount_paid_kes)} icon={TrendingUp} accentClass="text-cyan-600 bg-cyan-50" />
-                <SummaryCard label={copy.outstanding} value={formatCurrency(buyerSummary.outstanding_balance_kes)} icon={Wallet} accentClass="text-amber-600 bg-amber-50" />
+                <SummaryCard label={copy.revenue} value={formatCurrency(buyerSummary.revenue_kes)} />
+                <SummaryCard label={copy.cards.amountPaid} value={formatCurrency(buyerSummary.amount_paid_kes)} />
+                <SummaryCard label={copy.outstanding} value={formatCurrency(buyerSummary.outstanding_balance_kes)} />
               </div>
             </div>
           )}

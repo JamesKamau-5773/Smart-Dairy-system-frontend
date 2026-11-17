@@ -4,7 +4,7 @@ import { useAuth } from "../../contexts/AuthContext";
 import { canViewAdminControls } from "../../lib/roles";
 import { QUERY_KEYS } from "../../providers/QueryProvider";
 import { getApiErrorMessage, productionApi, safetyApi } from "../../lib/backendApi";
-import { Plus, AlertTriangle, ShieldCheck, SlidersHorizontal, Pencil, Trash2, Baby } from "lucide-react";
+import { AlertTriangle } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import FastMilkLog from "../../components/operations/FastMilkLog";
@@ -183,7 +183,7 @@ const StatusChip = ({ status }) => (status === 'Verified' ? null : status ? (
           : 'border-brand/20 bg-brand/10 text-brand-dark'
     }`}
   >
-    <ShieldCheck size={10} aria-hidden="true" /> {copy.statuses[status] ?? status}
+    {copy.statuses[status] ?? status}
   </span>
 ) : <span className="text-xs text-ink-muted">—</span>);
 
@@ -374,8 +374,8 @@ export default function YieldLog() {
       size={size}
       bordered
       items={[
-        { key: 'edit', label: copy.edit, icon: Pencil, onSelect: () => openEditLog(row) },
-        { key: 'delete', label: copy.delete, icon: Trash2, tone: 'danger', onSelect: () => handleDeleteFromTable(row) },
+        { key: 'edit', label: copy.edit, onSelect: () => openEditLog(row) },
+        { key: 'delete', label: copy.delete, tone: 'danger', onSelect: () => handleDeleteFromTable(row) },
       ]}
     />
   );
@@ -399,7 +399,7 @@ export default function YieldLog() {
         <div className="inline-flex items-center gap-2">
           {canVerify && row.status !== 'Verified' && (
             <button type="button" onClick={() => handleVerifyEntry(row)} className="inline-flex h-8 items-center gap-1 !rounded-input border border-ink/10 px-2.5 text-xs font-semibold text-brand hover:bg-ink-50">
-              <ShieldCheck size={12} aria-hidden="true" /> {copy.verify}
+              {copy.verify}
             </button>
           )}
           {actionsMenu(row, 'h-8 w-8')}
@@ -458,8 +458,8 @@ export default function YieldLog() {
       <Confirmation {...confirmation} />
       <PageHeader
         title={copy.title}
-        primaryAction={{ label: copy.recordMilk, icon: Plus, onClick: openCreateLog }}
-        secondaryActions={[{ key: 'calf', label: copy.feedCalf, icon: Baby, onClick: () => setShowCalfMilkFeed(true) }]}
+        primaryAction={{ label: copy.recordMilk, create: true, onClick: openCreateLog }}
+        secondaryActions={[{ key: 'calf', label: copy.feedCalf, onClick: () => setShowCalfMilkFeed(true) }]}
         secondaryOnMobile="inline"
       />
 
@@ -519,7 +519,7 @@ export default function YieldLog() {
                 aria-controls="production-filter-panel"
                 className="inline-flex min-h-11 items-center gap-1.5 !rounded-input border border-ink/15 px-3 text-xs font-semibold text-ink hover:bg-ink-50 sm:min-h-9"
               >
-                <SlidersHorizontal size={14} aria-hidden="true" /> {commonCopy.filters.filters}
+                {commonCopy.filters.filters}
               </button>
               <ToolbarDateRange range={dateRange} onChange={setRange} maxDate={todayLocalIso()} />
               <FilterChips chips={activeChips} onReset={clearFilters} />

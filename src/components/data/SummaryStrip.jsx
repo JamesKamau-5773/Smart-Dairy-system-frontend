@@ -1,4 +1,4 @@
-import { ArrowRight, CloudOff, RefreshCw } from 'lucide-react';
+import { CloudOff } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { getApiErrorMessage } from '../../lib/backendApi';
 import { formatAsOfTime } from '../../lib/numberFormat';
@@ -10,7 +10,7 @@ const Block = ({ className }) => <div aria-hidden="true" className={`rounded-bad
 function Retry({ onRetry }) {
   return (
     <button type="button" onClick={() => onRetry?.()} className="inline-flex min-h-11 shrink-0 items-center gap-1 text-xs font-semibold text-brand hover:underline sm:min-h-8">
-      <RefreshCw size={12} aria-hidden="true" /> {commonCopy.list.tryAgain}
+      {commonCopy.list.tryAgain}
     </button>
   );
 }
@@ -101,7 +101,7 @@ export default function SummaryStrip({
       </div>
       {link && (
         <Link to={link.to} className="inline-flex min-h-11 shrink-0 items-center gap-1 self-start text-sm font-semibold text-brand hover:underline sm:min-h-8 sm:self-auto">
-          {link.label ?? commonCopy.summary.fullReport} <ArrowRight size={14} aria-hidden="true" />
+          {link.label ?? commonCopy.summary.fullReport}
         </Link>
       )}
     </section>
