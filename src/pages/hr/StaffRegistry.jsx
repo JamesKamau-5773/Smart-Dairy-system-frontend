@@ -19,17 +19,23 @@ import { getApiErrorMessage, hrApi } from '../../lib/backendApi';
 import { accountLabel, hasAppAccount, roleLabel, staffStatus } from '../../lib/staffLabels';
 import { tone } from '../../components/ui/tones';
 import { staffCopy } from '../../i18n/staff';
+import { shellCopy } from '../../i18n/shell';
+import { enumLabel } from '../../lib/enumLabel';
+import { PHONE_QUERY, useMediaQuery } from '../../hooks/useMediaQuery';
+import { commonCopy } from '../../i18n/common';
 const money = (value) => `KES ${Number(value || 0).toLocaleString()}`;
 
 function StatusChip({ status }) {
   const { label, tone: toneName } = staffStatus(status);
-  return <span className={`inline-flex rounded-badge px-2 py-0.5 text-xs font-semibold ${tone(toneName).chip}`}>{label}</span>;
+  return <span className={`inline-flex rounded-badge px-2 py-0.5 text-meta ${tone(toneName).chip}`}>{label}</span>;
 }
 
 const STAFF_FILTERS = { former: 'no' };
 const STAFF_FILTER_VALUES = { former: ['no', 'yes'] };
 
 export default function StaffRegistry() {
+  // Inputs are 16px on phones, so the long search hint would be cut off there.
+  const isPhone = useMediaQuery(PHONE_QUERY);
   const copy = staffCopy.registry;
   const { tenantId } = useTenant();
   const {
@@ -225,33 +231,33 @@ export default function StaffRegistry() {
       <Confirmation {...confirmation} />
       <header className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <p className="text-[11px] font-semibold uppercase tracking-wider text-ink-muted">{copy.eyebrow}</p>
-          <h1 className="text-2xl font-black tracking-tight text-ink sm:text-3xl">{copy.title}</h1>
-          <p className="mt-1 text-sm text-ink-muted">{copy.subtitle}</p>
+          <p className="text-label text-ink-muted">{copy.eyebrow}</p>
+          <h1 className="text-page-title text-ink">{shellCopy.nav.items.staff}</h1>
+          <p className="mt-1 text-body text-ink-muted">{copy.subtitle}</p>
         </div>
-        <button type="button" onClick={() => setIsAddEmployeeModalOpen(true)} className="btn-command gap-2 self-start text-sm">
+        <button type="button" onClick={() => setIsAddEmployeeModalOpen(true)} className="btn-command gap-2 self-start text-control">
           <Plus size={16} aria-hidden="true" /> {copy.add}
         </button>
       </header>
 
       <section className="card-machined flex flex-col gap-2 p-4 sm:flex-row sm:items-center sm:justify-between sm:gap-6 sm:p-5">
         <div>
-          <p className="text-[11px] font-semibold uppercase tracking-wider text-ink-muted">
+          <p className="text-label text-ink-muted">
             {staffingRecommendation ? copy.activeEmployees(staffingRecommendation.employee_count) : copy.guidance}
           </p>
-          <p className="mt-0.5 text-base font-bold capitalize text-ink">
+          <p className="mt-0.5 text-body-strong text-ink">
             {staffingRecommendation
-              ? copy.farmSize(copy.farmSizes[String(staffingRecommendation.farm_size).toLowerCase()] ?? String(staffingRecommendation.farm_size).toLowerCase().replaceAll('_', ' '))
+              ? copy.farmSize(enumLabel(copy.farmSizes, String(staffingRecommendation.farm_size).toLowerCase()))
               : staffingRecommendationQuery.isError ? copy.notAvailable : copy.loading}
           </p>
         </div>
-        <div className="max-w-2xl text-sm sm:text-right">
+        <div className="max-w-2xl text-body sm:text-right">
           {recommendedRoles.length > 0 && (
-            <p className="font-semibold text-ink">
+            <p className="text-body-strong text-ink">
               {copy.suggestedTeam(recommendedRoles.map(({ label, count }) => copy.roleCount(count, label)).join(', '))}
             </p>
           )}
-          {staffingRecommendation?.note && <p className="mt-0.5 text-xs text-ink-muted">{staffingRecommendation.note}</p>}
+          {staffingRecommendation?.note && <p className="mt-0.5 text-meta text-ink-muted">{staffingRecommendation.note}</p>}
         </div>
       </section>
 
@@ -261,14 +267,14 @@ export default function StaffRegistry() {
           <Search size={16} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-ink-muted" aria-hidden="true" />
           <input
             type="search"
-            placeholder={copy.searchPlaceholder}
+            placeholder={isPhone ? commonCopy.filters.searchShort : copy.searchPlaceholder}
             value={searchTerm}
             onChange={(event) => setSearchTerm(event.target.value)}
-            className="input-machined w-full pl-9 text-sm"
+            className="input-machined w-full pl-9 text-control"
           />
         </label>
         {formerCount > 0 && (
-          <label className="flex min-h-11 items-center gap-2 text-sm font-semibold text-ink">
+          <label className="flex min-h-11 items-center gap-2 text-field-label text-ink">
             <input type="checkbox" checked={showFormer} onChange={(event) => setShowFormer(event.target.checked)} className="h-4 w-4 accent-brand" />
             {copy.showFormer(formerCount)}
           </label>
@@ -279,21 +285,21 @@ export default function StaffRegistry() {
         <div className="space-y-3" aria-busy="true">{[0, 1, 2].map((key) => <Skeleton key={key} className="h-20 w-full" />)}</div>
       ) : staff.length === 0 ? (
         <section className="card-machined flex flex-col items-start gap-3 p-6">
-          <p className="text-base font-bold text-ink">{copy.emptyTitle}</p>
-          <p className="text-sm text-ink-muted">{copy.emptyHint}</p>
-          <button type="button" onClick={() => setIsAddEmployeeModalOpen(true)} className="btn-command text-sm">
+          <p className="text-body-strong text-ink">{copy.emptyTitle}</p>
+          <p className="text-body text-ink-muted">{copy.emptyHint}</p>
+          <button type="button" onClick={() => setIsAddEmployeeModalOpen(true)} className="btn-command text-control">
         {copy.addFirst}</button>
         </section>
       ) : filteredStaff.length === 0 ? (
-        <p className="text-sm text-ink-muted">
+        <p className="text-body text-ink-muted">
           {copy.noMatches}{' '}
-          <button type="button" onClick={() => { setSearchTerm(''); setShowFormer(true); }} className="font-semibold text-brand hover:underline">{copy.clearSearch}</button>
+          <button type="button" onClick={() => { setSearchTerm(''); setShowFormer(true); }} className="text-control text-brand hover:underline">{copy.clearSearch}</button>
         </p>
       ) : (
         <>
           <div className="hidden overflow-x-auto rounded-card border border-ink/10 bg-card md:block">
             <table className="w-full min-w-[860px] text-left">
-              <thead className="border-b border-ink/10 text-[11px] font-semibold uppercase tracking-wider text-ink-muted">
+              <thead className="border-b border-ink/10 text-label text-ink-muted">
                 <tr>
                   <th scope="col" className="px-5 py-3">{copy.columns.employee}</th>
                   <th scope="col" className="px-5 py-3 text-right">{copy.columns.salary}</th>
@@ -310,17 +316,17 @@ export default function StaffRegistry() {
                   return (
                     <tr key={member.id} className={member.status === 'INACTIVE' ? 'text-ink-muted' : ''}>
                       <td className="px-5 py-3.5">
-                        <p className="text-sm font-semibold text-ink">{member.name}</p>
-                        <p className="text-xs text-ink-muted">{roleLabel(member.role)}{member.phoneNumber ? ` · ${member.phoneNumber}` : ''}</p>
+                        <p className="text-body-strong text-ink">{member.name}</p>
+                        <p className="text-meta text-ink-muted">{roleLabel(member.role)}{member.phoneNumber ? ` · ${member.phoneNumber}` : ''}</p>
                       </td>
-                      <td className="px-5 py-3.5 text-right text-sm tabular-nums">{money(member.baseSalary)}</td>
-                      <td className={`px-5 py-3.5 text-right text-sm tabular-nums ${member.loanBalance > 0 ? 'font-semibold text-ink' : 'text-ink-muted'}`}>{money(member.loanBalance)}</td>
-                      <td className="px-5 py-3.5 text-sm">{accountLabel(member.accountStatus)}</td>
+                      <td className="px-5 py-3.5 text-right text-body tabular-nums">{money(member.baseSalary)}</td>
+                      <td className={`px-5 py-3.5 text-right text-body tabular-nums ${member.loanBalance > 0 ? 'text-body-strong text-ink' : 'text-ink-muted'}`}>{money(member.loanBalance)}</td>
+                      <td className="px-5 py-3.5 text-body">{accountLabel(member.accountStatus)}</td>
                       <td className="px-5 py-3.5"><StatusChip status={member.status} /></td>
                       <td className="px-5 py-3.5">
                         <div className="flex items-center justify-end gap-2">
                           {primary && (
-                            <button type="button" onClick={primary.onClick} className="btn-command px-3 text-xs">
+                            <button type="button" onClick={primary.onClick} className="btn-command px-3 text-control">
                               {primary.label}
                             </button>
                           )}
@@ -332,7 +338,7 @@ export default function StaffRegistry() {
                             </PopoverTrigger>
                             <PopoverContent align="end" className="w-52 p-1.5">
                               {actions.filter((action) => !action.primary).map(({ key, label, onClick, danger }) => (
-                                <button key={key} type="button" onClick={onClick} className={`flex w-full items-center rounded-md px-3 py-2 text-left text-sm ${danger ? 'text-danger hover:bg-danger-50' : 'text-ink hover:bg-brand-50'}`}>
+                                <button key={key} type="button" onClick={onClick} className={`flex w-full items-center rounded-md px-3 py-2 text-left text-control ${danger ? 'text-danger hover:bg-danger-50' : 'text-ink hover:bg-brand-50'}`}>
                                   {label}
                                 </button>
                               ))}
@@ -352,19 +358,19 @@ export default function StaffRegistry() {
               <article key={member.id} className="rounded-card border border-ink/10 bg-card p-4" aria-label={member.name}>
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
-                    <h3 className="truncate text-sm font-bold text-ink">{member.name}</h3>
-                    <p className="mt-0.5 truncate text-xs text-ink-muted">{roleLabel(member.role)}</p>
+                    <h2 className="truncate text-section-title text-ink">{member.name}</h2>
+                    <p className="mt-0.5 truncate text-meta text-ink-muted">{roleLabel(member.role)}</p>
                   </div>
                   <StatusChip status={member.status} />
                 </div>
-                <dl className="mt-3 grid grid-cols-2 gap-3 text-xs">
-                  <div><dt className="text-ink-muted">{copy.columns.salary}</dt><dd className="mt-0.5 font-semibold tabular-nums text-ink">{money(member.baseSalary)}</dd></div>
-                  <div><dt className="text-ink-muted">{copy.columns.owes}</dt><dd className="mt-0.5 font-semibold tabular-nums text-ink">{money(member.loanBalance)}</dd></div>
-                  <div className="col-span-2"><dt className="text-ink-muted">{copy.columns.access}</dt><dd className="mt-0.5 font-semibold text-ink">{accountLabel(member.accountStatus)}</dd></div>
+                <dl className="mt-3 grid grid-cols-2 gap-3 text-meta">
+                  <div><dt className="text-ink-muted">{copy.columns.salary}</dt><dd className="mt-0.5 text-body-strong tabular-nums text-ink">{money(member.baseSalary)}</dd></div>
+                  <div><dt className="text-ink-muted">{copy.columns.owes}</dt><dd className="mt-0.5 text-body-strong tabular-nums text-ink">{money(member.loanBalance)}</dd></div>
+                  <div className="col-span-2"><dt className="text-ink-muted">{copy.columns.access}</dt><dd className="mt-0.5 text-body-strong text-ink">{accountLabel(member.accountStatus)}</dd></div>
                 </dl>
                 <div className="mt-3 flex flex-wrap gap-2">
                   {actionsFor(member).map(({ key, label, onClick, danger, primary }) => (
-                    <button key={key} type="button" onClick={onClick} className={`min-h-10 rounded-button px-3 text-xs font-semibold ${primary ? 'bg-brand text-white' : danger ? 'border border-danger/30 text-danger' : 'border border-ink/15 text-ink'}`}>
+                    <button key={key} type="button" onClick={onClick} className={`min-h-10 rounded-button px-3 text-control ${primary ? 'bg-brand text-white' : danger ? 'border border-danger/30 text-danger' : 'border border-ink/15 text-ink'}`}>
                       {label}
                     </button>
                   ))}

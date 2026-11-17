@@ -4,6 +4,15 @@ What changed for farmers and staff using Maziwa Smart. Newest first.
 
 ## Unreleased
 
+### Clearer text on the safety and staff pages (typography phase 5b)
+
+- **Safety Dashboard, Staff Registry and Payroll use the new type scale.** Each title is the page's
+  name in the menu ("Safety Dashboard", was "Milk Safety Board"), and nothing is smaller than 12px.
+- Field names are in sentence case in English and Kiswahili; the farm size reads "Small farm",
+  never a raw code.
+- On a phone, the search boxes on Staff Registry, Cow Register, AI & Pregnancy and milk history say
+  just "Search", and the search icon no longer sits on top of the text.
+
 ### Clearer text on the buyer, stock and report pages (typography phase 5a)
 
 - **Buyer List, Customer Management, customer profiles, Inventory, Customer Value & Profit, Cow

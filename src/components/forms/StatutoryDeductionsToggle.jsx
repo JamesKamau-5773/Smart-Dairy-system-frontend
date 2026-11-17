@@ -14,8 +14,8 @@ export default function StatutoryDeductionsToggle({ checked, onChange, className
         className="mt-0.5 h-4 w-4 shrink-0 accent-brand"
       />
       <span className="min-w-0">
-        <span className="block text-sm font-semibold text-ink">{staffCopy.statutory.label}</span>
-        <span className="mt-0.5 block text-xs text-ink-muted">
+        <span className="block text-body-strong text-ink">{staffCopy.statutory.label}</span>
+        <span className="mt-0.5 block text-meta text-ink-muted">
           {staffCopy.statutory.hint}
         </span>
       </span>

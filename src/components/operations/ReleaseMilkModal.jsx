@@ -21,11 +21,11 @@ export default function ReleaseMilkModal({ lock, cowName, onClose, onConfirm, is
   return (
     <BaseModal isOpen onClose={onClose} title={copy.overrideTitle(cowName)}>
       <form onSubmit={submit} noValidate className="space-y-4">
-        <p className="text-sm text-ink">
+        <p className="text-body text-ink">
           {ends ? copy.overrideWhy(ends) : null} {testFailed ? copy.overrideFailedTest : null}
         </p>
         <div>
-          <label htmlFor="release-override" className="mb-1.5 block text-xs font-semibold text-ink">{copy.overrideLabel}</label>
+          <label htmlFor="release-override" className="mb-1.5 block text-field-label text-ink">{copy.overrideLabel}</label>
           <textarea
             id="release-override"
             rows={2}
@@ -33,9 +33,9 @@ export default function ReleaseMilkModal({ lock, cowName, onClose, onConfirm, is
             onChange={(event) => setReason(event.target.value)}
             placeholder={copy.overridePlaceholder}
             aria-describedby="release-override-hint"
-            className="input-machined w-full text-sm"
+            className="input-machined w-full text-control"
           />
-          <p id="release-override-hint" className="mt-1 text-xs text-ink-muted">{copy.overrideHint}</p>
+          <p id="release-override-hint" className="mt-1 text-meta text-ink-muted">{copy.overrideHint}</p>
         </div>
         <SubmitButton pending={isPending} pendingLabel={copy.releasing} disabled={!reason.trim()}>{copy.overrideSubmit}</SubmitButton>
       </form>

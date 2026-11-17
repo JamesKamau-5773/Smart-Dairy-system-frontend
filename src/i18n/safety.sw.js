@@ -11,7 +11,6 @@ const days = (count) => (count === 1 ? 'siku 1' : `siku ${count}`);
 
 export const safetyCopy = {
   eyebrow: 'Usalama wa maziwa',
-  title: 'Ubao wa Usalama wa Maziwa',
   subtitle: 'Ng’ombe ambao maziwa yao lazima yatengwe na yasiuzwe hadi kipindi cha kusubiri dawa kiishe.', // REVIEW: withdrawal period
   holdTitle: (count) => `Tenga maziwa ya ${cows(count)}`,
   holdHint: 'Usiyachanganye na tangi kuu wala kuyauza hadi kila ng’ombe aruhusiwe.',

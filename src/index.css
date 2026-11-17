@@ -435,7 +435,8 @@ h6 {
 
   .input-machined {
     min-height: 44px;
-    padding: 0.75rem;
+    /* Vertical only: icon padding (pl-10 and the like) must still apply on phones. */
+    padding-block: 0.75rem;
   }
 
   /* Optimize button padding on mobile */
