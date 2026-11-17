@@ -14,6 +14,7 @@ export const herdCopy = {
     Bull: 'Bull',
     Sold: 'Sold',
     Dead: 'Dead',
+    Died: 'Died', // the backend's CowStatus value
     Culled: 'Culled',
   },
   age: {

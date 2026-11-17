@@ -527,7 +527,7 @@ export default function YieldLog() {
             </Toolbar>
             {filtersOpen && (
               <div id="production-filter-panel" className="grid grid-cols-1 gap-3 pb-2 pt-1 sm:grid-cols-2">
-                <label className="space-y-1 text-label text-ink-muted">
+                <label className="space-y-1 text-field-label text-ink-muted">
                   {copy.session}
                   <select value={filters.session} onChange={(e) => updateFilter('session', e.target.value)} className="input-machined">
                     <option value="all">{commonCopy.filters.all}</option>

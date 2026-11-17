@@ -22,7 +22,7 @@ Everything below is open. Suggested order:
 5. **Data the browser still works out for itself:** BR-002, BR-003, BR-004, BR-008, BR-009,
    BR-011, BR-012, BR-013, and the open questions in `docs/contracts/period-totals.md`.
    **Summary strips and the dashboard chart: BR-021, BR-022, BR-023.**
-6. **Language: BR-018.**
+6. **Language: BR-018, BR-024** (receipt status values in the contract).
 7. **Safe saves and missing features:** BR-005, BR-006, BR-007, BR-010.
 
 Each entry names the frontend files waiting on it; search for `TODO(BR-0xx)`.
@@ -654,3 +654,26 @@ Requests:
    records (statuses, voided entries), so the bars add up to the cards. The frontend never sums
    them to check.
 
+
+---
+
+## BR-024 — Publish the receipt status values in the API contract
+
+**Status:** Open · **Raised:** 2026-11-17 · **Frontend:** `components/finance/ReceiptPreview.jsx`, `i18n/__tests__/statusStrings.test.js`
+
+The receipt preview shows `status` from `GET /api/finance/receipts/{id}`. Every status the app
+shows needs an English and a Kiswahili string, keyed by the exact value the backend sends, and a
+test fails when one is missing. The contract doesn't list the receipt statuses, so for now the
+frontend shows the value in sentence case ("ISSUED" → "Issued") with no translation.
+
+Requests:
+
+1. **List the values in the contract.** Add the complete set of receipt `status` values to
+   `docs/backend-integration-contract.md` (or the OpenAPI schema), with what each means. The
+   model currently defines `ISSUED` and `VOIDED` (`app/models/finance.py`, `ReceiptStatus`);
+   please confirm that is the full set and that the API sends them exactly as written.
+2. **Treat new values as a contract change.** Adding a value later should be announced the same
+   way, so the frontend can add its strings before the value reaches farmers.
+
+When this is done, the frontend adds `financeCopy.receipt.statuses` in en and sw, an entry in
+`BACKEND_STATUS_ENUMS` in the status-strings test, and drops the TODO in `ReceiptPreview.jsx`.

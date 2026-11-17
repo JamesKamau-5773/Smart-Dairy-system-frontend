@@ -7,11 +7,13 @@
 //   section-title  16/24 600   <h2> (nested headings share it)
 //   body           14/20 400
 //   body-strong    14/20 600
-//   label          12/16 500   uppercase, 0.04em: the only uppercase text
+//   label          12/16 500   uppercase, 0.04em: table headers and small section headings only
 //   meta           13/18 400   timestamps, counts, helper text, chart text
+//   field-label    13/18 600   a form field's name, above its input (sentence case)
 //   stat-value     20/28 600   tabular figures
 //   control        14/20 500   buttons and inputs (16px inputs at <=640px, see brand.css)
 //   badge          13/18 500
+//   numeric-input  28/36 600   tabular; litres entry only (stays 28px on phones)
 export const TYPE_ROLES = [
   'page-title',
   'section-title',
@@ -19,7 +21,9 @@ export const TYPE_ROLES = [
   'body-strong',
   'label',
   'meta',
+  'field-label',
   'stat-value',
   'control',
   'badge',
+  'numeric-input',
 ];

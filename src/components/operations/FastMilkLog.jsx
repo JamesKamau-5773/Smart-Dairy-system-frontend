@@ -143,7 +143,7 @@ const FastMilkUI = ({
       <form onSubmit={onSubmit} className="p-8 space-y-6 bg-surface-warm/30">
         {draftNotice}
         <div className="space-y-2">
-          <label htmlFor="fast-milk-cow" className="block text-label text-ink-muted">{isEditMode ? copy.cow : copy.selectCow}</label>
+          <label htmlFor="fast-milk-cow" className="block text-field-label text-ink-muted">{isEditMode ? copy.cow : copy.selectCow}</label>
           {isEditMode ? (
             // Editing changes amount, session and date only; the backend keeps the record's cow.
             <input
@@ -190,7 +190,7 @@ const FastMilkUI = ({
         {/* One column on phones: side by side, the date and three sessions don’t fit at 360px. */}
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <div className="min-w-0 space-y-2">
-            <label htmlFor="fast-milk-date" className="block text-label text-ink-muted">{copy.date}</label>
+            <label htmlFor="fast-milk-date" className="block text-field-label text-ink-muted">{copy.date}</label>
             <input
               id="fast-milk-date"
               type="date"
@@ -204,7 +204,7 @@ const FastMilkUI = ({
             <FieldError id="fast-milk-date" message={errorFor('date')} />
           </div>
           <div className="min-w-0 space-y-2">
-            <span id="fast-milk-session" className="block text-label text-ink-muted">{copy.session}</span>
+            <span id="fast-milk-session" className="block text-field-label text-ink-muted">{copy.session}</span>
             <div role="group" aria-labelledby="fast-milk-session" {...fieldErrorProps('fast-milk-session', errorFor('session'))} className="grid grid-cols-3 gap-1 rounded-xl border-2 border-ink/10 bg-white p-1">
               {SESSION_OPTIONS.map((s) => (
                 <button
@@ -232,7 +232,7 @@ const FastMilkUI = ({
         )}
 
         <div className="space-y-2">
-          <label htmlFor="fast-milk-volume" className="block text-label text-ink-muted">{copy.volume}</label>
+          <label htmlFor="fast-milk-volume" className="block text-field-label text-ink-muted">{copy.volume}</label>
           <div className="relative">
             <input
               id="fast-milk-volume"
@@ -240,13 +240,13 @@ const FastMilkUI = ({
               inputMode="decimal"
               type="number"
               step="0.1"
-              className="w-full bg-white border-2 border-ink/10 rounded-xl p-6 text-center text-control text-brand focus:outline-none focus:border-brand [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+              className="w-full bg-white border-2 border-ink/10 rounded-xl p-6 text-center text-numeric-input text-brand focus:outline-none focus:border-brand [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
               placeholder="0.0"
               value={formData.volume}
               onChange={(e) => setFormData({ ...formData, volume: e.target.value })}
               required
             />
-            <span className="absolute right-8 top-1/2 -translate-y-1/2 text-body text-ink/45">L</span>
+            <span className="absolute right-8 top-1/2 -translate-y-1/2 text-stat-value text-ink/45">L</span>
           </div>
           <FieldError id="fast-milk-volume" message={errorFor('volume')} />
         </div>

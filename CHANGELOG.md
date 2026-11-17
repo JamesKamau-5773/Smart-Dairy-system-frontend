@@ -15,8 +15,10 @@ What changed for farmers and staff using Maziwa Smart. Newest first.
   off.
 - Statuses such as "Pending" are written in sentence case in English and Kiswahili, instead of
   being capitalised by the browser.
-- Field names above inputs on these pages (and in their forms) are small capitals, like the
-  table headings.
+- Field names above inputs are in sentence case, slightly bolder than the hint text. Only table
+  headings and small section headings use capitals.
+- **Litres stay large when you record milk.** The litres box keeps its big figures, on phones
+  too, and the form's buttons and labels read "Save record", "Morning" and so on.
 
 ### One typeface (typography phase 1)
 

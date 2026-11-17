@@ -196,7 +196,7 @@ h6 {
 
   /* A form field's name, above its input. */
   .label-text {
-    @apply text-label;
+    @apply text-field-label;
   }
 
   .billing-card__muted {
@@ -425,6 +425,12 @@ h6 {
   textarea {
     font-size: var(--type-control-phone-size) !important;
     line-height: var(--type-control-phone-line) !important;
+  }
+
+  /* Litres entry keeps its large size (it is already above 16px). */
+  input.text-numeric-input {
+    font-size: var(--type-numeric-input-size) !important;
+    line-height: var(--type-numeric-input-line) !important;
   }
 
   .input-machined {

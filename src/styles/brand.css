@@ -52,6 +52,11 @@
   --type-meta-line:            1.125rem;  /* 18 */
   --type-meta-weight:          var(--weight-regular);
 
+  /* Form field names: the meta size at semibold, sentence case (never uppercase). */
+  --type-field-label-size:     var(--type-meta-size);
+  --type-field-label-line:     var(--type-meta-line);
+  --type-field-label-weight:   var(--weight-semibold);
+
   --type-stat-value-size:      1.25rem;   /* 20 */
   --type-stat-value-line:      1.75rem;   /* 28 */
   --type-stat-value-weight:    var(--weight-semibold);
@@ -63,6 +68,12 @@
   --type-badge-size:           var(--type-meta-size);
   --type-badge-line:           var(--type-meta-line);
   --type-badge-weight:         var(--weight-medium);
+
+  /* Large numeric entry, used only where a farmer types litres. It keeps its size on phones
+   * (it is already above 16px, so iOS does not zoom). */
+  --type-numeric-input-size:   1.75rem;   /* 28 */
+  --type-numeric-input-line:   2.25rem;   /* 36 */
+  --type-numeric-input-weight: var(--weight-semibold);
 
   /* The one documented exception to the control role: at <=640px inputs are 16px, because
    * iOS Safari zooms the page when a smaller input takes focus. Applied in src/index.css. */

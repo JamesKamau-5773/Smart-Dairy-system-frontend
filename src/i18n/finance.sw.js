@@ -302,7 +302,7 @@ export const financeCopy = {
       date: 'Tarehe', party: 'Mteja/Msambazaji', category: 'Aina', description: 'Maelezo', ref: 'Kumb.',
       moneyIn: 'Pesa zilizoingia', moneyOut: 'Pesa zilizotoka', status: 'Hali', actions: 'Vitendo',
     },
-    statuses: { posted: 'Imerekodiwa', voided: 'Imebatilishwa', void: 'Imebatilishwa', cancelled: 'Imeghairiwa', pending: 'Inasubiri', paid: 'Imelipwa', unpaid: 'Haijalipwa' },
+    statuses: { draft: 'Rasimu', posted: 'Imerekodiwa', voided: 'Imebatilishwa', void: 'Imebatilishwa', cancelled: 'Imeghairiwa', pending: 'Inasubiri', paid: 'Imelipwa', unpaid: 'Haijalipwa' },
     receiptPhotos: (count) => `Picha za risiti (${count})`,
     addReceiptPhoto: 'Ongeza picha ya risiti',
     allCategories: 'Aina zote',

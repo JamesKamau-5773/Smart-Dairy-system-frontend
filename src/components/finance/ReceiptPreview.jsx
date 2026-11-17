@@ -42,7 +42,7 @@ export default function ReceiptPreview({ receipt, isOpen, onClose, onDownload, o
             <p className="mt-1 text-body text-ink-muted">{receipt.farm?.name || copy.farmNotRecorded}</p>
           </div>
           <div className="text-right">
-            {/* TODO: en/sw strings for the receipt statuses once the backend lists them; humanised until then. */}
+            {/* TODO(BR-024): en/sw strings once the contract lists the receipt statuses; humanised until then. */}
             <span className="inline-flex items-center border border-success/20 bg-success/10 px-2 py-1 text-badge text-success">{humanizeEnum(receipt.status)}</span>
             <p className="mt-3 text-meta tabular-nums text-ink">{receipt.receipt_number}</p>
           </div>
