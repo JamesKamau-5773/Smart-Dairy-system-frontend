@@ -47,6 +47,22 @@ const TYPOGRAPHY_MIGRATED = [
   'src/components/ui/GroupedDateRows.jsx',
   'src/components/ui/SearchSuggestions.jsx',
   'src/components/ui/DraftRestoredNotice.jsx',
+  // Phase 4: operations and feeding.
+  'src/pages/operations/MilkUsage.jsx',
+  'src/pages/operations/DailyRoutinePlanner.jsx',
+  'src/pages/operations/HerdsmanView.jsx',
+  'src/pages/operations/ClerkEntry.jsx',
+  'src/pages/operations/MilkLab.jsx',
+  'src/pages/nutrition/**',
+  'src/pages/inventory/FeedFormulation.jsx',
+  'src/components/nutrition/CreateBatchModal.jsx',
+  'src/components/nutrition/CurrentMixCard.jsx',
+  'src/components/nutrition/FeedingGroupPlanner.jsx',
+  'src/components/nutrition/ProfitabilityChart.jsx',
+  'src/components/nutrition/RecipeMeasurementFields.jsx',
+  'src/components/operations/MilkDispositionHistory.jsx',
+  'src/components/ui/InlineNotice.jsx',
+  'src/lib/feedingGroups.js',
 ]
 // Allowed raw values: the tokens file and the Tailwind configs that define the old scale,
 // the landing page until its own phase (it keeps its fluid display sizes), copy, and tests.

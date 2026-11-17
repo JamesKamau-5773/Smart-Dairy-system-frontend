@@ -29,7 +29,7 @@ const resolveBatchSize = (value, fallback) => {
 
 function BatchSizeControl({ value, onChange }) {
   return (
-    <label className="flex items-center gap-2 rounded-full border border-ink/10 bg-surface-raised px-3 py-1.5 text-xs font-bold text-ink-muted">
+    <label className="flex items-center gap-2 rounded-full border border-ink/10 bg-surface-raised px-3 py-1.5 text-field-label text-ink-muted">
       <span className="shrink-0">{copy.mixSize}</span>
       <input
         type="number"
@@ -37,7 +37,7 @@ function BatchSizeControl({ value, onChange }) {
         step="1"
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        className="w-20 bg-transparent text-right font-black text-brand focus:outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+        className="w-20 bg-transparent text-right text-control text-brand focus:outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
         aria-label={copy.batchSizeLabel}
       />
       <span>kg</span>
@@ -51,7 +51,7 @@ function RecipeAlerts({ alerts }) {
   return (
     <div className="mb-6 space-y-2 animate-in fade-in slide-in-from-top-2">
       {alerts.map((alert, idx) => (
-        <div key={idx} className="flex items-start gap-2 rounded-md border border-brand/20 bg-brand-50 p-3 text-xs font-bold text-brand-dark">
+        <div key={idx} className="flex items-start gap-2 rounded-md border border-brand/20 bg-brand-50 p-3 text-meta text-brand-dark">
           <AlertTriangle size={16} className="shrink-0 mt-0.5" aria-hidden="true" />
           <p>{alert.message}</p>
         </div>
@@ -63,7 +63,7 @@ function RecipeAlerts({ alerts }) {
 function ProteinMeter({ averageProtein, targetProtein }) {
   return (
     <div className="space-y-1.5 mb-8 bg-surface-raised p-4 rounded-lg border border-ink/5">
-      <div className="flex justify-between text-xs font-black uppercase text-ink-muted">
+      <div className="flex justify-between text-label text-ink-muted">
         <span>{copy.proteinGoal(targetProtein)}</span>
         <span className="text-brand-dark">
           {copy.currentMix(averageProtein.toFixed(1))}
@@ -87,9 +87,9 @@ function IngredientAllocationRow({ item, warnings, onPercentageChange, onApplyFi
     <div className="rounded-md border border-ink/10 bg-white p-3 transition-colors hover:border-brand/30 focus-within:border-brand focus-within:ring-1 focus-within:ring-brand">
     <div className="grid grid-cols-12 items-center gap-2">
       <div className="col-span-4 min-w-0 pr-2">
-        <div className="text-sm font-bold text-ink-strong truncate">{item.name}</div>
+        <div className="text-body-strong text-ink-strong truncate">{item.name}</div>
         {showStock && (
-          <div className="text-[10px] font-bold uppercase tracking-wide text-ink-muted">
+          <div className="text-label text-ink-muted">
             {copy.inStock(availableStock.toFixed(0), item.stockUnit || 'kg')}
           </div>
         )}
@@ -101,16 +101,16 @@ function IngredientAllocationRow({ item, warnings, onPercentageChange, onApplyFi
           min="0"
           max="100"
           step="any"
-          className="w-24 rounded-md border border-ink/15 bg-surface-raised px-2 py-1 text-right text-lg font-black text-brand focus:outline-none"
+          className="w-24 rounded-md border border-ink/15 bg-surface-raised px-2 py-1 text-right text-control text-brand focus:outline-none"
           value={item.percentage}
           onChange={(e) => onPercentageChange(item.id, e.target.value)}
           aria-label={copy.percentageLabel(item.name)}
         />
-        <span className="text-xs font-bold text-ink-muted">%</span>
+        <span className="text-meta text-ink-muted">%</span>
       </div>
       <div className="col-span-4 text-right">
-        <div className="text-sm font-black text-ink-strong tabular-nums">{item.weightKg.toFixed(2)} kg</div>
-        <div className="text-[10px] font-bold uppercase tracking-wide text-ink-muted">
+        <div className="text-body-strong text-ink-strong tabular-nums">{item.weightKg.toFixed(2)} kg</div>
+        <div className="text-label text-ink-muted">
           KES {item.cost.toFixed(0)}
         </div>
       </div>
@@ -131,11 +131,11 @@ function IngredientAllocationRow({ item, warnings, onPercentageChange, onApplyFi
 function MetricsFooter({ metrics }) {
   return (
     <div className="flex justify-between items-center pt-4 border-t border-ink/5">
-      <div className="text-xs text-ink-muted font-medium">
-        {copy.costPerBatch} <span className="font-bold text-ink-strong">KES {metrics.totalCost.toFixed(0)}</span>{copy.perBatch}
+      <div className="text-meta text-ink-muted">
+        {copy.costPerBatch} <span className="text-body-strong text-ink-strong">KES {metrics.totalCost.toFixed(0)}</span>{copy.perBatch}
       </div>
-      <div className="text-xs text-ink-muted font-medium">
-        {copy.yield} <span className="font-bold text-ink-strong">{metrics.totalWeight.toFixed(0)} kg</span>
+      <div className="text-meta text-ink-muted">
+        {copy.yield} <span className="text-body-strong text-ink-strong">{metrics.totalWeight.toFixed(0)} kg</span>
       </div>
     </div>
   );
@@ -230,9 +230,9 @@ export default function RecipeBuilder({
     <div className="bg-surface p-6 border border-ink/5 rounded-card ">
       {/* Header Area */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between mb-6 border-b border-ink/5 pb-4">
-        <h3 className="text-sm font-black uppercase tracking-wide text-brand-dark">
+        <h2 className="text-section-title text-brand-dark">
           {config.title}
-        </h3>
+        </h2>
         <BatchSizeControl value={batchSize} onChange={updateBatchSize} />
       </div>
 
@@ -245,14 +245,14 @@ export default function RecipeBuilder({
 
       {/* Ingredient Inputs */}
       <div className="space-y-2 mb-8">
-        <div className="grid grid-cols-12 gap-2 px-3 pb-2 text-[10px] font-black uppercase text-ink-muted border-b border-ink/5">
+        <div className="grid grid-cols-12 gap-2 px-3 pb-2 text-label text-ink-muted border-b border-ink/5">
           <div className="col-span-4">{copy.feedItem}</div>
           <div className="col-span-4 text-right">{copy.share}</div>
           <div className="col-span-4 text-right">{copy.mixAmount}</div>
         </div>
 
         {isLoading ? (
-          <div className="px-3 py-6 text-sm text-ink-muted">{copy.loading}</div>
+          <div className="px-3 py-6 text-body text-ink-muted">{copy.loading}</div>
         ) : metrics.ingredients.length > 0 ? (
           metrics.ingredients.map((item) => (
             <IngredientAllocationRow
@@ -265,12 +265,12 @@ export default function RecipeBuilder({
             />
           ))
         ) : (
-          <div className="px-3 py-6 text-sm text-ink-muted">{copy.empty}</div>
+          <div className="px-3 py-6 text-body text-ink-muted">{copy.empty}</div>
         )}
       </div>
       
       {metrics.ingredients.length > 0 && (
-        <p role="status" className={`mb-4 text-right text-xs font-bold ${sharesAddUp(shareTotal) ? 'text-ink-muted' : 'text-danger'}`}>
+        <p role="status" className={`mb-4 text-right text-meta ${sharesAddUp(shareTotal) ? 'text-ink-muted' : 'text-danger'}`}>
           {feedCopy.planner.shareTotal(shareTotal)}
         </p>
       )}

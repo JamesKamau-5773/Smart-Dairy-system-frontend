@@ -26,7 +26,7 @@ describe('top bar title and the page h1', () => {
   });
 
   it('stays the h1 on pages that have no heading of their own yet', () => {
-    renderAt('/feeding');
+    renderAt('/hr/staff');
     expect(screen.getByRole('heading', { level: 1 })).toBeTruthy();
   });
 

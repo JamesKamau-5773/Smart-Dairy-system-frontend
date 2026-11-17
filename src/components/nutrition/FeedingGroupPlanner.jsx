@@ -37,13 +37,13 @@ function ProfileEditor({ profile, onSave, isSaving }) {
         ['target_protein_percent', '0.1'],
         ['feeding_times_per_day', '1'],
       ].map(([field, step]) => (
-        <label key={field} className="text-[11px] font-semibold text-ink-muted">
+        <label key={field} className="text-field-label text-ink-muted">
           {copy.profileFields[field]}
           <input type="number" min="0.01" step={step} value={form[field]} onChange={(event) => update(field, event.target.value)} className="input-machined mt-1" required />
         </label>
       ))}
       <div className="col-span-2 flex justify-end sm:col-span-4">
-        <button type="submit" disabled={isSaving} className="btn-command inline-flex items-center gap-2 px-3 py-2 text-xs">
+        <button type="submit" disabled={isSaving} className="btn-command inline-flex items-center gap-2 px-3 py-2 text-control">
           {isSaving ? copy.saving : copy.saveProfile}
         </button>
       </div>
@@ -63,35 +63,35 @@ function RecipeMeasurementEditor({ recipe, onSave, isSaving }) {
 
   return (
     <form className="mt-4 border-t border-ink/10 pt-4" onSubmit={(event) => { event.preventDefault(); onSave(recipe.id, form); }}>
-      <h4 className="text-xs font-bold uppercase text-ink">
+      <h4 className="text-section-title text-ink">
       {copy.mixMeasure}</h4>
       <div className="mt-3 grid grid-cols-2 gap-3 lg:grid-cols-5">
-        <label className="text-[11px] font-semibold text-ink-muted">
+        <label className="text-field-label text-ink-muted">
           {copy.quantityDescribes}
           <select value={form.quantity_basis} onChange={(event) => update('quantity_basis', event.target.value)} className="input-machined mt-1">
             <option value="total_ration">{copy.totalRation}</option>
             <option value="concentrate">{copy.concentrateOnly}</option>
           </select>
         </label>
-        <label className="text-[11px] font-semibold text-ink-muted">
+        <label className="text-field-label text-ink-muted">
           {copy.concentrateRate}
           <input type="number" min="0.001" step="0.001" value={form.concentrate_kg_per_head_day} onChange={(event) => update('concentrate_kg_per_head_day', event.target.value)} className="input-machined mt-1" disabled={form.quantity_basis !== 'concentrate'} required={form.quantity_basis === 'concentrate'} />
         </label>
-        <label className="text-[11px] font-semibold text-ink-muted">
+        <label className="text-field-label text-ink-muted">
           {copy.bulkDensity}
           <input type="number" min="0.0001" step="0.0001" value={form.bulk_density_kg_per_litre} onChange={(event) => update('bulk_density_kg_per_litre', event.target.value)} className="input-machined mt-1" />
         </label>
-        <label className="text-[11px] font-semibold text-ink-muted">
+        <label className="text-field-label text-ink-muted">
           {copy.bucketSize}
           <input type="number" min="0.001" step="0.001" value={form.bucket_volume_litres} onChange={(event) => update('bucket_volume_litres', event.target.value)} className="input-machined mt-1" />
         </label>
-        <label className="text-[11px] font-semibold text-ink-muted">
+        <label className="text-field-label text-ink-muted">
           {copy.scoop}
           <input type="number" min="0.001" step="0.001" value={form.scoop_weight_kg} onChange={(event) => update('scoop_weight_kg', event.target.value)} className="input-machined mt-1" />
         </label>
       </div>
       <div className="mt-3 flex justify-end">
-        <button type="submit" disabled={isSaving} className="btn-command inline-flex items-center gap-2 px-3 py-2 text-xs">{isSaving ? copy.saving : copy.saveMeasures}</button>
+        <button type="submit" disabled={isSaving} className="btn-command inline-flex items-center gap-2 px-3 py-2 text-control">{isSaving ? copy.saving : copy.saveMeasures}</button>
       </div>
     </form>
   );
@@ -102,15 +102,15 @@ function GroupDetails({ group, profile, onSaveProfile, onSaveRecipe, isSavingPro
   const measures = group.physical_measures;
   return (
     <div className="py-4">
-      {group.requires_concentrate_rate && <p className="mb-3 border-l-2 border-brand bg-brand-50 px-3 py-2 text-xs font-semibold text-ink">{copy.needsRate}</p>}
+      {group.requires_concentrate_rate && <p className="mb-3 border-l-2 border-brand bg-brand-50 px-3 py-2 text-meta text-ink">{copy.needsRate}</p>}
       {recipe ? (
         <div className="grid gap-4 lg:grid-cols-2">
           <div>
-            <h4 className="text-xs font-bold uppercase text-ink">{copy.ingredients(recipe.name)}</h4>
+            <h4 className="text-section-title text-ink">{copy.ingredients(recipe.name)}</h4>
       <div className="mt-2 divide-y divide-ink/5 border-y border-ink/10">
               {recipe.ingredients.map((ingredient) => (
-                <div key={ingredient.inventory_item_id} className="grid min-w-0 grid-cols-2 gap-x-2 gap-y-2 py-2 text-xs sm:grid-cols-[minmax(0,1fr)_auto_auto] sm:gap-4">
-                  <span className="col-span-2 break-words font-semibold text-ink sm:col-span-1">{ingredient.name} ({Number(ingredient.percentage).toFixed(1)}%)</span>
+                <div key={ingredient.inventory_item_id} className="grid min-w-0 grid-cols-2 gap-x-2 gap-y-2 py-2 text-meta sm:grid-cols-[minmax(0,1fr)_auto_auto] sm:gap-4">
+                  <span className="col-span-2 break-words text-body-strong text-ink sm:col-span-1">{ingredient.name} ({Number(ingredient.percentage).toFixed(1)}%)</span>
                   <span className="text-right sm:text-left">{Number(ingredient.group_kg_per_feeding).toFixed(2)} {copy.perFeed}</span>
                   <span className="text-right sm:text-left">{Number(ingredient.daily_group_kg).toFixed(2)} {copy.perDay}</span>
                 </div>
@@ -118,14 +118,14 @@ function GroupDetails({ group, profile, onSaveProfile, onSaveRecipe, isSavingPro
             </div>
           </div>
           <div>
-            <h4 className="text-xs font-bold uppercase text-ink">{copy.physicalMeasure}</h4>
-            {measures ? <div className="mt-2 grid grid-cols-2 gap-2 text-xs text-ink">
+            <h4 className="text-section-title text-ink">{copy.physicalMeasure}</h4>
+            {measures ? <div className="mt-2 grid grid-cols-2 gap-2 text-meta text-ink">
               {measures.kg_per_bucket && <p><strong>{Number(measures.group_buckets_per_feeding).toFixed(2)}</strong> {copy.bucketsPerFeed} <span className="text-ink-muted">{copy.each(Number(measures.kg_per_bucket).toFixed(2))}</span></p>}
               {measures.kg_per_scoop && <p><strong>{Number(measures.group_scoops_per_feeding).toFixed(2)}</strong> {copy.scoopsPerFeed} <span className="text-ink-muted">{copy.each(Number(measures.kg_per_scoop).toFixed(2))}</span></p>}
-            </div> : <p className="mt-2 text-xs text-ink-muted">{copy.useKg}</p>}
+            </div> : <p className="mt-2 text-meta text-ink-muted">{copy.useKg}</p>}
           </div>
         </div>
-      ) : <p className="text-xs font-semibold text-ink-muted">{copy.noRecipe}</p>}
+      ) : <p className="text-meta text-ink-muted">{copy.noRecipe}</p>}
       <ProfileEditor profile={profile} onSave={onSaveProfile} isSaving={isSavingProfile} />
       {recipe && <RecipeMeasurementEditor recipe={recipe} onSave={onSaveRecipe} isSaving={isSavingRecipe} />}
     </div>
@@ -140,7 +140,7 @@ function AssignMixButton({ group }) {
     <button
       type="button"
       onClick={() => navigate('/feed-nutrition/mix', { state: { feedingGroup: group.feeding_group, draftName: copy.draftName(label) } })}
-      className="inline-flex min-h-10 shrink-0 items-center justify-center gap-1.5 rounded-button bg-brand px-2.5 text-xs font-semibold text-white hover:bg-brand-dark"
+      className="inline-flex min-h-10 shrink-0 items-center justify-center gap-1.5 rounded-button bg-brand px-2.5 text-control text-white hover:bg-brand-dark"
       aria-label={copy.assignTo(label)}
     >
 
@@ -207,18 +207,18 @@ export default function FeedingGroupPlanner() {
     <section className="card-machined overflow-hidden bg-surface">
       <div className="flex flex-col gap-3 border-b border-ink/10 bg-surface-raised px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h2 className="text-lg font-bold text-brand">
+          <h2 className="text-section-title text-brand">
     {copy.title}</h2>
-          <p className="mt-1 text-xs text-ink-muted">{copy.subtitle}</p>
+          <p className="mt-1 text-meta text-ink-muted">{copy.subtitle}</p>
         </div>
-        {message && <p className="text-xs font-semibold text-ink-muted" role="status">{message}</p>}
+        {message && <p className="text-meta text-ink-muted" role="status">{message}</p>}
       </div>
 
-      {planQuery.isLoading ? <div className="p-5 text-sm text-ink-muted">{copy.loading}</div> : groups.length === 0 ? <div className="p-5 text-sm text-ink-muted">{copy.empty}</div> : (
+      {planQuery.isLoading ? <div className="p-5 text-body text-ink-muted">{copy.loading}</div> : groups.length === 0 ? <div className="p-5 text-body text-ink-muted">{copy.empty}</div> : (
         <>
         <div className="hidden overflow-x-auto md:block">
           <table className="w-full min-w-[980px] text-left">
-            <thead className="bg-surface-raised text-[10px] font-bold uppercase tracking-wider text-ink-muted">
+            <thead className="bg-surface-raised text-label text-ink-muted">
               <tr><th className="px-5 py-3">{copy.columns.group}</th><th className="px-5 py-3 text-right">{copy.columns.headcount}</th><th className="px-5 py-3 text-right">{copy.columns.perHeadDay}</th><th className="px-5 py-3 text-right">{copy.columns.perHeadFeeding}</th><th className="px-5 py-3 text-right">{copy.columns.dailyBatch}</th><th className="px-5 py-3 text-right">{copy.columns.batchFeeding}</th><th className="px-5 py-3">{copy.columns.recipe}</th><th /></tr>
             </thead>
             <tbody className="divide-y divide-ink/5">
@@ -228,13 +228,13 @@ export default function FeedingGroupPlanner() {
                 return (
                   <React.Fragment key={group.feeding_group}>
                     <tr className="hover:bg-surface-raised">
-                      <td className="px-5 py-3"><span className="block text-sm font-semibold text-ink">{feedingGroupLabel(group.feeding_group)}</span><span className="text-[10px] font-bold uppercase text-ink-muted">{group.quantity_label}</span></td>
-                      <td className="px-5 py-3 text-right text-sm tabular-nums">{group.headcount}</td>
-                      <td className="px-5 py-3 text-right text-sm tabular-nums">{Number(group.daily_kg_per_head || 0).toFixed(2)} kg</td>
-                      <td className="px-5 py-3 text-right text-sm tabular-nums">{Number(group.kg_per_head_per_feeding || 0).toFixed(2)} kg</td>
-                      <td className="px-5 py-3 text-right text-sm font-bold text-brand tabular-nums">{Number(group.daily_group_batch_kg || 0).toFixed(2)} kg</td>
-                      <td className="px-5 py-3 text-right text-sm font-semibold text-ink tabular-nums">{Number(group.group_batch_per_feeding_kg || 0).toFixed(2)} kg</td>
-                      <td className="px-5 py-3 text-xs text-ink-muted">{group.assigned_recipe?.name ?? <AssignMixButton group={group} />}</td>
+                      <td className="px-5 py-3"><span className="block text-body-strong text-ink">{feedingGroupLabel(group.feeding_group)}</span><span className="text-label text-ink-muted">{group.quantity_label}</span></td>
+                      <td className="px-5 py-3 text-right text-body tabular-nums">{group.headcount}</td>
+                      <td className="px-5 py-3 text-right text-body tabular-nums">{Number(group.daily_kg_per_head || 0).toFixed(2)} kg</td>
+                      <td className="px-5 py-3 text-right text-body tabular-nums">{Number(group.kg_per_head_per_feeding || 0).toFixed(2)} kg</td>
+                      <td className="px-5 py-3 text-right text-body-strong text-brand tabular-nums">{Number(group.daily_group_batch_kg || 0).toFixed(2)} kg</td>
+                      <td className="px-5 py-3 text-right text-body-strong text-ink tabular-nums">{Number(group.group_batch_per_feeding_kg || 0).toFixed(2)} kg</td>
+                      <td className="px-5 py-3 text-meta text-ink-muted">{group.assigned_recipe?.name ?? <AssignMixButton group={group} />}</td>
                       <td className="px-5 py-3 text-right"><button type="button" onClick={() => setExpandedGroup(isExpanded ? null : group.feeding_group)} className="p-1 text-ink-muted hover:text-brand" aria-label={copy.editProfile(feedingGroupLabel(group.feeding_group))} aria-expanded={isExpanded}>{isExpanded ? <ChevronUp size={16} aria-hidden="true" /> : <ChevronDown size={16} aria-hidden="true" />}</button></td>
                     </tr>
                     {isExpanded && <tr><td colSpan={8} className="px-5 pb-4"><GroupDetails group={group} profile={profile} onSaveProfile={(feedingGroup, payload) => saveProfile.mutate({ group: feedingGroup, payload })} onSaveRecipe={(recipeId, payload) => saveRecipe.mutate({ recipeId, payload })} isSavingProfile={saveProfile.isPending} isSavingRecipe={saveRecipe.isPending} /></td></tr>}
@@ -242,7 +242,7 @@ export default function FeedingGroupPlanner() {
                 );
               })}
             </tbody>
-            <tfoot className="border-t border-ink/10 bg-surface-raised text-xs font-bold text-ink">
+            <tfoot className="border-t border-ink/10 bg-surface-raised text-meta text-ink">
               <tr><td className="px-5 py-3">{copy.total(totals.total_active_animals ?? 0)}</td><td /><td /><td /><td className="px-5 py-3 text-right tabular-nums">{Number(totals.total_planned_mix_kg || 0).toFixed(2)} kg</td><td colSpan={3} /></tr>
             </tfoot>
           </table>
@@ -255,21 +255,21 @@ export default function FeedingGroupPlanner() {
               <article key={group.feeding_group} className="min-w-0 p-4">
                 <div className="flex min-w-0 items-start justify-between gap-3">
                   <div className="min-w-0">
-                    <h3 className="break-words font-semibold text-ink">{feedingGroupLabel(group.feeding_group)}</h3>
+                    <h3 className="break-words text-section-title text-ink">{feedingGroupLabel(group.feeding_group)}</h3>
                   </div>
-                  <span className="shrink-0 rounded-badge border border-brand/20 bg-brand-50 px-2 py-1 text-[10px] font-bold text-brand-dark">{group.assigned_recipe ? copy.assigned : copy.notAssigned}</span>
+                  <span className="shrink-0 rounded-badge border border-brand/20 bg-brand-50 px-2 py-1 text-badge text-brand-dark">{group.assigned_recipe ? copy.assigned : copy.notAssigned}</span>
                 </div>
-                <dl className="mt-3 grid min-w-0 grid-cols-2 gap-x-3 gap-y-3 rounded-lg bg-brand-50 p-3 text-xs">
-                  <div className="min-w-0"><dt className="text-ink-muted">{copy.headcount}</dt><dd className="mt-0.5 font-semibold tabular-nums text-ink">{group.headcount}</dd></div>
-                  <div className="min-w-0"><dt className="text-ink-muted">{copy.dailyPerHead}</dt><dd className="mt-0.5 break-words font-semibold tabular-nums text-ink">{Number(group.daily_kg_per_head || 0).toFixed(2)} kg</dd></div>
-                  <div className="min-w-0"><dt className="text-ink-muted">{copy.perHeadFeeding}</dt><dd className="mt-0.5 break-words font-semibold tabular-nums text-ink">{Number(group.kg_per_head_per_feeding || 0).toFixed(2)} kg</dd></div>
-                  <div className="min-w-0"><dt className="text-ink-muted">{copy.dailyBatch}</dt><dd className="mt-0.5 break-words font-bold tabular-nums text-brand">{Number(group.daily_group_batch_kg || 0).toFixed(2)} kg</dd></div>
-                  <div className="min-w-0"><dt className="text-ink-muted">{copy.batchFeeding}</dt><dd className="mt-0.5 break-words font-semibold tabular-nums text-ink">{Number(group.group_batch_per_feeding_kg || 0).toFixed(2)} kg</dd></div>
+                <dl className="mt-3 grid min-w-0 grid-cols-2 gap-x-3 gap-y-3 rounded-lg bg-brand-50 p-3 text-meta">
+                  <div className="min-w-0"><dt className="text-ink-muted">{copy.headcount}</dt><dd className="mt-0.5 text-body-strong tabular-nums text-ink">{group.headcount}</dd></div>
+                  <div className="min-w-0"><dt className="text-ink-muted">{copy.dailyPerHead}</dt><dd className="mt-0.5 break-words text-body-strong tabular-nums text-ink">{Number(group.daily_kg_per_head || 0).toFixed(2)} kg</dd></div>
+                  <div className="min-w-0"><dt className="text-ink-muted">{copy.perHeadFeeding}</dt><dd className="mt-0.5 break-words text-body-strong tabular-nums text-ink">{Number(group.kg_per_head_per_feeding || 0).toFixed(2)} kg</dd></div>
+                  <div className="min-w-0"><dt className="text-ink-muted">{copy.dailyBatch}</dt><dd className="mt-0.5 break-words text-body-strong tabular-nums text-brand">{Number(group.daily_group_batch_kg || 0).toFixed(2)} kg</dd></div>
+                  <div className="min-w-0"><dt className="text-ink-muted">{copy.batchFeeding}</dt><dd className="mt-0.5 break-words text-body-strong tabular-nums text-ink">{Number(group.group_batch_per_feeding_kg || 0).toFixed(2)} kg</dd></div>
                 </dl>
                 <div className="mt-3 flex min-w-0 items-center justify-between gap-3 border-t border-ink/10 pt-3">
-                  <p className="min-w-0 break-words text-xs text-ink-muted">{group.quantity_label}{group.assigned_recipe?.name ? ` · ${group.assigned_recipe.name}` : ''}</p>
+                  <p className="min-w-0 break-words text-meta text-ink-muted">{group.quantity_label}{group.assigned_recipe?.name ? ` · ${group.assigned_recipe.name}` : ''}</p>
                   {group.assigned_recipe ? (
-                    <button type="button" onClick={() => setExpandedGroup(isExpanded ? null : group.feeding_group)} className="inline-flex min-h-10 shrink-0 items-center justify-center gap-1.5 rounded-button border border-brand/20 px-2.5 text-xs font-semibold text-brand-dark" aria-label={copy.recipeDetailsLabel(isExpanded, feedingGroupLabel(group.feeding_group))} aria-expanded={isExpanded}>{isExpanded ? <><ChevronUp size={15} aria-hidden="true" /> {copy.close}</> : <><ChevronDown size={15} aria-hidden="true" /> {copy.recipeDetails}</>}</button>
+                    <button type="button" onClick={() => setExpandedGroup(isExpanded ? null : group.feeding_group)} className="inline-flex min-h-10 shrink-0 items-center justify-center gap-1.5 rounded-button border border-brand/20 px-2.5 text-control text-brand-dark" aria-label={copy.recipeDetailsLabel(isExpanded, feedingGroupLabel(group.feeding_group))} aria-expanded={isExpanded}>{isExpanded ? <><ChevronUp size={15} aria-hidden="true" /> {copy.close}</> : <><ChevronDown size={15} aria-hidden="true" /> {copy.recipeDetails}</>}</button>
                   ) : (
                     <AssignMixButton group={group} />
                   )}
@@ -278,7 +278,7 @@ export default function FeedingGroupPlanner() {
               </article>
             );
           })}
-          <div className="bg-brand-50 px-4 py-3 text-xs font-bold text-ink">
+          <div className="bg-brand-50 px-4 py-3 text-meta text-ink">
             <div>{copy.total(totals.total_active_animals ?? 0)}</div>
             <div className="mt-1 text-brand">{copy.plannedMix(Number(totals.total_planned_mix_kg || 0).toFixed(2))}</div>
           </div>

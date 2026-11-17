@@ -4,6 +4,15 @@ What changed for farmers and staff using Maziwa Smart. Newest first.
 
 ## Unreleased
 
+### Clearer text on the operations and feeding pages (typography phase 4)
+
+- **Milk Usage, Daily Routine, Farm Task View, Today's Feeding, Feed Stock & Costs, Feed Mixes,
+  the Milk Feeding Planner and Unit Helpers use the new type scale.** Each page title matches
+  its name in the menu, and nothing is smaller than 12px.
+- Field names, buttons and counts are written in sentence case in English and Kiswahili
+  ("Save routine", "2 blocks"). The "Create new feed batch" button is now translated too.
+- Feeding groups the app has no name for yet are shown as a sentence, never as a raw code.
+
 ### Clearer text on the herd pages (typography phase 3)
 
 - **Cow Register, Breeding, Medical Records, Low milk alerts, the cow record and milk history

@@ -12,13 +12,13 @@ import { feedCopy } from '../../i18n/feed';
 
 const copy = feedCopy.unitHelpers;
 
-const FIELD = 'w-full bg-surface-raised border border-ink/20 text-ink font-bold rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-brand/50 focus:border-brand transition-all placeholder:font-medium placeholder:text-ink-muted/50';
-const LABEL = 'block text-[11px] font-black uppercase tracking-widest text-ink-muted mb-2';
+const FIELD = 'w-full bg-surface-raised border border-ink/20 text-ink text-control rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-brand/50 focus:border-brand transition-all placeholder:text-ink-muted/50';
+const LABEL = 'block text-field-label text-ink-muted mb-2';
 
 const EmptyConversionsState = () => (
   <div className="border border-dashed border-ink/15 bg-surface-warm/30 rounded-xl p-8 flex flex-col items-center justify-center text-center animate-reveal">
-    <h4 className="text-ink font-bold text-sm mb-1">{copy.emptyTitle}</h4>
-    <p className="text-xs text-ink-muted">{copy.emptyText}</p>
+    <h3 className="text-ink text-section-title mb-1">{copy.emptyTitle}</h3>
+    <p className="text-meta text-ink-muted">{copy.emptyText}</p>
   </div>
 );
 
@@ -26,8 +26,8 @@ const EmptyConversionsState = () => (
 const ConversionRow = ({ conversion, itemName }) => (
   <div className="flex items-center justify-between p-4 bg-surface-raised border border-ink/5 rounded-xl">
     <div>
-      <p className="text-sm font-bold text-ink mb-0.5">{itemName ?? copy.unknownItem}</p>
-      <p className="text-xs font-medium text-ink-muted">
+      <p className="text-body-strong text-ink mb-0.5">{itemName ?? copy.unknownItem}</p>
+      <p className="text-meta text-ink-muted">
         1 {conversion.unitName} = {conversion.kgEquivalent ?? '—'} kg
       </p>
     </div>
@@ -89,15 +89,15 @@ export default function UnitConversions() {
     <div className="min-h-[80vh] flex flex-col relative pb-12 animate-reveal">
       <div className="relative z-10 max-w-4xl mx-auto w-full px-4 sm:px-6 space-y-8 pt-6">
         <div className="border-b border-ink/10 pb-4">
-          <h1 className="font-black text-3xl text-ink m-0">{copy.title}</h1>
-          <p className="text-sm text-ink-muted mt-2">
+          <h1 className="text-page-title text-ink m-0">{copy.title}</h1>
+          <p className="text-body text-ink-muted mt-2">
             {copy.subtitle}
           </p>
         </div>
 
         <div className="bg-surface rounded-2xl border border-ink/10 p-6 md:p-8">
           <div className="mb-6 text-ink">
-            <h2 className="text-sm font-bold uppercase tracking-widest">{copy.addTitle}</h2>
+            <h2 className="text-section-title">{copy.addTitle}</h2>
           </div>
 
           <form onSubmit={handleSave} className="space-y-6">
@@ -116,8 +116,8 @@ export default function UnitConversions() {
                   {items.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}
                 </select>
                 {hasRowsToShow(itemsState) && items.length === 0 && (
-                  <p className="mt-2 text-xs text-ink-muted">
-                    {copy.addItemBefore}<Link to="/operations/inventory" className="font-semibold text-brand underline">{copy.stock}</Link>{copy.addItemAfter}
+                  <p className="mt-2 text-meta text-ink-muted">
+                    {copy.addItemBefore}<Link to="/operations/inventory" className="text-body-strong text-brand underline">{copy.stock}</Link>{copy.addItemAfter}
                   </p>
                 )}
               </div>
@@ -150,7 +150,7 @@ export default function UnitConversions() {
                     className={FIELD}
                     required
                   />
-                  <div className="absolute right-4 top-1/2 -translate-y-1/2 text-sm font-bold text-ink-muted pointer-events-none">kg</div>
+                  <div className="absolute right-4 top-1/2 -translate-y-1/2 text-body-strong text-ink-muted pointer-events-none">kg</div>
                 </div>
               </div>
             </div>
@@ -160,12 +160,12 @@ export default function UnitConversions() {
                 <ListLoadNotices state={itemsState} label={copy.itemsLabel} error={itemsQuery.error} onRetry={itemsQuery.refetch} />
               </div>
             )}
-            {saveError && <p role="alert" className="text-sm font-semibold text-danger">{saveError}</p>}
+            {saveError && <p role="alert" className="text-body-strong text-danger">{saveError}</p>}
             <div className="flex justify-end pt-2">
               <button
                 type="submit"
                 disabled={!isFormValid || saveConversion.isPending}
-                className="btn-command min-w-[160px] px-8 py-3.5 rounded-xl flex items-center justify-center disabled:opacity-60 transition-all bg-brand text-white hover:bg-brand/90 font-bold"
+                className="btn-command min-w-[160px] px-8 py-3.5 rounded-xl flex items-center justify-center disabled:opacity-60 transition-all bg-brand text-white hover:bg-brand/90 text-control"
               >
                 {saveConversion.isPending ? copy.saving : copy.save}
               </button>
@@ -175,8 +175,8 @@ export default function UnitConversions() {
 
         <div className="bg-surface rounded-2xl border border-ink/10 p-6 md:p-8">
           <div className="flex items-center justify-between mb-6">
-            <h3 className="text-sm font-bold text-ink uppercase tracking-widest">{copy.savedTitle}</h3>
-            <span className="bg-brand/10 text-brand text-xs font-bold px-2.5 py-1 rounded-md">
+            <h2 className="text-section-title text-ink">{copy.savedTitle}</h2>
+            <span className="bg-brand/10 text-brand text-badge px-2.5 py-1 rounded-md">
               {copy.savedCount(hasRowsToShow(loadState) ? conversions.length : '—')}
             </span>
           </div>

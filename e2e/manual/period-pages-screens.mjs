@@ -8,7 +8,7 @@
 //
 // Output: docs/audit/screens/<label>-<page>-<width>.png (or SCREENS_OUT_DIR)
 // Pages: SCREENS_PAGES=register,home,ledger,production-log,reports,inventory,record-milk,herd,breeding,medical,milk-drops,animal,milk-history
-// (default: ledger,production-log,reports)
+//   milk-usage,routine,tasks,feeding,feed-planner,feed-mixes,milk-lab,units (default: ledger,production-log,reports)
 import { chromium } from '@playwright/test';
 import { mkdirSync } from 'node:fs';
 
@@ -19,7 +19,9 @@ const OUT_DIR = process.env.SCREENS_OUT_DIR ?? 'docs/audit/screens';
 // 'register' is shot before signing in; 'home' is wherever registering lands.
 const ROUTES = { register: '/register', home: null, ledger: '/finance/ledger', 'production-log': '/operations/yield', reports: '/operations/reports?period=custom&start_date=2026-09-01&end_date=2026-11-16', inventory: '/operations/inventory', 'record-milk': '/operations/yield',
   herd: '/operations/herd', breeding: '/operations/breeding', medical: '/operations/records', 'milk-drops': '/operations/milk-drop-reports',
-  animal: '/operations/animal/1', 'milk-history': '/operations/animal/1/milk-history' };
+  animal: '/operations/animal/1', 'milk-history': '/operations/animal/1/milk-history',
+  'milk-usage': '/operations/milk-usage', routine: '/operations/routine', tasks: '/tasks', feeding: '/feeding', 'feed-planner': '/feed-nutrition',
+  'feed-mixes': '/feed-nutrition/mix', 'milk-lab': '/operations/lab', units: '/operations/unit-conversions' };
 // Pages shot after a click on the loaded route (a form opened over it).
 const OPEN = { 'record-milk': (page) => page.getByRole('button', { name: /Record milk/i }).first().click() };
 const PAGES = (process.env.SCREENS_PAGES ?? 'ledger,production-log,reports').split(',').map((name) => name.trim()).filter(Boolean);
@@ -218,6 +220,29 @@ const MILK_HISTORY = {
   meta: { total: 3, pages: 1 },
 };
 
+// ── Operations & feeding fixtures (typography phase 4) ─────────────────────────
+const FEEDING_TODAY = {
+  totals: { total_active_animals: 12, total_daily_feed_kg: 84.5 },
+  active_batches: [{ batch_id: 7, mix_name: 'Dairy mix A', remaining_kg: 310, days_left: 4 }],
+  groups: [
+    { feeding_group: 'lactating', headcount: 8, feeding_times_per_day: 2, kg_per_head_per_feeding: 3.5, group_batch_per_feeding_kg: 28, daily_group_batch_kg: 56, active_batch_id: 7, mix_name: 'Dairy mix A', ready: true, quantity_label: '28 kg per feeding', physical_measures: { group_buckets_per_feeding: 2 } },
+    { feeding_group: 'dry', headcount: 3, feeding_times_per_day: 2, kg_per_head_per_feeding: 2, group_batch_per_feeding_kg: 6, daily_group_batch_kg: 12, active_batch_id: null, ready: false, not_ready_reason: 'NO_ACTIVE_BATCH', not_ready_message: 'No active batch for this group.' },
+  ],
+};
+const RECIPES = [
+  { id: 1, name: 'Dairy mix A', recipe_type: 'LACTATING', target_protein_percentage: 16, ingredients: [{ name: 'Maize germ', percentage: 60 }, { name: 'Sunflower cake', percentage: 30 }, { name: 'Mineral lick', percentage: 10 }] },
+  { id: 2, name: 'Dry cow mix', recipe_type: 'DRY', target_protein_percentage: 12, ingredients: [{ name: 'Wheat bran', percentage: 70 }, { name: 'Cotton seed cake', percentage: 30 }] },
+];
+const CONVERSIONS = [{ id: 1, item_id: 3, item_name: 'Dairy meal', unit_name: 'Bucket', kg_equivalent: 8.5 }, { id: 2, item_id: 4, item_name: 'Maize germ', unit_name: 'Sack', kg_equivalent: 70 }];
+const ROUTINE = [
+  { id: 1, title: 'Morning milking', start_time: '05:00', end_time: '06:30', notes: 'Clean udders first.', checklist_items: ['Wash udders', 'Strip test', 'Milk'], display_order: 1 },
+  { id: 2, title: 'Feeding', start_time: '07:00', end_time: '07:45', notes: '', checklist_items: ['Dairy mix A to lactating cows'], display_order: 2 },
+];
+const DISPOSITIONS = [
+  { id: 1, disposition_date: '2026-11-15', disposition_type: 'CALF_FEEDING', liters: 4, calf_name: 'Baraka', calf_tag: 'KE-0150', notes: '', recorded_by: 'Wanjiru' },
+  { id: 2, disposition_date: '2026-11-14', disposition_type: 'HOUSEHOLD', liters: 2, notes: 'Family use', recorded_by: 'Kamau' },
+];
+
 function handle(method, path, params, body) {
   if (method === 'POST' && path === '/auth/register') {
     return [201, {
@@ -244,6 +269,11 @@ function handle(method, path, params, body) {
   if (path === '/operations/semen-inventory') return [200, SEMEN];
   if (path === '/clinical/vet-visits' || path === '/medical/records') return [200, VET_VISITS];
   if (path === '/production/milk-drop-alerts') return [200, MILK_DROPS];
+  if (path === '/v1/nutrition/feeding/today') return [200, FEEDING_TODAY];
+  if (path === '/feed/recipes') return [200, RECIPES];
+  if (path === '/units/conversions') return [200, CONVERSIONS];
+  if (path === '/routine/plans') return [200, ROUTINE];
+  if (path === '/production/milk-dispositions') return [200, DISPOSITIONS];
   return [200, []];
 }
 

@@ -16,8 +16,8 @@ export default function InlineNotice({ tone: kind = 'info', title, children }) {
   return (
     <div className="flex items-start gap-2.5 border-t border-ink/10 pt-3" role={kind === 'info' ? 'status' : 'note'}>
       <Icon size={16} className={`mt-0.5 shrink-0 ${icon}`} aria-hidden="true" />
-      <div className="min-w-0 text-sm">
-        {title && <p className="font-semibold text-ink">{title}</p>}
+      <div className="min-w-0 text-body">
+        {title && <p className="text-body-strong text-ink">{title}</p>}
         <p className={title ? 'text-ink-muted' : 'text-ink'}>{children}</p>
       </div>
     </div>
