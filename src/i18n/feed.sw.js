@@ -226,7 +226,10 @@ export const feedCopy = {
     batchesTitle: 'Chakula kilichopo stoo',
     remaining: (kg) => `Zimebaki kg ${kg}`,
     daysLeft: (days) => `takriban siku ${days}`,
-    totals: (count, kg) => `${animals(count)} · kg ${kg} za chakula zinahitajika leo`,
+    animalCount: (count) => animals(count),
+    animalsNotRecorded: 'Idadi ya wanyama haijarekodiwa',
+    feedNeeded: (kg) => `kg ${kg} za chakula zinahitajika leo`,
+    feedNotRecorded: 'Chakula kinachohitajika leo hakijarekodiwa',
     retry: 'Jaribu tena',
   },
 

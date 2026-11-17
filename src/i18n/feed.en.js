@@ -226,7 +226,10 @@ export const feedCopy = {
     batchesTitle: 'Feed in store',
     remaining: (kg) => `${kg} kg left`,
     daysLeft: (days) => plural(days, { one: 'about {n} day', other: 'about {n} days' }),
-    totals: (animals, kg) => `${plural(animals, { one: '{n} animal', other: '{n} animals' })} · ${kg} kg feed needed today`,
+    animalCount: (count) => plural(count, { one: '{n} animal', other: '{n} animals' }),
+    animalsNotRecorded: 'Number of animals not recorded',
+    feedNeeded: (kg) => `${kg} kg feed needed today`,
+    feedNotRecorded: 'Feed needed today not recorded',
     retry: 'Try again',
   },
 
