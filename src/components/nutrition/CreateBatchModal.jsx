@@ -149,12 +149,12 @@ export default function CreateBatchModal({
       closeLabel={copy.closeLabel}
       footerActions={(
         <>
-          <button type="button" onClick={onClose} className="text-sm font-bold text-slate-500 hover:text-slate-700">{copy.cancel}</button>
+          <button type="button" onClick={onClose} className="text-control text-slate-500 hover:text-slate-700">{copy.cancel}</button>
           <button
             type="button"
             onClick={handleSaveBatch}
             disabled={createBatchMutation.isPending || isLoadingRecipe || proteinSummaryQuery.isFetching || !proteinSummaryQuery.data || batchIngredients.length === 0 || !hasCompleteFormula || hasInsufficientStock}
-            className="flex items-center gap-2 px-6 py-3 rounded-xl font-black text-xs uppercase bg-brand text-white hover:bg-brand-dark disabled:bg-slate-300"
+            className="flex items-center gap-2 px-6 py-3 rounded-xl text-control bg-brand text-white hover:bg-brand-dark disabled:bg-slate-300"
           >
             {createBatchMutation.isPending && <Loader className="animate-spin" size={16} aria-hidden="true" />}
             {createBatchMutation.isPending ? copy.recording : copy.confirm(Number(mixSize || 0).toFixed(2))}
@@ -164,22 +164,22 @@ export default function CreateBatchModal({
     >
       <div className="space-y-6">
           <div>
-            <label htmlFor="batch-total-size" className="block text-sm font-bold text-slate-700 mb-2">{copy.totalSize}</label>
+            <label htmlFor="batch-total-size" className="block text-field-label text-slate-700 mb-2">{copy.totalSize}</label>
             <input
               id="batch-total-size"
               type="number"
               value={mixSize}
               onChange={(e) => setMixSize(e.target.value)}
               max={hasKnownBatchLimit ? maximumFeasibleBatchWeight : undefined}
-              className="w-full p-3 border border-slate-300 rounded-lg text-sm font-bold focus:ring-2 focus:ring-brand/50 outline-none"
+              className="w-full p-3 border border-slate-300 rounded-lg text-control focus:ring-2 focus:ring-brand/50 outline-none"
             />
             {hasKnownBatchLimit && (
-              <div className="mt-2 flex items-center justify-between gap-3 text-xs text-slate-600">
+              <div className="mt-2 flex items-center justify-between gap-3 text-meta text-slate-600">
                 <span>{copy.maxBatch(batchIngredients.length, maximumFeasibleBatchWeight)}</span>
                 <button
                   type="button"
                   onClick={() => setMixSize(maximumFeasibleBatchWeight)}
-                  className="shrink-0 font-bold text-brand hover:text-brand-dark"
+                  className="shrink-0 text-control text-brand hover:text-brand-dark"
                 >
                   {copy.useMax}
                 </button>
@@ -187,15 +187,15 @@ export default function CreateBatchModal({
             )}
           </div>
 
-          <div className="rounded-lg border border-slate-200 bg-slate-50 p-3 text-xs text-slate-700">
+          <div className="rounded-lg border border-slate-200 bg-slate-50 p-3 text-meta text-slate-700">
             <div className="flex flex-wrap items-center justify-between gap-2">
-              <span className="font-bold">{batchCopy.suggestTitle}</span>
+              <span className="text-body-strong">{batchCopy.suggestTitle}</span>
               <label className="flex items-center gap-2">
                 <span>{batchCopy.suggestFor}</span>
                 <select
                   value={suggestionDays}
                   onChange={(event) => setSuggestionDays(Number(event.target.value))}
-                  className="rounded border border-slate-300 bg-white px-2 py-1 font-bold"
+                  className="rounded border border-slate-300 bg-white px-2 py-1 text-control"
                 >
                   {SUGGESTION_DAYS.map((days) => <option key={days} value={days}>{batchCopy.days(days)}</option>)}
                 </select>
@@ -210,9 +210,9 @@ export default function CreateBatchModal({
                     ? batchCopy.suggestion(suggestion.kg, suggestionDays)
                     : suggestion.reason}
             </p>
-            {suggestion.capped && <p className="mt-1 font-semibold text-ink">{batchCopy.cappedToStock(suggestion.kg, suggestion.limitingIngredient)}</p>}
+            {suggestion.capped && <p className="mt-1 text-body-strong text-ink">{batchCopy.cappedToStock(suggestion.kg, suggestion.limitingIngredient)}</p>}
             {suggestion.kg && typedMixSize !== null && Number(typedMixSize) !== suggestion.kg && (
-              <button type="button" onClick={() => setMixSize(null)} className="mt-2 font-bold text-brand hover:text-brand-dark">
+              <button type="button" onClick={() => setMixSize(null)} className="mt-2 text-control text-brand hover:text-brand-dark">
                 {batchCopy.useSuggestion}
               </button>
             )}
@@ -220,23 +220,23 @@ export default function CreateBatchModal({
 
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
             <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
-              <div className="text-xs font-bold text-slate-500">
+              <div className="text-meta text-slate-500">
           {copy.totalBatch}</div>
-              <p className="mt-1 text-lg font-black text-slate-800">{Number(mixSize || 0).toFixed(2)} kg</p>
+              <p className="mt-1 text-stat-value text-slate-800">{Number(mixSize || 0).toFixed(2)} kg</p>
             </div>
             <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
-              <div className="text-xs font-bold text-slate-500">
+              <div className="text-meta text-slate-500">
           {copy.proteinContent}</div>
-              <p className="mt-1 text-lg font-black text-slate-800">
+              <p className="mt-1 text-stat-value text-slate-800">
                 {proteinSummaryQuery.data
                   ? `${Number(proteinSummaryQuery.data.average_protein_percent).toFixed(2)}%`
                   : proteinSummaryQuery.isFetching ? copy.calculating : '—'}
               </p>
             </div>
             <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
-              <div className="text-xs font-bold text-slate-500">
+              <div className="text-meta text-slate-500">
           {copy.totalProtein}</div>
-              <p className="mt-1 text-lg font-black text-slate-800">
+              <p className="mt-1 text-stat-value text-slate-800">
                 {proteinSummaryQuery.data
                   ? `${(Number(proteinSummaryQuery.data.total_protein_grams) / 1000).toFixed(2)} kg`
                   : proteinSummaryQuery.isFetching ? copy.calculating : '—'}
@@ -245,49 +245,49 @@ export default function CreateBatchModal({
           </div>
 
           {!hasCompleteFormula && batchIngredients.length > 0 && (
-            <div className="flex items-start gap-2 rounded-lg border border-brand/40 bg-brand-50 p-3 text-xs font-semibold text-ink">
+            <div className="flex items-start gap-2 rounded-lg border border-brand/40 bg-brand-50 p-3 text-meta text-ink">
               <AlertTriangle size={16} className="mt-0.5 shrink-0 text-brand-dark" aria-hidden="true" />
               {copy.sharesOff(totalPercentage.toFixed(2))}
             </div>
           )}
           {proteinSummaryQuery.data && Number(targetProtein) > 0 && verifiedProteinPercent < Number(targetProtein) && (
-            <div className="flex items-start gap-2 rounded-lg border border-brand/40 bg-brand-50 p-3 text-xs font-semibold text-ink">
+            <div className="flex items-start gap-2 rounded-lg border border-brand/40 bg-brand-50 p-3 text-meta text-ink">
               <AlertTriangle size={16} className="mt-0.5 shrink-0 text-brand-dark" aria-hidden="true" />
               {copy.belowGoal(verifiedProteinPercent.toFixed(2), Number(targetProtein).toFixed(2))}
             </div>
           )}
 
           {zeroProteinIngredients.length > 0 && (
-            <div className="flex items-start gap-2 rounded-lg border border-brand/40 bg-brand-50 p-3 text-xs font-semibold text-ink">
+            <div className="flex items-start gap-2 rounded-lg border border-brand/40 bg-brand-50 p-3 text-meta text-ink">
               <AlertTriangle size={16} className="mt-0.5 shrink-0 text-brand-dark" aria-hidden="true" />
               {copy.zeroProtein(zeroProteinIngredients.join(', '))}
             </div>
           )}
 
           {proteinSummaryQuery.isError && (
-            <div className="flex items-start gap-2 rounded-lg border border-brand-dark/60 bg-brand-100 p-3 text-xs font-semibold text-ink">
+            <div className="flex items-start gap-2 rounded-lg border border-brand-dark/60 bg-brand-100 p-3 text-meta text-ink">
               <AlertTriangle size={16} className="mt-0.5 shrink-0 text-brand-dark" aria-hidden="true" />
               {getApiErrorMessage(proteinSummaryQuery.error, copy.proteinFailed)}
             </div>
           )}
 
           <div>
-            <h4 className="text-sm font-bold text-slate-700 mb-2">{copy.weights}</h4>
+            <h3 className="text-section-title text-slate-700 mb-2">{copy.weights}</h3>
             {isLoadingRecipe ? (
-              <div className="text-sm text-slate-500">{copy.loadingRecipe}</div>
+              <div className="text-body text-slate-500">{copy.loadingRecipe}</div>
             ) : (
               <div className="border border-slate-200 rounded-lg overflow-hidden">
-                <div className="bg-slate-50 grid grid-cols-3 gap-4 px-4 py-2 text-xs font-bold text-slate-500 uppercase">
+                <div className="bg-slate-50 grid grid-cols-3 gap-4 px-4 py-2 text-label text-slate-500">
                   <span>{copy.ingredient}</span>
                   <span className="text-right">{copy.percentage}</span>
                   <span className="text-right">{copy.weightKg}</span>
                 </div>
                 <div className="max-h-60 overflow-y-auto">
                   {batchIngredients.map(ing => (
-                    <div key={ing.ingredientId} className="grid grid-cols-3 gap-4 px-4 py-3 border-t border-slate-100 text-sm">
-                      <span className="font-medium text-slate-800">{ing.name}</span>
+                    <div key={ing.ingredientId} className="grid grid-cols-3 gap-4 px-4 py-3 border-t border-slate-100 text-body">
+                      <span className="text-slate-800">{ing.name}</span>
                       <span className="text-right text-slate-600">{ing.percentage.toFixed(2)}%</span>
-                      <span className="text-right font-bold text-slate-800">{ing.weight.toFixed(2)} kg</span>
+                      <span className="text-right text-body-strong text-slate-800">{ing.weight.toFixed(2)} kg</span>
                     </div>
                   ))}
                 </div>
@@ -298,18 +298,18 @@ export default function CreateBatchModal({
 
         <div className="px-8 pb-2">
           {hasInsufficientStock && (
-            <div className="flex items-start gap-2 p-3 mb-2 rounded-lg border border-brand-dark/60 bg-brand-100 text-ink text-xs font-semibold">
+            <div className="flex items-start gap-2 p-3 mb-2 rounded-lg border border-brand-dark/60 bg-brand-100 text-ink text-meta">
               <AlertTriangle size={16} className="shrink-0 mt-0.5 text-brand-dark" aria-hidden="true" />
               <div>
                 <p>{copy.notEnough}</p>
-                <ul className="list-disc ml-4 mt-1 font-medium">
+                <ul className="list-disc ml-4 mt-1">
                   {insufficientIngredients.map((ing) => (
                     <li key={ing.ingredientId}>
                       {copy.shortfall(ing.name, ing.weight.toFixed(1), Number(ing.availableStock ?? ing.stock ?? ing.current_stock).toFixed(1))}
                     </li>
                   ))}
                 </ul>
-                <p className="mt-1 font-medium">{copy.reduce}</p>
+                <p className="mt-1">{copy.reduce}</p>
               </div>
             </div>
           )}

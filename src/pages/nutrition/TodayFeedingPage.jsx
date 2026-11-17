@@ -56,17 +56,17 @@ export default function TodayFeedingPage() {
   return (
     <div className="mx-auto max-w-3xl space-y-6 animate-reveal">
       <header className="border-b border-ink/10 pb-4">
-        <h1 className="text-2xl font-black tracking-tight text-ink sm:text-3xl">{LABELS.TODAY_FEEDING}</h1>
-        <p className="mt-1 text-sm text-ink-muted">{copy.subtitle}</p>
+        <h1 className="text-page-title text-ink">{LABELS.TODAY_FEEDING}</h1>
+        <p className="mt-1 text-body text-ink-muted">{copy.subtitle}</p>
         {today?.totals && (
-          <p className="mt-2 text-xs font-semibold text-ink-muted">
+          <p className="mt-2 text-meta text-ink-muted">
             {copy.totals(today.totals.total_active_animals ?? 0, kg(today.totals.total_daily_feed_kg))}
           </p>
         )}
       </header>
 
       {todayQuery.isLoading && (
-        <p role="status" className="flex items-center gap-2 text-sm text-ink-muted">
+        <p role="status" className="flex items-center gap-2 text-body text-ink-muted">
           <Loader2 size={18} className="animate-spin" aria-hidden="true" /> {copy.loading}
         </p>
       )}
@@ -79,7 +79,7 @@ export default function TodayFeedingPage() {
         />
       )}
 
-      {todayQuery.isSuccess && groups.length === 0 && <p className="text-sm text-ink-muted">{copy.empty}</p>}
+      {todayQuery.isSuccess && groups.length === 0 && <p className="text-body text-ink-muted">{copy.empty}</p>}
 
       <div className="space-y-4">
         {groups.map((group) => (
@@ -95,11 +95,11 @@ export default function TodayFeedingPage() {
 
       {(today?.active_batches ?? []).length > 0 && (
         <section aria-labelledby="feed-in-store" className="rounded-card border border-ink/10 bg-surface p-4">
-          <h2 id="feed-in-store" className="mb-3 text-sm font-black text-ink">{copy.batchesTitle}</h2>
+          <h2 id="feed-in-store" className="mb-3 text-section-title text-ink">{copy.batchesTitle}</h2>
           <ul className="divide-y divide-ink/10">
             {today.active_batches.map((batch) => (
-              <li key={batch.batch_id} className="flex flex-wrap items-baseline justify-between gap-2 py-2 text-sm">
-                <span className="font-semibold text-ink">{batch.batch_name}</span>
+              <li key={batch.batch_id} className="flex flex-wrap items-baseline justify-between gap-2 py-2 text-body">
+                <span className="text-body-strong text-ink">{batch.batch_name}</span>
                 <span className="text-ink-muted">
                   {copy.remaining(kg(batch.remaining_kg))}
                   {Number.isFinite(Number(batch.days_until_empty)) && batch.days_until_empty !== null && ` · ${copy.daysLeft(kg(batch.days_until_empty))}`}
@@ -116,8 +116,8 @@ export default function TodayFeedingPage() {
 function Measure({ label, value }) {
   return (
     <div className="min-w-0">
-      <dt className="text-[11px] font-semibold text-ink-muted">{label}</dt>
-      <dd className="mt-0.5 font-mono text-base font-bold tabular-nums text-ink">{value}</dd>
+      <dt className="text-meta text-ink-muted">{label}</dt>
+      <dd className="mt-0.5 text-body-strong tabular-nums text-ink">{value}</dd>
     </div>
   );
 }
@@ -142,15 +142,15 @@ function GroupCard({ group, readiness, isRecording, onFed }) {
     <article className="rounded-card border border-ink/10 bg-surface p-4">
       <div className="flex flex-wrap items-start justify-between gap-2">
         <div className="min-w-0">
-          <h2 className="text-lg font-black text-ink">{feedingGroupLabel(group.feeding_group)}</h2>
-          <p className="text-xs text-ink-muted">
+          <h2 className="text-section-title text-ink">{feedingGroupLabel(group.feeding_group)}</h2>
+          <p className="text-meta text-ink-muted">
             {copy.headcount(group.headcount ?? 0)}
             {group.mix_name && ` · ${group.mix_name}`}
             {group.quantity_label && ` · ${group.quantity_label}`}
           </p>
         </div>
         {group.feeding_times_per_day > 0 && (
-          <span className="shrink-0 rounded-badge border border-brand/20 bg-brand-50 px-2 py-1 text-[11px] font-bold text-brand-dark">{copy.timesPerDay(group.feeding_times_per_day)}</span>
+          <span className="shrink-0 rounded-badge border border-brand/20 bg-brand-50 px-2 py-1 text-badge text-brand-dark">{copy.timesPerDay(group.feeding_times_per_day)}</span>
         )}
       </div>
 
@@ -169,7 +169,7 @@ function GroupCard({ group, readiness, isRecording, onFed }) {
 
           <form onSubmit={submit} className="mt-3 flex flex-col gap-2 sm:flex-row sm:items-end">
             <label className="min-w-0 flex-1">
-              <span className="mb-1 block text-xs font-bold text-ink-muted">{copy.recordLabel}</span>
+              <span className="mb-1 block text-meta text-ink-muted">{copy.recordLabel}</span>
               <input
                 type="number"
                 inputMode="decimal"
@@ -179,15 +179,15 @@ function GroupCard({ group, readiness, isRecording, onFed }) {
                 value={amount}
                 onChange={(event) => setAmount(event.target.value)}
                 aria-invalid={amount !== '' && !amountOk ? true : undefined}
-                className="input-machined text-base"
+                className="input-machined text-control"
               />
             </label>
-            <button type="submit" disabled={isRecording || !amountOk} className="btn-command min-h-12 gap-2 px-5 text-base">
+            <button type="submit" disabled={isRecording || !amountOk} className="btn-command min-h-12 gap-2 px-5 text-control">
               {isRecording ? <><Loader2 size={18} className="animate-spin" aria-hidden="true" /> {copy.recording}</> : copy.record}
             </button>
           </form>
           {!amountOk && amount !== '' && (
-            <p className="mt-1 text-xs font-semibold text-danger">{copy.amountInvalid(kg(readiness.batch?.remaining_kg))}</p>
+            <p className="mt-1 text-meta text-danger">{copy.amountInvalid(kg(readiness.batch?.remaining_kg))}</p>
           )}
         </>
       )}

@@ -17,8 +17,8 @@ export const labelsCopy = {
   ESTIMATED_COST: 'Expected feed cost',
   READY_TO_CALCULATE_TITLE: 'Ready to plan feed',
   READY_TO_CALCULATE_DESC: 'Enter your milk goal and feed price on the left to get a feeding plan.',
-  MILKING_TIME_DAIRY_MEAL: 'Milking-Time Dairy Meal',
-  BOMA_FEEDINGS: 'Boma Feedings',
+  MILKING_TIME_DAIRY_MEAL: 'Milking-time dairy meal',
+  BOMA_FEEDINGS: 'Boma feedings',
   READY_PROMPT_SMALL: 'Enter a milk goal above to see the feeding plan.',
 
   // Medical

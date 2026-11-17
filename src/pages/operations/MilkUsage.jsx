@@ -13,6 +13,7 @@ import { QUERY_KEYS } from '../../providers/QueryProvider';
 import CalfMilkFeedModal from '../../components/operations/CalfMilkFeedModal';
 import MilkDispositionHistory from '../../components/operations/MilkDispositionHistory';
 import { milkCopy } from '../../i18n/milk';
+import { shellCopy } from '../../i18n/shell';
 
 void React;
 
@@ -61,10 +62,10 @@ export default function MilkUsage() {
       <section className="rounded-[28px] border border-brand/15 bg-brand-50 p-5 sm:p-6">
         <header className="flex min-w-0 flex-col gap-4 border-b border-ink/10 pb-5 sm:flex-row sm:items-end sm:justify-between">
           <div className="min-w-0">
-            <h1 className="m-0 break-words font-display text-3xl font-semibold tracking-tight text-brand sm:text-4xl">
-              {copy.titleStart} <span className="text-ink/30">{copy.titleEnd}</span>
+            <h1 className="m-0 break-words text-page-title text-brand">
+              {shellCopy.nav.items.milkUsage}
             </h1>
-            <p className="mt-2 max-w-2xl text-sm leading-6 text-ink-muted">{copy.subtitle}</p>
+            <p className="mt-2 max-w-2xl text-body text-ink-muted">{copy.subtitle}</p>
           </div>
           <button type="button" onClick={() => setShowFeedModal(true)} className="btn-command w-full justify-center whitespace-nowrap px-5 py-3 sm:w-auto">
 
@@ -81,8 +82,8 @@ export default function MilkUsage() {
           ].map(({ label, value }) => (
             <div key={label} className="min-w-0 rounded-2xl border border-ink/10 bg-surface p-3 sm:p-4">
               <div>
-                <p className="text-[10px] font-bold uppercase tracking-widest text-ink-muted">{label}</p>
-                <p className="mt-2 break-words text-2xl font-black tabular-nums text-brand sm:text-3xl">{value}</p>
+                <p className="text-label text-ink-muted">{label}</p>
+                <p className="mt-2 break-words text-stat-value tabular-nums text-brand">{value}</p>
               </div>
             </div>
           ))}
@@ -120,19 +121,19 @@ export default function MilkUsage() {
       {calfTotals.length > 0 && (
         <section className="overflow-hidden rounded-lg border border-slate-200 bg-white/90 backdrop-blur" aria-labelledby="calf-summary-heading">
           <div className="border-b border-ink/10 px-5 py-4">
-            <h2 id="calf-summary-heading" className="font-semibold text-ink">{copy.byCalf}</h2>
+            <h2 id="calf-summary-heading" className="text-section-title text-ink">{copy.byCalf}</h2>
           </div>
           <div className="max-h-64 overflow-auto">
             <table className="hidden w-full min-w-[520px] text-left md:table">
-              <thead className="sticky top-0 bg-surface-raised text-[10px] font-bold uppercase tracking-widest text-ink-muted">
+              <thead className="sticky top-0 bg-surface-raised text-label text-ink-muted">
                 <tr><th className="px-5 py-3">{copy.calf}</th><th className="px-5 py-3 text-right">{copy.feedings}</th><th className="px-5 py-3 text-right">{copy.totalMilk}</th></tr>
               </thead>
               <tbody className="divide-y divide-ink/10">
                 {calfTotals.map((calf) => (
                   <tr key={calf.calfId}>
-                    <td className="px-5 py-3 text-sm font-semibold text-ink">{formatCowIdentity({ cowName: calf.calfName, cowTag: calf.calfTag })}</td>
-                    <td className="px-5 py-3 text-right text-sm tabular-nums text-ink-muted">{calf.feedings}</td>
-                    <td className="px-5 py-3 text-right text-sm font-semibold tabular-nums text-ink">{calf.liters.toFixed(2)} L</td>
+                    <td className="px-5 py-3 text-body-strong text-ink">{formatCowIdentity({ cowName: calf.calfName, cowTag: calf.calfTag })}</td>
+                    <td className="px-5 py-3 text-right text-body tabular-nums text-ink-muted">{calf.feedings}</td>
+                    <td className="px-5 py-3 text-right text-body-strong tabular-nums text-ink">{calf.liters.toFixed(2)} L</td>
                   </tr>
                 ))}
               </tbody>
@@ -141,10 +142,10 @@ export default function MilkUsage() {
           <div className="divide-y divide-ink/10 md:hidden">
             {calfTotals.map((calf) => (
               <article key={calf.calfId} className="min-w-0 p-4">
-                <p className="break-words font-semibold text-brand">{formatCowIdentity({ cowName: calf.calfName, cowTag: calf.calfTag })}</p>
-                <dl className="mt-3 grid grid-cols-2 gap-3 text-xs">
-                  <div><dt className="text-ink-muted">{copy.feedings}</dt><dd className="mt-1 font-semibold tabular-nums text-ink">{calf.feedings}</dd></div>
-                  <div><dt className="text-ink-muted">{copy.totalMilk}</dt><dd className="mt-1 font-semibold tabular-nums text-ink">{calf.liters.toFixed(2)} L</dd></div>
+                <p className="break-words text-body-strong text-brand">{formatCowIdentity({ cowName: calf.calfName, cowTag: calf.calfTag })}</p>
+                <dl className="mt-3 grid grid-cols-2 gap-3 text-meta">
+                  <div><dt className="text-ink-muted">{copy.feedings}</dt><dd className="mt-1 text-body-strong tabular-nums text-ink">{calf.feedings}</dd></div>
+                  <div><dt className="text-ink-muted">{copy.totalMilk}</dt><dd className="mt-1 text-body-strong tabular-nums text-ink">{calf.liters.toFixed(2)} L</dd></div>
                 </dl>
               </article>
             ))}
@@ -161,10 +162,10 @@ export default function MilkUsage() {
         totalLiters={filteredLiters}
         footer={filteredRecords.length > PAGE_SIZE ? (
           <div className="flex items-center justify-between gap-4">
-            <span className="text-xs font-medium text-ink-muted">{copy.page(currentPage, pageCount)}</span>
+            <span className="text-meta text-ink-muted">{copy.page(currentPage, pageCount)}</span>
             <div className="flex gap-2">
-              <button type="button" onClick={() => setPage((value) => Math.max(1, value - 1))} disabled={currentPage === 1} className="btn-ghost px-3 py-2 text-xs disabled:opacity-40">{copy.previous}</button>
-              <button type="button" onClick={() => setPage((value) => Math.min(pageCount, value + 1))} disabled={currentPage === pageCount} className="btn-secondary px-3 py-2 text-xs disabled:opacity-40">{copy.next}</button>
+              <button type="button" onClick={() => setPage((value) => Math.max(1, value - 1))} disabled={currentPage === 1} className="btn-ghost px-3 py-2 text-control disabled:opacity-40">{copy.previous}</button>
+              <button type="button" onClick={() => setPage((value) => Math.min(pageCount, value + 1))} disabled={currentPage === pageCount} className="btn-secondary px-3 py-2 text-control disabled:opacity-40">{copy.next}</button>
             </div>
           </div>
         ) : null}

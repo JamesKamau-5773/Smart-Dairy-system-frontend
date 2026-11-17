@@ -20,8 +20,8 @@ export const labelsCopy = {
   ESTIMATED_COST: 'Gharama ya chakula inayotarajiwa',
   READY_TO_CALCULATE_TITLE: 'Tayari kupanga chakula',
   READY_TO_CALCULATE_DESC: 'Weka lengo lako la maziwa na bei ya chakula upande wa kushoto ili kupata mpango wa ulishaji.',
-  MILKING_TIME_DAIRY_MEAL: 'Dairy Meal Wakati wa Kukamua',
-  BOMA_FEEDINGS: 'Ulishaji Bomani',
+  MILKING_TIME_DAIRY_MEAL: 'Dairy meal wakati wa kukamua',
+  BOMA_FEEDINGS: 'Ulishaji bomani',
   READY_PROMPT_SMALL: 'Weka lengo la maziwa hapo juu ili kuona mpango wa ulishaji.',
 
   MEDICAL_RECORDS: 'Rekodi za Matibabu',

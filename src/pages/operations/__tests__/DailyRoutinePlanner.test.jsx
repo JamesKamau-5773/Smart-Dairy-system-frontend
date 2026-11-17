@@ -42,7 +42,7 @@ describe('DailyRoutinePlanner', () => {
     routineApi.listPlans.mockReturnValue(new Promise(() => {}));
     renderPlanner();
 
-    expect(screen.getByText('Daily Routine Planner')).toBeTruthy();
+    expect(screen.getByRole('heading', { level: 1 }).textContent).toBe('Daily Routine');
     expect(screen.queryByText(/No daily routine is set up/)).toBeNull();
     expect(document.querySelector('[aria-busy="true"]')).toBeTruthy();
   });
@@ -86,7 +86,7 @@ describe('DailyRoutinePlanner', () => {
     routineApi.savePlans.mockResolvedValue({ message: 'Saved' });
     renderPlanner();
 
-    const save = await screen.findByRole('button', { name: /Save Routine/ });
+    const save = await screen.findByRole('button', { name: /Save routine/ });
     expect(save.disabled).toBe(true);
 
     fireEvent.change(screen.getByLabelText(/one action per line/), { target: { value: 'Wash udders\nStrip test\nRecord litres' } });
@@ -108,7 +108,7 @@ describe('DailyRoutinePlanner', () => {
 
     const editor = await screen.findByLabelText(/one action per line/);
     fireEvent.change(editor, { target: { value: 'Changed' } });
-    fireEvent.click(screen.getByRole('button', { name: /Save Routine/ }));
+    fireEvent.click(screen.getByRole('button', { name: /Save routine/ }));
 
     expect(await screen.findByText(/No internet connection. The routine wasn’t saved/)).toBeTruthy();
     expect(screen.getByLabelText(/one action per line/).value).toBe('Changed');

@@ -8,6 +8,7 @@ import { useFormDraft } from '../../hooks/useFormDraft';
 import { CardSkeletons, ListLoadNotices } from '../../components/ui/ListLoadState';
 import DraftRestoredNotice from '../../components/ui/DraftRestoredNotice';
 import { dashboardCopy } from '../../i18n/dashboard';
+import { shellCopy } from '../../i18n/shell';
 
 const DRAFT_KEY = 'routine-plan';
 
@@ -72,14 +73,14 @@ export default function DailyRoutinePlanner() {
       <div className="rounded-[28px] border border-ink/10 bg-[linear-gradient(135deg,rgba(223,249,255,0.94),rgba(255,255,255,0.98))] p-5 sm:p-6 ">
         <div className="flex flex-col gap-4 border-b border-ink/10 pb-5 lg:flex-row lg:items-end lg:justify-between">
           <div>
-            <h2 className="font-sans text-3xl font-black tracking-tight text-brand">{copy.title}</h2>
-            <p className="mt-2 max-w-2xl text-sm leading-6 text-ink">
+            <h1 className="text-page-title text-brand">{shellCopy.nav.items.dailyRoutine}</h1>
+            <p className="mt-2 max-w-2xl text-body text-ink">
               {copy.subtitle}
             </p>
           </div>
 
           {showPlans && plans.length > 0 && (
-            <div className="flex flex-wrap items-center gap-2 text-[10px] font-bold uppercase tracking-widest text-ink-muted">
+            <div className="flex flex-wrap items-center gap-2 text-badge text-ink-muted">
               <span className="rounded-full border border-ink/10 bg-surface/90 px-3 py-1">{copy.blocks(tasks.length)}</span>
               <span className="rounded-full border border-ink/10 bg-surface/90 px-3 py-1">{copy.withNotes(tasks.filter((task) => countSteps(task.checklist) > 0).length)}</span>
               <span className="rounded-full border border-ink/10 bg-surface/90 px-3 py-1">{copy.activeSteps(countSteps(activeTask?.checklist))}</span>
@@ -109,7 +110,7 @@ export default function DailyRoutinePlanner() {
       )}
 
       {showPlans && plans.length === 0 && (
-        <div className="rounded-xl border border-dashed border-ink/10 bg-surface-warm/60 p-5 text-sm text-ink-muted">
+        <div className="rounded-xl border border-dashed border-ink/10 bg-surface-warm/60 p-5 text-body text-ink-muted">
           {copy.empty}
         </div>
       )}
@@ -119,10 +120,10 @@ export default function DailyRoutinePlanner() {
           {/* LEFT COLUMN: The Schedule List */}
           <div className="lg:col-span-2 card-machined bg-surface p-6  border border-ink/10">
             <div className="flex items-center justify-between mb-4 border-b border-ink/5 pb-4">
-              <h3 className="text-xs font-bold uppercase tracking-widest text-ink-muted">
+              <h2 className="text-section-title text-ink-muted">
 
                 {copy.dailyTasks}
-              </h3>
+              </h2>
             </div>
 
             <div className="space-y-3">
@@ -140,12 +141,12 @@ export default function DailyRoutinePlanner() {
                 >
                   <div className="flex flex-col md:flex-row md:items-center justify-between gap-2">
                     <div>
-                      <span className={`text-[10px] font-bold uppercase tracking-wider block mb-1 ${
+                      <span className={`text-meta tabular-nums block mb-1 ${
                         activeTask?.id === task.id ? 'text-brand' : 'text-ink-muted'
                       }`}>
                         {task.time}
                       </span>
-                      <span className={`font-semibold text-base ${
+                      <span className={`text-body-strong ${
                         activeTask?.id === task.id ? 'text-brand-dark' : 'text-ink-strong'
                       }`}>
                         {task.title}
@@ -153,7 +154,7 @@ export default function DailyRoutinePlanner() {
                     </div>
 
                     {countSteps(task.checklist) > 0 && (
-                      <div className="hidden md:flex items-center text-[10px] font-bold text-ink-muted bg-surface-warm px-2 py-1 rounded">
+                      <div className="hidden md:flex items-center text-meta text-ink-muted bg-surface-warm px-2 py-1 rounded">
 
                         {copy.notesAdded}
                       </div>
@@ -164,7 +165,7 @@ export default function DailyRoutinePlanner() {
             </div>
 
             <div className="mt-6 space-y-3 border-t border-ink/10 pt-4">
-              {saveError && <p role="alert" className="text-sm font-semibold text-danger">{saveError}</p>}
+              {saveError && <p role="alert" className="text-body-strong text-danger">{saveError}</p>}
               <button
                 type="button"
                 onClick={handleSave}
@@ -179,14 +180,14 @@ export default function DailyRoutinePlanner() {
           {/* RIGHT COLUMN: The Sticky Notes Editor */}
           <div className="lg:col-span-1 sticky top-6">
             <div className="card-machined bg-surface-warm/40 p-6 border border-brand/15  rounded-2xl">
-              <h3 className="text-[10px] font-bold uppercase tracking-widest text-brand mb-1">
+              <h2 className="text-section-title text-brand mb-1">
                 {copy.instructionsFor}
-              </h3>
-              <p className="font-bold text-ink-strong text-lg mb-4 border-b border-ink/10 pb-4">
+              </h2>
+              <p className="text-body-strong text-ink-strong mb-4 border-b border-ink/10 pb-4">
                 {activeTask?.title || copy.defaultTitle}
               </p>
 
-              <label htmlFor="routine-checklist" className="block text-xs font-semibold text-ink-muted mb-2">
+              <label htmlFor="routine-checklist" className="block text-field-label text-ink-muted mb-2">
                 {copy.checklistLabel}
               </label>
 
@@ -195,10 +196,10 @@ export default function DailyRoutinePlanner() {
                 value={activeTask?.checklist ?? ''}
                 onChange={(event) => handleChecklistChange(event.target.value)}
                 placeholder={copy.checklistPlaceholder}
-                className="w-full h-64 p-4 rounded-xl border border-ink/20 focus:border-brand focus:ring-1 focus:ring-brand bg-white text-sm text-ink-strong leading-relaxed resize-none transition-colors"
+                className="w-full h-64 p-4 rounded-xl border border-ink/20 focus:border-brand focus:ring-1 focus:ring-brand bg-white text-control text-ink-strong resize-none transition-colors"
               />
 
-              <p className="text-[10px] text-ink-muted mt-3 italic text-center">
+              <p className="text-meta text-ink-muted mt-3 text-center">
                 {copy.draftHint}
               </p>
             </div>

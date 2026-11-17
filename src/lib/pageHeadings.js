@@ -15,6 +15,18 @@ export const PAGES_WITH_OWN_HEADING = Object.freeze([
   '/operations/milk-drop-reports',
   '/operations/animal/:id',
   '/operations/animal/:id/milk-history',
+  // Phase 4: operations and feeding (clerk entry has no page heading of its own yet).
+  '/operations/milk-usage',
+  '/operations/routine',
+  '/tasks',
+  '/operations/herdsman',
+  '/feeding',
+  '/feed-nutrition',
+  '/operations/nutrition',
+  '/feed-nutrition/mix',
+  '/operations/feed-formulation',
+  '/operations/lab',
+  '/operations/unit-conversions',
 ]);
 
 const segments = (path) => path.split('/').filter(Boolean);

@@ -94,11 +94,9 @@ export const milkCopy = {
 
   // Milk given to calves (Milk Usage page, the calf feed form, the feeding history list).
   usage: {
-    eyebrow: 'Milk Operations',
-    titleStart: 'Milk',
-    titleEnd: 'Usage',
+    eyebrow: 'Milk operations',
     subtitle: 'Review milk allocated to calves without mixing usage records into production entries.',
-    feedCalf: 'Feed Calf',
+    feedCalf: 'Feed calf',
     fedToday: 'Fed today',
     fedThisMonth: 'Fed this month',
     calvesServed: 'Calves served',

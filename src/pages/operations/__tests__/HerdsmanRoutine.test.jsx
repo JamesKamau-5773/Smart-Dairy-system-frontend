@@ -32,8 +32,9 @@ describe('Farm Task View: today’s plan', () => {
     ]);
     renderView();
 
-    expect(await screen.findByText('Morning milking')).toBeTruthy();
-    expect(screen.getByText('Strip test')).toBeTruthy();
+    // Wait for the backend routine itself: "Morning milking" is also the current-shift label.
+    expect(await screen.findByText('Strip test')).toBeTruthy();
+    expect(screen.getAllByText('Morning milking').length).toBeGreaterThan(1);
     expect(screen.queryByText('Old local plan')).toBeNull();
   });
 

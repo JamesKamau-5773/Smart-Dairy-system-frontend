@@ -108,8 +108,8 @@ export default function NutritionDashboard() {
       {/* ── HEADER ── */}
       <div className="flex flex-col gap-4 border-b border-ink/10 pb-6 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <h1 className="text-3xl font-black tracking-tight text-ink">{LABELS.FEED_DASHBOARD}</h1>
-          <p className="mt-2 max-w-2xl text-sm leading-7 text-ink-muted">
+          <h1 className="text-page-title text-ink">{LABELS.FEED_DASHBOARD}</h1>
+          <p className="mt-2 max-w-2xl text-body text-ink-muted">
             Track what feed is in stock, what it costs, and which mix helps your cows give more milk.
           </p>
         </div>
@@ -117,9 +117,9 @@ export default function NutritionDashboard() {
         <button
           type="button"
           onClick={() => navigate('/feed-nutrition/mix')}
-          className="btn-command gap-2 px-4 py-2.5 text-sm"
+          className="btn-command gap-2 px-4 py-2.5 text-control"
         >
-          <Plus size={18} aria-hidden="true" /> Create New Feed Batch
+          <Plus size={18} aria-hidden="true" /> {feedCopy.costs.createBatch}
         </button>
       </div>
 

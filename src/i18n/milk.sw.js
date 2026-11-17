@@ -95,11 +95,9 @@ export const milkCopy = {
   },
 
   usage: {
-    eyebrow: 'Shughuli za Maziwa',
-    titleStart: 'Matumizi ya',
-    titleEnd: 'Maziwa',
+    eyebrow: 'Shughuli za maziwa',
     subtitle: 'Angalia maziwa yaliyotolewa kwa ndama bila kuchanganya rekodi za matumizi na rekodi za uzalishaji.',
-    feedCalf: 'Lisha Ndama',
+    feedCalf: 'Lisha ndama',
     fedToday: 'Yaliyolishwa leo',
     fedThisMonth: 'Yaliyolishwa mwezi huu',
     calvesServed: 'Ndama waliolishwa',

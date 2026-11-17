@@ -32,7 +32,7 @@ const MEASURES_BY_TYPE = {
 /** A short line under a disabled button saying why it can't be used. */
 function DisabledReason({ state }) {
   if (!state.disabled || !state.reason) return null;
-  return <p className="text-[11px] font-semibold text-ink-muted">{state.reason}</p>;
+  return <p className="text-meta text-ink-muted">{state.reason}</p>;
 }
 
 const DEFAULT_BATCH_SIZE_BY_TYPE = {
@@ -667,11 +667,11 @@ export default function FeedFormulation() {
 
       {/* Page Header */}
       <div className="border-b border-ink/10 pb-6">
-        <h1 className="text-3xl font-black tracking-tight text-ink">{LABELS.FEED_FORMULATION}</h1>
-        <p className="mt-2 text-sm text-ink-muted max-w-2xl">
+        <h1 className="text-page-title text-ink">{LABELS.FEED_FORMULATION}</h1>
+        <p className="mt-2 text-body text-ink-muted max-w-2xl">
           {copy.subtitle}
         </p>
-        {routerState?.feedingGroup && <p className="mt-3 inline-flex rounded-full border border-brand/20 bg-brand-50 px-3 py-1 text-xs font-semibold text-brand-dark">{copy.savingFor(FEEDING_GROUPS.find((group) => group.value === routerState.feedingGroup)?.label ?? String(routerState.feedingGroup).replaceAll('_', ' '))}</p>}
+        {routerState?.feedingGroup && <p className="mt-3 inline-flex rounded-full border border-brand/20 bg-brand-50 px-3 py-1 text-meta text-brand-dark">{copy.savingFor(FEEDING_GROUPS.find((group) => group.value === routerState.feedingGroup)?.label ?? String(routerState.feedingGroup).replaceAll('_', ' '))}</p>}
       </div>
 
       <FeedingGroupPlanner />
@@ -681,8 +681,8 @@ export default function FeedFormulation() {
         <div className="flex animate-fade-in items-start gap-3 rounded-xl border border-brand/20 bg-brand-50 p-4">
           <AlertCircle className="mt-0.5 shrink-0 text-brand-dark" size={20} aria-hidden="true" />
           <div>
-            <h4 className="text-sm font-bold text-brand-dark">{copy.draftTitle}</h4>
-            <p className="text-sm font-medium text-ink/70 mt-1">
+            <p className="text-body-strong text-brand-dark">{copy.draftTitle}</p>
+            <p className="text-body text-ink/70 mt-1">
               {copy.draftText}
             </p>
           </div>
@@ -693,12 +693,12 @@ export default function FeedFormulation() {
         <div className="bg-brand/5 border border-brand/20 p-4 rounded-xl flex items-start gap-3 animate-fade-in">
           <AlertCircle className="text-brand shrink-0 mt-0.5" size={20} aria-hidden="true" />
           <div>
-            <h4 className="font-bold text-brand text-sm">{copy.importedTitle}</h4>
-            <p className="text-sm font-medium text-ink/70 mt-1">
+            <p className="text-body-strong text-brand">{copy.importedTitle}</p>
+            <p className="text-body text-ink/70 mt-1">
               {copy.importedText}
             </p>
             {suggestedMixMessage && (
-              <p className="text-xs font-semibold text-brand-dark mt-2">{suggestedMixMessage}</p>
+              <p className="text-meta text-brand-dark mt-2">{suggestedMixMessage}</p>
             )}
           </div>
         </div>
@@ -708,7 +708,7 @@ export default function FeedFormulation() {
       <div className="flex p-1.5 bg-surface-raised border border-ink/5 rounded-lg max-w-md ">
         <button
           onClick={() => setActiveTab('dairy_meal')}
-          className={`flex-1 flex items-center justify-center gap-2 py-2.5 text-sm font-bold rounded-md transition-all ${
+          className={`flex-1 flex items-center justify-center gap-2 py-2.5 text-control rounded-md transition-all ${
             activeTab === 'dairy_meal'
               ? 'bg-white text-brand  border border-ink/5'
               : 'text-ink-muted hover:text-ink-strong'
@@ -719,7 +719,7 @@ export default function FeedFormulation() {
         </button>
         <button
           onClick={() => setActiveTab('main_meal')}
-          className={`flex-1 flex items-center justify-center gap-2 py-2.5 text-sm font-bold rounded-md transition-all ${
+          className={`flex-1 flex items-center justify-center gap-2 py-2.5 text-control rounded-md transition-all ${
             activeTab === 'main_meal'
               ? 'bg-white text-brand  border border-ink/5'
               : 'text-ink-muted hover:text-ink-strong'
@@ -737,8 +737,8 @@ export default function FeedFormulation() {
         <div className="lg:col-span-2">
           {recipe.length === 0 && !isInventoryLoading && !isRecipeLoading && !importedDraft ? (
             <div className="flex flex-col items-center justify-center h-full p-8 text-center border-2 border-dashed rounded-lg border-ink/20 bg-surface animate-in fade-in">
-              <h3 className="text-lg font-bold text-ink-strong">{copy.emptyTitle}</h3>
-              <p className="mt-2 text-sm text-ink-muted max-w-sm">
+              <h2 className="text-section-title text-ink-strong">{copy.emptyTitle}</h2>
+              <p className="mt-2 text-body text-ink-muted max-w-sm">
                 {copy.emptyText}
               </p>
               <button
@@ -770,13 +770,13 @@ export default function FeedFormulation() {
         {/* Right Column: Strategic Actions & Context */}
         <div className="space-y-6">
           <div className="bg-surface p-6 border border-ink/5 rounded-card ">
-            <h4 className="text-sm font-black text-ink-strong mb-2">{copy.saveTitle}</h4>
-            <p className="text-xs text-ink-muted mb-6">
+            <h2 className="text-section-title text-ink-strong mb-2">{copy.saveTitle}</h2>
+            <p className="text-meta text-ink-muted mb-6">
               {copy.saveText}
             </p>
 
             <div className="mb-4 space-y-2">
-              <label className="block text-[10px] font-black uppercase tracking-wider text-ink-muted">{copy.proteinGoal}</label>
+              <label className="block text-field-label text-ink-muted">{copy.proteinGoal}</label>
               <input
                 type="number"
                 min="1"
@@ -784,7 +784,7 @@ export default function FeedFormulation() {
                 step="0.1"
                 value={targetProtein}
                 onChange={(event) => setTargetProtein(event.target.value)}
-                className="w-full rounded-lg border border-ink/20 bg-surface-raised px-3 py-2 text-sm font-bold text-ink focus:outline-none focus:ring-2 focus:ring-brand/40"
+                className="w-full rounded-lg border border-ink/20 bg-surface-raised px-3 py-2 text-control text-ink focus:outline-none focus:ring-2 focus:ring-brand/40"
               />
             </div>
 
@@ -793,7 +793,7 @@ export default function FeedFormulation() {
                 type="button"
                 onClick={() => calculateNutritionMutation.mutate()}
                 disabled={calculateNutritionMutation.isPending || actionStates.check.disabled}
-                className="w-full bg-surface-raised hover:bg-ink/5 text-ink-strong px-4 py-2.5 rounded-button font-bold text-sm transition-colors disabled:opacity-70"
+                className="w-full bg-surface-raised hover:bg-ink/5 text-ink-strong px-4 py-2.5 rounded-button text-control transition-colors disabled:opacity-70"
               >
                 {calculateNutritionMutation.isPending ? copy.checking : copy.check}
               </button>
@@ -802,7 +802,7 @@ export default function FeedFormulation() {
                 type="button"
                 onClick={() => formulateMutation.mutate()}
                 disabled={formulateMutation.isPending || actionStates.adjust.disabled}
-                className="w-full bg-brand/10 hover:bg-brand/20 text-brand-dark px-4 py-2.5 rounded-button font-bold text-sm transition-colors disabled:opacity-70"
+                className="w-full bg-brand/10 hover:bg-brand/20 text-brand-dark px-4 py-2.5 rounded-button text-control transition-colors disabled:opacity-70"
               >
                 {formulateMutation.isPending ? copy.adjusting : copy.adjust}
               </button>
@@ -810,7 +810,7 @@ export default function FeedFormulation() {
             </div>
 
             {!hasEligibleIngredients && ingredientEligibilityDiagnostics.total > 0 && (
-              <div className="mb-4 rounded-md border border-brand/20 bg-brand-50 p-3 text-xs text-brand-dark">
+              <div className="mb-4 rounded-md border border-brand/20 bg-brand-50 p-3 text-meta text-brand-dark">
                 {copy.missingIds}
                 {ingredientEligibilityDiagnostics.missingIds.length > 0 && (
                   <span className="ml-1">
@@ -821,8 +821,8 @@ export default function FeedFormulation() {
             )}
 
             {proteinDiagnostics && (
-              <div className="mb-4 rounded-md border border-ink/10 bg-surface-raised p-3 text-xs text-ink-muted">
-                {copy.currentProtein} <span className="font-black text-ink">{formatProteinPercent(
+              <div className="mb-4 rounded-md border border-ink/10 bg-surface-raised p-3 text-meta text-ink-muted">
+                {copy.currentProtein} <span className="text-body-strong text-ink">{formatProteinPercent(
                   proteinDiagnostics.average_protein_percent ??
                   proteinDiagnostics.current_protein_percentage ??
                   proteinDiagnostics.currentProteinPercentage
@@ -831,15 +831,15 @@ export default function FeedFormulation() {
             )}
 
             {formulationPreview && (
-              <div className="mb-4 rounded-md border border-brand/20 bg-brand/5 p-3 text-xs text-brand-dark">
+              <div className="mb-4 rounded-md border border-brand/20 bg-brand/5 p-3 text-meta text-brand-dark">
                 {copy.sharesReady}
               </div>
             )}
 
             {suspectIngredients.length > 0 && (
               <div className="mb-4 space-y-2 rounded-md border border-brand/40 bg-brand-50 p-3">
-                <p className="text-xs font-black text-ink">{feedCopy.dataWarnings.suspectTitle}</p>
-                <p className="text-xs text-ink-muted">{feedCopy.dataWarnings.suspectHint}</p>
+                <p className="text-meta text-ink">{feedCopy.dataWarnings.suspectTitle}</p>
+                <p className="text-meta text-ink-muted">{feedCopy.dataWarnings.suspectHint}</p>
                 {suspectIngredients.map((suspect) => (
                   <DataWarningList
                     key={suspect.ingredient_id}
@@ -853,18 +853,18 @@ export default function FeedFormulation() {
             )}
 
             {formulationError && (
-              <div className="mb-4 rounded-md border border-brand/30 bg-brand-50 p-3 text-xs text-brand-dark">
+              <div className="mb-4 rounded-md border border-brand/30 bg-brand-50 p-3 text-meta text-brand-dark">
                 {formulationError}
               </div>
             )}
 
             <div className="mb-4 space-y-1">
-              <label htmlFor="mix-feeding-group" className="block text-[10px] font-black uppercase tracking-wider text-ink-muted">{feedCopy.planner.feedingGroup}</label>
+              <label htmlFor="mix-feeding-group" className="block text-field-label text-ink-muted">{feedCopy.planner.feedingGroup}</label>
               <select
                 id="mix-feeding-group"
                 value={feedingGroup}
                 onChange={(event) => setFeedingGroup(event.target.value)}
-                className="w-full rounded-lg border border-ink/20 bg-surface-raised px-3 py-2 text-sm font-bold text-ink focus:outline-none focus:ring-2 focus:ring-brand/40"
+                className="w-full rounded-lg border border-ink/20 bg-surface-raised px-3 py-2 text-control text-ink focus:outline-none focus:ring-2 focus:ring-brand/40"
               >
                 <option value="">{feedCopy.planner.feedingGroupNone}</option>
                 {FEEDING_GROUPS.map((group) => <option key={group.value} value={group.value}>{group.label}</option>)}
@@ -885,17 +885,17 @@ export default function FeedFormulation() {
                 type="button"
                 onClick={handleSave}
                 disabled={saveRecipe.isPending || actionStates.save.disabled}
-                className="w-full bg-brand hover:bg-brand-dark text-white px-4 py-3 rounded-button font-bold text-sm transition-colors  flex items-center justify-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed"
+                className="w-full bg-brand hover:bg-brand-dark text-white px-4 py-3 rounded-button text-control transition-colors flex items-center justify-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed"
               >
                 {saveRecipe.isPending ? copy.saving : copy.save}
               </button>
               {!saveRecipe.isPending && <DisabledReason state={actionStates.save} />}
-              {saveError && <p role="alert" className="text-xs font-semibold text-danger">{saveError}</p>}
+              {saveError && <p role="alert" className="text-meta text-danger">{saveError}</p>}
 
               {importedDraft && (
                 <button
                   onClick={handleDiscardDraft}
-                  className="w-full bg-surface-raised hover:bg-ink/5 text-ink-strong px-4 py-3 rounded-button font-bold text-sm transition-colors flex items-center justify-center gap-2"
+                  className="w-full bg-surface-raised hover:bg-ink/5 text-ink-strong px-4 py-3 rounded-button text-control transition-colors flex items-center justify-center gap-2"
                 >
 
   {copy.cancelDraft}
@@ -906,7 +906,7 @@ export default function FeedFormulation() {
                 type="button"
                 onClick={() => setIsBatchModalOpen(true)}
                 disabled={actionStates.batch.disabled}
-                className="mt-3 flex w-full items-center justify-center gap-2 rounded-button bg-brand px-4 py-3 text-sm font-bold text-white transition-colors hover:bg-brand-dark disabled:opacity-70"
+                className="mt-3 flex w-full items-center justify-center gap-2 rounded-button bg-brand px-4 py-3 text-control text-white transition-colors hover:bg-brand-dark disabled:opacity-70"
               >
                 {copy.createBatch}
               </button>
@@ -915,8 +915,8 @@ export default function FeedFormulation() {
           </div>
 
           <div className="bg-brand/5 p-6 border border-brand/20 rounded-card">
-            <h4 className="text-sm font-black text-brand-dark mb-2">{copy.tipTitle}</h4>
-            <p className="text-xs text-brand-dark/80 leading-relaxed">
+            <h2 className="text-section-title text-brand-dark mb-2">{copy.tipTitle}</h2>
+            <p className="text-meta text-brand-dark/80">
               {copy.tipText}
             </p>
           </div>
