@@ -7,7 +7,7 @@ const ActionButton = ({ action, variant, className = '' }) => (
   <button
     type="button"
     onClick={action.onClick}
-    className={`${variant === 'primary' ? 'btn-command' : 'btn-secondary'} min-h-11 gap-2 px-4 text-sm ${className}`}
+    className={`${variant === 'primary' ? 'btn-command' : 'btn-secondary'} min-h-11 gap-2 px-4 ${className}`}
   >
     {variant === 'primary' && action.create && <Plus size={16} aria-hidden="true" />}
     {action.label}
@@ -15,7 +15,7 @@ const ActionButton = ({ action, variant, className = '' }) => (
 );
 
 /**
- * One row: page title (matching the sidebar and top bar), an optional one-line muted
+ * One row: the page's one <h1> (matching the sidebar and top bar), an optional one-line muted
  * description, and right-aligned actions. No panel, tint or icon tile.
  *
  * primaryAction: { label, onClick, create? } (create: true shows the "+" for the page's create action)
@@ -27,8 +27,8 @@ export default function PageHeader({ title, description, primaryAction, secondar
   return (
     <header className="flex min-w-0 flex-wrap items-center justify-between gap-x-4 gap-y-3">
       <div className="min-w-0">
-        <h2 className="m-0 truncate font-sans text-xl font-semibold tracking-tight text-ink">{title}</h2>
-        {description && <p className="mt-0.5 truncate text-sm text-ink-muted">{description}</p>}
+        <h1 className="m-0 truncate text-page-title text-ink">{title}</h1>
+        {description && <p className="mt-0.5 truncate text-body text-ink-muted">{description}</p>}
       </div>
       <div className="flex min-w-0 flex-wrap items-center gap-2">
         {secondaryActions.map((action) => (

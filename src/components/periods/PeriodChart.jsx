@@ -17,7 +17,7 @@ export default function PeriodChart({ items, series, describe, isEmpty, axisLabe
 
   return (
     <figure className="min-w-0 space-y-2">
-      <figcaption className="flex flex-wrap items-center gap-4 text-xs text-ink-muted">
+      <figcaption className="flex flex-wrap items-center gap-4 text-meta text-ink-muted">
         {series.map((entry) => (
           <span key={entry.id} className="inline-flex items-center gap-1.5">
             <span aria-hidden="true" className={`h-2.5 w-2.5 rounded-[2px] ${entry.barClass}`} />
@@ -41,7 +41,7 @@ export default function PeriodChart({ items, series, describe, isEmpty, axisLabe
                   <span key={entry.id} aria-hidden="true" className={`block w-full max-w-4 rounded-t-[2px] ${entry.barClass}`} style={{ height: `${height(item[entry.id])}%` }} />
                 ))}
               </button>
-              <span role="tooltip" className="pointer-events-none absolute bottom-full left-1/2 z-20 mb-1 hidden -translate-x-1/2 whitespace-nowrap rounded-badge bg-ink px-2 py-1 text-[11px] font-medium text-white group-hover:block group-focus-within:block">
+              <span role="tooltip" className="pointer-events-none absolute bottom-full left-1/2 z-20 mb-1 hidden -translate-x-1/2 whitespace-nowrap rounded-badge bg-ink px-2 py-1 text-meta text-white group-hover:block group-focus-within:block">
                 {text}
               </span>
             </div>
@@ -50,7 +50,9 @@ export default function PeriodChart({ items, series, describe, isEmpty, axisLabe
       </div>
       <div aria-hidden="true" className="flex min-w-0 gap-1 sm:gap-1.5">
         {bars.map((item, index) => (
-          <span key={item.key} className="min-w-0 flex-1 truncate text-center text-[10px] text-ink-muted">
+          // Centred on its bar and free to overflow into the empty slots beside it, so a
+          // 13px label is never cut off on a narrow chart.
+          <span key={item.key} className="flex min-w-0 flex-1 justify-center whitespace-nowrap text-meta text-ink-muted">
             {index % labelEvery === 0 ? axisLabel(item) : ''}
           </span>
         ))}

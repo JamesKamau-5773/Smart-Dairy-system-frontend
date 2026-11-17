@@ -45,9 +45,9 @@ describe('FastMilkLog server field errors', () => {
       response: { status: 422, data: { code: 'VALIDATION_ERROR', fields: { amount: 'too_large' } } },
     });
     renderForm();
-    await fillAndSave(/Save Record/);
+    await fillAndSave(/Save record/);
 
-    const volume = await screen.findByLabelText('Volume (Liters)');
+    const volume = await screen.findByLabelText('Volume (liters)');
     await waitFor(() => expect(volume.getAttribute('aria-invalid')).toBe('true'));
     expect(document.getElementById(volume.getAttribute('aria-describedby')).textContent).toBe('This is too large.');
 
@@ -62,10 +62,10 @@ describe('FastMilkLog server field errors', () => {
       response: { status: 422, data: { code: 'VALIDATION_ERROR', fields: { milking_date: 'in_future' } } },
     });
     renderForm();
-    expect(screen.getByRole('heading', { name: 'Rekodi Maziwa' })).toBeTruthy();
-    expect(screen.getByRole('button', { name: 'jioni' })).toBeTruthy();
+    expect(screen.getByRole('heading', { name: 'Rekodi maziwa' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Jioni' })).toBeTruthy();
 
-    await fillAndSave('Hifadhi Rekodi');
+    await fillAndSave('Hifadhi rekodi');
     expect(await screen.findByText('Tarehe hii haiwezi kuwa ya baadaye.')).toBeTruthy();
   });
 });

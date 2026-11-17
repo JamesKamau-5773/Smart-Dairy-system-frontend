@@ -12,6 +12,7 @@ import LanguageSwitch from '../components/ui/LanguageSwitch';
 import { canSwitchLocale } from '../i18n/locale';
 import { shellCopy } from '../i18n/shell';
 import { roleLabel } from '../lib/staffLabels';
+import { pageOwnsHeading } from '../lib/pageHeadings';
 
 const { header: copy } = shellCopy;
 
@@ -71,10 +72,13 @@ export default function Header({ onMenuClick = () => {} }) {
                 : pathname.startsWith('/operations/inventory') ? copy.titles.stock
                   : pathname.split('/').filter(Boolean).pop()?.replaceAll('-', ' ') || copy.farmFallback;
 
+  // The page's one h1 is its own heading where it has one; the top bar's title is then plain text.
+  const TitleTag = pageOwnsHeading(pathname) ? 'p' : 'h1';
+
   return (
     <header className="sticky top-0 z-20 flex h-14 shrink-0 items-center gap-2 border-b border-ink/10 bg-surface/95 px-3 backdrop-blur sm:h-16 sm:gap-3 sm:px-6">
       <button type="button" onClick={onMenuClick} className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-brand text-white md:hidden" aria-label={copy.openMenu}><Menu size={20} aria-hidden="true" /></button>
-      <h1 className="min-w-0 flex-1 truncate font-display text-sm font-semibold capitalize text-ink-900 sm:text-base">{pageTitle}</h1>
+      <TitleTag className="min-w-0 flex-1 truncate font-display text-sm font-semibold capitalize text-ink-900 sm:text-base">{pageTitle}</TitleTag>
       <span className="max-w-[7.5rem] shrink-0 truncate rounded-full border border-brand/20 bg-brand-50 px-2 py-1 text-[10px] font-semibold text-brand-dark sm:max-w-none sm:px-3 sm:text-xs" aria-label={copy.activeWorkspace}>
         {activeFarm?.name || copy.farmFallback}
       </span>

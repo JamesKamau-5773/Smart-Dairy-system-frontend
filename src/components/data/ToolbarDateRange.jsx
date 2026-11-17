@@ -20,7 +20,7 @@ export default function ToolbarDateRange({ range, onChange, maxDate }) {
         <button
           type="button"
           aria-haspopup="dialog"
-          className="inline-flex min-h-11 shrink-0 items-center gap-1.5 !rounded-input border border-ink/15 bg-card px-3 text-xs font-semibold text-ink hover:bg-ink-50 sm:min-h-9"
+          className="inline-flex min-h-11 shrink-0 items-center gap-1.5 !rounded-input border border-ink/15 bg-card px-3 text-control text-ink hover:bg-ink-50 sm:min-h-9"
         >
           <CalendarDays size={14} aria-hidden="true" /> <span className="max-w-[14rem] truncate">{label}</span>
         </button>

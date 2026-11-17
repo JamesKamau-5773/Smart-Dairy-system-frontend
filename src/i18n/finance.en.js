@@ -304,8 +304,8 @@ export const financeCopy = {
       date: 'Date', party: 'Customer/Supplier', category: 'Category', description: 'Description', ref: 'Ref',
       moneyIn: 'Money in', moneyOut: 'Money out', status: 'Status', actions: 'Actions',
     },
-    // Ledger entry statuses the backend sends; anything else is shown as sent.
-    statuses: { posted: 'posted', voided: 'voided', void: 'void', cancelled: 'cancelled', pending: 'pending', paid: 'paid', unpaid: 'unpaid' },
+    // Ledger entry statuses the backend sends (lower-cased); anything else is humanised (src/lib/enumLabel.js).
+    statuses: { draft: 'Draft', posted: 'Posted', voided: 'Voided', void: 'Void', cancelled: 'Cancelled', pending: 'Pending', paid: 'Paid', unpaid: 'Unpaid' },
     receiptPhotos: (count) => `Receipt photos (${count})`,
     addReceiptPhoto: 'Add receipt photo',
     allCategories: 'All categories',

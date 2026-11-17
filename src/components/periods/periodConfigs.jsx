@@ -27,10 +27,10 @@ export const summaryIsEmpty = (summary) => summary?.current?.count === 0;
 
 export const ledgerSummaryConfig = {
   items: ({ current }) => [
-    { key: 'in', label: ledgerWords.moneyIn, value: moneyOrDash(current.income, { size: 'md' }) },
-    { key: 'out', label: ledgerWords.moneyOut, value: moneyOrDash(current.expenses, { size: 'md' }) },
-    { key: 'net', label: ledgerWords.net, value: moneyOrDash(current.net, { size: 'md', tone: 'net' }) },
-    { key: 'unpaid', label: ledgerWords.unpaid, value: moneyOrDash(current.unpaid, { size: 'md' }) },
+    { key: 'in', label: ledgerWords.moneyIn, value: moneyOrDash(current.income, { size: 'stat-value' }) },
+    { key: 'out', label: ledgerWords.moneyOut, value: moneyOrDash(current.expenses, { size: 'stat-value' }) },
+    { key: 'net', label: ledgerWords.net, value: moneyOrDash(current.net, { size: 'stat-value', tone: 'net' }) },
+    { key: 'unpaid', label: ledgerWords.unpaid, value: moneyOrDash(current.unpaid, { size: 'stat-value' }) },
   ],
 };
 
@@ -42,16 +42,16 @@ export const ledgerGroupConfig = {
   // Desktop table: the group's net (from the API) in the Amount column, signed like the rows:
   // a negative in the negative colour, a positive plain. The header names the currency.
   columnTotals: {
-    amount: (totals) => moneyOrDash(totals.net, { size: 'sm', tone: 'signed', showCurrency: false, className: 'font-semibold' }),
+    amount: (totals) => moneyOrDash(totals.net, { tone: 'signed', showCurrency: false, className: 'text-body-strong' }),
   },
-  labelMeta: (totals) => <span className="shrink-0 text-xs font-normal text-ink-muted">· {recordsText(totals.count)}</span>,
+  labelMeta: (totals) => <span className="shrink-0 text-meta text-ink-muted">· {recordsText(totals.count)}</span>,
   // Phones have no column header, so the net keeps its currency.
-  renderSummary: (totals) => moneyOrDash(totals.net, { size: 'sm', tone: 'signed', className: 'font-semibold' }),
+  renderSummary: (totals) => moneyOrDash(totals.net, { tone: 'signed', className: 'text-body-strong' }),
   describeSummary: (totals) => ledgerWords.describeTotals(signedMoneyText(totals.net), formatMoneyText(totals.income), formatMoneyText(totals.expenses)),
 };
 
 const entriesText = (count) => (count == null ? '—' : productionCopy.group.entries(count, formatCount(count)));
-const litresValue = (value) => <span className="font-mono tabular-nums">{formatLitres(value)}</span>;
+const litresValue = (value) => <span className="tabular-nums">{formatLitres(value)}</span>;
 
 export const productionSummaryConfig = {
   // TODO(BR-022): "Available" (`available_litres`) is left out, not shown as "—", until the
@@ -68,13 +68,13 @@ export const productionGroupConfig = {
   // Desktop table: litres under the Litres column (the header names the unit), the entry
   // count next to the label.
   columnTotals: {
-    litres: (totals) => <span className="font-mono text-sm font-semibold tabular-nums text-ink">{formatLitres(totals.litres, { unit: false })}</span>,
+    litres: (totals) => <span className="text-body-strong tabular-nums text-ink">{formatLitres(totals.litres, { unit: false })}</span>,
   },
-  labelMeta: (totals) => <span className="shrink-0 truncate text-xs font-normal text-ink-muted">· {entriesText(totals.entries)}</span>,
+  labelMeta: (totals) => <span className="shrink-0 truncate text-meta text-ink-muted">· {entriesText(totals.entries)}</span>,
   renderSummary: (totals) => (
     <span className="flex flex-col items-end">
-      <span className="font-mono text-sm font-semibold tabular-nums text-ink">{formatLitres(totals.litres)}</span>
-      <span className="whitespace-nowrap text-[11px] font-normal text-ink-muted">{entriesText(totals.entries)}</span>
+      <span className="text-body-strong tabular-nums text-ink">{formatLitres(totals.litres)}</span>
+      <span className="whitespace-nowrap text-meta text-ink-muted">{entriesText(totals.entries)}</span>
     </span>
   ),
   describeSummary: (totals) => productionCopy.group.describe(formatLitres(totals.litres)),

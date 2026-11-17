@@ -13,6 +13,7 @@ export const herdCopy = {
     Bull: 'Fahali',
     Sold: 'Ameuzwa',
     Dead: 'Amekufa',
+    Died: 'Amekufa',
     Culled: 'Ameondolewa', // REVIEW: culled
   },
   age: {

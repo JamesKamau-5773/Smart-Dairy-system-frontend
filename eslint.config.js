@@ -12,6 +12,28 @@ import localRules from './eslint-rules/index.js'
 const TYPOGRAPHY_MIGRATED = [
   'src/index.css',
   'src/lib/utils.js',
+  // Phase 2 pilot: Production Log, Ledger, Farm Reports and the shared parts they use.
+  'src/pages/operations/productionLog.jsx',
+  'src/pages/finance/FinancialLedger.jsx',
+  'src/pages/operations/OperationsReportsPage.jsx',
+  'src/components/data/**',
+  'src/components/layout/PageHeader.jsx',
+  'src/components/periods/**',
+  'src/components/ui/Money.jsx',
+  'src/components/ui/button.jsx',
+  'src/components/ui/OverflowMenu.jsx',
+  'src/components/ui/ListLoadState.jsx',
+  'src/components/operations/FastMilkLog.jsx',
+  'src/components/operations/QueuedMilkEntries.jsx',
+  'src/components/operations/CalfMilkFeedModal.jsx',
+  'src/components/operations/RecentCalfFeedings.jsx',
+  'src/components/finance/MoneyFlowChart.jsx',
+  'src/components/finance/ReceiptPreview.jsx',
+  'src/components/finance/LedgerEntryFormModal.jsx',
+  'src/components/finance/LedgerCorrectionModal.jsx',
+  'src/components/finance/ReceiptPhotosModal.jsx',
+  'src/components/finance/AttachmentThumb.jsx',
+  'src/lib/enumLabel.js',
 ]
 // Allowed raw values: the tokens file and the Tailwind configs that define the old scale,
 // the landing page until its own phase (it keeps its fluid display sizes), copy, and tests.

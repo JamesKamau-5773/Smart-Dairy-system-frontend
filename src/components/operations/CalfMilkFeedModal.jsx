@@ -73,13 +73,13 @@ function CalfMilkFeedForm({ onClose, initialDate }) {
       <form onSubmit={handleSubmit} className="space-y-5">
         <div className="border-b border-ink/10 pb-4">
           <div>
-            <p className="text-sm font-semibold text-ink">{copy.allocation}</p>
-            <p className="text-xs text-ink-muted">{copy.allocationHint}</p>
+            <p className="text-body-strong text-ink">{copy.allocation}</p>
+            <p className="text-meta text-ink-muted">{copy.allocationHint}</p>
           </div>
         </div>
 
         {validationMessage && (
-          <div role="alert" className="border-l-4 border-danger bg-danger/5 px-4 py-3 text-sm font-semibold text-danger">
+          <div role="alert" className="border-l-4 border-danger bg-danger/5 px-4 py-3 text-body-strong text-danger">
             {validationMessage}
           </div>
         )}
@@ -100,7 +100,7 @@ function CalfMilkFeedForm({ onClose, initialDate }) {
             ))}
           </select>
           {!herdQuery.isLoading && activeCalves.length === 0 && (
-            <span className="mt-1 text-xs font-medium text-warning-dark">{copy.noCalves}</span>
+            <span className="mt-1 text-meta text-warning-dark">{copy.noCalves}</span>
           )}
         </label>
 
@@ -134,7 +134,7 @@ function CalfMilkFeedForm({ onClose, initialDate }) {
                 disabled={mutation.isPending}
                 required
               />
-              <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold text-ink-muted">L</span>
+              <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-meta text-ink-muted">L</span>
             </div>
           </label>
         </div>

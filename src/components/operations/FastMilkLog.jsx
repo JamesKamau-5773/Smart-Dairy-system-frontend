@@ -98,8 +98,8 @@ const FastMilkUI = ({
     return (
       <div role="status" className="my-auto max-h-[calc(100dvh-2rem)] w-full max-w-md overflow-y-auto overscroll-contain bg-white rounded-3xl p-6 flex flex-col items-center justify-center text-center space-y-4 animate-reveal touch-pan-y sm:p-12 sm:max-h-[90dvh]">
         <outcome.Icon size={64} className={`${outcome.iconClass} scale-150 mb-2`} aria-hidden="true" />
-        <h3 className="font-black text-3xl text-ink">{outcome.title}</h3>
-        <p className="text-ink-muted font-bold">
+        <h2 className="text-section-title text-ink">{outcome.title}</h2>
+        <p className="text-body text-ink-muted">
           {messageType === 'success' ? copy.nextCow : messageType === 'info' ? copy.sentWhenOnline : message}
         </p>
       </div>
@@ -132,10 +132,10 @@ const FastMilkUI = ({
       )}
 
       <div className="p-8 pb-6 text-center border-b border-ink/5">
-        <h2 className="font-sans font-black text-3xl text-brand tracking-tight">
+        <h2 className="text-section-title text-brand">
           {isEditMode ? copy.titleEdit : copy.titleCreate}
         </h2>
-        <p className="text-ink-muted text-sm mt-1 font-medium">
+        <p className="mt-1 text-body text-ink-muted">
           {isEditMode ? copy.subtitleEdit : copy.subtitleCreate}
         </p>
       </div>
@@ -143,7 +143,7 @@ const FastMilkUI = ({
       <form onSubmit={onSubmit} className="p-8 space-y-6 bg-surface-warm/30">
         {draftNotice}
         <div className="space-y-2">
-          <label htmlFor="fast-milk-cow" className="text-[11px] font-black text-ink-muted uppercase tracking-widest block">{isEditMode ? copy.cow : copy.selectCow}</label>
+          <label htmlFor="fast-milk-cow" className="block text-field-label text-ink-muted">{isEditMode ? copy.cow : copy.selectCow}</label>
           {isEditMode ? (
             // Editing changes amount, session and date only; the backend keeps the record's cow.
             <input
@@ -153,7 +153,7 @@ const FastMilkUI = ({
               value={editCowLabel}
               aria-describedby={errorFor('cowId') ? 'fast-milk-cow-error fast-milk-cow-hint' : 'fast-milk-cow-hint'}
               aria-invalid={errorFor('cowId') ? true : undefined}
-              className="w-full rounded-xl border-2 border-ink/10 bg-ink/5 p-4 text-lg font-bold text-ink-strong focus:outline-none focus:border-brand focus:ring-4 focus:ring-brand/10"
+              className="w-full rounded-xl border-2 border-ink/10 bg-ink/5 p-4 text-control text-ink-strong focus:outline-none focus:border-brand focus:ring-4 focus:ring-brand/10"
             />
           ) : (
             <div className="relative">
@@ -162,7 +162,7 @@ const FastMilkUI = ({
                 value={formData.cowId}
                 onChange={(e) => setFormData({ ...formData, cowId: e.target.value })}
                 {...fieldErrorProps('fast-milk-cow', errorFor('cowId'))}
-                className="w-full appearance-none bg-white border-2 border-ink/10 rounded-xl p-4 pr-10 text-lg font-bold text-ink-strong focus:outline-none focus:border-brand focus:ring-4 focus:ring-brand/10 transition-all cursor-pointer "
+                className="w-full appearance-none bg-white border-2 border-ink/10 rounded-xl p-4 pr-10 text-control text-ink-strong focus:outline-none focus:border-brand focus:ring-4 focus:ring-brand/10 transition-all cursor-pointer "
                 required
               >
                 <option value="" disabled>{copy.chooseCow}</option>
@@ -181,7 +181,7 @@ const FastMilkUI = ({
           )}
           <FieldError id="fast-milk-cow" message={errorFor('cowId')} />
           {isEditMode && (
-            <p id="fast-milk-cow-hint" className="text-xs text-ink-muted">
+            <p id="fast-milk-cow-hint" className="text-meta text-ink-muted">
               {copy.moveCowHint}
             </p>
           )}
@@ -190,7 +190,7 @@ const FastMilkUI = ({
         {/* One column on phones: side by side, the date and three sessions don’t fit at 360px. */}
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <div className="min-w-0 space-y-2">
-            <label htmlFor="fast-milk-date" className="text-[11px] font-black text-ink-muted uppercase tracking-widest block">{copy.date}</label>
+            <label htmlFor="fast-milk-date" className="block text-field-label text-ink-muted">{copy.date}</label>
             <input
               id="fast-milk-date"
               type="date"
@@ -198,13 +198,13 @@ const FastMilkUI = ({
               max={todayIso()}
               onChange={(e) => setFormData({ ...formData, date: e.target.value })}
               {...fieldErrorProps('fast-milk-date', errorFor('date'))}
-              className="w-full bg-white border-2 border-ink/10 rounded-xl p-4 text-sm font-bold text-ink-strong focus:outline-none focus:border-brand focus:ring-4 focus:ring-brand/10 transition-all "
+              className="w-full bg-white border-2 border-ink/10 rounded-xl p-4 text-control text-ink-strong focus:outline-none focus:border-brand focus:ring-4 focus:ring-brand/10 transition-all "
               required
             />
             <FieldError id="fast-milk-date" message={errorFor('date')} />
           </div>
           <div className="min-w-0 space-y-2">
-            <span id="fast-milk-session" className="text-[11px] font-black text-ink-muted uppercase tracking-widest block">{copy.session}</span>
+            <span id="fast-milk-session" className="block text-field-label text-ink-muted">{copy.session}</span>
             <div role="group" aria-labelledby="fast-milk-session" {...fieldErrorProps('fast-milk-session', errorFor('session'))} className="grid grid-cols-3 gap-1 rounded-xl border-2 border-ink/10 bg-white p-1">
               {SESSION_OPTIONS.map((s) => (
                 <button
@@ -212,7 +212,7 @@ const FastMilkUI = ({
                   type="button"
                   aria-pressed={formData.session === s}
                   onClick={() => setFormData({ ...formData, session: s })}
-                  className={`min-w-0 truncate rounded-lg px-1 py-2.5 text-[11px] font-bold uppercase tracking-wide transition-colors ${
+                  className={`min-w-0 truncate rounded-lg px-1 py-2.5 text-control transition-colors ${
                     formData.session === s ? 'bg-brand text-surface' : 'text-ink-muted hover:bg-ink/5 hover:text-ink'
                   }`}
                 >
@@ -227,12 +227,12 @@ const FastMilkUI = ({
         {isLocked && (
           <div className="p-3 rounded-lg bg-danger/10 border border-danger flex items-center gap-3 text-danger">
             <AlertOctagon size={20} aria-hidden="true" />
-            <div className="text-sm font-bold">{copy.onMedication}</div>
+            <div className="text-body-strong">{copy.onMedication}</div>
           </div>
         )}
 
         <div className="space-y-2">
-          <label htmlFor="fast-milk-volume" className="text-[11px] font-black text-ink-muted uppercase tracking-widest block">{copy.volume}</label>
+          <label htmlFor="fast-milk-volume" className="block text-field-label text-ink-muted">{copy.volume}</label>
           <div className="relative">
             <input
               id="fast-milk-volume"
@@ -240,13 +240,13 @@ const FastMilkUI = ({
               inputMode="decimal"
               type="number"
               step="0.1"
-              className="w-full bg-white border-2 border-ink/10 rounded-xl p-6 text-center text-3xl font-black text-brand focus:outline-none focus:border-brand [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+              className="w-full bg-white border-2 border-ink/10 rounded-xl p-6 text-center text-numeric-input text-brand focus:outline-none focus:border-brand [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
               placeholder="0.0"
               value={formData.volume}
               onChange={(e) => setFormData({ ...formData, volume: e.target.value })}
               required
             />
-            <span className="absolute right-8 bottom-7 font-sans font-bold text-ink/45 text-xl">L</span>
+            <span className="absolute right-8 top-1/2 -translate-y-1/2 text-stat-value text-ink/45">L</span>
           </div>
           <FieldError id="fast-milk-volume" message={errorFor('volume')} />
         </div>
@@ -255,19 +255,19 @@ const FastMilkUI = ({
             action takes the full width below them, within thumb reach. */}
         <div className="pt-4 flex flex-wrap gap-3 sm:flex-nowrap">
           {onClose && (
-            <button type="button" onClick={onClose} className={`px-6 py-4 rounded-xl font-bold text-ink-muted hover:bg-ink/20 hover:text-ink-strong transition-colors ${isEditMode ? 'flex-1 sm:flex-none' : ''}`}>{copy.cancel}</button>
+            <button type="button" onClick={onClose} className={`px-6 py-4 rounded-xl text-control text-ink-muted hover:bg-ink/20 hover:text-ink-strong transition-colors ${isEditMode ? 'flex-1 sm:flex-none' : ''}`}>{copy.cancel}</button>
           )}
           {isEditMode && onDelete && (
             <button
               type="button"
               onClick={onDelete}
               disabled={isPending || isDeleting}
-              className="inline-flex flex-1 items-center justify-center rounded-xl border border-danger/20 px-5 py-4 font-bold text-danger hover:bg-danger/5 disabled:opacity-60 transition-colors sm:flex-none"
+              className="inline-flex flex-1 items-center justify-center rounded-xl border border-danger/20 px-5 py-4 text-control text-danger hover:bg-danger/5 disabled:opacity-60 transition-colors sm:flex-none"
             >
               {isDeleting ? copy.deleting : copy.deleteRecord}
             </button>
           )}
-          <button type="submit" disabled={!formData.cowId || !formData.volume || !formData.date || isLocked || isPending} className={`flex-1 bg-brand text-surface font-black text-lg py-4 rounded-xl hover:bg-brand-dark disabled:opacity-70 transition-all active:scale-95 ${isEditMode ? 'basis-full sm:basis-auto' : ''}`}>
+          <button type="submit" disabled={!formData.cowId || !formData.volume || !formData.date || isLocked || isPending} className={`flex-1 bg-brand text-surface text-control py-4 rounded-xl hover:bg-brand-dark disabled:opacity-70 transition-all active:scale-95 ${isEditMode ? 'basis-full sm:basis-auto' : ''}`}>
             {isPending ? copy.saving : isEditMode ? copy.update : copy.save}
           </button>
         </div>

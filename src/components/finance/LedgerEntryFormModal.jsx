@@ -167,7 +167,7 @@ export default function LedgerEntryFormModal({ onClose: closeModal, transactionT
       footerActions={(
         <>
           {isFormInvalid && !mutation.isPending && (
-            <p id="ledger-missing" className="w-full text-xs text-ink-muted">{copy.toSave(missingFields.join(', '))}</p>
+            <p id="ledger-missing" className="w-full text-meta text-ink-muted">{copy.toSave(missingFields.join(', '))}</p>
           )}
           <div className="flex justify-end gap-3">
             <button type="button" onClick={onClose} className="btn-secondary">
@@ -259,10 +259,10 @@ export default function LedgerEntryFormModal({ onClose: closeModal, transactionT
                       </button>
                     </PopoverTrigger>
                     <PopoverContent align="start" sideOffset={6} className="w-80 space-y-3">
-                      <div className="space-y-2 text-xs leading-relaxed text-ink-muted">
+                      <div className="space-y-2 text-meta text-ink-muted">
                         {categories.costClasses.map(([value, label]) => (
                           <div key={value}>
-                            <p className="font-bold text-ink">{label}</p>
+                            <p className="text-body-strong text-ink">{label}</p>
                             <p>{categories.describe(value)}</p>
                           </div>
                         ))}
@@ -293,7 +293,7 @@ export default function LedgerEntryFormModal({ onClose: closeModal, transactionT
                   onClick={() => setIsAnimalListOpen((current) => !current)}
                   aria-expanded={isAnimalListOpen}
                   aria-controls="animals-for-expense-list"
-                  className="mt-1 flex w-full items-center justify-between rounded-lg border border-ink/15 bg-card px-3 py-2.5 text-left text-sm font-medium text-ink shadow-sm transition-colors hover:border-ink/20 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:ring-offset-2"
+                  className="mt-1 flex w-full items-center justify-between rounded-lg border border-ink/15 bg-card px-3 py-2.5 text-left text-control text-ink shadow-sm transition-colors hover:border-ink/20 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:ring-offset-2"
                 >
                   <span>{copy.selectAnimals(formData.animal_ids.length)}</span>
                   {isAnimalListOpen ? <ChevronUp size={18} aria-hidden="true" /> : <ChevronDown size={18} aria-hidden="true" />}
@@ -301,7 +301,7 @@ export default function LedgerEntryFormModal({ onClose: closeModal, transactionT
                 {isAnimalListOpen && (
                   <div id="animals-for-expense-list" className="mt-2 max-h-48 overflow-y-auto rounded-lg border border-ink/15 bg-card">
                     {animals.length === 0 ? (
-                      <p className="px-3 py-3 text-sm text-ink-muted">{copy.noAnimals}</p>
+                      <p className="px-3 py-3 text-body text-ink-muted">{copy.noAnimals}</p>
                     ) : (
                       animals.map((animal) => (
                         <label key={animal.id} className="flex cursor-pointer items-center gap-3 py-2 px-3 transition-colors hover:bg-brand-50 focus-within:bg-brand-50">
@@ -311,7 +311,7 @@ export default function LedgerEntryFormModal({ onClose: closeModal, transactionT
                             onChange={() => handleAnimalToggle(animal.id)}
                             className="h-4 w-4 rounded border-ink/15 text-brand-700 focus:ring-brand-500"
                           />
-                          <span className="text-sm text-ink">{formatCowIdentity(animal)}</span>
+                          <span className="text-body text-ink">{formatCowIdentity(animal)}</span>
                         </label>
                       ))
                     )}
@@ -328,10 +328,10 @@ export default function LedgerEntryFormModal({ onClose: closeModal, transactionT
                       </button>
                     </PopoverTrigger>
                     <PopoverContent align="start" sideOffset={6} className="w-80 space-y-3">
-                      <div className="space-y-2 text-xs leading-relaxed text-ink-muted">
+                      <div className="space-y-2 text-meta text-ink-muted">
                         {categories.costClasses.map(([value, label]) => (
                           <div key={value}>
-                            <p className="font-bold text-ink">{label}</p>
+                            <p className="text-body-strong text-ink">{label}</p>
                             <p>{categories.describe(value)}</p>
                           </div>
                         ))}
@@ -346,8 +346,8 @@ export default function LedgerEntryFormModal({ onClose: closeModal, transactionT
                 <FieldError id="ledger-animal_cost_type" message={fieldError('animal_cost_type')} />
               </div>
             </div>
-            {!hasSelectedAnimals && <p className="text-xs text-ink-muted">{copy.animalsHint}</p>}
-            {hasSelectedAnimals && isAnimalAllocationIncomplete && <p className="text-xs text-brand-dark">{copy.costTypeNeeded}</p>}
+            {!hasSelectedAnimals && <p className="text-meta text-ink-muted">{copy.animalsHint}</p>}
+            {hasSelectedAnimals && isAnimalAllocationIncomplete && <p className="text-meta text-brand-dark">{copy.costTypeNeeded}</p>}
           </>
         )}
       </div>

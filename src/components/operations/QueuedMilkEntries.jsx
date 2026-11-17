@@ -32,27 +32,27 @@ export default function QueuedMilkEntries() {
   return (
     <section aria-labelledby="queued-milk-title" className="min-w-0 rounded-card border border-ink/10 bg-card">
       <div className="border-b border-ink/10 px-4 py-3 sm:px-6">
-        <h2 id="queued-milk-title" className="text-sm font-bold text-ink">
+        <h2 id="queued-milk-title" className="text-section-title text-ink">
           {copy.title(rows.length)}
         </h2>
-        <p className="mt-1 text-xs text-ink-muted">{copy.savedHere} {statusText}</p>
+        <p className="mt-1 text-meta text-ink-muted">{copy.savedHere} {statusText}</p>
       </div>
       <ul className="divide-y divide-ink/10">
         {rows.map((row) => (
           <li key={row.id} className="flex min-w-0 flex-wrap items-start justify-between gap-3 px-4 py-3 sm:px-6">
             <div className="min-w-0">
-              <p className="break-words font-semibold text-ink">{formatCowIdentity(row.cow, copy.cow)}</p>
-              <p className="mt-0.5 text-xs text-ink-muted">{formatDate(row.date)} · {sessionLabel(row.session)}</p>
-              {row.needsAttention && row.error && <p className="mt-1 text-xs text-danger-900">{row.error}</p>}
+              <p className="break-words text-body-strong text-ink">{formatCowIdentity(row.cow, copy.cow)}</p>
+              <p className="mt-0.5 text-meta text-ink-muted">{formatDate(row.date)} · {sessionLabel(row.session)}</p>
+              {row.needsAttention && row.error && <p className="mt-1 text-meta text-danger-900">{row.error}</p>}
             </div>
             <div className="flex shrink-0 items-center gap-3">
-              <span className="font-mono text-sm font-semibold tabular-nums text-ink">{formatLitres(row.amount)}</span>
+              <span className="text-body-strong tabular-nums text-ink">{formatLitres(row.amount)}</span>
               {row.needsAttention ? (
-                <span className="inline-flex items-center rounded-badge border border-danger-500/30 bg-danger-50 px-2 py-1 text-[10px] font-semibold text-danger-900">
+                <span className="inline-flex items-center rounded-badge border border-danger-500/30 bg-danger-50 px-2 py-1 text-badge text-danger-900">
                   {copy.needsAttention}
                 </span>
               ) : (
-                <span className="inline-flex items-center rounded-badge border border-warning-500/40 bg-warning-50 px-2 py-1 text-[10px] font-semibold text-ink">
+                <span className="inline-flex items-center rounded-badge border border-warning-500/40 bg-warning-50 px-2 py-1 text-badge text-ink">
                   {copy.notSent}
                 </span>
               )}

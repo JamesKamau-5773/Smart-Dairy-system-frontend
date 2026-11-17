@@ -34,6 +34,7 @@ import { financeCopy } from '../../i18n/finance';
 import { correctionKind } from '../../lib/ledgerCorrection';
 import { readAttachments } from '../../lib/receiptAttachments';
 import { ISO_DATE_FILTER, useUrlFilters } from '../../hooks/useUrlFilters';
+import { enumLabel } from '../../lib/enumLabel';
 
 const copy = financeCopy.ledger;
 
@@ -55,9 +56,9 @@ const typeOptions = () => ['all', 'revenue', 'expense'].map((type) => [type, cop
 const COLUMN_LAYOUT = [
   { id: 'party', width: 'w-[13rem]' },
   { id: 'category', width: 'w-[8rem]' },
-  { id: 'ref', width: 'w-[8rem]' },
+  { id: 'ref', width: 'w-[9.5rem]' }, // wide enough for a 16-character reference at the meta size
   { id: 'description' },
-  { id: 'amount', align: 'right', mono: true, width: 'w-[8rem]' },
+  { id: 'amount', align: 'right', width: 'w-[8rem]' },
   { id: 'status', width: 'w-[5.5rem]' },
   { id: 'actions', align: 'right', width: 'w-[3.5rem]', srOnly: true },
 ];
@@ -84,13 +85,13 @@ const signedAmount = (tx) => {
 
 // Posted is the normal state, so only other statuses get a badge.
 const StatusBadge = ({ status }) => {
-  if (!status) return <span className="text-xs text-ink-muted">—</span>;
+  if (!status) return <span className="text-meta text-ink-muted">—</span>;
   const text = String(status).toLowerCase().replace(/_/g, ' ');
   if (text === 'posted') return null;
   const voided = ['voided', 'void', 'cancelled'].includes(text);
   return (
-    <span className={`inline-flex max-w-full items-center rounded-badge border border-ink/10 bg-ink-50 px-1.5 py-0.5 text-[11px] font-medium capitalize ${voided ? 'text-ink-muted line-through' : 'text-ink'}`}>
-      <span className="truncate">{copy.statuses[text] ?? text}</span>
+    <span className={`inline-flex max-w-full items-center rounded-badge border border-ink/10 bg-ink-50 px-1.5 py-0.5 text-badge ${voided ? 'text-ink-muted line-through' : 'text-ink'}`}>
+      <span className="truncate">{enumLabel(copy.statuses, text)}</span>
     </span>
   );
 };
@@ -234,8 +235,8 @@ const FinancialLedger = () => {
   const amountCell = (tx) => {
     const amount = signedAmount(tx);
     return amount === null
-      ? <span className="text-xs text-ink-muted">—</span>
-      : <Money amount={amount} size="sm" tone="signed" showCurrency={false} className="font-semibold" />;
+      ? <span className="text-meta text-ink-muted">—</span>
+      : <Money amount={amount} tone="signed" showCurrency={false} className="text-body-strong" />;
   };
 
   // Desktop row, 44px. The full description and reference open in the row detail.
@@ -245,9 +246,9 @@ const FinancialLedger = () => {
     const detailId = `ledger-detail-${tx.id}`;
     return [
       <tr key={tx.id} className="h-11 border-b border-ink/5 hover:bg-ink-50/60">
-        <td className={cellClass(column.party, '!py-0')}><span className="block truncate text-sm font-medium text-ink" title={partyOf(tx)}>{partyOf(tx)}</span></td>
-        <td className={cellClass(column.category, '!py-0')}><span className="block truncate text-xs text-ink-muted" title={tx.category ? categoryText(tx.category) : undefined}>{categoryText(tx.category)}</span></td>
-        <td className={cellClass(column.ref, '!py-0')}><span className="block truncate text-[11px] text-ink-muted" title={tx.reference_code || undefined}>{tx.reference_code || '—'}</span></td>
+        <td className={cellClass(column.party, '!py-0')}><span className="block truncate text-body-strong text-ink" title={partyOf(tx)}>{partyOf(tx)}</span></td>
+        <td className={cellClass(column.category, '!py-0')}><span className="block truncate text-meta text-ink-muted" title={tx.category ? categoryText(tx.category) : undefined}>{categoryText(tx.category)}</span></td>
+        <td className={cellClass(column.ref, '!py-0')}><span className="block truncate text-meta text-ink-muted" title={tx.reference_code || undefined}>{tx.reference_code || '—'}</span></td>
         <td className={cellClass(column.description, '!py-0')}>
           <button
             type="button"
@@ -255,10 +256,10 @@ const FinancialLedger = () => {
             aria-expanded={expanded}
             aria-controls={detailId}
             title={description || undefined}
-            className="flex w-full min-w-0 items-center gap-1 !rounded-none text-left text-sm font-normal"
+            className="flex w-full min-w-0 items-center gap-1 !rounded-none text-left text-body"
           >
             <span className="min-w-0 truncate">
-              {tx.item_name && <span className="font-medium text-ink">{tx.item_name}</span>}
+              {tx.item_name && <span className="text-body-strong text-ink">{tx.item_name}</span>}
               {tx.item_name && tx.description && <span className="text-ink-muted"> · </span>}
               <span className="text-ink-muted">{tx.description || (tx.item_name ? '' : '—')}</span>
             </span>
@@ -271,11 +272,11 @@ const FinancialLedger = () => {
       </tr>,
       expanded && (
         <tr key={`${tx.id}-detail`} id={detailId} className="border-b border-ink/5 bg-ink-50/60">
-          <td colSpan={COLUMNS.length} className="px-4 !py-3 !font-sans">
-            <dl className="grid gap-x-6 gap-y-2 text-sm sm:grid-cols-[minmax(0,2fr)_minmax(0,1fr)_minmax(0,1fr)]">
-              <div className="min-w-0"><dt className="text-xs text-ink-muted">{copy.description}</dt><dd className="mt-0.5 whitespace-pre-wrap break-words text-ink">{description || '—'}</dd></div>
-              <div className="min-w-0"><dt className="text-xs text-ink-muted">{copy.reference}</dt><dd className="mt-0.5 break-all text-ink">{tx.reference_code || '—'}</dd></div>
-              <div className="min-w-0"><dt className="text-xs text-ink-muted">{copy.category}</dt><dd className="mt-0.5 break-words text-ink">{categoryText(tx.category)}</dd></div>
+          <td colSpan={COLUMNS.length} className="px-4 !py-3">
+            <dl className="grid gap-x-6 gap-y-2 text-body sm:grid-cols-[minmax(0,2fr)_minmax(0,1fr)_minmax(0,1fr)]">
+              <div className="min-w-0"><dt className="text-meta text-ink-muted">{copy.description}</dt><dd className="mt-0.5 whitespace-pre-wrap break-words text-ink">{description || '—'}</dd></div>
+              <div className="min-w-0"><dt className="text-meta text-ink-muted">{copy.reference}</dt><dd className="mt-0.5 break-all text-ink">{tx.reference_code || '—'}</dd></div>
+              <div className="min-w-0"><dt className="text-meta text-ink-muted">{copy.category}</dt><dd className="mt-0.5 break-words text-ink">{categoryText(tx.category)}</dd></div>
             </dl>
           </td>
         </tr>
@@ -292,22 +293,22 @@ const FinancialLedger = () => {
       <article key={tx.id} className="min-w-0 space-y-1 bg-card py-2 pl-3 pr-1">
         <div className="flex min-w-0 items-start gap-2">
           <div className="min-w-0 flex-1 pt-1">
-            <p className="truncate text-sm font-semibold text-ink">{partyOf(tx)}</p>
-            <p className="truncate text-xs text-ink-muted">
+            <p className="truncate text-body-strong text-ink">{partyOf(tx)}</p>
+            <p className="truncate text-meta text-ink-muted">
               {categoryText(tx.category)}{tx.reference_code ? <> · <span>{tx.reference_code}</span></> : null}
             </p>
           </div>
           <div className="shrink-0 pt-1 text-right">
-            <p className="text-[10px] font-semibold uppercase tracking-wider text-ink-muted">{direction === 'in' ? copy.columns.moneyIn : direction === 'out' ? copy.columns.moneyOut : copy.amount}</p>
+            <p className="text-label text-ink-muted">{direction === 'in' ? copy.columns.moneyIn : direction === 'out' ? copy.columns.moneyOut : copy.amount}</p>
             {signedAmount(tx) === null
-              ? <Money amount={tx.amount} size="sm" className="font-semibold" />
-              : <Money amount={signedAmount(tx)} size="sm" tone="signed" className="font-semibold" />}
+              ? <Money amount={tx.amount} className="text-body-strong" />
+              : <Money amount={signedAmount(tx)} tone="signed" className="text-body-strong" />}
           </div>
           <div className="flex shrink-0 items-center">{menuFor(tx, 'h-11 w-11')}</div>
         </div>
         <div className="flex min-w-0 items-start gap-2 pr-2">
           {description ? (
-            <button type="button" onClick={() => toggleExpanded(tx.id)} aria-expanded={expanded} className={`min-h-6 min-w-0 flex-1 !rounded-none text-left text-xs font-normal text-ink-muted ${expanded ? 'whitespace-pre-wrap break-words' : 'truncate'}`}>
+            <button type="button" onClick={() => toggleExpanded(tx.id)} aria-expanded={expanded} className={`min-h-6 min-w-0 flex-1 !rounded-none text-left text-meta text-ink-muted ${expanded ? 'whitespace-pre-wrap break-words' : 'truncate'}`}>
               {description}
             </button>
           ) : <span className="flex-1" />}
@@ -320,8 +321,8 @@ const FinancialLedger = () => {
   const openForm = (type) => setModalTransactionType(type);
   const addActions = (
     <div className="flex flex-wrap gap-2">
-      <button type="button" onClick={() => openForm('income')} className="btn-command min-h-11 gap-2 px-4 text-sm">{copy.logIncome}</button>
-      <button type="button" onClick={() => openForm('expense')} className="btn-secondary min-h-11 gap-2 px-4 text-sm">{copy.logExpense}</button>
+      <button type="button" onClick={() => openForm('income')} className="btn-command min-h-11 gap-2 px-4">{copy.logIncome}</button>
+      <button type="button" onClick={() => openForm('expense')} className="btn-secondary min-h-11 gap-2 px-4">{copy.logExpense}</button>
     </div>
   );
   const emptyMessage = hasActiveFilters
@@ -372,7 +373,7 @@ const FinancialLedger = () => {
           </Toolbar>
         )}
         notices={rows.searchScope?.typo_matched && (
-          <p role="status" className="border-b border-ink/10 bg-ink-50 px-4 py-2 text-sm text-ink">
+          <p role="status" className="border-b border-ink/10 bg-ink-50 px-4 py-2 text-body text-ink">
             {copy.typoMatch(rows.searchScope.search_query, rows.searchScope.matched_names?.join(', '))}
           </p>
         )}

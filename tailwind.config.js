@@ -4,7 +4,8 @@ import plugin from 'tailwindcss/plugin.js';
 import { TYPE_ROLES } from './src/styles/typeRoles.js';
 
 // One `text-<role>` class per type role. Values come from the --type-<role>-* tokens in
-// src/styles/brand.css. Uppercase belongs to the label role only; stat values use tabular figures.
+// src/styles/brand.css. Uppercase belongs to the label role only; stat values and numeric
+// inputs use tabular figures.
 const typeRoles = plugin(({ addUtilities }) => {
   addUtilities(Object.fromEntries(TYPE_ROLES.map((role) => [`.text-${role}`, {
     fontSize: `var(--type-${role}-size)`,
@@ -12,7 +13,7 @@ const typeRoles = plugin(({ addUtilities }) => {
     fontWeight: `var(--type-${role}-weight)`,
     letterSpacing: role === 'label' ? 'var(--type-label-tracking)' : '0',
     textTransform: role === 'label' ? 'uppercase' : 'none',
-    ...(role === 'stat-value' ? { fontVariantNumeric: 'tabular-nums' } : {}),
+    ...(role === 'stat-value' || role === 'numeric-input' ? { fontVariantNumeric: 'tabular-nums' } : {}),
   }])));
 });
 

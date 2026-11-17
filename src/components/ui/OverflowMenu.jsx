@@ -41,7 +41,7 @@ export default function OverflowMenu({ label = commonCopy.controls.moreActions, 
                 setOpen(false);
                 onSelect();
               }}
-              className={`flex min-h-11 w-full items-center !rounded-badge px-3 text-left text-sm font-medium hover:bg-ink-50 disabled:opacity-50 sm:min-h-9 ${TONES[tone] ?? TONES.default}`}
+              className={`flex min-h-11 w-full items-center !rounded-badge px-3 text-left text-control hover:bg-ink-50 disabled:opacity-50 sm:min-h-9 ${TONES[tone] ?? TONES.default}`}
             >
               <span className="min-w-0 truncate">{itemLabel}</span>
             </button>

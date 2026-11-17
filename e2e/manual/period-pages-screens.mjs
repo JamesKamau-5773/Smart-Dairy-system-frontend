@@ -7,7 +7,7 @@
 //   node e2e/manual/period-pages-screens.mjs before   # or: after
 //
 // Output: docs/audit/screens/<label>-<page>-<width>.png (or SCREENS_OUT_DIR)
-// Pages: SCREENS_PAGES=register,home,ledger,production-log,reports,inventory (default: ledger,production-log,reports)
+// Pages: SCREENS_PAGES=register,home,ledger,production-log,reports,inventory,record-milk (default: ledger,production-log,reports)
 import { chromium } from '@playwright/test';
 import { mkdirSync } from 'node:fs';
 
@@ -16,7 +16,9 @@ const BASE_URL = process.env.SCREENS_BASE_URL ?? 'http://localhost:4173';
 const API_ORIGIN = 'http://api.e2e.test';
 const OUT_DIR = process.env.SCREENS_OUT_DIR ?? 'docs/audit/screens';
 // 'register' is shot before signing in; 'home' is wherever registering lands.
-const ROUTES = { register: '/register', home: null, ledger: '/finance/ledger', 'production-log': '/operations/yield', reports: '/operations/reports?period=custom&start_date=2026-09-01&end_date=2026-11-16', inventory: '/operations/inventory' };
+const ROUTES = { register: '/register', home: null, ledger: '/finance/ledger', 'production-log': '/operations/yield', reports: '/operations/reports?period=custom&start_date=2026-09-01&end_date=2026-11-16', inventory: '/operations/inventory', 'record-milk': '/operations/yield' };
+// Pages shot after a click on the loaded route (a form opened over it).
+const OPEN = { 'record-milk': (page) => page.getByRole('button', { name: /Record milk/i }).first().click() };
 const PAGES = (process.env.SCREENS_PAGES ?? 'ledger,production-log,reports').split(',').map((name) => name.trim()).filter(Boolean);
 const unknownPage = PAGES.find((name) => !(name in ROUTES));
 if (unknownPage) throw new Error(`Unknown page "${unknownPage}". Known: ${Object.keys(ROUTES).join(', ')}`);
@@ -252,6 +254,10 @@ async function capture(browser, width, height) {
   for (const name of PAGES.filter((page) => ROUTES[page])) {
     if (name === 'register') continue;
     await page.goto(`${BASE_URL}${ROUTES[name]}`);
+    if (OPEN[name]) {
+      await page.waitForLoadState('networkidle');
+      await OPEN[name](page);
+    }
     await shoot(name);
   }
   await context.close();

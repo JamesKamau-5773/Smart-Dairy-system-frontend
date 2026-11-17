@@ -80,7 +80,7 @@ export default function GroupedList({
   const rowProps = (node) => ({ node, config, isOpen: open.has(node.key), onToggle: () => toggle(node.key), ariaLabel: ariaLabel(node) });
 
   const emptyDay = (node) => (node.records.length === 0
-    ? <p className="px-4 py-3 text-xs text-ink-muted">{commonCopy.groups.emptyDay}</p>
+    ? <p className="px-4 py-3 text-meta text-ink-muted">{commonCopy.groups.emptyDay}</p>
     : null);
 
   // Offsets match the page scroller's padding (p-4 sm:p-6 md:p-8) so the header meets the app bar.
@@ -105,10 +105,10 @@ export default function GroupedList({
   );
 
   const groupsNotice = groupsUnavailable && (
-    <div role="status" className="flex flex-wrap items-center justify-between gap-2 border-b border-ink/10 bg-ink-50 px-4 py-2 text-xs text-ink-muted">
+    <div role="status" className="flex flex-wrap items-center justify-between gap-2 border-b border-ink/10 bg-ink-50 px-4 py-2 text-meta text-ink-muted">
       <span>{commonCopy.groups.totalsFailed}</span>
       {onRetryGroups && (
-        <button type="button" onClick={() => onRetryGroups()} className="inline-flex min-h-11 items-center font-semibold text-brand hover:underline">
+        <button type="button" onClick={() => onRetryGroups()} className="inline-flex min-h-11 items-center text-control text-brand hover:underline">
           {commonCopy.list.tryAgain}
         </button>
       )}
@@ -125,7 +125,7 @@ export default function GroupedList({
         {display.map(renderRows)}
         {tree.ungrouped.length > 0 && (
           <>
-            <tr className={LEVEL_STYLES.day}><td colSpan={columns.length} className="px-4 py-2 text-xs font-semibold text-ink-muted">{ungroupedLabel}</td></tr>
+            <tr className={LEVEL_STYLES.day}><td colSpan={columns.length} className="px-4 py-2 text-ink-muted">{ungroupedLabel}</td></tr>
             {tree.ungrouped.map((record) => renderRecord(record))}
           </>
         )}

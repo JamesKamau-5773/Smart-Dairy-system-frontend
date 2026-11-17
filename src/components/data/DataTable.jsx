@@ -2,15 +2,14 @@
 // Column definitions are the one source for the header, the data rows and the group
 // rows, so a total always sits in the same column as the values it sums.
 //
-// column: { id, header, align?: 'left' | 'right', width?: Tailwind width class, mono?: boolean }
+// column: { id, header, align?: 'left' | 'right', width?: Tailwind width class }
 
 const ALIGN = { left: 'text-left', right: 'text-right' };
 
-/** Classes for a cell in `column`. Global CSS makes right-aligned cells monospace; only money keeps that. */
+/** Classes for a cell in `column`. Every cell already uses tabular figures (src/index.css). */
 export const cellClass = (column, extra = '') => [
   'px-2 first:pl-3 last:pr-3 sm:first:pl-4 sm:last:pr-3',
   ALIGN[column.align ?? 'left'],
-  column.mono ? '' : '!font-sans',
   extra,
 ].filter(Boolean).join(' ');
 
@@ -28,7 +27,7 @@ export function TableHead({ columns }) {
       <thead>
         <tr className="bg-brand">
           {columns.map((column) => (
-            <th key={column.id} scope="col" className={cellClass(column, 'h-10 whitespace-nowrap text-[11px] font-semibold uppercase tracking-wider text-white')}>
+            <th key={column.id} scope="col" className={cellClass(column, 'h-10 whitespace-nowrap text-label text-white')}>
               {column.header}
             </th>
           ))}

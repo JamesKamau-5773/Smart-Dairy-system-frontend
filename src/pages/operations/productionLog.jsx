@@ -36,6 +36,7 @@ import { Link } from "react-router-dom";
 import { todayLocalIso, toLocalIsoDate } from '../../lib/localDate';
 import { reportError } from '../../lib/telemetry';
 import { ISO_DATE_FILTER, useUrlFilters } from '../../hooks/useUrlFilters';
+import { enumLabel } from '../../lib/enumLabel';
 
 const AMOUNT_FIELD_CANDIDATES = [
   'amount',
@@ -110,7 +111,7 @@ const getBucket = (row) => row.bucket;
 const COLUMN_LAYOUT = [
   { id: 'session', width: 'w-[7rem]' },
   { id: 'cow', width: 'w-[14rem]' },
-  { id: 'litres', align: 'right', mono: true, width: 'w-[6rem]' },
+  { id: 'litres', align: 'right', width: 'w-[6rem]' },
   { id: 'milker' },
   { id: 'status', width: 'w-[7.5rem]' },
   { id: 'actions', align: 'right', width: 'w-[9.5rem]' },
@@ -175,7 +176,7 @@ const formatMilker = (value) => {
 // Verified is the normal state, so only other statuses get a badge.
 const StatusChip = ({ status }) => (status === 'Verified' ? null : status ? (
   <span
-    className={`inline-flex items-center gap-1 rounded-badge border px-2 py-1 font-sans text-[11px] font-medium ${
+    className={`inline-flex items-center gap-1 rounded-badge border px-2 py-1 text-badge ${
       status === 'Verified'
         ? 'border-brand/20 bg-brand/5 text-brand'
         : status === 'Pending'
@@ -183,9 +184,9 @@ const StatusChip = ({ status }) => (status === 'Verified' ? null : status ? (
           : 'border-brand/20 bg-brand/10 text-brand-dark'
     }`}
   >
-    {copy.statuses[status] ?? status}
+    {enumLabel(copy.statuses, status)}
   </span>
-) : <span className="text-xs text-ink-muted">—</span>);
+) : <span className="text-meta text-ink-muted">—</span>);
 
 export default function YieldLog() {
   const { tenantId, farmId } = useTenant();
@@ -390,15 +391,15 @@ export default function YieldLog() {
   // Desktop row (44px). The day group above it carries the date.
   const renderRow = (row) => (
     <tr key={row.id} className="h-11 border-b border-ink/5 hover:bg-ink-50">
-      <td className={cellClass(column.session, '!py-1 text-xs text-ink')}>{sessionLabel(row.session)}</td>
-      <td className={cellClass(column.cow, '!py-1 text-sm')}><span className="block truncate">{cowLink(row, tableLink)}</span></td>
-      <td className={cellClass(column.litres, '!py-1 text-sm tabular-nums text-ink')}>{formatLitres(row.amount, { unit: false })}</td>
-      <td className={cellClass(column.milker, '!py-1 text-xs text-ink')}><span className="block truncate">{formatMilker(row.milker)}</span></td>
+      <td className={cellClass(column.session, '!py-1 text-body text-ink')}>{sessionLabel(row.session)}</td>
+      <td className={cellClass(column.cow, '!py-1 text-body')}><span className="block truncate">{cowLink(row, tableLink)}</span></td>
+      <td className={cellClass(column.litres, '!py-1 text-body tabular-nums text-ink')}>{formatLitres(row.amount, { unit: false })}</td>
+      <td className={cellClass(column.milker, '!py-1 text-body text-ink')}><span className="block truncate">{formatMilker(row.milker)}</span></td>
       <td className={cellClass(column.status, '!py-1')}><StatusChip status={row.status} /></td>
       <td className={cellClass(column.actions, '!py-1')}>
         <div className="inline-flex items-center gap-2">
           {canVerify && row.status !== 'Verified' && (
-            <button type="button" onClick={() => handleVerifyEntry(row)} className="inline-flex h-8 items-center gap-1 !rounded-input border border-ink/10 px-2.5 text-xs font-semibold text-brand hover:bg-ink-50">
+            <button type="button" onClick={() => handleVerifyEntry(row)} className="inline-flex h-8 items-center gap-1 !rounded-input border border-ink/10 px-2.5 text-control text-brand hover:bg-ink-50">
               {copy.verify}
             </button>
           )}
@@ -413,17 +414,17 @@ export default function YieldLog() {
     <article key={row.id} className="min-w-0 space-y-2 bg-card p-4">
       <div className="flex min-w-0 items-start gap-3">
         <div className="min-w-0 flex-1">
-          {cowLink(row, 'break-words font-semibold text-brand')}
-          <p className="mt-1 text-xs text-ink-muted">{sessionLabel(row.session)}</p>
+          {cowLink(row, 'break-words text-body-strong text-brand')}
+          <p className="mt-1 text-meta text-ink-muted">{sessionLabel(row.session)}</p>
         </div>
-        <p className="shrink-0 pt-0.5 text-right font-mono text-lg font-bold tabular-nums text-brand">{formatLitres(row.amount)}</p>
+        <p className="shrink-0 pt-0.5 text-right text-body-strong tabular-nums text-brand">{formatLitres(row.amount)}</p>
         {actionsMenu(row, 'h-11 w-11')}
       </div>
-      <div className="flex min-w-0 flex-wrap items-center justify-between gap-x-3 gap-y-2 border-t border-ink/10 pt-2 text-xs">
-        <span className="min-w-0 break-all text-ink-muted">{copy.milker} <span className="font-medium text-ink">{formatMilker(row.milker)}</span></span>
+      <div className="flex min-w-0 flex-wrap items-center justify-between gap-x-3 gap-y-2 border-t border-ink/10 pt-2 text-meta">
+        <span className="min-w-0 break-all text-ink-muted">{copy.milker} <span className="text-ink">{formatMilker(row.milker)}</span></span>
         <span className="flex items-center gap-2">
           <StatusChip status={row.status} />
-          {canVerify && row.status !== 'Verified' && <button type="button" onClick={() => handleVerifyEntry(row)} className="min-h-11 rounded-lg border border-brand/20 px-3 text-xs font-semibold text-brand">{copy.verify}</button>}
+          {canVerify && row.status !== 'Verified' && <button type="button" onClick={() => handleVerifyEntry(row)} className="min-h-11 rounded-lg border border-brand/20 px-3 text-control text-brand">{copy.verify}</button>}
         </span>
       </div>
     </article>
@@ -445,7 +446,7 @@ export default function YieldLog() {
       {lastEntryDate && (
         <>
           {' · '}{copy.summary.lastEntry}{' '}
-          <button type="button" onClick={showLastEntry} className="inline font-semibold text-brand underline-offset-2 hover:underline">
+          <button type="button" onClick={showLastEntry} className="inline text-body-strong text-brand underline-offset-2 hover:underline">
             {formatDate(lastEntryDate)}
           </button>
         </>
@@ -498,8 +499,8 @@ export default function YieldLog() {
         <div role="status" className={`${SURFACE} flex items-start gap-3 p-3 sm:p-4`}>
           <AlertTriangle size={18} className="mt-0.5 shrink-0 text-brand-dark" aria-hidden="true" />
           <div className="min-w-0">
-            <h3 className="text-sm font-semibold text-ink">{copy.medicineTitle}</h3>
-            <p className="mt-0.5 text-xs text-ink-muted">{copy.medicineMessage(hardlocks.length)}</p>
+            <p className="text-body-strong text-ink">{copy.medicineTitle}</p>
+            <p className="mt-0.5 text-meta text-ink-muted">{copy.medicineMessage(hardlocks.length)}</p>
           </div>
         </div>
       )}
@@ -517,7 +518,7 @@ export default function YieldLog() {
                 onClick={() => setFiltersOpen((prev) => !prev)}
                 aria-expanded={filtersOpen}
                 aria-controls="production-filter-panel"
-                className="inline-flex min-h-11 items-center gap-1.5 !rounded-input border border-ink/15 px-3 text-xs font-semibold text-ink hover:bg-ink-50 sm:min-h-9"
+                className="inline-flex min-h-11 items-center gap-1.5 !rounded-input border border-ink/15 px-3 text-control text-ink hover:bg-ink-50 sm:min-h-9"
               >
                 {commonCopy.filters.filters}
               </button>
@@ -526,7 +527,7 @@ export default function YieldLog() {
             </Toolbar>
             {filtersOpen && (
               <div id="production-filter-panel" className="grid grid-cols-1 gap-3 pb-2 pt-1 sm:grid-cols-2">
-                <label className="space-y-1 text-xs font-semibold text-ink-muted">
+                <label className="space-y-1 text-field-label text-ink-muted">
                   {copy.session}
                   <select value={filters.session} onChange={(e) => updateFilter('session', e.target.value)} className="input-machined">
                     <option value="all">{commonCopy.filters.all}</option>
