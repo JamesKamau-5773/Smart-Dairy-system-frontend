@@ -12,7 +12,7 @@ vi.mock('../../../lib/localDate', async (importOriginal) => ({ ...(await importO
 const columns = [
   { id: 'session', header: 'Session', width: 'w-[8rem]' },
   { id: 'cow', header: 'Cow' },
-  { id: 'litres', header: 'Litres', align: 'right', mono: true, width: 'w-[8rem]' },
+  { id: 'total', header: 'Litres', align: 'right', mono: true, width: 'w-[8rem]' },
   { id: 'actions', header: 'Actions', align: 'right', width: 'w-[8rem]' },
 ];
 const column = Object.fromEntries(columns.map((entry) => [entry.id, entry]));
@@ -31,7 +31,7 @@ const renderRow = (row) => (
   <tr key={row.id} className="h-11">
     <td className={cellClass(column.session)}>Evening</td>
     <td className={cellClass(column.cow)}>{row.cow}</td>
-    <td className={cellClass(column.litres)}>{row.litres} L</td>
+    <td className={cellClass(column.total)}>{row.litres} L</td>
     <td className={cellClass(column.actions)} />
   </tr>
 );
@@ -71,10 +71,20 @@ describe('GroupedDataTable', () => {
     const cells = november.querySelectorAll('td');
     // Label spans Session and Cow, then Litres holds the total and Actions stays empty.
     expect(cells[0].getAttribute('colspan')).toBe('2');
-    expect(cells[0].textContent).toContain('November· 90 entries');
+    expect(cells[0].textContent).toContain('November');
+    expect(cells[0].textContent).toContain('90 entries');
     // The header names the unit, so the total has no "L".
     expect(cells[1].textContent).toBe('598.4');
     expect(cells[2].textContent).toBe('');
+  });
+
+  it('can start the table at md, scrolling sideways there, with cards for phones and a neutral header', () => {
+    renderTable({ tableFrom: 'md', scroll: true, headerVariant: 'neutral', tableClassName: 'min-w-[1140px]' });
+    const table = desktopTable();
+    expect(table.className).toContain('min-w-[1140px]');
+    expect(table.parentElement.className).toBe('hidden md:block overflow-x-auto');
+    expect(table.querySelector('thead tr').className).toContain('bg-ink-100');
+    expect(screen.getByText('Joyce card').closest('.md\\:hidden')).toBeTruthy();
   });
 
   it('opens and closes groups with buttons that report aria-expanded, keeping the same columns', () => {

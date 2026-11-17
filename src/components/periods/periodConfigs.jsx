@@ -48,26 +48,32 @@ export const ledgerGroupConfig = {
 };
 
 const entriesText = (count) => (count == null ? '—' : productionCopy.group.entries(count, formatCount(count)));
-const litresValue = (value) => <span className="font-mono tabular-nums">{formatLitres(value)}</span>;
-
-export const productionSummaryConfig = {
-  // TODO(BR-022): "Available" (`available_litres`) is left out, not shown as "—", until the
-  // backend confirms the field; add it back here as a third item when it does.
-  items: ({ current }) => [
-    { key: 'litres', label: productionCopy.summary.totalMilk, value: litresValue(current.litres) },
-    { key: 'avg', label: productionCopy.summary.avgPerDay, value: litresValue(current.avgLitresPerDay) },
-  ],
-};
+// "563 entries": the count in mono, the word in plain text. "—" when the API sent no count.
+const entriesMeta = (count) => (
+  <span className="ml-2 shrink-0 truncate font-mono text-[11px] font-semibold uppercase tabular-nums tracking-wider text-ink-400">
+    {count == null ? '—' : formatCount(count)}{' '}
+    <span className="font-sans font-normal lowercase">{productionCopy.group.entriesWord(count ?? 0)}</span>
+  </span>
+);
 
 export const productionGroupConfig = {
   levels: TABLE_GROUP_LEVELS,
   get noun() { return productionCopy.group.noun; },
-  // Desktop table: litres under the Litres column (the header names the unit), the entry
+  // Grey-tinted group rows with brand labels; deeper levels are lighter and further in.
+  levelStyles: {
+    year: 'border-t-2 border-ink-200 bg-ink-50 text-sm font-semibold text-brand',
+    month: 'bg-ink-50/50 text-sm font-semibold text-brand',
+    day: 'bg-ink-50/30 text-sm font-semibold text-brand',
+  },
+  levelIndent: { year: 'pl-4', month: 'pl-8', day: 'pl-12' },
+  chevronClassName: 'text-brand',
+  cellClassName: '!px-4',
+  // Desktop table: litres under the Total (L) column (the header names the unit), the entry
   // count next to the label.
   columnTotals: {
-    litres: (totals) => <span className="font-mono text-sm font-semibold tabular-nums text-ink">{formatLitres(totals.litres, { unit: false })}</span>,
+    total: (totals) => <span className="whitespace-nowrap font-mono text-sm font-bold tabular-nums text-brand">{formatLitres(totals.litres, { unit: false })}</span>,
   },
-  labelMeta: (totals) => <span className="shrink-0 truncate text-xs font-normal text-ink-muted">· {entriesText(totals.entries)}</span>,
+  labelMeta: (totals) => entriesMeta(totals.entries),
   renderSummary: (totals) => (
     <span className="flex flex-col items-end">
       <span className="font-mono text-sm font-semibold tabular-nums text-ink">{formatLitres(totals.litres)}</span>

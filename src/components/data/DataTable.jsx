@@ -2,9 +2,10 @@
 // Column definitions are the one source for the header, the data rows and the group
 // rows, so a total always sits in the same column as the values it sums.
 //
-// column: { id, header, align?: 'left' | 'right', width?: Tailwind width class, mono?: boolean }
+// column: { id, header, align?: 'left' | 'center' | 'right', width?: Tailwind width class,
+//           mono?: boolean, headerClassName?: extra classes for this column's header }
 
-const ALIGN = { left: 'text-left', right: 'text-right' };
+const ALIGN = { left: 'text-left', center: 'text-center', right: 'text-right' };
 
 /** Classes for a cell in `column`. Global CSS makes right-aligned cells monospace; only money keeps that. */
 export const cellClass = (column, extra = '') => [
@@ -14,21 +15,29 @@ export const cellClass = (column, extra = '') => [
   extra,
 ].filter(Boolean).join(' ');
 
+const HEADER_VARIANTS = {
+  // Solid brand fill, white uppercase labels (Ledger, Historical Checks).
+  brand: { row: 'bg-brand', cell: 'h-10 font-semibold text-white' },
+  // Light grey fill, grey uppercase labels (Production Log).
+  neutral: { row: 'border-b border-ink-200 bg-ink-100', cell: 'h-10 font-bold text-ink-600' },
+};
+
 /**
- * <colgroup> + <thead> in the brand header style: solid brand fill, white uppercase labels.
+ * <colgroup> + <thead>: uppercase column labels in the `variant` style ('brand' by default).
  * Widths come from the column definitions; use it in a `table-fixed` table so columns
  * never move when groups open or close.
  */
-export function TableHead({ columns }) {
+export function TableHead({ columns, variant = 'brand' }) {
+  const style = HEADER_VARIANTS[variant] ?? HEADER_VARIANTS.brand;
   return (
     <>
       <colgroup>
         {columns.map((column) => <col key={column.id} className={column.width ?? ''} />)}
       </colgroup>
       <thead>
-        <tr className="bg-brand">
+        <tr className={style.row}>
           {columns.map((column) => (
-            <th key={column.id} scope="col" className={cellClass(column, 'h-10 whitespace-nowrap text-[11px] font-semibold uppercase tracking-wider text-white')}>
+            <th key={column.id} scope="col" className={cellClass(column, `${style.cell} whitespace-nowrap text-[11px] uppercase tracking-wider ${column.headerClassName ?? ''}`)}>
               {column.header}
             </th>
           ))}

@@ -104,14 +104,10 @@ describe('production log page rules', () => {
     expect(['246.0', '8', 4, 3.5, '1306.4'].map((value) => litres(value))).toEqual(['246.0 L', '8.0 L', '4.0 L', '3.5 L', '1,306.4 L']);
   });
 
-  it('shows total milk and avg per day, leaving Available out until BR-022', async () => {
-    const { productionSummaryConfig } = await import('../../components/periods/periodConfigs');
-    const text = (items) => items.map((item) => [item.label, item.value.props.children]);
-    const base = toProductionSummary({ current: { litres: '246.0', entries: 36, avg_litres_per_day: '41.0' } });
-    expect(text(productionSummaryConfig.items(base))).toEqual([['Total milk', '246.0 L'], ['Avg per day', '41.0 L']]);
-    // Not shown even when sent, and never as a dash.
-    const withAvailable = toProductionSummary({ current: { litres: '246.0', entries: 36, avg_litres_per_day: '41.0', available_litres: '233.5' } });
-    expect(productionSummaryConfig.items(withAvailable).map((item) => item.key)).toEqual(['litres', 'avg']);
+  it('shows the backend’s change against the 5-day average with its sign, or "—"', async () => {
+    const { formatSignedLitres } = await import('../numberFormat');
+    expect(['0.4', '-2.1', 0, null, '', 'n/a'].map((value) => formatSignedLitres(value)))
+      .toEqual(['+0.4 L', '−2.1 L', '0.0 L', '—', '—', '—']);
   });
 
   it('is empty only when the API says there are no entries', async () => {

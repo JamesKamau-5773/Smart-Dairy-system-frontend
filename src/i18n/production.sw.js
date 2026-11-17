@@ -4,8 +4,11 @@
  */
 export const productionCopy = {
   title: 'Rekodi za Maziwa',
-  recordMilk: 'Rekodi maziwa',
-  feedCalf: 'Lisha ndama',
+  eyebrow: 'Uzalishaji', // REVIEW
+  heading: { lead: 'Rekodi', rest: 'ya Maziwa ya Kila Siku' }, // REVIEW
+  description: 'Kagua rekodi za maziwa, ona ng’ombe walio kwenye dawa, na fanya kazi mahali pamoja kwa vichujio na historia ya mabadiliko.', // REVIEW
+  recordMilk: 'Rekodi Maziwa',
+  feedCalf: 'Lisha Ndama',
   rowsLabel: 'rekodi za maziwa',
   sectionLabel: 'Rekodi za maziwa',
   searchLabel: 'Tafuta kwa jina la ng’ombe au namba ya hereni',
@@ -14,13 +17,24 @@ export const productionCopy = {
   session: 'Kipindi',
 
   columns: {
+    lead: '',
     session: 'Kipindi',
-    milker: 'Mkamuaji',
     cow: 'Ng’ombe',
+    morning: 'Asubuhi',
+    midday: 'Mchana',
+    evening: 'Jioni',
+    milker: 'Mkamuaji',
     litres: 'Lita',
+    total: 'Jumla (L)',
     status: 'Hali',
+    vsAvg: 'Dhidi ya wastani wa siku 5', // REVIEW
+    recordedBy: 'Imerekodiwa na',
     actions: 'Vitendo',
   },
+  recordedVia: { app: 'Programu', whatsapp: 'WhatsApp', import: 'Iliyoingizwa', system: 'Mfumo' }, // REVIEW
+  showing: (shown, total) => (total == null
+    ? `Rekodi ${shown}`
+    : `Inaonyesha ${shown} kati ya ${total}`), // REVIEW
   sessions: { morning: 'Asubuhi', afternoon: 'Mchana', evening: 'Jioni', unknown: 'Haijulikani' },
   statuses: { Verified: 'Imethibitishwa', Pending: 'Inasubiri', Flagged: 'Imealamishwa', Isolated: 'Yametengwa' }, // REVIEW: "Flagged", "Isolated" (milk kept apart)
 
@@ -43,17 +57,20 @@ export const productionCopy = {
   medicineTitle: 'Ng’ombe walio kwenye dawa: usichanganye maziwa yao',
   medicineMessage: (count) => `Ng’ombe ${count} ${count === 1 ? 'yuko' : 'wako'} katika kipindi cha kusubiri dawa kuisha. Rekodi za maziwa yao zimezuiliwa ili maziwa mengine yasichafuliwe.`, // REVIEW: "withdrawal period"
 
-  summary: {
+  tiles: {
     label: 'Jumla za maziwa',
-    totalMilk: 'Jumla ya maziwa',
-    avgPerDay: 'Wastani kwa siku',
-    available: 'Yaliyopo',
-    noEntries: 'Hakuna rekodi',
-    lastEntry: 'rekodi ya mwisho',
+    totalVolume: 'Jumla ya Maziwa',
+    verified: 'Zilizothibitishwa',
+    pending: 'Zinazosubiri',
+    flagged: 'Zilizoalamishwa', // REVIEW
   },
+
   group: {
     noun: ['rekodi', 'rekodi'],
     entries: (_count, formatted) => `rekodi ${formatted}`,
+    // Same number for one or many in Kiswahili; the count is kept so the signature matches English.
+    // eslint-disable-next-line no-unused-vars
+    entriesWord: (_count) => 'rekodi',
     describe: (litres) => litres,
   },
 
@@ -69,14 +86,15 @@ export const productionCopy = {
   },
 
   calves: {
-    title: 'Ulishaji wa ndama wa karibuni',
+    title: 'Maziwa ya ndama ya karibuni', // REVIEW
+    totals: (_count, formattedCount, litres) => `Ulishaji ${formattedCount} · ${litres} yametolewa`, // REVIEW
     viewAll: 'Ona zote',
     loading: 'Inapakia ulishaji wa ndama…',
     failed: 'Imeshindwa kupakia ulishaji wa ndama.',
     empty: 'Hakuna ulishaji wa ndama uliorekodiwa.',
     date: 'Tarehe',
     calf: 'Ndama',
-    litres: 'Lita',
+    litres: 'Maziwa Yaliyotumika', // REVIEW
     notes: 'Maelezo',
   },
 };
