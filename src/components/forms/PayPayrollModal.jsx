@@ -28,24 +28,24 @@ export default function PayPayrollModal({ run, onClose, onConfirm, isPending }) 
       <form onSubmit={submit} noValidate className="space-y-4">
         <dl className="grid grid-cols-2 divide-x divide-ink/10 rounded-card border border-ink/10">
           <div className="px-3 py-2.5">
-            <dt className="text-[11px] font-semibold uppercase tracking-wider text-ink-muted">{copy.employees}</dt>
-            <dd className="mt-0.5 text-lg font-bold tabular-nums text-ink">{run.employees}</dd>
+            <dt className="text-label text-ink-muted">{copy.employees}</dt>
+            <dd className="mt-0.5 text-body-strong tabular-nums text-ink">{run.employees}</dd>
           </div>
           <div className="px-3 py-2.5">
-            <dt className="text-[11px] font-semibold uppercase tracking-wider text-ink-muted">{copy.totalNet}</dt>
-            <dd className="mt-0.5 text-lg font-bold tabular-nums text-ink">KES {Number(run.totalDisbursed || 0).toLocaleString()}</dd>
+            <dt className="text-label text-ink-muted">{copy.totalNet}</dt>
+            <dd className="mt-0.5 text-body-strong tabular-nums text-ink">KES {Number(run.totalDisbursed || 0).toLocaleString()}</dd>
           </div>
         </dl>
 
         <div className="grid gap-4 sm:grid-cols-2">
           <div>
-            <label htmlFor="pay-method" className="mb-1.5 block text-xs font-semibold text-ink">{copy.paidBy}</label>
-            <select id="pay-method" value={method} onChange={(event) => setMethod(event.target.value)} className="input-machined w-full text-sm">
+            <label htmlFor="pay-method" className="mb-1.5 block text-field-label text-ink">{copy.paidBy}</label>
+            <select id="pay-method" value={method} onChange={(event) => setMethod(event.target.value)} className="input-machined w-full text-control">
               {PAYMENT_METHODS.map((value) => <option key={value} value={value}>{copy.methods[value] ?? value}</option>)}
             </select>
           </div>
           <div>
-            <label htmlFor="pay-reference" className="mb-1.5 block text-xs font-semibold text-ink">
+            <label htmlFor="pay-reference" className="mb-1.5 block text-field-label text-ink">
               {needsReference ? copy.reference : copy.referenceOptional}
             </label>
             <input
@@ -53,10 +53,10 @@ export default function PayPayrollModal({ run, onClose, onConfirm, isPending }) 
               value={reference}
               onChange={(event) => setReference(event.target.value)}
               placeholder={method === 'M-Pesa' ? copy.mpesaPlaceholder : method === 'Cash' ? copy.cashPlaceholder : copy.bankPlaceholder}
-              className="input-machined w-full text-sm uppercase"
+              className="input-machined w-full text-control"
               aria-describedby="pay-reference-hint"
             />
-            <p id="pay-reference-hint" className="mt-1 text-xs text-ink-muted">{copy.referenceHint}</p>
+            <p id="pay-reference-hint" className="mt-1 text-meta text-ink-muted">{copy.referenceHint}</p>
           </div>
         </div>
 

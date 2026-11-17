@@ -30,6 +30,8 @@ import { reportError } from '../../lib/telemetry';
 import { formatMonthYear } from '../../lib/dateFormat';
 import { breedingCopy } from '../../i18n/breeding';
 import { shellCopy } from '../../i18n/shell';
+import { PHONE_QUERY, useMediaQuery } from '../../hooks/useMediaQuery';
+import { commonCopy } from '../../i18n/common';
 
 /**
  * NOTE: The following components should be extracted into their own files
@@ -349,6 +351,8 @@ function SemenInventory({ stock, loadState, error, onRetry, onAddInventory, onRe
 // MAIN ORCHESTRATOR COMPONENT
 // ============================================================================
 export default function BreedingHub() {
+  // Inputs are 16px on phones, so the long search hint would be cut off there.
+  const isPhone = useMediaQuery(PHONE_QUERY);
   const copy = breedingCopy.hub;
   const { tenantId, farmId } = useTenant();
   const queryClient = useQueryClient();
@@ -806,7 +810,8 @@ export default function BreedingHub() {
                       type="search"
                       value={historySearch}
                       onChange={(event) => setHistorySearch(event.target.value)}
-                      placeholder={copy.historySearch}
+                      aria-label={copy.historySearch}
+                      placeholder={isPhone ? commonCopy.filters.searchShort : copy.historySearch}
                       className="w-full bg-transparent text-control text-ink-strong outline-none placeholder:text-ink-muted"
                     />
                   </div>

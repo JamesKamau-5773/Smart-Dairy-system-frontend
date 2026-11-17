@@ -35,19 +35,19 @@ export default function AdvanceRepaymentModal({ staff, onClose, onSubmit }) {
       <form onSubmit={submit} noValidate className="space-y-4">
         <div className="grid gap-4 sm:grid-cols-2">
           <div>
-            <label htmlFor="repay-amount" className="mb-1.5 block text-xs font-semibold text-ink">{copy.amount}</label>
-            <input id="repay-amount" type="number" inputMode="decimal" min="0" step="any" value={form.amount} onChange={set('amount')} className="input-machined w-full text-sm" />
+            <label htmlFor="repay-amount" className="mb-1.5 block text-field-label text-ink">{copy.amount}</label>
+            <input id="repay-amount" type="number" inputMode="decimal" min="0" step="any" value={form.amount} onChange={set('amount')} className="input-machined w-full text-control" />
           </div>
           <div>
-            <label htmlFor="repay-date" className="mb-1.5 block text-xs font-semibold text-ink">{copy.date}</label>
-            <input id="repay-date" type="date" max={todayLocalIso()} value={form.date} onChange={set('date')} className="input-machined w-full text-sm" />
+            <label htmlFor="repay-date" className="mb-1.5 block text-field-label text-ink">{copy.date}</label>
+            <input id="repay-date" type="date" max={todayLocalIso()} value={form.date} onChange={set('date')} className="input-machined w-full text-control" />
           </div>
         </div>
         <div>
-          <label htmlFor="repay-note" className="mb-1.5 block text-xs font-semibold text-ink">{copy.note}</label>
-          <input id="repay-note" value={form.note} onChange={set('note')} placeholder={copy.notePlaceholder} className="input-machined w-full text-sm" />
+          <label htmlFor="repay-note" className="mb-1.5 block text-field-label text-ink">{copy.note}</label>
+          <input id="repay-note" value={form.note} onChange={set('note')} placeholder={copy.notePlaceholder} className="input-machined w-full text-control" />
         </div>
-        {error && <p role="alert" className="text-sm font-semibold text-danger">{error}</p>}
+        {error && <p role="alert" className="text-body-strong text-danger">{error}</p>}
         <SubmitButton pending={pending} pendingLabel={copy.pending} disabled={!canSubmit}>{copy.submit}</SubmitButton>
       </form>
     </BaseModal>

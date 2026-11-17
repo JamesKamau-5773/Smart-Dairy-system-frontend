@@ -81,7 +81,6 @@ export const staffCopy = {
       delete: 'Futa (aliongezwa kimakosa)',
     },
     eyebrow: 'Watu',
-    title: 'Daftari la Wafanyakazi',
     subtitle: 'Taarifa za wafanyakazi, mishahara, mikopo na ruhusa za programu.',
     add: 'Ongeza mfanyakazi',
     activeEmployees: (count) => plural(count, { one: 'Mfanyakazi {n} aliye kazini', other: 'Wafanyakazi {n} walio kazini' }),
@@ -136,7 +135,6 @@ export const staffCopy = {
     nothingPaid: 'Hakuna kilichorekodiwa kuwa kimelipwa.',
     paymentNotRecorded: 'Malipo hayakurekodiwa.',
     eyebrow: 'Watu',
-    title: 'Mishahara',
     subtitle: 'Malipo ya kila mwezi, makato ya kisheria, likizo na marejesho ya mikopo.',
     creating: 'Inaandaa…',
     openDraft: (period) => `Fungua rasimu ya ${period}`,
@@ -255,7 +253,7 @@ export const staffCopy = {
   },
 
   drawer: {
-    tabs: { profile: 'Taarifa na Hali', financials: 'Fedha', medical: 'Afya / Vyeti' },
+    tabs: { profile: 'Taarifa na hali', financials: 'Fedha', medical: 'Afya / vyeti' },
     subtitle: 'Simamia taarifa, mshahara na vyeti bila kuondoka kwenye daftari.',
     employment: 'Taarifa za ajira',
     employmentHint: 'Weka taarifa za mfanyakazi na mawasiliano zikiwa za sasa.',
@@ -331,7 +329,7 @@ export const staffCopy = {
   },
 
   verifyReturn: {
-    title: (name) => `Thibitisha Kurudi - ${name}`,
+    title: (name) => `Thibitisha kurudi - ${name}`,
     question: (name) => `Je, ${name} amerudi kazini leo?`,
     hint: 'Tumia hapa kuthibitisha kama likizo imeisha. Kama mfanyakazi hajarudi, rekodi inabaki imechelewa na adhabu ya mshahara inaendelea kuongezeka.',
     yes: 'Ndiyo, amerudi',

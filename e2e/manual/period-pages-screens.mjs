@@ -9,7 +9,8 @@
 // Output: docs/audit/screens/<label>-<page>-<width>.png (or SCREENS_OUT_DIR)
 // Pages: SCREENS_PAGES=register,home,ledger,production-log,reports,inventory,record-milk,herd,breeding,medical,milk-drops,animal,milk-history
 //   milk-usage,routine,tasks,feeding,feed-planner,feed-mixes,milk-lab,units,
-//   buyers,customers,customer-profile,customer-value,cow-profit,milk-inventory (default: ledger,production-log,reports)
+//   buyers,customers,customer-profile,customer-value,cow-profit,milk-inventory,safety,staff,payroll
+//   (default: ledger,production-log,reports)
 import { chromium } from '@playwright/test';
 import { mkdirSync } from 'node:fs';
 
@@ -24,7 +25,8 @@ const ROUTES = { register: '/register', home: null, ledger: '/finance/ledger', '
   'milk-usage': '/operations/milk-usage', routine: '/operations/routine', tasks: '/tasks', feeding: '/feeding', 'feed-planner': '/feed-nutrition',
   'feed-mixes': '/feed-nutrition/mix', 'milk-lab': '/operations/lab', units: '/operations/unit-conversions',
   buyers: '/finance/buyers', customers: '/operations/customers', 'customer-profile': '/finance/customers/4',
-  'customer-value': '/finance/reports/dairy-unit-economics', 'cow-profit': '/finance/reports/animal-economics', 'milk-inventory': '/operations/reports/milk-inventory' };
+  'customer-value': '/finance/reports/dairy-unit-economics', 'cow-profit': '/finance/reports/animal-economics', 'milk-inventory': '/operations/reports/milk-inventory',
+  safety: '/operations/safety', staff: '/hr/staff', payroll: '/hr/payroll' };
 // Pages shot after a click on the loaded route (a form opened over it).
 const OPEN = { 'record-milk': (page) => page.getByRole('button', { name: /Record milk/i }).first().click() };
 const PAGES = (process.env.SCREENS_PAGES ?? 'ledger,production-log,reports').split(',').map((name) => name.trim()).filter(Boolean);
@@ -269,6 +271,16 @@ const MILK_INVENTORY = {
   ],
 };
 
+// ── Compliance and HR fixtures (typography phase 5b) ───────────────────────────
+const HARDLOCKS = { items: [
+  { hardlock_id: 81, cow_id: 1, cow_tag: 'KE-0012', cow_name: 'Neema', reason: 'Antibiotic withdrawal', severity: 'HIGH', medication: 'Intramammary antibiotic', withdrawal_active: true, withdrawal_ends_at: '2026-11-20T06:00:00Z', vet_name: 'Dr. Wanjiku', can_release: true, updated_at: '2026-11-12T09:00:00Z' },
+  { hardlock_id: 82, cow_id: 2, cow_tag: 'KE-0046', cow_name: 'Malaika wa Kwanza', reason: 'Failed milk test', severity: 'MEDIUM', withdrawal_active: false, can_release: true, updated_at: '2026-11-15T07:00:00Z' },
+], meta: { total: 2 } };
+const STAFF = [
+  { id: 91, name: 'Wanjiru Kamau', role: 'FARM_HAND', phone_number: '+254712000222', status: 'ACTIVE', base_salary: 15000, loan_balance: 2000, statutory_deductions_enabled: true },
+  { id: 92, name: 'Kamau Otieno', role: 'MILKER', phone_number: '+254722000333', status: 'ON_LEAVE', base_salary: 12000, loan_balance: 0, leave_type: 'Annual', leave_start_date: '2026-11-10', leave_end_date: '2026-11-20' },
+];
+
 function handle(method, path, params, body) {
   if (method === 'POST' && path === '/auth/register') {
     return [201, {
@@ -305,6 +317,9 @@ function handle(method, path, params, body) {
   if (path === '/finance/deliveries') return [200, DELIVERIES];
   if (path === '/inventory/items') return [200, INVENTORY];
   if (path === '/reports/milk-inventory') return [200, MILK_INVENTORY];
+  if (path === '/veterinary/hardlocks/active') return [200, HARDLOCKS];
+  if (path === '/hr/staff') return [200, STAFF];
+  if (path === '/hr/staffing-recommendations') return [200, { employee_count: 2, farm_size: 'small', note: 'Two people can run a herd of this size.' }];
   return [200, []];
 }
 

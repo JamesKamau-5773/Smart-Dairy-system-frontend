@@ -23,6 +23,8 @@ import { herdCopy, herdStatusLabel } from '../../i18n/herd';
 import { useUrlFilters } from '../../hooks/useUrlFilters';
 import AnimalAge from '../../components/operations/AnimalAge';
 import { shellCopy } from '../../i18n/shell';
+import { PHONE_QUERY, useMediaQuery } from '../../hooks/useMediaQuery';
+import { commonCopy } from '../../i18n/common';
 import {
   formatDate,
   statusTone,
@@ -43,6 +45,8 @@ const HERD_FILTER_VALUES = { status: ['All', 'Milking', 'Dry'], sort: ['age', 'b
 // ─────────────────────────────────────────────────────────────────────────
 
 export default function HerdRegistry() {
+  // Inputs are 16px on phones, so the long search hint would be cut off there.
+  const isPhone = useMediaQuery(PHONE_QUERY);
   const copy = herdCopy.registry;
   const form = copy.form;
   const { tenantId, farmId } = useTenant();
@@ -666,7 +670,8 @@ export default function HerdRegistry() {
                   type="search"
                   value={herdSearch}
                   onChange={(event) => setHerdSearch(event.target.value)}
-                  placeholder={copy.searchPlaceholder}
+                  aria-label={copy.searchPlaceholder}
+                  placeholder={isPhone ? commonCopy.filters.searchShort : copy.searchPlaceholder}
                   className="w-full bg-transparent text-control text-ink-strong outline-none placeholder:text-ink-muted"
                   aria-label={copy.searchLabel}
                 />

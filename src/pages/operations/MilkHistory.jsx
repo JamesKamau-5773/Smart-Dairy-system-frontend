@@ -18,6 +18,8 @@ import { CardSkeletons, ListLoadMessage, SlowLoadingHint, TableSkeletonRows } fr
 import { getListLoadState } from '../../lib/listLoadState';
 import { CartesianGrid, Legend, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import { enumLabel } from '../../lib/enumLabel';
+import { PHONE_QUERY, useMediaQuery } from '../../hooks/useMediaQuery';
+import { commonCopy } from '../../i18n/common';
 
 // TODO(BR-013): the daily totals for the chart are added up here from the cow's sessions; the
 // backend should return the daily series with the history.
@@ -61,6 +63,8 @@ const HISTORY_FILTER_VALUES = {
 };
 
 export default function MilkHistory() {
+  // Inputs are 16px on phones, so the long search hint would be cut off there.
+  const isPhone = useMediaQuery(PHONE_QUERY);
   const { id } = useParams();
   const { tenantId, farmId } = useTenant();
   // Date, status and session live in the address. The search stays here: it matches the
@@ -256,7 +260,8 @@ export default function MilkHistory() {
                     type="text"
                     value={filters.search}
                     onChange={(e) => setSearch(e.target.value)}
-                    placeholder={copy.searchPlaceholder}
+                    aria-label={copy.searchPlaceholder}
+                    placeholder={isPhone ? commonCopy.filters.searchShort : copy.searchPlaceholder}
                     className="input-machined pl-10"
                   />
                 </div>

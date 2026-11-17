@@ -13,6 +13,7 @@ import { roleLabel } from '../../lib/staffLabels';
 import { tone } from '../../components/ui/tones';
 import { formatDate } from '../../lib/dateFormat';
 import { staffCopy } from '../../i18n/staff';
+import { shellCopy } from '../../i18n/shell';
 
 const copy = staffCopy.payroll;
 
@@ -21,15 +22,15 @@ const money = (value) => Number(value || 0).toLocaleString();
 function Kpi({ title, value }) {
   return (
     <div className="rounded-card border border-ink/10 bg-card p-4">
-      <p className="text-[11px] font-semibold uppercase tracking-wider text-ink-muted">{title}</p>
-      <p className="mt-1 text-2xl font-bold tabular-nums text-ink">{value}</p>
+      <p className="text-label text-ink-muted">{title}</p>
+      <p className="mt-1 text-stat-value tabular-nums text-ink">{value}</p>
     </div>
   );
 }
 
 function StatusChip({ status }) {
   const { label, tone: toneName } = runStatus(status);
-  return <span className={`inline-flex rounded-badge px-2 py-0.5 text-xs font-semibold ${tone(toneName).chip}`}>{label}</span>;
+  return <span className={`inline-flex rounded-badge px-2 py-0.5 text-meta ${tone(toneName).chip}`}>{label}</span>;
 }
 
 // Totals are the backend's (`summary`); without them, none are shown rather than added up here.
@@ -38,7 +39,7 @@ function RunTotals({ summary, statutoryTotals }) {
   const employer = statutoryTotals?.employerContributions;
   return (
     <>
-    <dl className="grid grid-cols-2 gap-x-4 gap-y-2 border-t border-ink/10 px-5 py-4 text-sm sm:grid-cols-5">
+    <dl className="grid grid-cols-2 gap-x-4 gap-y-2 border-t border-ink/10 px-5 py-4 text-body sm:grid-cols-5">
       {[
         ['base', summary.totalBase],
         ['leave', -summary.totalLeave],
@@ -47,13 +48,13 @@ function RunTotals({ summary, statutoryTotals }) {
         ['net', summary.totalNet],
       ].map(([key, value]) => (
         <div key={key}>
-          <dt className="text-[11px] font-semibold uppercase tracking-wider text-ink-muted">{copy.totals[key]}</dt>
-          <dd className={`tabular-nums ${key === 'net' ? 'text-base font-bold text-ink' : 'text-ink'}`}>KES {money(value)}</dd>
+          <dt className="text-label text-ink-muted">{copy.totals[key]}</dt>
+          <dd className={`tabular-nums ${key === 'net' ? 'text-body-strong text-ink' : 'text-ink'}`}>KES {money(value)}</dd>
         </div>
       ))}
     </dl>
     {statutoryTotals?.paye !== null && statutoryTotals?.paye !== undefined && (
-      <p className="border-t border-ink/10 px-5 py-3 text-xs text-ink-muted">
+      <p className="border-t border-ink/10 px-5 py-3 text-meta text-ink-muted">
         {copy.statutoryNote(money(statutoryTotals.paye), money(statutoryTotals.nssf), money(statutoryTotals.shif), money(statutoryTotals.housingLevy))}
         {employer !== null && employer !== undefined && copy.employerNote(money(employer))}
       </p>
@@ -65,7 +66,7 @@ function RunTotals({ summary, statutoryTotals }) {
 function LeaveNote({ line }) {
   if (!(line.approvedLeaveDays > 0 || line.overduePenaltyDays > 0)) return null;
   return (
-    <span className="block text-xs text-ink-muted">
+    <span className="block text-meta text-ink-muted">
       {line.approvedLeaveDays > 0 ? copy.leaveDays(line.approvedLeaveDays) : ''}
       {line.approvedLeaveDays > 0 && line.overduePenaltyDays > 0 ? ' · ' : ''}
       {line.overduePenaltyDays > 0 ? copy.overdueDays(line.overduePenaltyDays) : ''}
@@ -78,7 +79,7 @@ function StatutoryCell({ line }) {
   return (
     <>
       {line.totalStatutory > 0 ? `−${money(line.totalStatutory)}` : '0'}
-      <span className="block text-xs text-ink-muted">{statutoryBreakdown(line)}</span>
+      <span className="block text-meta text-ink-muted">{statutoryBreakdown(line)}</span>
     </>
   );
 }
@@ -86,7 +87,7 @@ function StatutoryCell({ line }) {
 function PayslipButton({ line, run, onDownload, pending }) {
   if (!canDownloadPayslips(run.status)) return null;
   return (
-    <button type="button" onClick={() => onDownload(line)} disabled={pending} className="inline-flex min-h-9 items-center text-xs font-semibold text-brand underline-offset-4 hover:underline disabled:opacity-50">
+    <button type="button" onClick={() => onDownload(line)} disabled={pending} className="inline-flex min-h-9 items-center text-control text-brand underline-offset-4 hover:underline disabled:opacity-50">
       {pending ? copy.preparing : copy.payslip}
     </button>
   );
@@ -98,7 +99,7 @@ function PayrollLines({ run, onPayslip, payslipPending }) {
     <>
       <div className="hidden overflow-x-auto md:block">
         <table className="w-full min-w-[960px] text-left">
-          <thead className="border-b border-ink/10 text-[11px] font-semibold uppercase tracking-wider text-ink-muted">
+          <thead className="border-b border-ink/10 text-label text-ink-muted">
             <tr>
               <th scope="col" className="px-5 py-3">{copy.columns.employee}</th>
               <th scope="col" className="px-5 py-3 text-right">{copy.columns.base}</th>
@@ -114,22 +115,22 @@ function PayrollLines({ run, onPayslip, payslipPending }) {
             {lines.map((line) => (
               <tr key={line.staffId}>
                 <td className="px-5 py-3.5">
-                  <p className="text-sm font-semibold text-ink">{line.name}</p>
-                  <p className="text-xs text-ink-muted">{roleLabel(line.role)}</p>
+                  <p className="text-body-strong text-ink">{line.name}</p>
+                  <p className="text-meta text-ink-muted">{roleLabel(line.role)}</p>
                 </td>
-                <td className="px-5 py-3.5 text-right text-sm tabular-nums text-ink">{money(line.base)}</td>
-                <td className="px-5 py-3.5 text-right text-sm tabular-nums text-ink">
+                <td className="px-5 py-3.5 text-right text-body tabular-nums text-ink">{money(line.base)}</td>
+                <td className="px-5 py-3.5 text-right text-body tabular-nums text-ink">
                   {line.leaveDeduction > 0 ? `−${money(line.leaveDeduction)}` : '0'}
                   <LeaveNote line={line} />
                 </td>
-                <td className="px-5 py-3.5 text-right text-sm tabular-nums text-ink">
+                <td className="px-5 py-3.5 text-right text-body tabular-nums text-ink">
                   {money(line.grossPay)}
-                  {line.daysPaid !== null && <span className="block text-xs text-ink-muted">{copy.daysPaid(line.daysPaid)}</span>}
+                  {line.daysPaid !== null && <span className="block text-meta text-ink-muted">{copy.daysPaid(line.daysPaid)}</span>}
                 </td>
-                <td className="px-5 py-3.5 text-right text-sm tabular-nums text-ink"><StatutoryCell line={line} /></td>
-                <td className="px-5 py-3.5 text-right text-sm tabular-nums text-ink">{line.advanceDeduction > 0 ? `−${money(line.advanceDeduction)}` : '0'}</td>
-                <td className="px-5 py-3.5 text-right text-sm font-bold tabular-nums text-ink">{money(line.net)}</td>
-                <td className="px-5 py-3.5 text-sm text-ink-muted">
+                <td className="px-5 py-3.5 text-right text-body tabular-nums text-ink"><StatutoryCell line={line} /></td>
+                <td className="px-5 py-3.5 text-right text-body tabular-nums text-ink">{line.advanceDeduction > 0 ? `−${money(line.advanceDeduction)}` : '0'}</td>
+                <td className="px-5 py-3.5 text-right text-body-strong tabular-nums text-ink">{money(line.net)}</td>
+                <td className="px-5 py-3.5 text-body text-ink-muted">
                   {lineStatusLabel(line.status)}
                   <span className="block"><PayslipButton line={line} run={run} onDownload={onPayslip} pending={payslipPending === line.staffId} /></span>
                 </td>
@@ -143,18 +144,18 @@ function PayrollLines({ run, onPayslip, payslipPending }) {
           <article key={line.staffId} className="rounded-card border border-ink/10 p-4" aria-label={line.name}>
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0">
-                <h4 className="truncate text-sm font-bold text-ink">{line.name}</h4>
-                <p className="text-xs text-ink-muted">{roleLabel(line.role)}</p>
+                <h3 className="truncate text-section-title text-ink">{line.name}</h3>
+                <p className="text-meta text-ink-muted">{roleLabel(line.role)}</p>
               </div>
-              <span className="text-xs text-ink-muted">{lineStatusLabel(line.status)}</span>
+              <span className="text-meta text-ink-muted">{lineStatusLabel(line.status)}</span>
             </div>
-            <dl className="mt-3 grid grid-cols-2 gap-3 text-xs">
-              <div><dt className="text-ink-muted">{copy.columns.base}</dt><dd className="font-semibold tabular-nums text-ink">KES {money(line.base)}</dd></div>
-              <div><dt className="text-ink-muted">{copy.columns.leave}</dt><dd className="font-semibold tabular-nums text-ink">KES {money(line.leaveDeduction)}</dd><LeaveNote line={line} /></div>
-              <div><dt className="text-ink-muted">{copy.columns.gross}</dt><dd className="font-semibold tabular-nums text-ink">KES {money(line.grossPay)}</dd>{line.daysPaid !== null && <dd className="text-ink-muted">{copy.daysPaid(line.daysPaid)}</dd>}</div>
-              <div><dt className="text-ink-muted">{copy.columns.advances}</dt><dd className="font-semibold tabular-nums text-ink">KES {money(line.advanceDeduction)}</dd></div>
-              <div className="col-span-2"><dt className="text-ink-muted">{copy.statutoryDeductions}</dt><dd className="font-semibold tabular-nums text-ink"><StatutoryCell line={line} /></dd></div>
-              <div className="col-span-2 border-t border-ink/10 pt-2"><dt className="text-ink-muted">{copy.columns.net}</dt><dd className="text-base font-bold tabular-nums text-ink">KES {money(line.net)}</dd></div>
+            <dl className="mt-3 grid grid-cols-2 gap-3 text-meta">
+              <div><dt className="text-ink-muted">{copy.columns.base}</dt><dd className="text-body-strong tabular-nums text-ink">KES {money(line.base)}</dd></div>
+              <div><dt className="text-ink-muted">{copy.columns.leave}</dt><dd className="text-body-strong tabular-nums text-ink">KES {money(line.leaveDeduction)}</dd><LeaveNote line={line} /></div>
+              <div><dt className="text-ink-muted">{copy.columns.gross}</dt><dd className="text-body-strong tabular-nums text-ink">KES {money(line.grossPay)}</dd>{line.daysPaid !== null && <dd className="text-ink-muted">{copy.daysPaid(line.daysPaid)}</dd>}</div>
+              <div><dt className="text-ink-muted">{copy.columns.advances}</dt><dd className="text-body-strong tabular-nums text-ink">KES {money(line.advanceDeduction)}</dd></div>
+              <div className="col-span-2"><dt className="text-ink-muted">{copy.statutoryDeductions}</dt><dd className="text-body-strong tabular-nums text-ink"><StatutoryCell line={line} /></dd></div>
+              <div className="col-span-2 border-t border-ink/10 pt-2"><dt className="text-ink-muted">{copy.columns.net}</dt><dd className="text-body-strong tabular-nums text-ink">KES {money(line.net)}</dd></div>
             </dl>
             <div className="mt-2"><PayslipButton line={line} run={run} onDownload={onPayslip} pending={payslipPending === line.staffId} /></div>
           </article>
@@ -316,11 +317,11 @@ export default function Payroll() {
 
       <header className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <p className="text-[11px] font-semibold uppercase tracking-wider text-ink-muted">{copy.eyebrow}</p>
-          <h1 className="text-2xl font-black tracking-tight text-ink sm:text-3xl">{copy.title}</h1>
-          <p className="mt-1 text-sm text-ink-muted">{copy.subtitle}</p>
+          <p className="text-label text-ink-muted">{copy.eyebrow}</p>
+          <h1 className="text-page-title text-ink">{shellCopy.nav.items.payroll}</h1>
+          <p className="mt-1 text-body text-ink-muted">{copy.subtitle}</p>
         </div>
-        <button type="button" onClick={runPayroll} disabled={busy !== null || status !== 'ready'} className="btn-command self-start text-sm">
+        <button type="button" onClick={runPayroll} disabled={busy !== null || status !== 'ready'} className="btn-command self-start text-control">
           {busy === 'run' ? copy.creating : nextDraftId ? copy.openDraft(nextLabel) : copy.create(nextLabel)}
         </button>
       </header>
@@ -330,8 +331,8 @@ export default function Payroll() {
 
       {status === 'ready' && !activeSummary && (
         <section className="card-machined p-6">
-          <p className="text-base font-bold text-ink">{copy.emptyTitle}</p>
-          <p className="mt-1 text-sm text-ink-muted">{copy.emptyHint(nextLabel)}</p>
+          <p className="text-body-strong text-ink">{copy.emptyTitle}</p>
+          <p className="mt-1 text-body text-ink-muted">{copy.emptyHint(nextLabel)}</p>
         </section>
       )}
 
@@ -352,23 +353,23 @@ export default function Payroll() {
           <section className="card-machined overflow-hidden" aria-labelledby="active-run-title">
             <div className="flex flex-col gap-3 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
               <div>
-                <h2 id="active-run-title" className="text-base font-bold text-ink">{copy.runTitle(activeRun.period)}</h2>
-                <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-ink-muted">
+                <h2 id="active-run-title" className="text-section-title text-ink">{copy.runTitle(activeRun.period)}</h2>
+                <div className="mt-1 flex flex-wrap items-center gap-2 text-meta text-ink-muted">
                   <StatusChip status={activeRun.status} />
                   {activeRun.paidAt && <span>{copy.paidOn(formatDate(activeRun.paidAt))}</span>}
                 </div>
               </div>
               <div className="flex flex-wrap gap-2">
                 {runStatusCode === 'DRAFT' && (
-                  <button type="button" onClick={finalize} disabled={busy !== null} className="btn-command text-sm">{busy === 'finalize' ? copy.finalizing : copy.finalize}</button>
+                  <button type="button" onClick={finalize} disabled={busy !== null} className="btn-command text-control">{busy === 'finalize' ? copy.finalizing : copy.finalize}</button>
                 )}
                 {runStatusCode === 'FINALIZED' && (
-                  <button type="button" onClick={() => setPayOpen(true)} disabled={busy !== null} className="btn-command text-sm">{copy.recordPayment}</button>
+                  <button type="button" onClick={() => setPayOpen(true)} disabled={busy !== null} className="btn-command text-control">{copy.recordPayment}</button>
                 )}
-                <button type="button" onClick={exportCsv} className="btn-secondary text-sm">
+                <button type="button" onClick={exportCsv} className="btn-secondary text-control">
     {copy.exportCsv}</button>
                 {runs.length > 1 && (
-                  <button type="button" onClick={() => setHistoryOpen(true)} className="btn-ghost text-sm">
+                  <button type="button" onClick={() => setHistoryOpen(true)} className="btn-ghost text-control">
     {copy.earlierRuns(runs.length - 1)}</button>
                 )}
               </div>
@@ -394,10 +395,10 @@ export default function Payroll() {
                 className={`flex w-full items-center justify-between gap-3 rounded-card border px-4 py-3 text-left ${run.id === activeSummary?.id ? 'border-brand bg-brand-50' : 'border-ink/10 hover:bg-brand-50'}`}
               >
                 <span>
-                  <span className="block text-sm font-semibold text-ink">{run.period || periodLabel({ payroll_year: run.payrollYear ?? run.payroll_year, payroll_month: run.payrollMonth ?? run.payroll_month })}</span>
+                  <span className="block text-body-strong text-ink">{run.period || periodLabel({ payroll_year: run.payrollYear ?? run.payroll_year, payroll_month: run.payrollMonth ?? run.payroll_month })}</span>
                   <StatusChip status={run.status} />
                 </span>
-                <span className="text-right text-sm font-semibold tabular-nums text-ink">KES {money(run.totalDisbursed)}</span>
+                <span className="text-right text-body-strong tabular-nums text-ink">KES {money(run.totalDisbursed)}</span>
               </button>
             </li>
           ))}
