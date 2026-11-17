@@ -2,6 +2,8 @@
 // tokens in src/styles/brand.css (--type-<role>-*). Each role is a `text-<role>` class,
 // built in tailwind.config.js; tailwind-merge (src/lib/utils.js) and the typography lint
 // rule (eslint-rules/) read the same list.
+// After adding or renaming a role, restart `npm run dev`: the running server keeps its loaded
+// copy of this file, so an @apply of the new class fails until it restarts.
 //
 //   page-title     24/32 600   the page's one <h1>
 //   section-title  16/24 600   <h2> (nested headings share it)
