@@ -1,6 +1,6 @@
 import React from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { cleanup, fireEvent, render, screen } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import BreedingHub from '../BreedingHub';
 
@@ -109,6 +109,23 @@ describe('BreedingHub history and pending edits', () => {
     // The filter chip plus the failed record's own status: the record is listed under it.
     expect(screen.getAllByText('Unsuccessful').length).toBeGreaterThan(1);
     expect(screen.getAllByText(/Malaika/).length).toBeGreaterThan(0);
+  });
+
+  it('groups history by the AI service month, with only the backend’s dates and notes', async () => {
+    mocks.listLogs.mockResolvedValue([
+      { ...baseLog, id: 90, insemination_date: '2026-01-22', status: 'Pregnant', updated_at: '2026-02-20T09:00:00Z' },
+      { ...baseLog, id: 91, insemination_date: '2025-12-05', status: 'Pending' },
+    ]);
+    renderHub();
+
+    fireEvent.click((await screen.findAllByRole('button', { name: 'View All Historical Checks' }))[0]);
+    const dialog = screen.getByRole('dialog', { name: 'Historical Checks' });
+
+    const months = within(dialog).getAllByText(/^(Jan 2026|Dec 2025)$/).map((node) => node.textContent);
+    expect([...new Set(months)]).toEqual(['Jan 2026', 'Dec 2025']);
+    expect(within(dialog).getAllByText('20 Feb 2026').length).toBeGreaterThan(0);
+    // The pending record has no update time from the backend and no invented note.
+    expect(within(dialog).queryByText('Awaiting vet window')).toBeNull();
   });
 });
 describe('BreedingHub shows the backend’s data, and says when it couldn’t load', () => {

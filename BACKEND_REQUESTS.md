@@ -654,3 +654,22 @@ Requests:
    records (statuses, voided entries), so the bars add up to the cards. The frontend never sums
    them to check.
 
+
+---
+
+## BR-024 — Breeding logs: `updated_at` on each record
+
+**Status:** Open · **Raised:** 2026-11-17 · **Frontend:** `lib/breedingUtils.js` (`TODO(BR-024)`), `pages/operations/BreedingHub.jsx` (Historical Checks)
+
+Historical Checks has an "Updated" column. It used to show the day the page was opened for every
+record, and grouped every record under the current month because of it. It now groups by the AI
+service date and shows the record's own `updated_at`, or "—" when there isn't one.
+
+`GET /api/operations/breeding-logs` should include, on each record, when it was last changed (a
+vet outcome recorded, an edit), as an ISO 8601 timestamp:
+
+```json
+{ "id": 88, "insemination_date": "2026-01-22", "status": "Pregnant", "updated_at": "2026-02-20T09:00:00Z" }
+```
+
+If it is already sent under another name, say which and the frontend will read that instead.

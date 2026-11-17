@@ -42,28 +42,24 @@ import {
   Pencil,
 } from 'lucide-react';
 import { toLocalIsoDate } from '../../lib/localDate';
+import { formatDate, formatMonth } from '../../lib/dateFormat';
 import { reportError } from '../../lib/telemetry';
 
 /**
  * NOTE: The following components should be extracted into their own files
  * under `src/components/breeding/` to improve code organization and reusability.
  */
-function createHistoryEntry(log, status = 'Pending', notes = '') {
-  const labelByStatus = {
-    Pregnant: 'Pregnant (In-Calf)',
-    Open: 'Open (Not Pregnant)',
-    Failed: 'Unsuccessful',
-    Pending: 'Pending Check',
-  };
+const OUTCOME_LABELS = {
+  Pregnant: 'Pregnant (In-Calf)',
+  Open: 'Open (Not Pregnant)',
+  Failed: 'Unsuccessful',
+  Pending: 'Pending Check',
+};
 
-  return {
-    ...log,
-    status,
-    outcome: labelByStatus[status] || 'Pending Check',
-    notes: notes || (status === 'Pending' ? 'Awaiting vet window' : ''),
-    expectedCalvingDate: log.expectedCalvingDate ?? null,
-    updatedAt: new Date().toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' }),
-  };
+// A history row is the backend record plus a display label for its status. Notes and the
+// "Updated" date are the backend's own; nothing is filled in when they're missing.
+function createHistoryEntry(log) {
+  return { ...log, outcome: OUTCOME_LABELS[log.status] ?? OUTCOME_LABELS.Pending };
 }
 
 function getStatusTone(status) {
@@ -91,25 +87,21 @@ function formatCowLabel(log = {}) {
   return formatCowIdentity({ cowName: log.cowName, cowTag: log.cowTag });
 }
 
-function getMonthLabel(dateValue) {
-  const parsedDate = new Date(dateValue);
-  if (Number.isNaN(parsedDate.getTime())) return 'Unknown Month';
+const NO_AI_DATE_GROUP = 'no-ai-date';
 
-  return parsedDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
-}
-
+// Groups by the month of the AI service date the backend sent (YYYY-MM-DD → YYYY-MM), in the
+// order given (newest first). Records without an AI date get their own group at the end.
 function groupHistoryByMonth(history) {
-  return history.reduce((groups, entry) => {
-    const monthLabel = getMonthLabel(entry.updatedAt);
-
-    if (!groups.has(monthLabel)) {
-      groups.set(monthLabel, []);
-    }
-
-    groups.get(monthLabel).push(entry);
-    return groups;
-  }, new Map());
+  const groups = new Map();
+  history.forEach((entry) => {
+    const key = /^\d{4}-\d{2}-\d{2}$/.test(entry.aiDate ?? '') ? entry.aiDate.slice(0, 7) : NO_AI_DATE_GROUP;
+    if (!groups.has(key)) groups.set(key, []);
+    groups.get(key).push(entry);
+  });
+  return groups;
 }
+
+const historyMonthLabel = (key) => (key === NO_AI_DATE_GROUP ? 'No AI date' : formatMonth(key) ?? key);
 
 function HistoryStatusBadge({ status, outcome }) {
   return (
@@ -465,7 +457,7 @@ export default function BreedingHub() {
   }, [breedingLogsData, herdOptions]);
 
   const vetHistory = useMemo(
-    () => (normalizedBreedingLogs ?? []).map((log) => createHistoryEntry(log, log.status, log.notes)),
+    () => (normalizedBreedingLogs ?? []).map(createHistoryEntry),
     [normalizedBreedingLogs],
   );
   const vetQueue = useMemo(
@@ -864,10 +856,10 @@ export default function BreedingHub() {
                 </div>
               )}
 
-              {Array.from(groupedHistory.entries()).map(([monthLabel, entries]) => (
-                <div key={monthLabel} className="mb-4 space-y-2 last:mb-0">
+              {Array.from(groupedHistory.entries()).map(([monthKey, entries]) => (
+                <div key={monthKey} className="mb-4 space-y-2 last:mb-0">
                   <div className="sticky top-0 z-10 flex items-center justify-between rounded-md border border-ink/10 bg-surface px-3 py-2 text-xs font-black uppercase tracking-widest text-brand ">
-                    <span>{monthLabel}</span>
+                    <span>{historyMonthLabel(monthKey)}</span>
                     <span className="rounded-full bg-brand/5 px-2 py-0.5 text-[10px] font-black text-brand">
                       {entries.length} {entries.length === 1 ? 'record' : 'records'}
                     </span>
@@ -888,7 +880,7 @@ export default function BreedingHub() {
                           <div className="min-w-0"><dt className="text-ink-muted">AI Date</dt><dd className="font-medium text-ink">{entry.aiDate || '—'}</dd></div>
                           <div className="min-w-0"><dt className="text-ink-muted">Bull</dt><dd className="break-words font-medium text-ink">{entry.sireCode || '—'}</dd></div>
                           <div className="min-w-0"><dt className="text-ink-muted">Expected Calving</dt><dd className="font-medium text-ink">{entry.expectedCalvingDate || '—'}</dd></div>
-                          <div className="min-w-0"><dt className="text-ink-muted">Updated</dt><dd className="font-medium text-ink">{entry.updatedAt || '—'}</dd></div>
+                          <div className="min-w-0"><dt className="text-ink-muted">Updated</dt><dd className="font-medium text-ink">{formatDate(entry.updatedAt, '—')}</dd></div>
                           <div className="col-span-2 min-w-0">
                             <dt className="sr-only">Source</dt>
                             <dd>
@@ -933,7 +925,7 @@ export default function BreedingHub() {
                             <td className="px-2 py-2">
                               <HistoryStatusBadge status={entry.status} outcome={entry.outcome} />
                             </td>
-                            <td className="px-2 py-2 text-sm text-ink-muted">{entry.updatedAt}</td>
+                            <td className="px-2 py-2 text-sm text-ink-muted">{formatDate(entry.updatedAt, '—')}</td>
                           </tr>
                         ))}
                       </tbody>
