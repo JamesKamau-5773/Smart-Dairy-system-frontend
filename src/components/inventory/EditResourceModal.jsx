@@ -76,13 +76,13 @@ export default function EditResourceModal({ isOpen, onClose, item, onSave }) {
           <button
             type="button"
             onClick={onClose}
-            className="flex-1 py-3 rounded-lg font-black text-xs uppercase tracking-widest text-slate-500 hover:bg-slate-200 hover:text-ink transition-colors"
+            className="flex-1 py-3 rounded-lg text-control text-slate-500 hover:bg-slate-200 hover:text-ink transition-colors"
           >
             {feedCopy.inventory.form.cancel}
           </button>
           <button
             type="submit"
-            className="flex-[2] py-3 px-6 rounded-lg font-black text-xs uppercase tracking-widest bg-ink text-white hover:bg-ink-strong transition-all  flex items-center justify-center gap-2"
+            className="flex-[2] py-3 px-6 rounded-lg text-control bg-ink text-white hover:bg-ink-strong transition-all flex items-center justify-center gap-2"
           >
 
         {feedCopy.inventory.form.saveChanges}
@@ -93,44 +93,44 @@ export default function EditResourceModal({ isOpen, onClose, item, onSave }) {
       <div className="space-y-5">
         <div className="grid grid-cols-2 gap-5">
           <div>
-            <label className="block text-[10px] font-black text-ink-muted uppercase tracking-widest mb-2">{feedCopy.inventory.form.name}</label>
+            <label className="block text-field-label text-ink-muted mb-2">{feedCopy.inventory.form.name}</label>
             <input
               required
               value={formData.name}
               onChange={(e) => handleFieldChange('name', e.target.value)}
-              className="w-full p-3 border border-slate-200 rounded-lg text-sm font-bold focus:ring-2 focus:ring-brand/20 focus:border-brand outline-none transition-all"
+              className="w-full p-3 border border-slate-200 rounded-lg text-control focus:ring-2 focus:ring-brand/20 focus:border-brand outline-none transition-all"
             />
           </div>
           <div>
-            <label className="block text-[10px] font-black text-ink-muted uppercase tracking-widest mb-2">{feedCopy.item.skuOptional}</label>
+            <label className="block text-field-label text-ink-muted mb-2">{feedCopy.item.skuOptional}</label>
             <input
               value={formData.sku}
               onChange={(e) => setFormData({...formData, sku: e.target.value})}
-              className="w-full p-3 border border-slate-200 rounded-lg text-sm font-bold font-mono focus:ring-2 focus:ring-brand/20 focus:border-brand outline-none transition-all"
+              className="w-full p-3 border border-slate-200 rounded-lg text-control focus:ring-2 focus:ring-brand/20 focus:border-brand outline-none transition-all tabular-nums"
             />
           </div>
         </div>
 
         <div className="grid grid-cols-2 gap-5">
           <div>
-            <label className="block text-[10px] font-black text-ink-muted uppercase tracking-widest mb-2">{feedCopy.inventory.form.category}</label>
+            <label className="block text-field-label text-ink-muted mb-2">{feedCopy.inventory.form.category}</label>
             <select
               value={formData.category}
               onChange={(e) => handleFieldChange('category', e.target.value)}
-              className="w-full p-3 border border-slate-200 rounded-lg text-sm font-bold focus:ring-2 focus:ring-brand/20 focus:border-brand outline-none transition-all bg-white"
+              className="w-full p-3 border border-slate-200 rounded-lg text-control focus:ring-2 focus:ring-brand/20 focus:border-brand outline-none transition-all bg-white"
             >
               {Object.entries(feedCopy.inventory.categories).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
             </select>
           </div>
           <div>
-            <label className="block text-[10px] font-black text-ink-muted uppercase tracking-widest mb-2">{feedCopy.inventory.form.reorderLevel}</label>
+            <label className="block text-field-label text-ink-muted mb-2">{feedCopy.inventory.form.reorderLevel}</label>
             <input
               required
               type="number"
               min="0"
               value={formData.reorderLevel}
               onChange={(e) => setFormData({...formData, reorderLevel: parseInt(e.target.value, 10) || 0})}
-              className="w-full p-3 border border-slate-200 rounded-lg text-sm font-bold focus:ring-2 focus:ring-brand/20 focus:border-brand outline-none transition-all"
+              className="w-full p-3 border border-slate-200 rounded-lg text-control focus:ring-2 focus:ring-brand/20 focus:border-brand outline-none transition-all"
             />
           </div>
         </div>
@@ -138,8 +138,8 @@ export default function EditResourceModal({ isOpen, onClose, item, onSave }) {
         <div className="grid grid-cols-2 gap-5">
           <div>
             <div className="mb-2 flex items-center justify-between gap-2">
-              <label className="block text-[10px] font-black text-ink-muted uppercase tracking-widest">{feedCopy.inventory.form.protein}</label>
-              <select value={proteinUnit} onChange={(e) => setProteinUnit(e.target.value)} className="rounded border border-slate-200 bg-white px-2 py-1 text-[10px] font-bold">
+              <label className="block text-field-label text-ink-muted">{feedCopy.inventory.form.protein}</label>
+              <select value={proteinUnit} onChange={(e) => setProteinUnit(e.target.value)} className="rounded border border-slate-200 bg-white px-2 py-1 text-control">
                 <option value="percent">%</option>
                 <option value="g_per_kg">g/kg</option>
               </select>
@@ -151,16 +151,16 @@ export default function EditResourceModal({ isOpen, onClose, item, onSave }) {
               step="any"
               value={proteinInputValue}
               onChange={(e) => setFormData({ ...formData, proteinGramsPerKg: proteinInputToGramsPerKg(e.target.value, proteinUnit) })}
-              className="w-full p-3 border border-slate-200 rounded-lg text-sm font-bold focus:ring-2 focus:ring-brand/20 focus:border-brand outline-none transition-all"
+              className="w-full p-3 border border-slate-200 rounded-lg text-control focus:ring-2 focus:ring-brand/20 focus:border-brand outline-none transition-all"
             />
-            <p className="mt-1 text-[10px] font-semibold text-slate-500">
+            <p className="mt-1 text-meta text-slate-500">
               {proteinUnit === 'percent'
                 ? `${proteinInputValue}% = ${Number(formData.proteinGramsPerKg).toFixed(1)} g/kg`
                 : `${proteinInputValue} g/kg = ${(Number(formData.proteinGramsPerKg) / 10).toFixed(1)}%`}
             </p>
           </div>
           <div>
-            <label className="block text-[10px] font-black text-ink-muted uppercase tracking-widest mb-2">{feedCopy.inventory.form.energy}</label>
+            <label className="block text-field-label text-ink-muted mb-2">{feedCopy.inventory.form.energy}</label>
             <input
               type="number"
               min="0"
@@ -168,14 +168,14 @@ export default function EditResourceModal({ isOpen, onClose, item, onSave }) {
               max="30"
               value={formData.energyMjPerKg}
               onChange={(e) => setFormData({ ...formData, energyMjPerKg: Number(e.target.value) || 0 })}
-              className="w-full p-3 border border-slate-200 rounded-lg text-sm font-bold focus:ring-2 focus:ring-brand/20 focus:border-brand outline-none transition-all"
+              className="w-full p-3 border border-slate-200 rounded-lg text-control focus:ring-2 focus:ring-brand/20 focus:border-brand outline-none transition-all"
             />
           </div>
         </div>
 
         <div className="grid grid-cols-2 gap-5">
           <div>
-            <label className="block text-[10px] font-black text-ink-muted uppercase tracking-widest mb-2">{feedCopy.inventory.form.fiber}</label>
+            <label className="block text-field-label text-ink-muted mb-2">{feedCopy.inventory.form.fiber}</label>
             <input
               type="number"
               min="0"
@@ -183,38 +183,38 @@ export default function EditResourceModal({ isOpen, onClose, item, onSave }) {
               max="999.99"
               value={formData.fiberGramsPerKg}
               onChange={(e) => setFormData({ ...formData, fiberGramsPerKg: Number(e.target.value) || 0 })}
-              className="w-full p-3 border border-slate-200 rounded-lg text-sm font-bold focus:ring-2 focus:ring-brand/20 focus:border-brand outline-none transition-all"
+              className="w-full p-3 border border-slate-200 rounded-lg text-control focus:ring-2 focus:ring-brand/20 focus:border-brand outline-none transition-all"
             />
           </div>
           <div>
-            <label className="block text-[10px] font-black text-ink-muted uppercase tracking-widest mb-2">{feedCopy.inventory.form.cost}</label>
+            <label className="block text-field-label text-ink-muted mb-2">{feedCopy.inventory.form.cost}</label>
             <input
               type="number"
               min="0"
               step="any"
               value={formData.costPerKg}
               onChange={(e) => setFormData({ ...formData, costPerKg: Number(e.target.value) || 0 })}
-              className="w-full p-3 border border-slate-200 rounded-lg text-sm font-bold focus:ring-2 focus:ring-brand/20 focus:border-brand outline-none transition-all"
+              className="w-full p-3 border border-slate-200 rounded-lg text-control focus:ring-2 focus:ring-brand/20 focus:border-brand outline-none transition-all"
             />
           </div>
         </div>
 
         {defaultSource && (
-          <p className="text-[10px] text-slate-500 font-semibold">
+          <p className="text-meta text-slate-500">
             Defaults applied from {defaultSource.startsWith('ingredient:') ? 'ingredient standard' : 'category baseline'} ({defaultSource.replace('ingredient:', '').replace('category:', '')}).
           </p>
         )}
 
         {Object.keys(errors).length > 0 && (
-          <ul role="alert" className="space-y-1 rounded-lg border border-brand-dark/60 bg-brand-100 p-3 text-xs font-semibold text-ink">
+          <ul role="alert" className="space-y-1 rounded-lg border border-brand-dark/60 bg-brand-100 p-3 text-meta text-ink">
             {Object.entries(errors).map(([field, message]) => <li key={field}>{message}</li>)}
           </ul>
         )}
 
         {/* Note about stock */}
         <div className="bg-blue-50 border border-blue-100 rounded-lg p-4 mt-2">
-          <p className="text-xs font-bold text-blue-800">
-            {feedCopy.inventory.form.stockNoteBefore}<span className="font-black">{feedCopy.inventory.restock}</span>{feedCopy.inventory.form.stockNoteAfter}
+          <p className="text-meta text-blue-800">
+            {feedCopy.inventory.form.stockNoteBefore}<span className="text-body-strong">{feedCopy.inventory.restock}</span>{feedCopy.inventory.form.stockNoteAfter}
           </p>
         </div>
       </div>

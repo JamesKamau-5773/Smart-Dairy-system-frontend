@@ -9,7 +9,7 @@ import BaseModal from '../ui/BaseModal';
 import { commonCopy } from '../../i18n/common';
 
 const { restock: copy } = feedCopy;
-const fieldClass = 'w-full rounded-lg border border-slate-200 bg-white p-3 text-sm font-bold text-slate-800 outline-none focus:ring-2 focus:ring-brand/20';
+const fieldClass = 'w-full rounded-lg border border-slate-200 bg-white p-3 text-control text-slate-800 outline-none focus:ring-2 focus:ring-brand/20';
 
 export default function StandardDeliveryModal({ isOpen, onClose, item, onRestock, tenantId, farmId }) {
   const [form, setForm] = useState(EMPTY_RESTOCK);
@@ -76,7 +76,7 @@ export default function StandardDeliveryModal({ isOpen, onClose, item, onRestock
           <button 
             type="button" 
             onClick={onClose}
-            className="text-sm font-bold text-slate-500 hover:text-slate-700 transition-colors"
+            className="text-control text-slate-500 hover:text-slate-700 transition-colors"
           >
             {feedCopy.inventory.delivery.cancel}
           </button>
@@ -84,7 +84,7 @@ export default function StandardDeliveryModal({ isOpen, onClose, item, onRestock
             type="button"
             onClick={handleConfirm}
             disabled={quantity <= 0 || !selectedItem || isSubmitting}
-            className="flex items-center gap-2 px-6 py-3 rounded-xl font-black text-xs uppercase transition-all  bg-brand text-white hover:bg-brand-dark disabled:bg-slate-200 disabled:text-slate-400 disabled:cursor-not-allowed"
+            className="flex items-center gap-2 px-6 py-3 rounded-xl text-badge transition-all bg-brand text-white hover:bg-brand-dark disabled:bg-slate-200 disabled:text-slate-400 disabled:cursor-not-allowed"
           >
             {feedCopy.inventory.delivery.confirm}
           </button>
@@ -93,7 +93,7 @@ export default function StandardDeliveryModal({ isOpen, onClose, item, onRestock
     >
       {/* SECTION 1: WHAT ARRIVED */}
       <div className="mb-8">
-        <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-4">
+        <label className="block text-field-label text-slate-500 mb-4">
           {feedCopy.inventory.delivery.whatArrived}
         </label>
 
@@ -102,15 +102,15 @@ export default function StandardDeliveryModal({ isOpen, onClose, item, onRestock
           <div className="p-5 bg-brand/5 border border-brand/20 rounded-xl flex items-center justify-between">
             <div>
               <div className="flex items-center gap-2 mb-1">
-                <span className="font-black text-brand text-lg">{selectedItem?.name ?? feedCopy.inventory.delivery.selected}</span>
+                <span className="text-body-strong text-brand">{selectedItem?.name ?? feedCopy.inventory.delivery.selected}</span>
               </div>
-              <div className="text-[11px] font-bold text-slate-500 uppercase tracking-wider ">
+              <div className="text-label text-slate-500 ">
                 {feedCopy.inventory.delivery.sku(selectedItem?.sku || feedCopy.inventory.delivery.notAssigned)}
               </div>
             </div>
             <div className="text-right">
-              <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">{feedCopy.inventory.delivery.currentStock}</div>
-              <div className="font-black text-slate-700">
+              <div className="text-label text-slate-400 mb-1">{feedCopy.inventory.delivery.currentStock}</div>
+              <div className="text-body-strong text-slate-700">
                 {selectedStock.value ?? 0} {unitLabel}
               </div>
             </div>
@@ -118,14 +118,14 @@ export default function StandardDeliveryModal({ isOpen, onClose, item, onRestock
         ) : (
           /* GENERAL RESTOCK VIEW (User clicked "Add to Feedstore" at the top) */
           <div className="quick-select-container mb-6">
-            <label className="text-[10px] font-black text-ink-muted uppercase tracking-widest mb-2 block">
+            <label className="text-field-label text-ink-muted mb-2 block">
               {feedCopy.inventory.delivery.priority}
             </label>
 
             {isLoading ? (
-              <div className="text-sm text-slate-400">{feedCopy.inventory.delivery.loadingPriorities}</div>
+              <div className="text-body text-slate-400">{feedCopy.inventory.delivery.loadingPriorities}</div>
             ) : quickSelectOptions.length === 0 ? (
-              <div className="text-sm text-slate-400">{feedCopy.inventory.delivery.allHealthy}</div>
+              <div className="text-body text-slate-400">{feedCopy.inventory.delivery.allHealthy}</div>
             ) : (
               <div className="flex flex-wrap gap-2">
                 {quickSelectOptions.map((option) => {
@@ -134,7 +134,7 @@ export default function StandardDeliveryModal({ isOpen, onClose, item, onRestock
                     <button
                       key={option.id}
                       onClick={() => handleQuickSelect(option)}
-                      className={`px-3 py-1.5 text-sm font-medium rounded-lg transition-colors flex items-center gap-1 border ${
+                      className={`px-3 py-1.5 text-control rounded-lg transition-colors flex items-center gap-1 border ${
                         isSelected
                           ? 'bg-rose-100 text-rose-800 border-rose-200'
                           : 'bg-rose-50 hover:bg-rose-100 text-rose-700 border-rose-100'
@@ -155,7 +155,7 @@ export default function StandardDeliveryModal({ isOpen, onClose, item, onRestock
 
       {/* SECTION 2: HOW MUCH WAS DELIVERED */}
       <div className="border border-slate-100 rounded-2xl p-8 flex flex-col items-center bg-slate-50/50">
-        <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-6">
+        <label className="block text-field-label text-slate-500 mb-6">
           {feedCopy.inventory.delivery.howMuch}
         </label>
 
@@ -180,9 +180,9 @@ export default function StandardDeliveryModal({ isOpen, onClose, item, onRestock
               onChange={(event) => setField('quantity', event.target.value)}
               placeholder="0"
               aria-invalid={errors.quantity ? true : undefined}
-              className="w-28 bg-transparent text-center text-3xl font-black tabular-nums tracking-tighter text-slate-800 outline-none"
+              className="w-28 bg-transparent text-center text-control tabular-nums text-slate-800 outline-none"
             />
-            <span className="text-xl font-bold text-slate-400" aria-hidden="true">{unitLabel}</span>
+            <span className="text-body-strong text-slate-400" aria-hidden="true">{unitLabel}</span>
           </div>
 
           <button 
@@ -199,26 +199,26 @@ export default function StandardDeliveryModal({ isOpen, onClose, item, onRestock
           <button 
             type="button"
             onClick={() => increaseAmount(50)}
-            className="px-5 py-2.5 bg-white border border-slate-200 rounded-lg text-xs font-black text-slate-600 hover:bg-slate-50 transition-all "
+            className="px-5 py-2.5 bg-white border border-slate-200 rounded-lg text-control text-slate-600 hover:bg-slate-50 transition-all "
           >
             + 50kg Bag
           </button>
           <button 
             type="button"
             onClick={() => increaseAmount(70)}
-            className="px-5 py-2.5 bg-white border border-slate-200 rounded-lg text-xs font-black text-slate-600 hover:bg-slate-50 transition-all "
+            className="px-5 py-2.5 bg-white border border-slate-200 rounded-lg text-control text-slate-600 hover:bg-slate-50 transition-all "
           >
             + 70kg Bag
           </button>
         </div>
-        {errors.quantity && <p className="mt-4 text-xs font-semibold text-danger">{errors.quantity}</p>}
+        {errors.quantity && <p className="mt-4 text-meta text-danger">{errors.quantity}</p>}
       </div>
 
       {/* SECTION 3: PRICE, SUPPLIER AND LEDGER */}
       <div className="mt-6 space-y-4">
         <div className="grid gap-4 sm:grid-cols-2">
           <label className="block">
-            <span className="mb-1.5 block text-[10px] font-black uppercase tracking-widest text-slate-500">{copy.unitCost}</span>
+            <span className="mb-1.5 block text-field-label text-slate-500">{copy.unitCost}</span>
             <input
               type="number"
               inputMode="decimal"
@@ -229,11 +229,11 @@ export default function StandardDeliveryModal({ isOpen, onClose, item, onRestock
               aria-invalid={errors.unitCost ? true : undefined}
               className={fieldClass}
             />
-            <span className="mt-1.5 block text-[10px] font-semibold text-slate-400">{copy.unitCostHint}</span>
-            {errors.unitCost && <span className="mt-1 block text-xs font-semibold text-danger">{errors.unitCost}</span>}
+            <span className="mt-1.5 block text-meta text-slate-400">{copy.unitCostHint}</span>
+            {errors.unitCost && <span className="mt-1 block text-meta text-danger">{errors.unitCost}</span>}
           </label>
           <label className="block">
-            <span className="mb-1.5 block text-[10px] font-black uppercase tracking-widest text-slate-500">{copy.supplier}</span>
+            <span className="mb-1.5 block text-field-label text-slate-500">{copy.supplier}</span>
             <input
               value={form.supplierName}
               onChange={(event) => setField('supplierName', event.target.value)}
@@ -242,7 +242,7 @@ export default function StandardDeliveryModal({ isOpen, onClose, item, onRestock
             />
           </label>
         </div>
-        <label className="flex items-start gap-3 rounded-lg border border-slate-200 p-3 text-sm text-slate-700">
+        <label className="flex items-start gap-3 rounded-lg border border-slate-200 p-3 text-field-label text-slate-700">
           <input
             type="checkbox"
             checked={form.recordExpense}
@@ -250,11 +250,11 @@ export default function StandardDeliveryModal({ isOpen, onClose, item, onRestock
             className="mt-1 h-4 w-4 shrink-0 accent-brand"
           />
           <span>
-            <span className="block font-semibold">{copy.recordExpense}</span>
-            <span className="block text-xs text-slate-500">{copy.recordExpenseWarning}</span>
+            <span className="block text-body-strong">{copy.recordExpense}</span>
+            <span className="block text-meta text-slate-500">{copy.recordExpenseWarning}</span>
           </span>
         </label>
-        {submitError && <p role="alert" className="text-xs font-semibold text-danger">{submitError}</p>}
+        {submitError && <p role="alert" className="text-meta text-danger">{submitError}</p>}
       </div>
     </BaseModal>
   );

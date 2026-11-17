@@ -8,7 +8,8 @@
 //
 // Output: docs/audit/screens/<label>-<page>-<width>.png (or SCREENS_OUT_DIR)
 // Pages: SCREENS_PAGES=register,home,ledger,production-log,reports,inventory,record-milk,herd,breeding,medical,milk-drops,animal,milk-history
-//   milk-usage,routine,tasks,feeding,feed-planner,feed-mixes,milk-lab,units (default: ledger,production-log,reports)
+//   milk-usage,routine,tasks,feeding,feed-planner,feed-mixes,milk-lab,units,
+//   buyers,customers,customer-profile,customer-value,cow-profit,milk-inventory (default: ledger,production-log,reports)
 import { chromium } from '@playwright/test';
 import { mkdirSync } from 'node:fs';
 
@@ -21,7 +22,9 @@ const ROUTES = { register: '/register', home: null, ledger: '/finance/ledger', '
   herd: '/operations/herd', breeding: '/operations/breeding', medical: '/operations/records', 'milk-drops': '/operations/milk-drop-reports',
   animal: '/operations/animal/1', 'milk-history': '/operations/animal/1/milk-history',
   'milk-usage': '/operations/milk-usage', routine: '/operations/routine', tasks: '/tasks', feeding: '/feeding', 'feed-planner': '/feed-nutrition',
-  'feed-mixes': '/feed-nutrition/mix', 'milk-lab': '/operations/lab', units: '/operations/unit-conversions' };
+  'feed-mixes': '/feed-nutrition/mix', 'milk-lab': '/operations/lab', units: '/operations/unit-conversions',
+  buyers: '/finance/buyers', customers: '/operations/customers', 'customer-profile': '/finance/customers/4',
+  'customer-value': '/finance/reports/dairy-unit-economics', 'cow-profit': '/finance/reports/animal-economics', 'milk-inventory': '/operations/reports/milk-inventory' };
 // Pages shot after a click on the loaded route (a form opened over it).
 const OPEN = { 'record-milk': (page) => page.getByRole('button', { name: /Record milk/i }).first().click() };
 const PAGES = (process.env.SCREENS_PAGES ?? 'ledger,production-log,reports').split(',').map((name) => name.trim()).filter(Boolean);
@@ -243,6 +246,29 @@ const DISPOSITIONS = [
   { id: 2, disposition_date: '2026-11-14', disposition_type: 'HOUSEHOLD', liters: 2, notes: 'Family use', recorded_by: 'Kamau' },
 ];
 
+// ── Finance, supply and report fixtures (typography phase 5a) ──────────────────
+const CUSTOMERS = [
+  { id: 4, name: 'Brookside Dairy', type: 'Cooperative', contact_person: 'Jane Wambui', phone_number: '+254712345678', agreed_rate_per_liter: 45, account_balance: 12500, daily_contract_liters: 40 },
+  { id: 5, name: 'Auntie Grace', type: 'Individual', contact_person: '', phone_number: '+254722000111', agreed_rate_per_liter: 50, account_balance: -636, daily_contract_liters: 3 },
+  { id: 6, name: 'Mama Mboga Hotel', type: 'Hotel', contact_person: 'Peter Otieno', phone_number: '+254733222444', agreed_rate_per_liter: 55, account_balance: 0, daily_contract_liters: 10 },
+];
+const DELIVERIES = [
+  { id: 71, customer_id: 4, date: '2026-11-15', liters_delivered: 40, billable_liters: 40, personal_consumption_liters: 0, billed_amount: 1800, amount: 1800 },
+  { id: 72, customer_id: 4, date: '2026-11-14', liters_delivered: 38.5, billable_liters: 38.5, personal_consumption_liters: 0, billed_amount: 1732.5, amount: 1732.5 },
+];
+const INVENTORY = [
+  { id: 3, name: 'Dairy meal', category: 'Bulk Feed', unit: 'kg', current_qty: 420, reorder_level: 200, item_code: 'FD-001', is_active: true },
+  { id: 4, name: 'Maize germ', category: 'Bulk Feed', unit: 'kg', current_qty: 90, reorder_level: 150, item_code: 'FD-002', is_active: true },
+  { id: 8, name: 'Teat dip', category: 'Medicine', unit: 'litre', current_qty: 6, reorder_level: 2, item_code: 'MD-010', is_active: true },
+];
+const MILK_INVENTORY = {
+  summary: { total_produced: 1240.5, total_sold: 1102, total_unsold: 138.5 },
+  daily_records: [
+    { date: '2026-11-15', produced: 82, sold: 75, unsold: 7, remaining: 7 },
+    { date: '2026-11-14', produced: 79.5, sold: 70, unsold: 9.5, remaining: 9.5 },
+  ],
+};
+
 function handle(method, path, params, body) {
   if (method === 'POST' && path === '/auth/register') {
     return [201, {
@@ -274,6 +300,11 @@ function handle(method, path, params, body) {
   if (path === '/units/conversions') return [200, CONVERSIONS];
   if (path === '/routine/plans') return [200, ROUTINE];
   if (path === '/production/milk-dispositions') return [200, DISPOSITIONS];
+  if (path === '/finance/customers') return [200, CUSTOMERS];
+  if (path === '/finance/customers/4') return [200, CUSTOMERS[0]];
+  if (path === '/finance/deliveries') return [200, DELIVERIES];
+  if (path === '/inventory/items') return [200, INVENTORY];
+  if (path === '/reports/milk-inventory') return [200, MILK_INVENTORY];
   return [200, []];
 }
 

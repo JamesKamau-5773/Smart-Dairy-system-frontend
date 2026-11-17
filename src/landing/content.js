@@ -165,7 +165,7 @@ export const DASHBOARD_PREVIEW = {
     { group: 'Operations', items: ['Production Log', 'Milk Usage', 'Daily Routine', 'Farm Task View'] },
     { group: 'Herd Management', items: ['Cow Register', 'AI & Pregnancy', 'Medical Records', 'Milk Drop Alerts'] },
     { group: 'Feed Planning', items: ['Feed Planner', 'Feed Mixing Planner'] },
-    { group: 'Finance & Supply', items: ['Buyers List'] },
+    { group: 'Finance & Supply', items: ['Buyer List'] },
   ],
   page: 'Dashboard',
   status: 'Online',
@@ -253,7 +253,7 @@ export const SHOWCASE = {
         'Milk statements sent on WhatsApp.',
       ],
       screens: [
-        screen('buyers.jpg', 'Customer Billing screen listing milk buyers with their rate and balance owed'),
+        screen('buyers.jpg', 'Buyer List screen listing milk buyers with their rate and balance owed'),
       ],
     },
     {

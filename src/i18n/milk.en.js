@@ -155,15 +155,14 @@ export const milkCopy = {
   // Produced, sold and unsold milk over time (MilkInventoryReport).
   inventoryReport: {
     eyebrow: 'Reports',
-    title: 'Milk Inventory Report',
     subtitle: 'Visualize the flow of milk from production to sales over time.',
     trend: 'Milk Inventory Trend',
     pickDate: 'Pick a date',
     lines: { produced: 'Produced', sold: 'Sold', unsold: 'Unsold' },
-    legend: { produced: 'Total Produced', sold: 'Total Sold', unsold: 'Total Unsold' },
+    legend: { produced: 'Total produced', sold: 'Total sold', unsold: 'Total unsold' },
     loadFailed: 'Error loading report data.',
     noData: 'No data available for the selected date range.',
-    dailyRecords: 'Daily Records',
+    dailyRecords: 'Daily records',
     columns: { date: 'Date', produced: 'Produced (L)', sold: 'Sold (L)', unsold: 'Unsold (L)' },
     dayMeta: (produced, sold, unsold) => `${produced} L produced / ${sold} L sold / ${unsold} L unsold`,
   },

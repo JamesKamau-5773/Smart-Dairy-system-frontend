@@ -64,7 +64,7 @@ export default function Header({ onMenuClick = () => {} }) {
   // TODO(Phase 7): title every page by route, not from the address.
   const pageTitle = pathname === '/dashboard' ? copy.titles.dashboard
     : pathname.startsWith('/operations/yield') ? copy.titles.production
-      : pathname.startsWith('/finance/buyers') ? copy.titles.buyers
+      : pathname.startsWith('/finance/buyers') ? shellCopy.nav.items.buyers
         : pathname.startsWith('/finance/ledger') ? copy.titles.ledger
           : pathname.startsWith('/operations/milk-usage') ? copy.titles.milkUsage
             : pathname.startsWith('/feed-nutrition/mix') ? shellCopy.nav.items.feedMixes

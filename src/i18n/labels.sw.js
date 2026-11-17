@@ -43,7 +43,7 @@ export const labelsCopy = {
   CUSTOMER_BILLING: 'Malipo ya Wateja',
   FEEDING_AREA: 'Ulishaji',
   TODAY_FEEDING: 'Ulishaji wa Leo',
-  MILK_LAB: 'Mpango wa Maziwa ya Ndama', // REVIEW: "Milk Feeding Planner" (calves)
+  MILK_LAB: 'Mpango wa Maziwa na Ulishaji', // REVIEW: "Milk Feeding Planner"
   FEED_FORMULATION: 'Michanganyiko ya Chakula',
   FEED_DASHBOARD: 'Akiba ya Chakula na Gharama',
   FEED_INGREDIENTS: 'Viambato',

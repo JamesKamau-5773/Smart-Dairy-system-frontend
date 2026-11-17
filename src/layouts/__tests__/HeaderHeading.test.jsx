@@ -39,7 +39,7 @@ describe('top bar title and the page h1', () => {
   });
 
   it('names Medical Records, Inventory and Feed Mixes by their sidebar labels, not old names', () => {
-    for (const [path, title] of [['/operations/records', 'Medical Records'], ['/operations/inventory', 'Inventory'], ['/feed-nutrition/mix', 'Feed Mixes']]) {
+    for (const [path, title] of [['/operations/records', 'Medical Records'], ['/operations/inventory', 'Inventory'], ['/feed-nutrition/mix', 'Feed Mixes'], ['/finance/buyers', 'Buyer List']]) {
       renderAt(path);
       expect(screen.getByText(title)).toBeTruthy();
       cleanup();
@@ -48,7 +48,7 @@ describe('top bar title and the page h1', () => {
 
   it('matches whole paths, with :id standing for one segment', () => {
     expect(pageOwnsHeading('/finance/ledger/')).toBe(true);
-    expect(pageOwnsHeading('/operations/reports/milk-inventory')).toBe(false);
+    expect(pageOwnsHeading('/operations/reports/no-such-report')).toBe(false);
     expect(pageOwnsHeading('/operations/animal/42')).toBe(true);
     expect(pageOwnsHeading('/operations/animal/42/milk-history')).toBe(true);
     expect(pageOwnsHeading('/operations/animal/42/other')).toBe(false);

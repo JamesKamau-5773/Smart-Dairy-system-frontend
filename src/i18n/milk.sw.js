@@ -155,15 +155,14 @@ export const milkCopy = {
 
   inventoryReport: {
     eyebrow: 'Ripoti',
-    title: 'Ripoti ya Akiba ya Maziwa',
     subtitle: 'Ona mtiririko wa maziwa kutoka uzalishaji hadi mauzo kwa muda.',
-    trend: 'Mwenendo wa Akiba ya Maziwa',
+    trend: 'Mwenendo wa akiba ya maziwa',
     pickDate: 'Chagua tarehe',
     lines: { produced: 'Yaliyozalishwa', sold: 'Yaliyouzwa', unsold: 'Yasiyouzwa' },
-    legend: { produced: 'Jumla Yaliyozalishwa', sold: 'Jumla Yaliyouzwa', unsold: 'Jumla Yasiyouzwa' },
+    legend: { produced: 'Jumla yaliyozalishwa', sold: 'Jumla yaliyouzwa', unsold: 'Jumla yasiyouzwa' },
     loadFailed: 'Imeshindwa kupakia data ya ripoti.',
     noData: 'Hakuna data kwa kipindi ulichochagua.',
-    dailyRecords: 'Rekodi za Kila Siku',
+    dailyRecords: 'Rekodi za kila siku',
     columns: { date: 'Tarehe', produced: 'Yaliyozalishwa (L)', sold: 'Yaliyouzwa (L)', unsold: 'Yasiyouzwa (L)' },
     dayMeta: (produced, sold, unsold) => `L ${produced} zimezalishwa / L ${sold} zimeuzwa / L ${unsold} hazijauzwa`,
   },

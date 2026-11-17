@@ -270,7 +270,7 @@ export default function MilkLab() {
     <div className="min-h-[80vh] flex flex-col relative pb-12 animate-reveal">
       <div className="relative z-10 max-w-5xl mx-auto w-full px-4 sm:px-6 space-y-8">
         <div className="border-b border-ink/10 pb-4">
-          <h1 className="text-page-title text-ink m-0">{copy.title}</h1>
+          <h1 className="text-page-title text-ink m-0">{shellCopy.nav.items.milkLab}</h1>
           <p className="text-body text-ink-muted mt-2 max-w-2xl">
             {copy.subtitle}
           </p>

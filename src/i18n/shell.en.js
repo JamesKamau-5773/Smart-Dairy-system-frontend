@@ -49,7 +49,6 @@ export const shellCopy = {
     titles: {
       dashboard: 'Dashboard',
       production: 'Production Log',
-      buyers: 'Buyer List',
       ledger: 'Ledger',
       milkUsage: 'Milk Usage',
     },
@@ -88,7 +87,7 @@ export const shellCopy = {
       ingredients: LABELS.FEED_INGREDIENTS,
       milkLab: LABELS.MILK_LAB,
       unitHelpers: 'Unit Helpers',
-      buyers: 'Buyers List',
+      buyers: 'Buyer List',
       customers: 'Customer Management',
       inventory: 'Inventory',
       ledger: 'Ledger',
