@@ -1,3 +1,4 @@
+import { plural } from './locale';
 /**
  * Text for the herd: the cow register, a cow's record and the labels shared by herd screens.
  * Values that need runtime data are functions.
@@ -61,7 +62,7 @@ export const herdCopy = {
     eventFallbackTitle: (type) => `${type} event`,
     eventFallbackDescription: 'No additional details provided.',
     logAction: 'Log action',
-    timelinePage: (page, pages, total) => `Showing page ${page} of ${pages} · ${total} total events`,
+    timelinePage: (page, pages, total) => `Showing page ${page} of ${pages} · ${plural(total, { one: '{n} total event', other: '{n} total events' })}`,
     previous: 'Previous',
     next: 'Next',
 
@@ -156,7 +157,7 @@ export const herdCopy = {
       feedingPlan: 'Feeding plan',
       loadingGoal: 'Loading saved milk goal...',
       extraMilk: 'Extra milk needed / day',
-      days: (count) => `${count} days`,
+      days: (count) => plural(count, { one: '{n} day', other: '{n} days' }),
     },
   },
 
@@ -175,7 +176,7 @@ export const herdCopy = {
     error: 'Error',
     success: 'Success',
     summary: 'Registry summary',
-    cowCount: (count) => `${count} cows`,
+    cowCount: (count) => plural(count, { one: '{n} cow', other: '{n} cows' }),
     notAvailable: 'Not available',
     lastUpdated: (when) => `Last updated ${when}`,
     averageAge: 'Average age',
@@ -214,7 +215,7 @@ export const herdCopy = {
     lastCalvedShort: 'Last calved',
     ageShort: 'Age',
     updatedShort: 'Updated',
-    showing: (shown, total) => `Showing ${shown} of ${total} animals.`,
+    showing: (shown, total) => `Showing ${shown} of ${plural(total, { one: '{n} animal', other: '{n} animals' })}.`,
     noMatches: 'No animals match your search or filters.',
     empty: 'Your herd is empty.',
     didYouMean: 'Did you mean',

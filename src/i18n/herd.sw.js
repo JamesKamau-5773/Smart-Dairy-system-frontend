@@ -1,3 +1,4 @@
+import { plural } from './locale';
 /**
  * Kiswahili for the herd. Same keys as herd.en.js; anything missing falls back to English.
  * Lines marked REVIEW need checking by a native speaker before release.
@@ -59,7 +60,7 @@ export const herdCopy = {
     eventFallbackTitle: (type) => `Tukio la ${type.toLowerCase()}`,
     eventFallbackDescription: 'Hakuna maelezo zaidi.',
     logAction: 'Rekodi tukio',
-    timelinePage: (page, pages, total) => `Ukurasa ${page} kati ya ${pages} · matukio ${total} kwa jumla`,
+    timelinePage: (page, pages, total) => `Ukurasa ${page} kati ya ${pages} · ${plural(total, { one: 'tukio {n} kwa jumla', other: 'matukio {n} kwa jumla' })}`,
     previous: 'Iliyotangulia',
     next: 'Inayofuata',
 
@@ -211,7 +212,7 @@ export const herdCopy = {
     lastCalvedShort: 'Alizaa mwisho',
     ageShort: 'Umri',
     updatedShort: 'Imesasishwa',
-    showing: (shown, total) => `Inaonyesha wanyama ${shown} kati ya ${total}.`,
+    showing: (shown, total) => plural(total, { one: `Inaonyesha mnyama ${shown} kati ya {n}.`, other: `Inaonyesha wanyama ${shown} kati ya {n}.` }),
     noMatches: 'Hakuna mnyama anayelingana na utafutaji au vichujio vyako.',
     empty: 'Bado huna mifugo.',
     didYouMean: 'Ulimaanisha',

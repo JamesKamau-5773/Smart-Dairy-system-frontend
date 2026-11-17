@@ -1,3 +1,4 @@
+import { plural } from './locale';
 /**
  * Kiswahili for buyers, customers, the ledger and money reports. Same keys as finance.en.js;
  * anything missing falls back to English. Lines marked REVIEW need a native speaker's check.
@@ -35,7 +36,7 @@ export const financeCopy = {
     status: 'Hali',
     allStatuses: 'Hali zote',
     shareSelected: (count) => `Tuma Taarifa kwa WhatsApp (${count})`,
-    showing: (shown, total) => `Wanunuzi ${shown} kati ya ${total}`,
+    showing: (shown, total) => plural(total, { one: `Mnunuzi ${shown} kati ya {n}`, other: `Wanunuzi ${shown} kati ya {n}` }),
     tableLabel: 'Jedwali la wanunuzi',
     selectAll: 'Chagua wanunuzi wote wanaoonekana',
     columns: { name: 'Jina la Mnunuzi', id: 'Namba', phone: 'Namba ya Simu', rate: 'Bei Iliyokubaliwa', balance: 'Salio la Sasa', status: 'Hali', actions: 'Vitendo' },
@@ -560,7 +561,7 @@ export const financeCopy = {
     profitTitle: 'Faida na Uaminifu wa Wateja',
     profitPerLiter: 'Faida kwa Lita',
     assumedLifespan: 'Muda wa Mteja Unaokadiriwa',
-    months: (count) => `miezi ${count}`,
+    months: (count) => plural(count, { one: 'mwezi {n}', other: 'miezi {n}' }),
     projected: 'Faida Inayotarajiwa kwa Mteja',
     totalRevenue: 'Jumla ya Mapato',
     deliveryRevenue: 'Mapato ya Mizigo kwa Wateja',

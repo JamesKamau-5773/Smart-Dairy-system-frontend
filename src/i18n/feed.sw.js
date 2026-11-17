@@ -1,3 +1,4 @@
+import { plural } from './locale';
 /**
  * Kiswahili for feed planning and inventory. Same keys as feed.en.js; anything missing falls back
  * to English. Lines marked REVIEW need checking by a native speaker before release.
@@ -166,8 +167,8 @@ export const feedCopy = {
     },
     mixedOn: 'Kilichanganywa',
     stockLevel: 'Kilichobaki stoo',
-    daysLeft: (days) => `Takriban siku ${days} zimebaki kwa kasi iliyorekodiwa`,
-    lowStock: (days) => `Kinakaribia kuisha: takriban siku ${days} zimebaki`,
+    daysLeft: (days) => plural(days, { one: 'Takriban siku {n} imebaki kwa kasi iliyorekodiwa', other: 'Takriban siku {n} zimebaki kwa kasi iliyorekodiwa' }),
+    lowStock: (days) => plural(days, { one: 'Kinakaribia kuisha: takriban siku {n} imebaki', other: 'Kinakaribia kuisha: takriban siku {n} zimebaki' }),
     pace: (kg) => `Kulingana na matumizi yaliyorekodiwa ya kg ${kg} kwa siku.`,
     noForecast: 'Bado hakuna makadirio',
     noForecastHint: 'Rekodi ulishaji unapofanyika ili kukokotoa kiasi cha kila siku na siku zilizobaki.',
@@ -258,8 +259,11 @@ export const feedCopy = {
     wholeHerd: 'Mifugo Yote',
     usingSaved: (targeted, active) => `Inatumia malengo yaliyohifadhiwa ya ng’ombe ${targeted} kati ya ${active} wanaokamuliwa sasa.`,
     usingHerd: 'Inatumia lengo la mifugo yote uliloweka kwenye kikokotoo.',
-    notIncluded: (count) => `Ng’ombe ${count} wanakamuliwa lakini bado hawana malengo yaliyohifadhiwa, kwa hiyo hawakujumuishwa kwenye hesabu hii.`,
-    localTargets: (count) => `Malengo ${count} ya akiba kwenye simu yamepatikana`,
+    notIncluded: (count) => plural(count, {
+      one: 'Ng’ombe {n} anakamuliwa lakini bado hana lengo lililohifadhiwa, kwa hiyo hakujumuishwa kwenye hesabu hii.',
+      other: 'Ng’ombe {n} wanakamuliwa lakini bado hawana malengo yaliyohifadhiwa, kwa hiyo hawakujumuishwa kwenye hesabu hii.',
+    }),
+    localTargets: (count) => plural(count, { one: 'Lengo {n} la akiba kwenye simu limepatikana', other: 'Malengo {n} ya akiba kwenye simu yamepatikana' }),
     allFromBackend: 'Malengo yote yaliyopakiwa yametoka kwenye seva',
     title: 'Mpango wa Maziwa na Ulishaji', // REVIEW: "Milk Feeding Planner"
     subtitle: 'Panga kiasi sahihi cha chakula ili ng’ombe wako wafikie malengo ya maziwa bila kupoteza chakula.',
@@ -406,7 +410,7 @@ export const feedCopy = {
     empty: 'Bado hakuna makundi ya ulishaji.',
     columns: { group: 'Kundi / msingi wa kiasi', headcount: 'Idadi', perHeadDay: 'kg/kichwa/siku', perHeadFeeding: 'kg/kichwa/ulishaji', dailyBatch: 'Jumla ya kundi kwa siku', batchFeeding: 'Kiasi/ulishaji', recipe: 'Mchanganyiko' },
     editProfile: (group) => `Hariri taarifa za ${group}`,
-    total: (count) => `Jumla (wanyama ${count} walio hai)`,
+    total: (count) => plural(count, { one: 'Jumla (mnyama {n} aliye hai)', other: 'Jumla (wanyama {n} walio hai)' }),
     assigned: 'Umewekwa',
     notAssigned: 'Haujawekwa',
     headcount: 'Idadi',
@@ -449,7 +453,7 @@ export const feedCopy = {
     recording: 'Inarekodi kundi...',
     confirm: (kg) => `Thibitisha kundi la kg ${kg}`,
     totalSize: 'Ukubwa wa kundi (kg)',
-    maxBatch: (count, kg) => `Viungo vyote ${count} vinaweza kutengeneza kundi kamili la hadi kg ${kg} kwa asilimia hizi.`,
+    maxBatch: (count, kg) => plural(count, { one: `Kiungo {n} kinaweza kutengeneza kundi kamili la hadi kg ${kg} kwa asilimia hii.`, other: `Viungo vyote {n} vinaweza kutengeneza kundi kamili la hadi kg ${kg} kwa asilimia hizi.` }),
     useMax: 'Tumia kundi kubwa zaidi',
     totalBatch: 'Jumla ya kundi',
     proteinContent: 'Kiwango cha protini',

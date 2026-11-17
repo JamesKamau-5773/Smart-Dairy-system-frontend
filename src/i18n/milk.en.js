@@ -1,3 +1,4 @@
+import { plural } from './locale';
 /** Text for recording, editing and deleting a milk record (FastMilkLog). */
 export const milkCopy = {
   titleCreate: 'Record milk',
@@ -78,7 +79,7 @@ export const milkCopy = {
     status: 'Status',
     session: 'Session',
     all: 'All',
-    showing: (shown, total) => `Showing ${shown} of ${total} sessions`,
+    showing: (shown, total) => `Showing ${shown} of ${plural(total, { one: '{n} session', other: '{n} sessions' })}`,
     recordsTitle: 'Milk session records',
     recordsSubtitle: 'Most recent milking sessions first.',
     notAvailable: 'Not available',

@@ -1,3 +1,4 @@
+import { plural } from './locale';
 /** Text for the dashboard (Command Center), its widgets and the member dashboard. */
 export const dashboardCopy = {
   summary: {
@@ -124,9 +125,9 @@ export const dashboardCopy = {
     saved: 'Routine saved. The herdsman will see it in the Farm Task View.',
     title: 'Daily Routine Planner',
     subtitle: 'Set the daily schedule. The notes you type here will appear as a checklist on the herdsman’s phone.',
-    blocks: (count) => `${count} blocks`,
+    blocks: (count) => plural(count, { one: '{n} block', other: '{n} blocks' }),
     withNotes: (count) => `${count} with notes`,
-    activeSteps: (count) => `${count} active steps`,
+    activeSteps: (count) => plural(count, { one: '{n} active step', other: '{n} active steps' }),
     unsaved: (count) => `Unsaved changes (${count})`,
     savedAt: (time) => `Saved ${time}`,
     empty: 'No daily routine is set up for this farm yet. Time blocks can’t be added from this screen yet.',

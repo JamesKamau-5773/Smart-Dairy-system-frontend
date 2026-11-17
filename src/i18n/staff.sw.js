@@ -1,3 +1,4 @@
+import { plural } from './locale';
 /**
  * Kiswahili for staff, app access and payroll. Same keys as staff.en.js; anything missing falls
  * back to English. Lines marked REVIEW need checking by a native speaker before release.
@@ -83,7 +84,7 @@ export const staffCopy = {
     title: 'Daftari la Wafanyakazi',
     subtitle: 'Taarifa za wafanyakazi, mishahara, mikopo na ruhusa za programu.',
     add: 'Ongeza mfanyakazi',
-    activeEmployees: (count) => `Wafanyakazi ${count} walio kazini`,
+    activeEmployees: (count) => plural(count, { one: 'Mfanyakazi {n} aliye kazini', other: 'Wafanyakazi {n} walio kazini' }),
     guidance: 'Mwongozo wa wafanyakazi',
     farmSize: (size) => `Shamba ${size.toLowerCase()}`,
     farmSizes: { small: 'Dogo', medium: 'La wastani', large: 'Kubwa', very_large: 'Kubwa sana' },
@@ -116,7 +117,7 @@ export const staffCopy = {
     preparing: 'Inatayarisha…',
     payslip: 'Hati ya mshahara',
     columns: { employee: 'Mfanyakazi', base: 'Msingi', leave: 'Likizo', gross: 'Jumla', statutory: 'Makato ya kisheria', advances: 'Mikopo', net: 'Mshahara halisi', status: 'Hali' },
-    daysPaid: (count) => `siku ${count} zimelipwa`,
+    daysPaid: (count) => plural(count, { one: 'siku {n} imelipwa', other: 'siku {n} zimelipwa' }),
     statutoryDeductions: 'Makato ya kisheria',
     loadFailed: 'Mishahara haikuweza kupakia.',
     runLoadFailed: 'Mshahara huu haukuweza kupakia.',
@@ -127,7 +128,7 @@ export const staffCopy = {
     created: (period) => `Mishahara ya ${period} imeandaliwa kama rasimu.`,
     notCreated: 'Mishahara haikuandaliwa.',
     finalizeTitle: (period) => `Kamilisha mishahara ya ${period}?`,
-    finalizeMessage: (employees, amount) => `Wafanyakazi ${employees}, KES ${amount} mshahara halisi. Baada ya hapa kiasi hakiwezi kubadilika.`,
+    finalizeMessage: (employees, amount) => `${plural(employees, { one: 'Mfanyakazi {n}', other: 'Wafanyakazi {n}' })}, KES ${amount} mshahara halisi. Baada ya hapa kiasi hakiwezi kubadilika.`,
     finalizeConfirm: 'Kamilisha',
     finalized: 'Mishahara imekamilishwa. Walipe wafanyakazi, kisha urekodi malipo.',
     notFinalized: 'Mishahara haikukamilishwa.',

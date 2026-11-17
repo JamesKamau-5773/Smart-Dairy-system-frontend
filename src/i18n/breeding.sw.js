@@ -1,3 +1,4 @@
+import { plural } from './locale';
 /**
  * Kiswahili for AI and pregnancy. Same keys as breeding.en.js; anything missing falls back to
  * English. Lines marked REVIEW need checking by a native speaker before release.
@@ -22,8 +23,8 @@ export const breedingCopy = {
     titleStart: 'AI na',
     titleEnd: 'Mimba',
     onHeat: (count) => `${count} wako kwenye joto`, // REVIEW: "on heat" = joto
-    pendingChecks: (total, due) => `Vipimo ${total} vinasubiri (${due} vimefika)`,
-    straws: (count) => `Mirija ${count} kwenye tangi`, // REVIEW: straws (semen)
+    pendingChecks: (total, due) => `${plural(total, { one: 'Kipimo {n} kinasubiri', other: 'Vipimo {n} vinasubiri' })} · ${plural(due, { one: '{n} kimefika', other: '{n} vimefika' })}`,
+    straws: (count) => plural(count, { one: 'Mrija {n} kwenye tangi', other: 'Mirija {n} kwenye tangi' }), // REVIEW: straws (semen)
     recordHeat: 'Rekodi joto',
     logService: 'Rekodi huduma ya AI',
     heatAlerts: 'Hatua inahitajika: Ng’ombe walio kwenye joto',
@@ -118,12 +119,12 @@ export const breedingCopy = {
       selected: 'Bidhaa iliyochaguliwa',
       code: (code) => `Namba: ${code}`,
       noCode: 'Haipo',
-      current: (count) => `Akiba ya sasa: mirija ${count}`,
+      current: (count) => plural(count, { one: 'Akiba ya sasa: mrija {n}', other: 'Akiba ya sasa: mirija {n}' }),
       add: 'Ongeza mirija *',
       placeholder: 'mf. 20',
       amountInvalid: 'Weka kiasi kikubwa kuliko 0.',
       noItem: 'Chagua bidhaa ya akiba kabla ya kuongeza.',
-      done: (name, amount) => `Mirija ${amount} imeongezwa kwa ${name}.`,
+      done: (name, amount) => `${plural(amount, { one: 'Mrija {n} umeongezwa', other: 'Mirija {n} imeongezwa' })} kwa ${name}.`,
       failed: 'Imeshindwa kuongeza akiba hii ya mbegu. Angalia kiasi kisha ujaribu tena.',
       saving: 'Inahifadhi...',
       submit: 'Ongeza akiba',
