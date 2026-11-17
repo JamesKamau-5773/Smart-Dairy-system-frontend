@@ -17,7 +17,7 @@ export const herdCopy = {
     Culled: 'Ameondolewa', // REVIEW: culled
   },
   age: {
-    unknown: 'Haijulikani',
+    notRecorded: 'Umri haujarekodiwa',
     short: (years, months) => `miaka ${years} miezi ${months}`,
   },
 

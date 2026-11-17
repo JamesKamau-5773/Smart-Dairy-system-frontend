@@ -18,7 +18,7 @@ export const herdCopy = {
     Culled: 'Culled',
   },
   age: {
-    unknown: 'N/A',
+    notRecorded: 'Age not recorded',
     short: (years, months) => `${years}y ${months}m`,
   },
 

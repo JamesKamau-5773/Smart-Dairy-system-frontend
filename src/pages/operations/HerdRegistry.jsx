@@ -21,8 +21,8 @@ import { formatCowIdentity } from '../../lib/cowIdentity';
 import { useTenant } from '../../hooks/useTenant';
 import { herdCopy, herdStatusLabel } from '../../i18n/herd';
 import { useUrlFilters } from '../../hooks/useUrlFilters';
+import AnimalAge from '../../components/operations/AnimalAge';
 import {
-  formatAge,
   formatDate,
   statusTone,
   hasValidTimestamp,
@@ -135,6 +135,8 @@ export default function HerdRegistry() {
     if (sortBy === 'breed') return a.breed.localeCompare(b.breed) || a.id.localeCompare(b.id);
     if (sortBy === 'status') return a.status.localeCompare(b.status) || a.id.localeCompare(b.id);
     if (sortBy === 'name') return a.name.localeCompare(b.name) || a.id.localeCompare(b.id);
+    // Unknown ages (null) sort last, never as 0.
+    if (a.ageMonths === null || b.ageMonths === null) return (a.ageMonths === null) - (b.ageMonths === null) || a.id.localeCompare(b.id);
     return a.ageMonths - b.ageMonths;
   });
 
@@ -615,7 +617,7 @@ export default function HerdRegistry() {
           </div>
           <div className="rounded-lg border border-ink/10 bg-surface-raised px-4 py-3">
             <div className="text-label text-ink-muted">{copy.averageAge}</div>
-            <div className="mt-1 text-stat-value text-ink-strong">{formatAge(herdSummary.averageAgeMonths)}</div>
+            <div className="mt-1 text-stat-value text-ink-strong"><AnimalAge months={herdSummary.averageAgeMonths} /></div>
           </div>
           <div className="rounded-lg border border-ink/10 bg-surface-raised px-4 py-3">
             <div className="text-label text-ink-muted">{copy.milkingDry}</div>
@@ -811,7 +813,7 @@ export default function HerdRegistry() {
                       <td className="px-3 py-2.5 text-body text-ink-muted">{cow.breed}</td>
                       <td className="px-3 py-2.5 text-body text-ink-muted">{formatDate(cow.lastCalved)}</td>
                       <td className="px-3 py-2.5 text-body text-ink-muted">
-                        {formatAge(cow.ageMonths)}
+                        <AnimalAge months={cow.ageMonths} />
                       </td>
                       <td className="px-3 py-2.5">
                         <span
@@ -876,7 +878,7 @@ export default function HerdRegistry() {
                     </div>
                     <div className="mt-3 grid grid-cols-2 gap-3 rounded-lg bg-surface-raised p-3 text-meta">
                       <div><p className="text-ink-muted">{copy.lastCalvedShort}</p><p className="mt-1 text-body-strong text-ink">{formatDate(cow.lastCalved)}</p></div>
-                      <div><p className="text-ink-muted">{copy.ageShort}</p><p className="mt-1 text-body-strong text-ink">{formatAge(cow.ageMonths)}</p></div>
+                      <div><p className="text-ink-muted">{copy.ageShort}</p><p className="mt-1 text-body-strong text-ink"><AnimalAge months={cow.ageMonths} /></p></div>
                       <div className="col-span-2"><p className="text-ink-muted">{copy.updatedShort}</p><p className="mt-1 text-body-strong text-ink">{hasValidTimestamp(cow.updatedAt) ? `${getRelativeTime(cow.updatedAt)}${cow.updatedBy ? ` · ${cow.updatedBy}` : ''}` : '—'}</p></div>
                     </div>
                     <div className="mt-3 flex gap-2">
