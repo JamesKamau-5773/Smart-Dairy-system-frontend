@@ -17,6 +17,7 @@ import {
 import {
   enrichBreedingLogCowIdentity,
   filterBreedingHistory,
+  formatBreedingCowLabel,
   normalizeBreedingLog,
   normalizeHerdOption,
   normalizeSemenInventory,
@@ -36,80 +37,14 @@ import {
   Plus,
   Trash2,
   ChevronRight,
-  ChevronDown,
-  ChevronUp,
-  Search,
   Pencil,
 } from 'lucide-react';
 import { toLocalIsoDate } from '../../lib/localDate';
-import { formatDate, formatMonth } from '../../lib/dateFormat';
+import { groupHistoryByMonth } from '../../lib/breedingHistory';
+import { SemenSourceBadge } from '../../components/breeding/BreedingBadges';
+import BreedingHistoryFilters from '../../components/breeding/BreedingHistoryFilters';
+import BreedingHistoryList from '../../components/breeding/BreedingHistoryList';
 import { reportError } from '../../lib/telemetry';
-
-/**
- * NOTE: The following components should be extracted into their own files
- * under `src/components/breeding/` to improve code organization and reusability.
- */
-const OUTCOME_LABELS = {
-  Pregnant: 'Pregnant (In-Calf)',
-  Open: 'Open (Not Pregnant)',
-  Failed: 'Unsuccessful',
-  Pending: 'Pending Check',
-};
-
-// A history row is the backend record plus a display label for its status. Notes and the
-// "Updated" date are the backend's own; nothing is filled in when they're missing.
-function createHistoryEntry(log) {
-  return { ...log, outcome: OUTCOME_LABELS[log.status] ?? OUTCOME_LABELS.Pending };
-}
-
-function getStatusTone(status) {
-  if (status === 'Pregnant') return 'border-emerald-500/30 bg-emerald-500/10 text-emerald-700';
-  if (status === 'Open') return 'border-rose-500/30 bg-rose-500/10 text-rose-600';
-  if (status === 'Failed') return 'border-red-700/25 bg-red-600/10 text-red-800';
-  return 'border-brand/20 bg-brand/10 text-brand';
-}
-
-function formatSemenSource(source = 'farm_stock') {
-  if (source === 'unknown') return 'Unknown Source';
-  return source === 'vet_provided' ? 'Vet Provided' : 'Farm Stock';
-}
-
-function getSemenSourceTone(source = 'farm_stock') {
-  if (source === 'unknown') {
-    return 'border-ink/20 bg-surface-raised text-ink-muted';
-  }
-  return source === 'vet_provided'
-    ? 'border-amber-500/30 bg-amber-500/10 text-amber-700'
-    : 'border-sky-500/30 bg-sky-500/10 text-sky-700';
-}
-
-function formatCowLabel(log = {}) {
-  return formatCowIdentity({ cowName: log.cowName, cowTag: log.cowTag });
-}
-
-const NO_AI_DATE_GROUP = 'no-ai-date';
-
-// Groups by the month of the AI service date the backend sent (YYYY-MM-DD → YYYY-MM), in the
-// order given (newest first). Records without an AI date get their own group at the end.
-function groupHistoryByMonth(history) {
-  const groups = new Map();
-  history.forEach((entry) => {
-    const key = /^\d{4}-\d{2}-\d{2}$/.test(entry.aiDate ?? '') ? entry.aiDate.slice(0, 7) : NO_AI_DATE_GROUP;
-    if (!groups.has(key)) groups.set(key, []);
-    groups.get(key).push(entry);
-  });
-  return groups;
-}
-
-const historyMonthLabel = (key) => (key === NO_AI_DATE_GROUP ? 'No AI date' : formatMonth(key) ?? key);
-
-function HistoryStatusBadge({ status, outcome }) {
-  return (
-    <span className={`inline-flex rounded-full border px-2 py-1 text-[10px] font-black uppercase tracking-wider ${getStatusTone(status)}`}>
-      {outcome}
-    </span>
-  );
-}
 
 // ============================================================================
 // COMPONENT 1: Page Header & KPI Chips (Responsibility: High-level context & Global Actions)
@@ -208,7 +143,7 @@ function VetQueueItem({ log, onOutcome, onEdit, isUpdating }) {
       isReady ? 'border-brand/20 bg-surface' : 'border-ink/5 bg-surface/50 opacity-80'
     }`}>
       <div>
-        <h4 className={`font-bold text-base ${isReady ? 'text-brand' : 'text-ink-strong'}`}>{formatCowLabel(log)}</h4>
+        <h4 className={`font-bold text-base ${isReady ? 'text-brand' : 'text-ink-strong'}`}>{formatBreedingCowLabel(log)}</h4>
         <div className="mt-1 flex gap-3 font-mono text-xs text-ink-muted">
           <span>Served: {log.aiDate || '--'}</span>
           <span aria-hidden="true">•</span>
@@ -226,9 +161,7 @@ function VetQueueItem({ log, onOutcome, onEdit, isUpdating }) {
             </>
           )}
           <span aria-hidden="true">•</span>
-          <span className={`rounded-full border px-2 py-0.5 font-sans text-[10px] font-bold uppercase tracking-wide ${getSemenSourceTone(log.semenSource)}`}>
-            {formatSemenSource(log.semenSource)}
-          </span>
+          <SemenSourceBadge source={log.semenSource} />
         </div>
       </div>
 
@@ -266,7 +199,7 @@ function VetQueueItem({ log, onOutcome, onEdit, isUpdating }) {
           type="button"
           onClick={() => onEdit(log)}
           className="btn-secondary inline-flex items-center gap-1 px-3 py-2 text-xs"
-          aria-label={`Edit AI service for ${formatCowLabel(log)}`}
+          aria-label={`Edit AI service for ${formatBreedingCowLabel(log)}`}
         >
           <Pencil size={14} /> Edit
         </button>
@@ -456,10 +389,7 @@ export default function BreedingHub() {
       .map((log) => enrichBreedingLogCowIdentity(log, herdOptions));
   }, [breedingLogsData, herdOptions]);
 
-  const vetHistory = useMemo(
-    () => (normalizedBreedingLogs ?? []).map(createHistoryEntry),
-    [normalizedBreedingLogs],
-  );
+  const vetHistory = normalizedBreedingLogs ?? [];
   const vetQueue = useMemo(
     () => (normalizedBreedingLogs ?? []).filter((log) => log.status === 'Pending'),
     [normalizedBreedingLogs],
@@ -565,8 +495,6 @@ export default function BreedingHub() {
 
   const filteredHistory = filterBreedingHistory(vetHistory, historyFilter, historySearch);
   const groupedHistory = groupHistoryByMonth(filteredHistory);
-  const hasActiveHistoryFilters = historyFilter !== 'All' || historySearch.trim() !== '';
-  const activeHistoryControlCount = [historySearch.trim(), historyFilter !== 'All'].filter(Boolean).length;
 
   const handleDeleteInventory = async (bull) => {
     if (!bull?.id) {
@@ -765,180 +693,26 @@ export default function BreedingHub() {
         />
       </BaseModal>
 
-      <BaseModal closeOnBackdrop isOpen={isHistoryOpen} onClose={() => setIsHistoryOpen(false)} title="Historical Checks">
-        <div className="space-y-4">
-          <SimpleModalSection title="All Checks">
-            <div className="flex flex-col gap-3 border-b border-ink/10 pb-4 md:flex-row md:items-center md:justify-between">
-              <div>
-                <div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest text-ink-muted">
-                  <Search size={12} /> Search and filters
-                </div>
-                <p className="mt-1 text-sm leading-6 text-ink-muted">Filter breeding history by record status, cow name, or ear tag.</p>
-              </div>
+      <BaseModal
+        closeOnBackdrop
+        size="4xl"
+        isOpen={isHistoryOpen}
+        onClose={() => setIsHistoryOpen(false)}
+        title="Historical Checks"
+        footerActions={<button type="button" onClick={() => setIsHistoryOpen(false)} className="btn-command px-4 py-2 text-sm">Close</button>}
+      >
+        <SimpleModalSection title="All Checks">
+          <BreedingHistoryFilters
+            filter={historyFilter}
+            search={historySearch}
+            open={historyControlsOpen}
+            onFilterChange={setHistoryFilter}
+            onSearchChange={setHistorySearch}
+            onToggle={() => setHistoryControlsOpen((current) => !current)}
+          />
 
-              <div className="flex items-center gap-2">
-                <span className="rounded-full border border-ink/10 bg-surface-warm/60 px-3 py-1 text-[10px] font-bold uppercase tracking-widest text-ink-muted">
-                  {activeHistoryControlCount} active
-                </span>
-                <button
-                  type="button"
-                  onClick={() => setHistoryControlsOpen((current) => !current)}
-                  aria-expanded={historyControlsOpen}
-                  className="inline-flex items-center gap-1.5 rounded-lg border border-ink/10 bg-surface px-3 py-1.5 text-xs font-semibold text-ink  transition-all hover:border-brand/20 hover:bg-brand/5 hover:text-brand"
-                >
-                  {historyControlsOpen ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
-                  {historyControlsOpen ? 'Hide filters' : 'Show filters'}
-                </button>
-              </div>
-            </div>
-
-            {historyControlsOpen && (
-              <div className="space-y-4 pt-4">
-                <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-                  <div className="flex flex-1 items-center gap-2 rounded-lg border border-ink/10 bg-surface-raised px-3 py-2">
-                    <Search size={14} className="text-ink-muted" />
-                    <input
-                      type="search"
-                      value={historySearch}
-                      onChange={(event) => setHistorySearch(event.target.value)}
-                      placeholder="Search name or ear tag..."
-                      className="w-full bg-transparent text-sm text-ink-strong outline-none placeholder:text-ink-muted"
-                    />
-                  </div>
-
-                  <div className="flex items-center gap-2">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setHistoryFilter('All');
-                        setHistorySearch('');
-                      }}
-                      className={`rounded-lg border px-3 py-2 text-xs font-bold transition-colors ${
-                        hasActiveHistoryFilters
-                          ? 'border-brand/20 bg-brand/5 text-brand hover:bg-brand/10'
-                          : 'border-ink/10 bg-surface-raised text-ink-muted'
-                      }`}
-                    >
-                      Clear filters
-                    </button>
-                  </div>
-                </div>
-
-                <div className="flex flex-wrap gap-2">
-                  {[
-                    { value: 'All', label: 'All' },
-                    { value: 'Pregnant', label: 'Pregnant' },
-                    { value: 'Open', label: 'Open' },
-                    { value: 'Pending', label: 'Pending' },
-                    { value: 'Failed', label: 'Unsuccessful' },
-                  ].map(({ value, label }) => (
-                    <button
-                      key={value}
-                      type="button"
-                      onClick={() => setHistoryFilter(value)}
-                      className={`rounded-full border px-3 py-1.5 text-xs font-bold transition-colors ${
-                        historyFilter === value
-                          ? 'border-brand bg-brand text-surface'
-                          : 'border-ink/10 bg-surface-raised text-ink-muted hover:border-brand/20 hover:text-brand'
-                      }`}
-                    >
-                      {label}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            <div className="max-h-[420px] overflow-y-auto pr-1">
-              {filteredHistory.length === 0 && (
-                <div className="rounded-lg border border-dashed border-ink/10 bg-surface/50 p-6 text-center text-sm text-ink-muted">
-                  No records match the selected filter.
-                </div>
-              )}
-
-              {Array.from(groupedHistory.entries()).map(([monthKey, entries]) => (
-                <div key={monthKey} className="mb-4 space-y-2 last:mb-0">
-                  <div className="sticky top-0 z-10 flex items-center justify-between rounded-md border border-ink/10 bg-surface px-3 py-2 text-xs font-black uppercase tracking-widest text-brand ">
-                    <span>{historyMonthLabel(monthKey)}</span>
-                    <span className="rounded-full bg-brand/5 px-2 py-0.5 text-[10px] font-black text-brand">
-                      {entries.length} {entries.length === 1 ? 'record' : 'records'}
-                    </span>
-                  </div>
-
-                  {/* Phones: one card per AI record, like the other lists. */}
-                  <ul className="space-y-2 md:hidden">
-                    {entries.map((entry) => (
-                      <li key={entry.id} className="min-w-0 rounded-lg border border-ink/10 bg-surface-raised p-3">
-                        <div className="flex min-w-0 items-start justify-between gap-3">
-                          <div className="min-w-0">
-                            <p className="break-words font-bold text-ink-strong">{formatCowLabel(entry)}</p>
-                            {entry.notes && <p className="mt-1 break-words text-[11px] text-ink-muted">{entry.notes}</p>}
-                          </div>
-                          <HistoryStatusBadge status={entry.status} outcome={entry.outcome} />
-                        </div>
-                        <dl className="mt-3 grid grid-cols-2 gap-x-3 gap-y-2 border-t border-ink/10 pt-2 text-xs">
-                          <div className="min-w-0"><dt className="text-ink-muted">AI Date</dt><dd className="font-medium text-ink">{entry.aiDate || '—'}</dd></div>
-                          <div className="min-w-0"><dt className="text-ink-muted">Bull</dt><dd className="break-words font-medium text-ink">{entry.sireCode || '—'}</dd></div>
-                          <div className="min-w-0"><dt className="text-ink-muted">Expected Calving</dt><dd className="font-medium text-ink">{entry.expectedCalvingDate || '—'}</dd></div>
-                          <div className="min-w-0"><dt className="text-ink-muted">Updated</dt><dd className="font-medium text-ink">{formatDate(entry.updatedAt, '—')}</dd></div>
-                          <div className="col-span-2 min-w-0">
-                            <dt className="sr-only">Source</dt>
-                            <dd>
-                              <span className={`inline-flex rounded-full border px-2 py-1 text-[10px] font-black uppercase tracking-wider ${getSemenSourceTone(entry.semenSource)}`}>
-                                {formatSemenSource(entry.semenSource)}
-                              </span>
-                            </dd>
-                          </div>
-                        </dl>
-                      </li>
-                    ))}
-                  </ul>
-
-                  <div className="hidden overflow-hidden rounded-lg border border-ink/10 bg-surface-raised md:block">
-                    <table className="w-full border-collapse text-left">
-                      <thead className="bg-surface/70">
-                        <tr>
-                          <th className="px-2 py-1.5 text-[9px] font-black uppercase tracking-wider text-ink-muted">Cow</th>
-                          <th className="px-2 py-1.5 text-[9px] font-black uppercase tracking-wider text-ink-muted">AI Date</th>
-                          <th className="px-2 py-1.5 text-[9px] font-black uppercase tracking-wider text-ink-muted">Bull</th>
-                          <th className="px-2 py-1.5 text-[9px] font-black uppercase tracking-wider text-ink-muted">Expected Calving</th>
-                          <th className="px-2 py-1.5 text-[9px] font-black uppercase tracking-wider text-ink-muted">Source</th>
-                          <th className="px-2 py-1.5 text-[9px] font-black uppercase tracking-wider text-ink-muted">Status</th>
-                          <th className="px-2 py-1.5 text-[9px] font-black uppercase tracking-wider text-ink-muted">Updated</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {entries.map((entry) => (
-                          <tr key={entry.id} className="border-t border-ink/5 align-top hover:bg-surface/50">
-                            <td className="px-2 py-2">
-                              <div className="font-bold text-ink-strong">{formatCowLabel(entry)}</div>
-                              {entry.notes && <div className="mt-1 text-[11px] text-ink-muted">{entry.notes}</div>}
-                            </td>
-                            <td className="px-2 py-2 text-sm text-ink-muted">{entry.aiDate || '—'}</td>
-                            <td className="px-2 py-2 text-sm text-ink-muted">{entry.sireCode || '—'}</td>
-                            <td className="px-2 py-2 text-sm text-ink-muted">{entry.expectedCalvingDate || '—'}</td>
-                            <td className="px-2 py-2">
-                              <span className={`inline-flex rounded-full border px-2 py-1 text-[10px] font-black uppercase tracking-wider ${getSemenSourceTone(entry.semenSource)}`}>
-                                {formatSemenSource(entry.semenSource)}
-                              </span>
-                            </td>
-                            <td className="px-2 py-2">
-                              <HistoryStatusBadge status={entry.status} outcome={entry.outcome} />
-                            </td>
-                            <td className="px-2 py-2 text-sm text-ink-muted">{formatDate(entry.updatedAt, '—')}</td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </SimpleModalSection>
-          <div className="flex justify-end pt-2">
-            <button type="button" onClick={() => setIsHistoryOpen(false)} className="btn-command px-4 py-2 text-sm">Close</button>
-          </div>
-        </div>
+          <BreedingHistoryList groups={groupedHistory} />
+        </SimpleModalSection>
       </BaseModal>
 
       <BaseModal closeOnBackdrop isOpen={isInventoryOpen} onClose={() => setIsInventoryOpen(false)} title="Add New Inventory">

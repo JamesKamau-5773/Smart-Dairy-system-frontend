@@ -153,6 +153,11 @@ export function normalizeBreedingLog(log = {}) {
   };
 }
 
+/** "Malaika · KE-0046": how a breeding record names its cow. */
+export function formatBreedingCowLabel(log = {}) {
+  return formatCowIdentity({ cowName: log.cowName, cowTag: log.cowTag });
+}
+
 export function filterBreedingHistory(history, filter = 'All', searchTerm = '') {
   const normalizedSearch = searchTerm.trim().toLowerCase();
 
