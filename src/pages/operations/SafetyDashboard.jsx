@@ -20,15 +20,16 @@ import { useAuth } from '../../contexts/AuthContext';
 import { useTenant } from '../../hooks/useTenant';
 import { safetyCopy as copy } from '../../i18n/safety';
 import { tone } from '../../components/ui/tones';
+import { shellCopy } from '../../i18n/shell';
 
 // Risk is the strength of the app's blue (./tones), with the label in words.
 const SEVERITY_TONE = { high: tone('critical'), medium: tone('attention'), low: tone('neutral') };
 
 function SeverityChip({ severity }) {
-  if (!severity) return <span className="text-xs text-ink-muted">{copy.notRecorded}</span>;
+  if (!severity) return <span className="text-meta text-ink-muted">{copy.notRecorded}</span>;
   const tone = SEVERITY_TONE[severity];
   return (
-    <span className={`inline-flex items-center gap-1.5 rounded-badge px-2 py-0.5 text-xs font-semibold ${tone.chip}`}>
+    <span className={`inline-flex items-center gap-1.5 rounded-badge px-2 py-0.5 text-meta ${tone.chip}`}>
       <span className={`h-1.5 w-1.5 rounded-full ${tone.dot}`} aria-hidden="true" /> {copy.severity[severity]}
     </span>
   );
@@ -37,11 +38,11 @@ function SeverityChip({ severity }) {
 function ClearsOn({ lockExpires }) {
   const date = formatLockExpiry(lockExpires);
   const days = daysUntilClear(lockExpires);
-  if (!date) return <span className="text-sm text-ink-muted">{copy.noDate}</span>;
+  if (!date) return <span className="text-body text-ink-muted">{copy.noDate}</span>;
   return (
-    <span className="block text-sm">
-      <span className="font-semibold text-ink">{date}</span>
-      <span className={`block text-xs ${days === 0 ? 'font-semibold text-brand' : 'text-ink-muted'}`}>
+    <span className="block text-body">
+      <span className="text-body-strong text-ink">{date}</span>
+      <span className={`block text-meta ${days === 0 ? 'text-body-strong text-brand' : 'text-ink-muted'}`}>
         {days === 0 ? copy.withdrawalOver : copy.clearsIn(days)}
       </span>
     </span>
@@ -57,19 +58,19 @@ function HoldSummary({ total, counts }) {
           {onHold ? <ShieldAlert size={20} className={tone('critical').icon} /> : <ShieldCheck size={20} className={tone('info').icon} />}
         </span>
         <div className="min-w-0">
-          <h2 id="hold-summary" className="text-lg font-bold text-ink">{onHold ? copy.holdTitle(total) : copy.clearTitle}</h2>
-          <p className="text-sm text-ink-muted">{onHold ? copy.holdHint : copy.clearHint}</p>
+          <h2 id="hold-summary" className="text-section-title text-ink">{onHold ? copy.holdTitle(total) : copy.clearTitle}</h2>
+          <p className="text-body text-ink-muted">{onHold ? copy.holdHint : copy.clearHint}</p>
         </div>
       </div>
       {onHold && (
         <dl className="mt-4 grid grid-cols-3 divide-x divide-ink/10 rounded-card border border-ink/10">
           {SEVERITIES.map((severity) => (
             <div key={severity} className="px-3 py-2.5">
-              <dt className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-ink-muted">
+              <dt className="flex items-center gap-1.5 text-label text-ink-muted">
                 <span className={`h-1.5 w-1.5 rounded-full ${SEVERITY_TONE[severity].dot}`} aria-hidden="true" /> {copy.severity[severity]}
               </dt>
-              <dd className="mt-0.5 text-xl font-bold tabular-nums text-ink">{counts[severity]}</dd>
-              <dd className="text-[11px] text-ink-muted">{copy.severityHint[severity]}</dd>
+              <dd className="mt-0.5 text-body-strong tabular-nums text-ink">{counts[severity]}</dd>
+              <dd className="text-meta text-ink-muted">{copy.severityHint[severity]}</dd>
             </div>
           ))}
         </dl>
@@ -83,32 +84,32 @@ function LockCard({ lock, tenantId, canRelease, canRecordTest, isReleasing, onRe
     <article className="flex flex-col gap-3 rounded-card border border-ink/10 bg-card p-4 sm:flex-row sm:items-start sm:justify-between">
       <div className="min-w-0 space-y-1">
         <div className="flex flex-wrap items-center gap-2">
-          <h3 className="text-base font-bold text-ink">{formatCowIdentity(lock)}</h3>
+          <h2 className="text-section-title text-ink">{formatCowIdentity(lock)}</h2>
           <SeverityChip severity={lock.severity} />
         </div>
-        <p className="text-sm text-ink">{lock.reason ?? copy.notRecorded}</p>
-        <p className="text-xs text-ink-muted">{copy.medication}: {lock.medication ?? copy.notRecorded}</p>
-        {lock.vetName && <p className="text-xs text-ink-muted">{copy.treatedBy(lock.vetName)}</p>}
-        {lock.source === 'manual' && <p className="text-xs text-ink-muted">{lock.updatedBy ? copy.heldBy(lock.updatedBy) : copy.manualHold}</p>}
-        {lock.latestTest && <p className="text-xs text-ink-muted">{copy.latestTest(lock.latestTest.test_type, lock.latestTest.result)}</p>}
-        {lock.notes && <p className="text-xs text-ink-muted">{copy.notes}: {lock.notes}</p>}
+        <p className="text-body text-ink">{lock.reason ?? copy.notRecorded}</p>
+        <p className="text-meta text-ink-muted">{copy.medication}: {lock.medication ?? copy.notRecorded}</p>
+        {lock.vetName && <p className="text-meta text-ink-muted">{copy.treatedBy(lock.vetName)}</p>}
+        {lock.source === 'manual' && <p className="text-meta text-ink-muted">{lock.updatedBy ? copy.heldBy(lock.updatedBy) : copy.manualHold}</p>}
+        {lock.latestTest && <p className="text-meta text-ink-muted">{copy.latestTest(lock.latestTest.test_type, lock.latestTest.result)}</p>}
+        {lock.notes && <p className="text-meta text-ink-muted">{copy.notes}: {lock.notes}</p>}
         {lock.cowRecordId && (
-          <Link to={`/operations/animal/${lock.cowRecordId}`} className="inline-flex min-h-8 items-center text-sm font-semibold text-brand hover:underline">
+          <Link to={`/operations/animal/${lock.cowRecordId}`} className="inline-flex min-h-8 items-center text-body-strong text-brand hover:underline">
             {copy.openCow}
           </Link>
         )}
         <MilkTestHistory tenantId={tenantId} cowId={lock.cowId} />
       </div>
       <div className="flex shrink-0 flex-col gap-2 sm:items-end sm:text-right">
-        <p className="text-[11px] font-semibold uppercase tracking-wider text-ink-muted">{copy.columns.clears}</p>
+        <p className="text-label text-ink-muted">{copy.columns.clears}</p>
         <ClearsOn lockExpires={lock.lockExpires} />
         {canRecordTest && (
-          <button type="button" onClick={() => onRecordTest(lock)} className="btn-ghost text-sm font-semibold">
+          <button type="button" onClick={() => onRecordTest(lock)} className="btn-ghost text-control">
             {copy.recordTest}
           </button>
         )}
         {canRelease && (
-          <button type="button" onClick={() => onRelease(lock)} disabled={isReleasing} className="btn-secondary text-sm font-semibold">
+          <button type="button" onClick={() => onRelease(lock)} disabled={isReleasing} className="btn-secondary text-control">
             {copy.release}
           </button>
         )}
@@ -263,22 +264,22 @@ export default function MilkSafetyBoard() {
 
       <header className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <p className="text-[11px] font-semibold uppercase tracking-wider text-ink-muted">{copy.eyebrow}</p>
-          <h1 className="text-2xl font-black tracking-tight text-ink sm:text-3xl">{copy.title}</h1>
-          <p className="mt-1 max-w-2xl text-sm text-ink-muted">{copy.subtitle}</p>
+          <p className="text-label text-ink-muted">{copy.eyebrow}</p>
+          <h1 className="text-page-title text-ink">{shellCopy.nav.items.safety}</h1>
+          <p className="mt-1 max-w-2xl text-body text-ink-muted">{copy.subtitle}</p>
         </div>
         <div className="flex flex-wrap gap-2 self-start sm:self-auto">
           {canRecord && (
             <>
-              <button type="button" onClick={() => openForm('hold')} className="btn-command text-sm">
+              <button type="button" onClick={() => openForm('hold')} className="btn-command text-control">
                 {copy.placeHold}
               </button>
-              <button type="button" onClick={() => openForm('test')} className="btn-secondary text-sm">
+              <button type="button" onClick={() => openForm('test')} className="btn-secondary text-control">
                 {copy.recordTest}
               </button>
             </>
           )}
-          <button type="button" onClick={() => boardQuery.refetch()} disabled={boardQuery.isFetching} className="btn-ghost text-sm">
+          <button type="button" onClick={() => boardQuery.refetch()} disabled={boardQuery.isFetching} className="btn-ghost text-control">
             {boardQuery.isFetching ? copy.refreshing : copy.refresh}
           </button>
         </div>
@@ -297,11 +298,11 @@ export default function MilkSafetyBoard() {
               <label className="relative min-w-0 flex-1">
                 <span className="sr-only">{copy.search}</span>
                 <Search size={16} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-ink-muted" aria-hidden="true" />
-                <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder={copy.search} className="input-machined w-full pl-9 text-sm" />
+                <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder={copy.search} className="input-machined w-full pl-9 text-control" />
               </label>
               <label className="sm:w-48">
                 <span className="sr-only">{copy.columns.risk}</span>
-                <select value={severity} onChange={(event) => setSeverity(event.target.value)} className="input-machined w-full text-sm">
+                <select value={severity} onChange={(event) => setSeverity(event.target.value)} className="input-machined w-full text-control">
                   <option value="all">{copy.allSeverities}</option>
                   {SEVERITIES.map((value) => <option key={value} value={value}>{copy.severity[value]}</option>)}
                 </select>
@@ -309,7 +310,7 @@ export default function MilkSafetyBoard() {
             </div>
           )}
 
-          {total > locks.length && <p className="text-xs text-ink-muted">{copy.showing(locks.length, total)}</p>}
+          {total > locks.length && <p className="text-meta text-ink-muted">{copy.showing(locks.length, total)}</p>}
 
           <div className="space-y-3">
             {visible.map((lock) => (
@@ -327,9 +328,9 @@ export default function MilkSafetyBoard() {
           </div>
 
           {total > 0 && visible.length === 0 && (
-            <p className="text-sm text-ink-muted">
+            <p className="text-body text-ink-muted">
               {copy.noMatches}{' '}
-              <button type="button" onClick={() => { setQuery(''); setSeverity('all'); }} className="font-semibold text-brand hover:underline">{copy.clearFilters}</button>
+              <button type="button" onClick={() => { setQuery(''); setSeverity('all'); }} className="text-control text-brand hover:underline">{copy.clearFilters}</button>
             </p>
           )}
         </>

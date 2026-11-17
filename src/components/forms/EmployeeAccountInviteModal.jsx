@@ -92,10 +92,10 @@ export default function EmployeeAccountInviteModal({ isOpen, staff, onClose, onI
         <>
           <button type="button" onClick={onClose} className="btn-secondary">{copy.close}</button>
           {onSaveAccess && staff.userId && (
-            <button type="button" onClick={handleSaveAccess} disabled={isSubmitting} className="rounded-md border border-brand px-4 py-2 text-sm font-semibold text-brand disabled:opacity-50">{copy.savePages}</button>
+            <button type="button" onClick={handleSaveAccess} disabled={isSubmitting} className="rounded-md border border-brand px-4 py-2 text-control text-brand disabled:opacity-50">{copy.savePages}</button>
           )}
           {!actionComplete && !isActiveAccount && (
-            <button type="submit" form="manage-app-access-form" disabled={isSubmitting} className="inline-flex items-center justify-center rounded-md bg-brand px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-brand/90 disabled:cursor-not-allowed disabled:opacity-50">
+            <button type="submit" form="manage-app-access-form" disabled={isSubmitting} className="inline-flex items-center justify-center rounded-md bg-brand px-4 py-2 text-control text-white transition-colors hover:bg-brand/90 disabled:cursor-not-allowed disabled:opacity-50">
               {isSubmitting
                 ? copy.saving
                 : mode === ACCESS_MODES.INVITE
@@ -107,12 +107,12 @@ export default function EmployeeAccountInviteModal({ isOpen, staff, onClose, onI
       )}
     >
       <form id="manage-app-access-form" onSubmit={handleSubmit} className="space-y-5">
-        <p className="font-semibold text-ink-strong">{staff.name}</p>
+        <p className="text-body-strong text-ink-strong">{staff.name}</p>
 
         {errorMessage && <AlertBanner type="danger" title={copy.failedTitle} message={errorMessage} onDismiss={() => setErrorMessage('')} />}
         {savedMessage && <AlertBanner type="success" title={copy.updatedTitle} message={savedMessage} onDismiss={() => setSavedMessage('')} />}
 
-        {isActiveAccount && <p className="text-sm text-slate-600">{copy.activeHint}</p>}
+        {isActiveAccount && <p className="text-body text-slate-600">{copy.activeHint}</p>}
 
         {!actionComplete && !isActiveAccount && (
           <AccessProvisioningFields
@@ -129,12 +129,12 @@ export default function EmployeeAccountInviteModal({ isOpen, staff, onClose, onI
 
         <section className="space-y-2 rounded-lg border border-slate-200 p-4">
           <div>
-            <h3 className="text-sm font-bold text-slate-800">{copy.pages}</h3>
-            <p className="text-xs text-slate-500">{copy.pagesHint}</p>
+            <h3 className="text-section-title text-slate-800">{copy.pages}</h3>
+            <p className="text-meta text-slate-500">{copy.pagesHint}</p>
           </div>
           <div className="grid gap-2 sm:grid-cols-2">
             {STAFF_PAGE_ACCESS_OPTIONS.map(({ key, label }) => (
-              <label key={key} className="flex items-center gap-2 text-sm text-slate-700">
+              <label key={key} className="flex items-center gap-2 text-field-label text-slate-700">
                 <input type="checkbox" checked={pageAccess.includes(key)} onChange={(event) => setPageAccess((current) => event.target.checked ? [...current, key] : current.filter((entry) => entry !== key))} />
                 {label}
               </label>

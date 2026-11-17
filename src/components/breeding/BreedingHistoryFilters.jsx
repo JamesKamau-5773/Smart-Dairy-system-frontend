@@ -2,6 +2,8 @@ import { ChevronDown, ChevronUp, Search } from 'lucide-react';
 import { SURFACE } from '../data/surface';
 import { activeHistoryFilterCount, historyFilters } from '../../lib/breedingHistory';
 import { breedingCopy } from '../../i18n/breeding';
+import { commonCopy } from '../../i18n/common';
+import { PHONE_QUERY, useMediaQuery } from '../../hooks/useMediaQuery';
 
 /**
  * Search and status filters for Historical Checks, folded behind "Show filters".
@@ -9,6 +11,8 @@ import { breedingCopy } from '../../i18n/breeding';
  */
 export default function BreedingHistoryFilters({ filter, search, open, onFilterChange, onSearchChange, onToggle }) {
   const copy = breedingCopy.hub;
+  // Inputs are 16px on phones, so the long search hint would be cut off there.
+  const isPhone = useMediaQuery(PHONE_QUERY);
   const activeCount = activeHistoryFilterCount(filter, search);
   const clear = () => {
     onFilterChange('All');
@@ -50,7 +54,7 @@ export default function BreedingHistoryFilters({ filter, search, open, onFilterC
                 type="search"
                 value={search}
                 onChange={(event) => onSearchChange(event.target.value)}
-                placeholder={copy.historySearch}
+                placeholder={isPhone ? commonCopy.filters.searchShort : copy.historySearch}
                 aria-label={copy.historySearch}
                 className="w-full bg-transparent text-control text-ink-strong outline-none placeholder:text-ink-muted"
               />

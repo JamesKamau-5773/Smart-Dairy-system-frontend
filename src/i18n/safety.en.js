@@ -1,7 +1,6 @@
 // User-facing text for the milk safety board.
 export const safetyCopy = {
   eyebrow: 'Milk safety',
-  title: 'Milk Safety Board',
   subtitle: 'Cows whose milk must be kept apart and not sold until their withdrawal period ends.',
   holdTitle: (count) => `Keep milk from ${count} ${count === 1 ? 'cow' : 'cows'} apart`,
   holdHint: 'Do not mix it with the bulk tank or sell it until each cow is released.',

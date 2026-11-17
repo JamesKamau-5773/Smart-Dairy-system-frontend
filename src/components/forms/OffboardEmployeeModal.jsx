@@ -7,8 +7,8 @@ import { OFFBOARDING_REASONS, hasAppAccount } from '../../lib/staffLabels';
 import { tone } from '../ui/tones';
 import { staffCopy } from '../../i18n/staff';
 
-const fieldClass = 'input-machined w-full text-sm';
-const labelClass = 'mb-1.5 block text-xs font-semibold text-ink';
+const fieldClass = 'input-machined w-full';
+const labelClass = 'mb-1.5 block text-field-label text-ink';
 
 /**
  * Marks someone as former staff with a last working day and a reason. Records
@@ -46,7 +46,7 @@ export default function OffboardEmployeeModal({ staff, onClose, onSubmit }) {
     <BaseModal isOpen onClose={onClose} title={copy.title(staff.name)} subtitle={copy.subtitle}>
       <form onSubmit={submit} noValidate className="space-y-4">
         {hasLoan && (
-          <p role="alert" className={`rounded-card border p-3 text-sm text-ink ${tone('critical').border} ${tone('critical').surface}`}>
+          <p role="alert" className={`rounded-card border p-3 text-body text-ink ${tone('critical').border} ${tone('critical').surface}`}>
             {copy.stillOwes(staff.name, Number(staff.loanBalance).toLocaleString())}
           </p>
         )}
@@ -69,9 +69,9 @@ export default function OffboardEmployeeModal({ staff, onClose, onSubmit }) {
         </div>
 
         {hasAppAccount(staff.accountStatus) && (
-          <p className="text-xs text-ink-muted">{copy.loginHint(staff.name)}</p>
+          <p className="text-meta text-ink-muted">{copy.loginHint(staff.name)}</p>
         )}
-        {error && <p role="alert" className="text-sm font-semibold text-danger">{error}</p>}
+        {error && <p role="alert" className="text-body-strong text-danger">{error}</p>}
 
         <SubmitButton pending={pending} pendingLabel={copy.pending} disabled={!canSubmit}>{copy.submit}</SubmitButton>
       </form>

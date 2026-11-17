@@ -80,7 +80,6 @@ export const staffCopy = {
       delete: 'Delete (added by mistake)',
     },
     eyebrow: 'People',
-    title: 'Staff Registry',
     subtitle: 'Employee details, salaries, advances and app access.',
     add: 'Add employee',
     activeEmployees: (count) => plural(count, { one: '{n} active employee', other: '{n} active employees' }),
@@ -135,7 +134,6 @@ export const staffCopy = {
     nothingPaid: 'Nothing was recorded as paid.',
     paymentNotRecorded: 'The payment was not recorded.',
     eyebrow: 'People',
-    title: 'Payroll',
     subtitle: 'Monthly pay, statutory deductions, leave and advance repayments.',
     creating: 'Creating…',
     openDraft: (period) => `Open ${period} draft`,
@@ -256,7 +254,7 @@ export const staffCopy = {
   },
 
   drawer: {
-    tabs: { profile: 'Profile & Status', financials: 'Financials', medical: 'Medical / Certifications' },
+    tabs: { profile: 'Profile & status', financials: 'Financials', medical: 'Medical / certifications' },
     subtitle: 'Manage profile, payroll inputs, and credentials without leaving the registry context.',
     employment: 'Employment details',
     employmentHint: 'Keep the employee’s staff register and contact information current.',
@@ -332,7 +330,7 @@ export const staffCopy = {
   },
 
   verifyReturn: {
-    title: (name) => `Verify Return - ${name}`,
+    title: (name) => `Verify return - ${name}`,
     question: (name) => `Did ${name} return to work today?`,
     hint: 'Use this gate to confirm whether the leave has ended. If the employee has not returned, the record remains overdue and the payroll penalty keeps accruing.',
     yes: 'Yes, returned',
