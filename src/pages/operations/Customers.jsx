@@ -18,6 +18,7 @@ import { QUERY_KEYS } from '../../providers/QueryProvider';
 import { getListLoadState, hasRowsToShow } from '../../lib/listLoadState';
 import { isFeatureEnabled } from '../../lib/featureFlags';
 import { customerTypeLabel, financeCopy } from '../../i18n/finance';
+import { shellCopy } from '../../i18n/shell';
 const TABLE_COLUMNS = 4;
 
 // The first balance/rate field the backend sent; null (shown as "—") when none, never 0.
@@ -142,7 +143,7 @@ export default function CustomersPage() {
         <div>
           <div>
             <h2 className="font-sans font-bold text-2xl tracking-tight text-brand-900 m-0">
-              {copy.title}
+              {shellCopy.nav.items.customers}
             </h2>
             <p className="mt-1 text-sm text-brand-700/80">
               {copy.subtitle}

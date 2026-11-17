@@ -48,7 +48,6 @@ export const shellCopy = {
     titles: {
       dashboard: 'Dashibodi',
       production: 'Rekodi za Maziwa',
-      buyers: 'Orodha ya Wanunuzi',
       ledger: 'Daftari la Hesabu',
       milkUsage: 'Matumizi ya Maziwa',
     },
@@ -85,7 +84,7 @@ export const shellCopy = {
       feedDashboard: 'Akiba ya Chakula na Gharama',
       feedMixes: 'Michanganyiko ya Chakula',
       ingredients: 'Viambato',
-      milkLab: 'Mpango wa Maziwa ya Ndama', // REVIEW: "Milk Feeding Planner" (calves)
+      milkLab: 'Mpango wa Maziwa na Ulishaji', // REVIEW: "Milk Feeding Planner"
       unitHelpers: 'Vipimo vya Kienyeji', // REVIEW: local units such as kasuku, gorogoro
       buyers: 'Orodha ya Wanunuzi',
       customers: 'Wateja',

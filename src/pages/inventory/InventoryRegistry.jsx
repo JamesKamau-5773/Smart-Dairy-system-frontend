@@ -28,6 +28,7 @@ import { feedCopy } from '../../i18n/feed';
 import { tone } from '../../components/ui/tones';
 import { CardSkeletons, ListLoadNotices, TableSkeletonRows } from '../../components/ui/ListLoadState';
 import { getListLoadState, hasRowsToShow } from '../../lib/listLoadState';
+import { shellCopy } from '../../i18n/shell';
 
 const { item: itemCopy, restock: restockCopy, stockOut: stockOutCopy, stockCount: stockCountCopy } = feedCopy;
 
@@ -334,7 +335,7 @@ export default function InventoryRegistry() {
       <div className="mb-8 flex flex-col gap-4 rounded-card border border-brand-100 bg-brand-50 p-5 sm:flex-row sm:items-center sm:justify-between">
         <div className="min-w-0">
           <div>
-            <h2 className="font-sans font-bold text-2xl tracking-tight text-brand-900 m-0">{feedCopy.inventory.title}</h2>
+            <h2 className="font-sans font-bold text-2xl tracking-tight text-brand-900 m-0">{shellCopy.nav.items.inventory}</h2>
             <p className="text-sm text-brand-700/80 mt-1">{feedCopy.inventory.subtitle}</p>
           </div>
         </div>

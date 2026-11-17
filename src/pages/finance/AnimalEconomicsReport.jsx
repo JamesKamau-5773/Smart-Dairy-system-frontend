@@ -13,6 +13,7 @@ import { getListLoadState, hasRowsToShow } from '../../lib/listLoadState';
 import { ListLoadNotices } from '../../components/ui/ListLoadState';
 import Skeleton from '../../components/ui/Skeleton';
 import { financeCopy } from '../../i18n/finance';
+import { shellCopy } from '../../i18n/shell';
 
 const copy = financeCopy.cowProfit;
 // A cost type code ("calf_feed") in the chosen language; an unknown one made readable.
@@ -101,7 +102,7 @@ export default function AnimalEconomicsReport() {
   return (
     <div className="animate-reveal mx-auto max-w-7xl space-y-6">
       <div className="border-b border-slate-300 pb-6">
-        <h1 className="font-sans text-3xl font-black tracking-tight text-slate-900">{copy.title}</h1>
+        <h1 className="font-sans text-3xl font-black tracking-tight text-slate-900">{shellCopy.nav.items.cowProfit}</h1>
         <p className="mt-2 max-w-2xl text-sm font-medium text-slate-700">
           {copy.subtitle}
         </p>

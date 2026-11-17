@@ -12,6 +12,7 @@ import { Button } from '@/components/ui/button';
 import { Calendar } from '@/components/ui/calendar';
 import { cn } from '@/lib/utils';
 import GroupedDateRows from '@/components/ui/GroupedDateRows';
+import { shellCopy } from '../../i18n/shell';
 
 export default function MilkInventoryReport() {
   const [date, setDate] = useState({
@@ -64,7 +65,7 @@ export default function MilkInventoryReport() {
       <div className="flex flex-col md:flex-row justify-between items-start md:items-end border-b border-ink/10 pb-6 gap-4">
         <div>
           <h1 className="font-sans font-black text-3xl tracking-tight text-ink m-0">
-            {copy.title}
+            {shellCopy.nav.items.milkInventory}
           </h1>
           <p className="text-sm font-medium text-ink-muted mt-2 max-w-xl">
             {copy.subtitle}

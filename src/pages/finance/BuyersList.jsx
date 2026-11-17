@@ -20,6 +20,7 @@ import { formatCount } from '../../lib/numberFormat';
 import { SITE } from '../../landing/content';
 import { normalizeKenyanPhone } from '../../lib/phone';
 import { customerTypeLabel, financeCopy } from '../../i18n/finance';
+import { shellCopy } from '../../i18n/shell';
 // "KES 1,250.00"; "—" when the backend sent no figure (unknown is never shown as zero).
 const formatKes = formatMoneyText;
 
@@ -197,7 +198,7 @@ export default function BuyersList() {
         <div>
           <div>
             <h1 className="m-0 font-display text-2xl font-bold text-ink-900">
-              {copy.title}
+              {shellCopy.nav.items.buyers}
             </h1>
             <p className="mt-1 max-w-xl text-sm text-slate-600">
               {copy.subtitle}

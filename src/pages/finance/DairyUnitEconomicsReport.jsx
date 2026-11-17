@@ -16,6 +16,7 @@ import { getListLoadState, hasRowsToShow } from '@/lib/listLoadState';
 import { formatCount, formatLitres } from '@/lib/numberFormat';
 import { ListLoadNotices } from '@/components/ui/ListLoadState';
 import Skeleton from '@/components/ui/Skeleton';
+import { shellCopy } from '../../i18n/shell';
 
 const KPI_CARDS = 4;
 const copy = financeCopy.unitEconomics;
@@ -214,7 +215,7 @@ export default function DairyUnitEconomicsReport() {
       <div className="flex flex-col md:flex-row justify-between items-start md:items-end border-b border-ink/10 pb-6 gap-4">
         <div>
           <h1 className="font-sans font-black text-3xl tracking-tight text-ink m-0">
-            {copy.title}
+            {shellCopy.nav.items.customerValue}
           </h1>
           <p className="text-sm font-medium text-ink-muted mt-2 max-w-2xl">
             {copy.subtitle}

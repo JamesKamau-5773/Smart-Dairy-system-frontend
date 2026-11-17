@@ -52,7 +52,7 @@ describe('AnimalEconomicsReport', () => {
   it('shows a plain-language, actionable animal profit report', async () => {
     renderWithClient(createElement(AnimalEconomicsReport));
 
-    expect(screen.getByText('Cost to Raise vs. Total Earnings')).toBeTruthy();
+    expect(screen.getByRole('heading', { level: 1 }).textContent).toBe('Cow Profitability');
     expect(screen.getByText('Choose an animal to see its costs and profit.')).toBeTruthy();
 
     await waitFor(() => expect(screen.getByRole('option', { name: /Bella/ })).toBeTruthy());

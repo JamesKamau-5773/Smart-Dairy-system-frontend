@@ -39,7 +39,7 @@ describe('top bar title and the page h1', () => {
   });
 
   it('names Medical Records, Inventory and Feed Mixes by their sidebar labels, not old names', () => {
-    for (const [path, title] of [['/operations/records', 'Medical Records'], ['/operations/inventory', 'Inventory'], ['/feed-nutrition/mix', 'Feed Mixes']]) {
+    for (const [path, title] of [['/operations/records', 'Medical Records'], ['/operations/inventory', 'Inventory'], ['/feed-nutrition/mix', 'Feed Mixes'], ['/finance/buyers', 'Buyer List']]) {
       renderAt(path);
       expect(screen.getByText(title)).toBeTruthy();
       cleanup();

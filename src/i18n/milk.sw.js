@@ -155,7 +155,6 @@ export const milkCopy = {
 
   inventoryReport: {
     eyebrow: 'Ripoti',
-    title: 'Ripoti ya Akiba ya Maziwa',
     subtitle: 'Ona mtiririko wa maziwa kutoka uzalishaji hadi mauzo kwa muda.',
     trend: 'Mwenendo wa Akiba ya Maziwa',
     pickDate: 'Chagua tarehe',

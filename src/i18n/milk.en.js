@@ -155,7 +155,6 @@ export const milkCopy = {
   // Produced, sold and unsold milk over time (MilkInventoryReport).
   inventoryReport: {
     eyebrow: 'Reports',
-    title: 'Milk Inventory Report',
     subtitle: 'Visualize the flow of milk from production to sales over time.',
     trend: 'Milk Inventory Trend',
     pickDate: 'Pick a date',
