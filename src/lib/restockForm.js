@@ -1,4 +1,4 @@
-import { feedCopy } from '../i18n/feed.en';
+import { feedCopy } from '../i18n/feed';
 
 // The restock (delivery) form: what it may send and how it becomes a stock movement.
 

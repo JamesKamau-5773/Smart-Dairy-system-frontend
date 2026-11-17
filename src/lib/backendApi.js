@@ -983,7 +983,7 @@ export const productionApi = {
   },
   /**
    * Calf feedings plus the backend's totals for them: `{ items, count, totalLitres }`.
-   * TODO(BR-026): `total_liters` is requested; null until the backend sends it.
+   * TODO(BR-027): `total_liters` is requested; null until the backend sends it.
    */
   listMilkDispositionsWithTotals(params = {}) {
     return apiClient.get('/production/milk-dispositions', { params }).then((response) => ({

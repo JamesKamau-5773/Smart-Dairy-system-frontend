@@ -4,7 +4,7 @@ import AlertBanner from '../ui/AlertBanner';
 import SubmitButton from '../auth/SubmitButton';
 import CowSelect from './CowSelect';
 import { dateTimeInputToIso, nowLocalDateTimeInput } from '../../lib/localDate';
-import { safetyCopy as copy } from '../../i18n/safety.en';
+import { safetyCopy as copy } from '../../i18n/safety';
 
 // The backend's limit on a test name.
 const MAX_TEST_TYPE_LENGTH = 60;

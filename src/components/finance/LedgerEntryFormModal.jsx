@@ -20,7 +20,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '../ui/popover';
 import FieldError from '../ui/FieldError';
 import { fieldErrorProps } from '../ui/fieldErrorProps';
 import { useServerFieldErrors } from '../../hooks/useServerFieldErrors';
-
+import { financeCopy } from '../../i18n/finance';
 // A ledger draft is worth keeping once any amount, party, item or note has been typed.
 const isLedgerDraftEmpty = (values) => !['amount', 'party', 'item_name', 'description', 'reference_code', 'customer_id', 'income_source']
   .some((field) => String(values?.[field] ?? '').trim());
@@ -30,6 +30,8 @@ const SERVER_FIELDS = Object.freeze({ fieldMap: { payment_method: 'paymentMethod
 
 /** Log income (or a customer payment) or an expense. Saves a draft until it closes. */
 export default function LedgerEntryFormModal({ onClose: closeModal, transactionType, farmId, tenantId }) {
+  const copy = financeCopy.ledgerForm;
+  const methods = financeCopy.paymentMethods;
   const queryClient = useQueryClient();
   const categories = useLedgerCategories(tenantId, farmId);
   const [isAnimalListOpen, setIsAnimalListOpen] = useState(false);
@@ -91,14 +93,14 @@ export default function LedgerEntryFormModal({ onClose: closeModal, transactionT
       if (isQueuedOffline(result)) {
         toast(queuedOfflineMessage());
       } else {
-        toast.success(isCustomerPayment ? 'Customer payment recorded.' : transactionType === 'income' ? 'Income recorded.' : 'Expense recorded.');
+        toast.success(isCustomerPayment ? copy.paymentRecorded : transactionType === 'income' ? copy.incomeRecorded : copy.expenseRecorded);
       }
       onClose();
     },
     onError: (error) => {
       toast.error(
-        (isCustomerPayment && offlineFailureMessage(error, 'This payment was not recorded.'))
-          || getApiErrorMessage(error, `The ${transactionType === 'income' ? 'income' : 'expense'} was not saved. Check the details and try again.`),
+        (isCustomerPayment && offlineFailureMessage(error, copy.paymentNotRecorded))
+          || getApiErrorMessage(error, copy.notSaved(transactionType === 'income')),
       );
     },
   });
@@ -158,21 +160,21 @@ export default function LedgerEntryFormModal({ onClose: closeModal, transactionT
     <BaseModal
       isOpen
       onClose={onClose}
-      title={transactionType === 'income' ? 'Record income or customer payment' : 'Log new expense'}
+      title={transactionType === 'income' ? copy.incomeTitle : copy.expenseTitle}
       size="lg"
-      closeLabel="Close transaction form"
+      closeLabel={copy.close}
       onSubmit={handleSubmit}
       footerActions={(
         <>
           {isFormInvalid && !mutation.isPending && (
-            <p id="ledger-missing" className="w-full text-xs text-ink-muted">To save, add {missingFields.join(', ')}.</p>
+            <p id="ledger-missing" className="w-full text-meta text-ink-muted">{copy.toSave(missingFields.join(', '))}</p>
           )}
           <div className="flex justify-end gap-3">
             <button type="button" onClick={onClose} className="btn-secondary">
-              Cancel
+              {copy.cancel}
             </button>
             <button type="submit" className="btn-primary" disabled={mutation.isPending || isFormInvalid} aria-describedby={isFormInvalid ? 'ledger-missing' : undefined}>
-              {mutation.isPending ? 'Saving...' : `Log ${transactionType === 'income' ? 'Income' : 'Expense'}`}
+              {mutation.isPending ? copy.saving : transactionType === 'income' ? copy.logIncome : copy.logExpense}
             </button>
           </div>
         </>
@@ -188,21 +190,21 @@ export default function LedgerEntryFormModal({ onClose: closeModal, transactionT
         {transactionType === 'income' ? (
           <>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <DateField label="Date received" name="date" value={formData.date} max={todayLocalIso()} onChange={setDate} required className="form-control" error={fieldError('date')} />
-              <label className="form-control"><span className="label-text">Income amount (KES)</span><input type="number" min="0.01" step="0.01" id="ledger-amount" {...fieldErrorProps('ledger-amount', fieldError('amount'))} name="amount" value={formData.amount} onChange={handleChange} className="input-machined" placeholder="e.g., 5000" required /><FieldError id="ledger-amount" message={fieldError('amount')} /></label>
+              <DateField label={copy.dateReceived} name="date" value={formData.date} max={todayLocalIso()} onChange={setDate} required className="form-control" error={fieldError('date')} />
+              <label className="form-control"><span className="label-text">{copy.incomeAmount}</span><input type="number" min="0.01" step="0.01" id="ledger-amount" {...fieldErrorProps('ledger-amount', fieldError('amount'))} name="amount" value={formData.amount} onChange={handleChange} className="input-machined" placeholder={copy.incomeAmountPlaceholder} required /><FieldError id="ledger-amount" message={fieldError('amount')} /></label>
             </div>
             <fieldset className="space-y-2">
-              <legend className="label-text">Payment source</legend>
+              <legend className="label-text">{copy.paymentSource}</legend>
               <div className="grid grid-cols-2 gap-2 rounded-lg border border-ink/10 bg-surface-raised p-1">
-                <button type="button" onClick={() => setFormData((current) => ({ ...current, incomePayerType: 'customer', income_source: '' }))} className={formData.incomePayerType === 'customer' ? 'btn-primary' : 'btn-secondary'}>Customer payment</button>
-                <button type="button" onClick={() => setFormData((current) => ({ ...current, incomePayerType: 'other', customer_id: '' }))} className={formData.incomePayerType === 'other' ? 'btn-primary' : 'btn-secondary'}>Other payer</button>
+                <button type="button" onClick={() => setFormData((current) => ({ ...current, incomePayerType: 'customer', income_source: '' }))} className={formData.incomePayerType === 'customer' ? 'btn-primary' : 'btn-secondary'}>{copy.customerPayment}</button>
+                <button type="button" onClick={() => setFormData((current) => ({ ...current, incomePayerType: 'other', customer_id: '' }))} className={formData.incomePayerType === 'other' ? 'btn-primary' : 'btn-secondary'}>{copy.otherPayer}</button>
               </div>
             </fieldset>
             {formData.incomePayerType === 'customer' ? (
               <label className="form-control">
-                <span className="label-text">Customer making payment</span>
+                <span className="label-text">{copy.payingCustomer}</span>
                 <select id="ledger-customer_id" {...fieldErrorProps('ledger-customer_id', fieldError('customer_id'))} name="customer_id" value={formData.customer_id} onChange={handleChange} className="input-machined" required>
-                  <option value="" disabled>Select who paid</option>
+                  <option value="" disabled>{copy.selectPayer}</option>
                   {customers.map(customer => (
                     <option key={customer.id} value={customer.id}>{customer.name}</option>
                   ))}
@@ -210,57 +212,57 @@ export default function LedgerEntryFormModal({ onClose: closeModal, transactionT
                 <FieldError id="ledger-customer_id" message={fieldError('customer_id')} />
               </label>
             ) : (
-              <label className="form-control"><span className="label-text">Payer or income source</span><input type="text" id="ledger-income_source" {...fieldErrorProps('ledger-income_source', fieldError('income_source'))} name="income_source" value={formData.income_source} onChange={handleChange} className="input-machined" placeholder="e.g., County show or walk-in buyer" required /><FieldError id="ledger-income_source" message={fieldError('income_source')} /></label>
+              <label className="form-control"><span className="label-text">{copy.payerSource}</span><input type="text" id="ledger-income_source" {...fieldErrorProps('ledger-income_source', fieldError('income_source'))} name="income_source" value={formData.income_source} onChange={handleChange} className="input-machined" placeholder={copy.payerSourcePlaceholder} required /><FieldError id="ledger-income_source" message={fieldError('income_source')} /></label>
             )}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <label className="form-control">
-                <span className="label-text">Income source</span>
+                <span className="label-text">{copy.incomeSource}</span>
                 <select id="ledger-category" {...fieldErrorProps('ledger-category', fieldError('category'))} name="category" value={formData.category} onChange={handleChange} className="input-machined" required>
                   {categories.income.map(([value, label]) => <option key={value} value={value}>{label}</option>)}
                 </select>
                 <FieldError id="ledger-category" message={fieldError('category')} />
               </label>
               <label className="form-control">
-                <span className="label-text">Payment received via</span>
+                <span className="label-text">{copy.receivedVia}</span>
                 <select id="ledger-paymentMethod" {...fieldErrorProps('ledger-paymentMethod', fieldError('paymentMethod'))} name="paymentMethod" value={formData.paymentMethod} onChange={handleChange} className="input-machined" required>
-                  <option value="M-Pesa">M-Pesa</option><option value="Cash">Cash</option><option value="Bank">Bank transfer</option><option value="Other">Other</option>
+                  <option value="M-Pesa">{methods['M-Pesa']}</option><option value="Cash">{methods.Cash}</option><option value="Bank">{methods.Bank}</option><option value="Other">{methods.Other}</option>
                 </select>
                 <FieldError id="ledger-paymentMethod" message={fieldError('paymentMethod')} />
               </label>
             </div>
-            <label className="form-control"><span className="label-text">Payment reference{isPaymentReferenceRequired ? ' (required)' : ' (optional)'}</span><input type="text" id="ledger-reference_code" name="reference_code" value={formData.reference_code} onChange={handleChange} className="input-machined uppercase" placeholder={formData.paymentMethod === 'Cash' ? 'Optional for cash payments' : 'M-Pesa or bank transaction code'} required={isPaymentReferenceRequired} {...fieldErrorProps('ledger-reference_code', mpesaCodeError || fieldError('reference_code'))} /><FieldError id="ledger-reference_code" message={mpesaCodeError || fieldError('reference_code')} /></label>
-            <label className="form-control"><span className="label-text">Income notes</span><textarea id="ledger-description" {...fieldErrorProps('ledger-description', fieldError('description'))} name="description" value={formData.description} onChange={handleChange} className="input-machined" rows="2" placeholder="What was this payment for?" /><FieldError id="ledger-description" message={fieldError('description')} /></label>
+            <label className="form-control"><span className="label-text">{copy.reference(isPaymentReferenceRequired)}</span><input type="text" id="ledger-reference_code" name="reference_code" value={formData.reference_code} onChange={handleChange} className="input-machined uppercase" placeholder={formData.paymentMethod === 'Cash' ? copy.referenceCashPlaceholder : copy.referencePlaceholder} required={isPaymentReferenceRequired} {...fieldErrorProps('ledger-reference_code', mpesaCodeError || fieldError('reference_code'))} /><FieldError id="ledger-reference_code" message={mpesaCodeError || fieldError('reference_code')} /></label>
+            <label className="form-control"><span className="label-text">{copy.incomeNotes}</span><textarea id="ledger-description" {...fieldErrorProps('ledger-description', fieldError('description'))} name="description" value={formData.description} onChange={handleChange} className="input-machined" rows="2" placeholder={copy.incomeNotesPlaceholder} /><FieldError id="ledger-description" message={fieldError('description')} /></label>
           </>
         ) : (
           <>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <DateField label="Expense date" name="date" value={formData.date} max={todayLocalIso()} onChange={setDate} required className="form-control" error={fieldError('date')} />
-              <label className="form-control"><span className="label-text">Amount paid (KES)</span><input type="number" min="0.01" step="0.01" id="ledger-amount" {...fieldErrorProps('ledger-amount', fieldError('amount'))} name="amount" value={formData.amount} onChange={handleChange} className="input-machined" placeholder="e.g., 2500" required /><FieldError id="ledger-amount" message={fieldError('amount')} /></label>
+              <DateField label={copy.expenseDate} name="date" value={formData.date} max={todayLocalIso()} onChange={setDate} required className="form-control" error={fieldError('date')} />
+              <label className="form-control"><span className="label-text">{copy.amountPaid}</span><input type="number" min="0.01" step="0.01" id="ledger-amount" {...fieldErrorProps('ledger-amount', fieldError('amount'))} name="amount" value={formData.amount} onChange={handleChange} className="input-machined" placeholder={copy.amountPaidPlaceholder} required /><FieldError id="ledger-amount" message={fieldError('amount')} /></label>
             </div>
-            <label className="form-control"><span className="label-text">Supplier or payee</span><input type="text" id="ledger-party" {...fieldErrorProps('ledger-party', fieldError('party'))} name="party" value={formData.party} onChange={handleChange} className="input-machined" placeholder="e.g., Agrovet Store or employee name" required /><FieldError id="ledger-party" message={fieldError('party')} /></label>
-            <label className="form-control"><span className="label-text">Expense category</span><select id="ledger-category" {...fieldErrorProps('ledger-category', fieldError('category'))} name="category" value={formData.category} onChange={handleChange} className="input-machined" required>{categories.expense.map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select><FieldError id="ledger-category" message={fieldError('category')} /></label>
-            <label className="form-control"><span className="label-text">{requiresCommodityQuantity ? 'Item / commodity name' : 'Expense or service description'}</span><input type="text" id="ledger-item_name" {...fieldErrorProps('ledger-item_name', fieldError('item_name'))} name="item_name" value={formData.item_name} onChange={handleChange} className="input-machined" placeholder={requiresCommodityQuantity ? 'e.g., Dairy Meal' : 'e.g., Veterinary visit or vaccination'} required /><FieldError id="ledger-item_name" message={fieldError('item_name')} /></label>
+            <label className="form-control"><span className="label-text">{copy.payee}</span><input type="text" id="ledger-party" {...fieldErrorProps('ledger-party', fieldError('party'))} name="party" value={formData.party} onChange={handleChange} className="input-machined" placeholder={copy.payeePlaceholder} required /><FieldError id="ledger-party" message={fieldError('party')} /></label>
+            <label className="form-control"><span className="label-text">{copy.expenseCategory}</span><select id="ledger-category" {...fieldErrorProps('ledger-category', fieldError('category'))} name="category" value={formData.category} onChange={handleChange} className="input-machined" required>{categories.expense.map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select><FieldError id="ledger-category" message={fieldError('category')} /></label>
+            <label className="form-control"><span className="label-text">{requiresCommodityQuantity ? copy.itemName : copy.serviceDescription}</span><input type="text" id="ledger-item_name" {...fieldErrorProps('ledger-item_name', fieldError('item_name'))} name="item_name" value={formData.item_name} onChange={handleChange} className="input-machined" placeholder={requiresCommodityQuantity ? copy.itemPlaceholder : copy.servicePlaceholder} required /><FieldError id="ledger-item_name" message={fieldError('item_name')} /></label>
             {requiresCommodityQuantity && (
               <div className="grid grid-cols-2 gap-3">
-                <label className="form-control"><span className="label-text">Quantity</span><input type="number" min="0.001" step="0.001" id="ledger-quantity" {...fieldErrorProps('ledger-quantity', fieldError('quantity'))} name="quantity" value={formData.quantity} onChange={handleChange} className="input-machined" placeholder="e.g., 50" required /><FieldError id="ledger-quantity" message={fieldError('quantity')} /></label>
-                <label className="form-control"><span className="label-text">Unit</span><select name="quantity_unit" value={formData.quantity_unit} onChange={handleChange} className="input-machined" required><option value="kg">Kilograms (kg)</option><option value="g">Grams (g)</option><option value="L">Litres (L)</option><option value="mL">Millilitres (mL)</option><option value="bags">Bags</option><option value="pieces">Pieces</option><option value="packs">Packs</option><option value="units">Units</option></select></label>
+                <label className="form-control"><span className="label-text">{copy.quantity}</span><input type="number" min="0.001" step="0.001" id="ledger-quantity" {...fieldErrorProps('ledger-quantity', fieldError('quantity'))} name="quantity" value={formData.quantity} onChange={handleChange} className="input-machined" placeholder={copy.quantityPlaceholder} required /><FieldError id="ledger-quantity" message={fieldError('quantity')} /></label>
+                <label className="form-control"><span className="label-text">{copy.unit}</span><select name="quantity_unit" value={formData.quantity_unit} onChange={handleChange} className="input-machined" required>{Object.entries(copy.units).map(([unit, label]) => <option key={unit} value={unit}>{label}</option>)}</select></label>
               </div>
             )}
             <div className="grid grid-cols-1 gap-4">
               <div className="form-control">
                 <div className="mb-1.5 flex items-center gap-1.5">
-                  <span className="label-text">Cost classification</span>
+                  <span className="label-text">{copy.costClass}</span>
                   <Popover>
                     <PopoverTrigger asChild>
-                      <button type="button" className="inline-flex text-ink-muted transition-colors hover:text-brand" aria-label="Explain cost classifications">
+                      <button type="button" className="inline-flex text-ink-muted transition-colors hover:text-brand" aria-label={copy.explainCostClasses}>
                         <Info size={14} aria-hidden="true" />
                       </button>
                     </PopoverTrigger>
                     <PopoverContent align="start" sideOffset={6} className="w-80 space-y-3">
-                      <div className="space-y-2 text-xs leading-relaxed text-ink-muted">
+                      <div className="space-y-2 text-meta text-ink-muted">
                         {categories.costClasses.map(([value, label]) => (
                           <div key={value}>
-                            <p className="font-bold text-ink">{label}</p>
+                            <p className="text-body-strong text-ink">{label}</p>
                             <p>{categories.describe(value)}</p>
                           </div>
                         ))}
@@ -275,31 +277,31 @@ export default function LedgerEntryFormModal({ onClose: closeModal, transactionT
               </div>
             </div>
             <label className="form-control">
-              <span className="label-text">Payment method used</span>
+              <span className="label-text">{copy.paymentMethod}</span>
               <select id="ledger-paymentMethod" {...fieldErrorProps('ledger-paymentMethod', fieldError('paymentMethod'))} name="paymentMethod" value={formData.paymentMethod} onChange={handleChange} className="input-machined" required>
-                <option value="M-Pesa">M-Pesa</option><option value="Cash">Cash</option><option value="Bank">Bank transfer</option><option value="Other">Other</option>
+                <option value="M-Pesa">{methods['M-Pesa']}</option><option value="Cash">{methods.Cash}</option><option value="Bank">{methods.Bank}</option><option value="Other">{methods.Other}</option>
               </select>
               <FieldError id="ledger-paymentMethod" message={fieldError('paymentMethod')} />
             </label>
-            <label className="form-control"><span className="label-text">Receipt or invoice number</span><input type="text" id="ledger-reference_code" {...fieldErrorProps('ledger-reference_code', fieldError('reference_code'))} name="reference_code" value={formData.reference_code} onChange={handleChange} className="input-machined" placeholder="Supplier receipt, invoice, or transaction code" /><FieldError id="ledger-reference_code" message={fieldError('reference_code')} /></label>
-            <label className="form-control"><span className="label-text">Purchase or expense details</span><textarea id="ledger-description" {...fieldErrorProps('ledger-description', fieldError('description'))} name="description" value={formData.description} onChange={handleChange} className="input-machined" rows="2" placeholder="Describe the goods or services purchased" /><FieldError id="ledger-description" message={fieldError('description')} /></label>
+            <label className="form-control"><span className="label-text">{copy.receiptNumber}</span><input type="text" id="ledger-reference_code" {...fieldErrorProps('ledger-reference_code', fieldError('reference_code'))} name="reference_code" value={formData.reference_code} onChange={handleChange} className="input-machined" placeholder={copy.receiptPlaceholder} /><FieldError id="ledger-reference_code" message={fieldError('reference_code')} /></label>
+            <label className="form-control"><span className="label-text">{copy.details}</span><textarea id="ledger-description" {...fieldErrorProps('ledger-description', fieldError('description'))} name="description" value={formData.description} onChange={handleChange} className="input-machined" rows="2" placeholder={copy.detailsPlaceholder} /><FieldError id="ledger-description" message={fieldError('description')} /></label>
             <div className="grid grid-cols-1 gap-4 border-t border-ink/10 pt-4">
               <div className="form-control">
-                <span className="label-text">Animals for this expense (optional)</span>
+                <span className="label-text">{copy.animals}</span>
                 <button
                   type="button"
                   onClick={() => setIsAnimalListOpen((current) => !current)}
                   aria-expanded={isAnimalListOpen}
                   aria-controls="animals-for-expense-list"
-                  className="mt-1 flex w-full items-center justify-between rounded-lg border border-ink/15 bg-card px-3 py-2.5 text-left text-sm font-medium text-ink shadow-sm transition-colors hover:border-ink/20 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:ring-offset-2"
+                  className="mt-1 flex w-full items-center justify-between rounded-lg border border-ink/15 bg-card px-3 py-2.5 text-left text-control text-ink shadow-sm transition-colors hover:border-ink/20 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:ring-offset-2"
                 >
-                  <span>Select Animals ({formData.animal_ids.length} selected)</span>
+                  <span>{copy.selectAnimals(formData.animal_ids.length)}</span>
                   {isAnimalListOpen ? <ChevronUp size={18} aria-hidden="true" /> : <ChevronDown size={18} aria-hidden="true" />}
                 </button>
                 {isAnimalListOpen && (
                   <div id="animals-for-expense-list" className="mt-2 max-h-48 overflow-y-auto rounded-lg border border-ink/15 bg-card">
                     {animals.length === 0 ? (
-                      <p className="px-3 py-3 text-sm text-ink-muted">No animals available</p>
+                      <p className="px-3 py-3 text-body text-ink-muted">{copy.noAnimals}</p>
                     ) : (
                       animals.map((animal) => (
                         <label key={animal.id} className="flex cursor-pointer items-center gap-3 py-2 px-3 transition-colors hover:bg-brand-50 focus-within:bg-brand-50">
@@ -309,7 +311,7 @@ export default function LedgerEntryFormModal({ onClose: closeModal, transactionT
                             onChange={() => handleAnimalToggle(animal.id)}
                             className="h-4 w-4 rounded border-ink/15 text-brand-700 focus:ring-brand-500"
                           />
-                          <span className="text-sm text-ink">{formatCowIdentity(animal)}</span>
+                          <span className="text-body text-ink">{formatCowIdentity(animal)}</span>
                         </label>
                       ))
                     )}
@@ -318,18 +320,18 @@ export default function LedgerEntryFormModal({ onClose: closeModal, transactionT
               </div>
               <div className="form-control">
                 <div className="mb-1.5 flex items-center gap-1.5">
-                  <span className="label-text">Animal cost type</span>
+                  <span className="label-text">{copy.animalCostType}</span>
                   <Popover>
                     <PopoverTrigger asChild>
-                      <button type="button" className="inline-flex text-ink-muted transition-colors hover:text-brand" aria-label="Explain cost classifications">
+                      <button type="button" className="inline-flex text-ink-muted transition-colors hover:text-brand" aria-label={copy.explainCostClasses}>
                         <Info size={14} aria-hidden="true" />
                       </button>
                     </PopoverTrigger>
                     <PopoverContent align="start" sideOffset={6} className="w-80 space-y-3">
-                      <div className="space-y-2 text-xs leading-relaxed text-ink-muted">
+                      <div className="space-y-2 text-meta text-ink-muted">
                         {categories.costClasses.map(([value, label]) => (
                           <div key={value}>
-                            <p className="font-bold text-ink">{label}</p>
+                            <p className="text-body-strong text-ink">{label}</p>
                             <p>{categories.describe(value)}</p>
                           </div>
                         ))}
@@ -338,14 +340,14 @@ export default function LedgerEntryFormModal({ onClose: closeModal, transactionT
                   </Popover>
                 </div>
                 <select id="ledger-animal_cost_type" {...fieldErrorProps('ledger-animal_cost_type', fieldError('animal_cost_type'))} name="animal_cost_type" value={formData.animal_cost_type} onChange={handleChange} className="input-machined" disabled={!hasSelectedAnimals}>
-                  <option value="">Select cost type</option>
-                  <option value="PURCHASE">Purchase</option><option value="CALF_FEED">Calf feed</option><option value="HEIFER_FEED">Heifer feed</option><option value="BREEDING">Breeding</option><option value="VETERINARY">Veterinary</option><option value="LABOR">Labor</option><option value="HOUSING">Housing</option><option value="OVERHEAD">Overhead</option><option value="OTHER">Other</option>
+                  <option value="">{copy.selectCostType}</option>
+                  {Object.entries(copy.animalCostTypes).map(([code, label]) => <option key={code} value={code}>{label}</option>)}
                 </select>
                 <FieldError id="ledger-animal_cost_type" message={fieldError('animal_cost_type')} />
               </div>
             </div>
-            {!hasSelectedAnimals && <p className="text-xs text-ink-muted">Choose cows only if this cost was for specific animals, such as treatment or AI.</p>}
-            {hasSelectedAnimals && isAnimalAllocationIncomplete && <p className="text-xs text-brand-dark">Select a cost type to assign this expense to the selected cows.</p>}
+            {!hasSelectedAnimals && <p className="text-meta text-ink-muted">{copy.animalsHint}</p>}
+            {hasSelectedAnimals && isAnimalAllocationIncomplete && <p className="text-meta text-brand-dark">{copy.costTypeNeeded}</p>}
           </>
         )}
       </div>

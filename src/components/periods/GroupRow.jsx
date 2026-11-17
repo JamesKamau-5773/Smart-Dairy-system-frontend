@@ -1,12 +1,13 @@
 import { ChevronRight } from 'lucide-react';
 import { cellClass } from '../data/DataTable';
-import { LEVEL_INDENT, LEVEL_STYLES } from './groupLevels';
+import { LEVEL_INDENT, LEVEL_STYLES, LEVEL_TYPE } from './groupLevels';
 
-const missing = <span className="font-mono text-sm text-ink-muted">—</span>;
+const missing = <span className="text-body tabular-nums text-ink-muted">—</span>;
 
-// A page's group config may restyle the levels (`levelStyles`, `levelIndent`, by level) and
-// the chevron (`chevronClassName`); otherwise the shared brand style applies.
+// A page's group config may restyle the levels (`levelStyles`, `levelType`, `levelIndent`, by
+// level) and the chevron (`chevronClassName`); otherwise the shared brand style applies.
 const levelStyle = (config, level) => config?.levelStyles?.[level] ?? LEVEL_STYLES[level];
+const levelType = (config, level) => config?.levelType?.[level] ?? LEVEL_TYPE[level];
 const levelIndent = (config, level) => config?.levelIndent?.[level] ?? LEVEL_INDENT[level];
 
 function Toggle({ node, config, isOpen, onToggle, ariaLabel, children, className = '' }) {
@@ -18,7 +19,7 @@ function Toggle({ node, config, isOpen, onToggle, ariaLabel, children, className
       aria-label={ariaLabel}
       data-group-key={node.key}
       data-group-keys={node.keys.join(' ')}
-      className={`flex w-full min-w-0 items-center gap-2 !rounded-none text-left ${levelIndent(config, node.level)} ${className}`}
+      className={`flex w-full min-w-0 items-center gap-2 !rounded-none text-left ${levelType(config, node.level)} ${levelIndent(config, node.level)} ${className}`}
     >
       <ChevronRight
         size={node.level === 'year' ? 16 : 14}

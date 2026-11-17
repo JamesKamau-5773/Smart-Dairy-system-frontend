@@ -2,6 +2,7 @@ import { useId, useState } from 'react';
 import { CalendarDays } from 'lucide-react';
 import { Calendar } from './calendar';
 import { Popover, PopoverContent, PopoverTrigger } from './popover';
+import { commonCopy } from '../../i18n/common';
 import { formatDate, maskInputDate, parseInputDate, toInputDate } from '../../lib/dateFormat';
 
 const pad = (value) => String(value).padStart(2, '0');
@@ -75,7 +76,7 @@ export default function DateField({ label, value = '', onChange, min, max, requi
           <PopoverTrigger asChild>
             <button
               type="button"
-              aria-label={`Pick ${label.toLowerCase()} from a calendar`}
+              aria-label={commonCopy.controls.pickDate(label)}
               className="absolute right-0.5 top-1/2 inline-flex h-10 w-10 -translate-y-1/2 items-center justify-center !rounded-input text-ink-muted hover:text-brand"
             >
               <CalendarDays size={16} aria-hidden="true" />

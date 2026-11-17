@@ -1,4 +1,4 @@
-import { ArrowRight, CloudOff, RefreshCw } from 'lucide-react';
+import { CloudOff } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { getApiErrorMessage } from '../../lib/backendApi';
 import { formatAsOfTime } from '../../lib/numberFormat';
@@ -9,8 +9,8 @@ const Block = ({ className }) => <div aria-hidden="true" className={`rounded-bad
 
 function Retry({ onRetry }) {
   return (
-    <button type="button" onClick={() => onRetry?.()} className="inline-flex min-h-11 shrink-0 items-center gap-1 text-xs font-semibold text-brand hover:underline sm:min-h-8">
-      <RefreshCw size={12} aria-hidden="true" /> {commonCopy.list.tryAgain}
+    <button type="button" onClick={() => onRetry?.()} className="inline-flex min-h-11 shrink-0 items-center gap-1 text-control text-brand hover:underline sm:min-h-8">
+      {commonCopy.list.tryAgain}
     </button>
   );
 }
@@ -44,7 +44,7 @@ export default function SummaryStrip({
 
   let body;
   if (notice) {
-    body = <p role="status" className="text-sm text-ink-muted">{notice}</p>;
+    body = <p role="status" className="text-body text-ink-muted">{notice}</p>;
   } else if (loadState === 'loading' && !hasData) {
     body = (
       <div aria-busy="true" className="flex flex-wrap gap-x-8 gap-y-2">
@@ -55,27 +55,29 @@ export default function SummaryStrip({
     );
   } else if (!hasData && loadState === 'offline') {
     body = (
-      <p role="status" className="flex items-start gap-2 text-sm text-ink">
+      <p role="status" className="flex items-start gap-2 text-body text-ink">
         <CloudOff size={16} className="mt-0.5 shrink-0 text-ink-muted" aria-hidden="true" />
         {commonCopy.summary.offline}
       </p>
     );
   } else if (!hasData) {
     body = (
-      <div role="alert" className="flex min-w-0 flex-wrap items-center gap-x-3 text-sm text-ink">
+      <div role="alert" className="flex min-w-0 flex-wrap items-center gap-x-3 text-body text-ink">
         <span className="min-w-0">{commonCopy.summary.loadFailed} {getApiErrorMessage(error, commonCopy.list.errorDetail)}</span>
         <Retry onRetry={onRetry} />
       </div>
     );
   } else if (empty) {
-    body = <div className="text-sm text-ink-muted">{empty}</div>;
+    body = <div className="text-body text-ink-muted">{empty}</div>;
   } else {
+    // Phones: one figure per line, label left and value right, so a full money figure
+    // (symbol and decimals at the stat size) never has to be cut to fit half the width.
     body = (
-      <dl className="grid min-w-0 grid-cols-2 gap-x-6 gap-y-2 sm:flex sm:flex-wrap sm:gap-x-8">
+      <dl className="grid min-w-0 grid-cols-1 gap-y-1 sm:flex sm:flex-wrap sm:gap-x-8 sm:gap-y-2">
         {items.map((item) => (
-          <div key={item.key} className="min-w-0">
-            <dt className="text-[10px] font-semibold uppercase tracking-wider text-ink-muted">{item.label}</dt>
-            <dd className="mt-0.5 truncate text-base font-semibold text-ink sm:text-lg">{item.value}</dd>
+          <div key={item.key} className="flex min-w-0 items-baseline justify-between gap-3 sm:block">
+            <dt className="shrink-0 text-label text-ink-muted">{item.label}</dt>
+            <dd className="min-w-0 truncate text-stat-value text-ink sm:mt-0.5">{item.value}</dd>
           </div>
         ))}
       </dl>
@@ -87,21 +89,21 @@ export default function SummaryStrip({
       <div className="min-w-0 flex-1 space-y-1">
         {body}
         {(scope || asOfTime) && hasData && (
-          <p className="flex flex-wrap gap-x-3 text-xs text-ink-muted">
+          <p className="flex flex-wrap gap-x-3 text-meta text-ink-muted">
             {scope && <span>{commonCopy.summary.scope(scope)}</span>}
             {asOfTime && <span>{commonCopy.summary.asOf(asOfTime)}</span>}
           </p>
         )}
         {loadState === 'stale' && hasData && (
-          <div role="status" className="flex flex-wrap items-center gap-x-2 text-xs text-ink-muted">
+          <div role="status" className="flex flex-wrap items-center gap-x-2 text-meta text-ink-muted">
             <span>{commonCopy.summary.refreshFailed} {getApiErrorMessage(error, commonCopy.summary.checkConnection)}</span>
             <Retry onRetry={onRetry} />
           </div>
         )}
       </div>
       {link && (
-        <Link to={link.to} className="inline-flex min-h-11 shrink-0 items-center gap-1 self-start text-sm font-semibold text-brand hover:underline sm:min-h-8 sm:self-auto">
-          {link.label ?? commonCopy.summary.fullReport} <ArrowRight size={14} aria-hidden="true" />
+        <Link to={link.to} className="inline-flex min-h-11 shrink-0 items-center gap-1 self-start text-body-strong text-brand hover:underline sm:min-h-8 sm:self-auto">
+          {link.label ?? commonCopy.summary.fullReport}
         </Link>
       )}
     </section>

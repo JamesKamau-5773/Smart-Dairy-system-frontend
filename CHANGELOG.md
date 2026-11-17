@@ -4,6 +4,82 @@ What changed for farmers and staff using Maziwa Smart. Newest first.
 
 ## Unreleased
 
+### Clearer text on the buyer, stock and report pages (typography phase 5a)
+
+- **Buyer List, Customer Management, customer profiles, Inventory, Customer Value & Profit, Cow
+  Profitability and the Milk Inventory Report use the new type scale.** Each title is the page's
+  name in the menu: "Buyer List" (was "Customer Billing"), "Cow Profitability" (was "Cost to Raise
+  vs. Total Earnings") and "Inventory" (was "Stock Registry").
+- Field names, buttons and figures are written in sentence case in English and Kiswahili. On a
+  phone, the search boxes say just "Search".
+- Cost types and record checks the app has no wording for yet are shown as a sentence, never as a
+  raw code.
+- In Kiswahili, the Milk Feeding Planner is "Mpango wa Maziwa na Ulishaji" everywhere (the menu
+  called it a calf milk plan).
+
+### Clearer text on the operations and feeding pages (typography phase 4)
+
+- **Milk Usage, Daily Routine, Farm Task View, Today's Feeding, Feed Stock & Costs, Feed Mixes,
+  the Milk Feeding Planner and Unit Helpers use the new type scale.** Each page title matches
+  its name in the menu, and nothing is smaller than 12px.
+- Field names, buttons and counts are written in sentence case in English and Kiswahili
+  ("Save routine", "2 blocks"). The "Create new feed batch" button is now translated too.
+- Feeding groups the app has no name for yet are shown as a sentence, never as a raw code.
+
+### Clearer text on the herd pages (typography phase 3)
+
+- **Cow Register, Breeding, Medical Records, Low milk alerts, the cow record and milk history
+  use the new type scale.** Each page title is the page's main heading, summary figures are one
+  size, and nothing is smaller than 12px.
+- Field names, statuses and buttons are written in sentence case in English and Kiswahili
+  ("Save record", "Under treatment", "Mirija 6 kwenye tangi") instead of capitals. Column
+  headings and small section headings keep their capitals.
+- A status the app has no wording for yet is shown as a sentence ("ON_HOLD" → "On hold") rather
+  than as the raw code.
+- Pending vet checks and the medical records table no longer squeeze dates and buttons onto
+  several lines.
+
+### Clearer text on the Production Log, Ledger and Farm Reports (typography phase 2)
+
+- **The three pages use the new type scale.** Page titles are larger, summary figures are one
+  size (20px), and no text on these pages is smaller than 12px. Small grey text such as
+  record counts and references went up from 10–11px to 13px.
+- **Money is the same size from symbol to decimals.** "KES" and the cents are no longer in
+  tiny print; they are only shown in a lighter colour.
+- On a phone, the Ledger's summary shows one figure per line so a full amount is never cut
+  off.
+- Statuses such as "Pending" are written in sentence case in English and Kiswahili, instead of
+  being capitalised by the browser.
+- Field names above inputs are in sentence case, slightly bolder than the hint text. Only table
+  headings and small section headings use capitals.
+- **Litres stay large when you record milk.** The litres box keeps its big figures, on phones
+  too, and the form's buttons and labels read "Save record", "Morning" and so on.
+
+### One typeface (typography phase 1)
+
+- **The app uses one typeface, Inter, served with the app.** It no longer downloads three fonts
+  from Google, so pages show text sooner on a slow connection, and the font is saved for
+  offline use. Numbers keep their columns lined up without the separate monospace font.
+- Buttons, inputs and table headings share one size and weight. On a phone, every text box is
+  16px so the screen doesn't zoom in when you tap it, and search boxes say just "Search" so the
+  hint isn't cut off.
+- **The Soft / Dense switch in the profile menu is gone.** The app has one typography now; light
+  and dark stay. A saved Soft or Dense choice is cleared and the usual theme used.
+
+### The whole app in Kiswahili
+
+- **Every screen now follows the language switch.** Before, only the sidebar, sign-in and a few
+  pages changed to Kiswahili. Now the herd, health, AI and pregnancy, milk, feed and stock,
+  buyers and money, staff and payroll, reports, admin and onboarding screens do too. Anything
+  without a Kiswahili translation yet still shows in English. Saved records (statuses,
+  categories, payment methods, recipe names, payroll CSV headings) keep their English codes;
+  only how they are shown changes.
+- **Gaps now show as "—", not invented numbers.** A buyer's profile showed KES 0.00 when the
+  server sent nothing; a new feed batch's protein showed 0%; dates without a value showed "N/A".
+  These now show "—". The AI & pregnancy list no longer shows an "Updated" date of today for
+  every check (the server doesn't send one yet). It lists checks by AI date instead.
+- Dates read day-first everywhere (03 Nov 2026), in the chosen language.
+
 ### Milk record fixes
 
 - **Editing a milk record no longer moves it to the morning.** The form didn't recognise the

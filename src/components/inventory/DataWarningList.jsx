@@ -1,5 +1,5 @@
-import { AlertTriangle, Wrench } from 'lucide-react';
-import { feedCopy } from '../../i18n/feed.en';
+import { AlertTriangle } from 'lucide-react';
+import { feedCopy } from '../../i18n/feed';
 import { tone } from '../ui/tones';
 
 const { dataWarnings: copy } = feedCopy;
@@ -17,22 +17,21 @@ export default function DataWarningList({ warnings, itemName, onApplyFix, pendin
   return (
     <ul className="space-y-1.5">
       {warnings.map((warning) => (
-        <li key={`${warning.code}:${warning.field}`} className="flex items-start gap-2 text-xs leading-relaxed text-ink-muted">
+        <li key={`${warning.code}:${warning.field}`} className="flex items-start gap-2 text-meta text-ink-muted">
           <AlertTriangle size={14} className={`mt-0.5 shrink-0 ${iconTone}`} aria-hidden="true" />
           <span className="min-w-0">
-            {itemName && <span className="font-semibold text-ink">{itemName}: </span>}
+            {itemName && <span className="text-body-strong text-ink">{itemName}: </span>}
             {warning.message}
             {warning.suggested_value !== undefined && warning.suggested_value !== null && (
-              <span className="font-semibold text-ink"> {copy.suggested(warning.suggested_value)}.</span>
+              <span className="text-body-strong text-ink"> {copy.suggested(warning.suggested_value)}.</span>
             )}
             {onApplyFix && (
               <button
                 type="button"
                 onClick={() => onApplyFix(warning.code)}
                 disabled={pendingCode !== null}
-                className="ml-2 inline-flex items-center gap-1 font-semibold text-brand underline-offset-4 hover:text-brand-dark hover:underline disabled:opacity-50"
+                className="ml-2 inline-flex items-center text-control text-brand underline-offset-4 hover:text-brand-dark hover:underline disabled:opacity-50"
               >
-                <Wrench size={12} aria-hidden="true" />
                 {pendingCode === warning.code ? copy.applying : copy.apply}
               </button>
             )}

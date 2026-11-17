@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { FileWarning, Filter, Stethoscope, Wheat, ThermometerSun, Settings, CheckCircle2 } from 'lucide-react';
 import BaseModal from '../../components/ui/BaseModal';
 import toast from 'react-hot-toast';
 import { getApiErrorMessage, productionApi } from '../../lib/backendApi';
@@ -11,9 +10,10 @@ import GroupedDateRows from '../../components/ui/GroupedDateRows';
 import { CardSkeletons, ListLoadNotices, TableSkeletonRows } from '../../components/ui/ListLoadState';
 import { getListLoadState, hasRowsToShow } from '../../lib/listLoadState';
 import { formatLitres } from '../../lib/numberFormat';
+import { healthCopy } from '../../i18n/health';
+import { enumLabel } from '../../lib/enumLabel';
 
 const TABLE_COLUMNS = 4;
-const EMPTY_MESSAGE = 'No milk drop alerts. They appear here automatically when a cow gives much less milk than usual, so you can check her health and feed.';
 
 /** "−4.5 L" for the milk a cow is short; "—" when the backend sent no figure. */
 const formatMissingMilk = (litres) => {
@@ -21,14 +21,16 @@ const formatMissingMilk = (litres) => {
   return text === '—' ? text : `−${text}`;
 };
 
+// `options` are the findings as saved with the case; the screen shows them in the chosen language.
 const DIAGNOSTIC_CATEGORIES = [
-  { id: 'clinical', label: 'Cow Health & Sickness', icon: Stethoscope, options: ['Signs of Mastitis (clots, swelling)', 'Lame or sore hooves', 'Metabolic sickness (Milk fever, etc.)', 'Not eating / Looks weak'] },
-  { id: 'nutrition', label: 'Feed & Water', icon: Wheat, options: ['No clean water / Trough empty', 'Not enough feed given', 'Cow refused to eat the feed'] },
-  { id: 'environmental', label: 'Weather & Environment', icon: ThermometerSun, options: ['Too hot / Heat stress', 'Heavy rain or muddy yard', 'Spooked by animals or loud noises'] },
-  { id: 'routine', label: 'Milking Routine & Equipment', icon: Settings, options: ['Milking was late (over 30 mins)', 'Cow was nervous / Held back milk', 'Milking machine lost pressure'] },
+  { id: 'clinical', options: ['Signs of Mastitis (clots, swelling)', 'Lame or sore hooves', 'Metabolic sickness (Milk fever, etc.)', 'Not eating / Looks weak'] },
+  { id: 'nutrition', options: ['No clean water / Trough empty', 'Not enough feed given', 'Cow refused to eat the feed'] },
+  { id: 'environmental', options: ['Too hot / Heat stress', 'Heavy rain or muddy yard', 'Spooked by animals or loud noises'] },
+  { id: 'routine', options: ['Milking was late (over 30 mins)', 'Cow was nervous / Held back milk', 'Milking machine lost pressure'] },
 ];
 
 export default function MilkDropReports() {
+  const copy = healthCopy.milkDrop;
   const queryClient = useQueryClient();
   const { tenantId, farmId } = useTenant();
 
@@ -52,11 +54,11 @@ export default function MilkDropReports() {
     mutationFn: ({ alertId, ...payload }) => productionApi.investigateMilkDropAlert(alertId, payload),
     onSuccess: (_result, variables) => {
       queryClient.invalidateQueries({ queryKey: ['milk-drop-reports', tenantId, farmId] });
-      toast.success(variables.status === 'RESOLVED' ? 'Case closed.' : 'Investigation saved.');
+      toast.success(variables.status === 'RESOLVED' ? copy.caseClosed : copy.investigationSaved);
       closeModal();
     },
     onError: (error) => {
-      setFormError(getApiErrorMessage(error, 'Could not update this investigation. Check your connection and try again.'));
+      setFormError(getApiErrorMessage(error, copy.saveFailed));
     },
   });
 
@@ -77,7 +79,7 @@ export default function MilkDropReports() {
 
   const handleSubmit = (status = 'INVESTIGATING') => {
     if (status === 'RESOLVED' && selectedReasons.length === 0 && !managerNotes.trim()) {
-      setFormError('Add at least one finding or a manager note before closing the case.');
+      setFormError(copy.needFinding);
       return;
     }
 
@@ -91,24 +93,24 @@ export default function MilkDropReports() {
   };
 
   return (
-    <div className="p-4 sm:p-6 max-w-6xl mx-auto font-sans animate-reveal">
+    <div className="p-4 sm:p-6 max-w-6xl mx-auto animate-reveal">
       <div className="flex flex-col sm:flex-row sm:justify-between sm:items-end gap-4 mb-6">
         <div>
-          <div className="flex items-center gap-2 text-brand mb-1">
-            <FileWarning size={24} />
-            <h1 className="text-xl sm:text-2xl font-bold text-ink">Low Milk Alerts</h1>
+          <div className="text-brand mb-1">
+            <h1 className="text-page-title text-ink">{copy.title}</h1>
           </div>
-          <p className="text-xs sm:text-sm text-ink/50 font-medium">Investigate yield drops per cow.</p>
+          <p className="text-meta text-ink/50">{copy.subtitle}</p>
         </div>
         <div className="flex gap-2">
-          <button className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 py-2 bg-surface text-ink border border-ink/20 rounded-md text-sm font-semibold hover:bg-surface-raised">
-            <Filter size={16} /> Filter
+          <button className="flex-1 sm:flex-none flex items-center justify-center px-4 py-2 bg-surface text-ink border border-ink/20 rounded-md text-control hover:bg-surface-raised">
+
+    {copy.filter}
           </button>
         </div>
       </div>
 
       <div className="overflow-hidden rounded-lg border border-ink/10 bg-surface shadow-sm">
-        <ListLoadNotices state={loadState} label="milk drop alerts" error={reportsQuery.error} onRetry={reportsQuery.refetch} />
+        <ListLoadNotices state={loadState} label={copy.listLabel} error={reportsQuery.error} onRetry={reportsQuery.refetch} />
         {loadState === 'loading' && (
           <div aria-busy="true">
             <table className="hidden w-full md:table"><tbody><TableSkeletonRows columns={TABLE_COLUMNS} /></tbody></table>
@@ -117,13 +119,13 @@ export default function MilkDropReports() {
         )}
         {showReports && (<>
         <div className="hidden overflow-x-auto md:block">
-        <table className="w-full min-w-[640px] text-left text-sm">
+        <table className="w-full min-w-[640px] text-left text-body">
           <thead>
-            <tr className="border-b border-ink/10 text-xs font-semibold uppercase tracking-wide text-ink/50">
-              <th className="px-6 py-3">Date</th>
-              <th className="px-6 py-3">Cow</th>
-              <th className="px-6 py-3">Missing Milk</th>
-              <th className="px-6 py-3">Status</th>
+            <tr className="border-b border-ink/10 text-label text-ink/50">
+              <th className="px-6 py-3">{copy.columns.date}</th>
+              <th className="px-6 py-3">{copy.columns.cow}</th>
+              <th className="px-6 py-3">{copy.columns.missing}</th>
+              <th className="px-6 py-3">{copy.columns.status}</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-ink/5">
@@ -131,26 +133,27 @@ export default function MilkDropReports() {
               items={reports}
               getDate={(report) => report.date_time}
               colSpan={TABLE_COLUMNS}
-              renderGroupMeta={(items) => `${items.length} ${items.length === 1 ? 'alert' : 'alerts'}`}
+              renderGroupMeta={(items) => copy.alertCount(items.length)}
               renderItem={(report) => (
               <tr key={report.id} className="hover:bg-brand/5">
                 <td className="px-6 py-4">{formatAlertDate(report.date_time)}</td>
-                <td className="px-6 py-4 font-bold">{formatCowIdentity(report)}</td>
-                <td className="px-6 py-4 font-bold text-brand-dark">{formatMissingMilk(report.missing_milk)}</td>
+                <td className="px-6 py-4 text-body-strong">{formatCowIdentity(report)}</td>
+                <td className="px-6 py-4 text-body-strong text-brand-dark">{formatMissingMilk(report.missing_milk)}</td>
                 <td className="px-6 py-4">
                   {report.status === 'OPEN' ? (
-                    <button onClick={() => openInvestigateModal(report)} className="text-brand font-bold">Check Cow</button>
+                    <button onClick={() => openInvestigateModal(report)} className="text-brand text-control">{copy.checkCow}</button>
                   ) : report.status === 'INVESTIGATING' ? (
-                    <button onClick={() => openInvestigateModal(report)} className="font-bold text-brand-dark">Investigating</button>
+                    <button onClick={() => openInvestigateModal(report)} className="text-control text-brand-dark">{copy.investigating}</button>
                   ) : (
-                    <span className="inline-flex items-center gap-1.5 font-bold text-brand"><CheckCircle2 size={14} /> Closed</span>
+                    <span className="inline-flex items-center text-body-strong text-brand">
+                    {copy.closed}</span>
                   )}
                 </td>
               </tr>
               )}
               empty={reports.length === 0 && (
               <tr>
-                <td className="px-6 py-6 text-center text-ink/50" colSpan={TABLE_COLUMNS}>{EMPTY_MESSAGE}</td>
+                <td className="px-6 py-6 text-center text-ink/50" colSpan={TABLE_COLUMNS}>{copy.empty}</td>
               </tr>
               )}
             />
@@ -162,19 +165,19 @@ export default function MilkDropReports() {
             <article key={report.id} className="min-w-0 space-y-3 p-4">
               <div className="flex min-w-0 items-start justify-between gap-3">
                 <div className="min-w-0">
-                  <time className="text-xs text-ink-muted">{formatAlertDate(report.date_time)}</time>
-                  <h3 className="mt-1 break-words font-semibold text-ink">{formatCowIdentity(report)}</h3>
+                  <time className="text-meta text-ink-muted">{formatAlertDate(report.date_time)}</time>
+                  <h2 className="mt-1 break-words text-section-title text-ink">{formatCowIdentity(report)}</h2>
                 </div>
-                <span className="shrink-0 rounded-full border border-brand/20 bg-brand-50 px-2 py-1 text-[10px] font-bold text-brand-dark">{report.status}</span>
+                <span className="shrink-0 rounded-full border border-brand/20 bg-brand-50 px-2 py-1 text-badge text-brand-dark">{enumLabel(copy.statuses, report.status)}</span>
               </div>
-              <div className="flex items-center justify-between gap-3 border-t border-ink/10 pt-3 text-sm">
-                <span className="text-ink-muted">Missing milk</span>
-                <span className="font-mono font-bold tabular-nums text-brand-dark">{formatMissingMilk(report.missing_milk)}</span>
+              <div className="flex items-center justify-between gap-3 border-t border-ink/10 pt-3 text-body">
+                <span className="text-ink-muted">{copy.missingMilk}</span>
+                <span className="text-body-strong tabular-nums text-brand-dark">{formatMissingMilk(report.missing_milk)}</span>
               </div>
-              {report.status !== 'RESOLVED' && <button type="button" onClick={() => openInvestigateModal(report)} className="w-full rounded-button bg-brand px-3 py-2 text-sm font-semibold text-white">{report.status === 'OPEN' ? 'Check cow' : 'Continue investigation'}</button>}
+              {report.status !== 'RESOLVED' && <button type="button" onClick={() => openInvestigateModal(report)} className="w-full rounded-button bg-brand px-3 py-2 text-control text-white">{report.status === 'OPEN' ? copy.checkCowShort : copy.continueInvestigation}</button>}
             </article>
           ))}
-          {reports.length === 0 && <p className="p-6 text-center text-sm text-ink-muted">{EMPTY_MESSAGE}</p>}
+          {reports.length === 0 && <p className="p-6 text-center text-body text-ink-muted">{copy.empty}</p>}
         </div>
         </>)}
       </div>
@@ -182,18 +185,19 @@ export default function MilkDropReports() {
       <BaseModal
         isOpen={investigateModal.isOpen}
         onClose={closeModal}
-        title={investigateModal.log ? `Investigate ${formatCowIdentity(investigateModal.log)}` : ''}
-        subtitle="Save progress while reviewing, then close the case once the cause is confirmed."
+        title={investigateModal.log ? copy.investigateTitle(formatCowIdentity(investigateModal.log)) : ''}
+        subtitle={copy.investigateHint}
         size="3xl"
         footerActions={investigateModal.log && (
           <>
-            <button onClick={closeModal} className="px-4 py-2 text-sm font-bold">Cancel</button>
-            <button type="button" onClick={() => handleSubmit('INVESTIGATING')} disabled={saveInvestigation.isPending} className="px-6 py-2 border border-brand/20 bg-surface text-brand text-sm font-bold rounded-md disabled:opacity-60">
-              {saveInvestigation.isPending ? 'Saving...' : investigateModal.log.status === 'OPEN' ? 'Start Investigation' : 'Save Progress'}
+            <button onClick={closeModal} className="px-4 py-2 text-control">{copy.cancel}</button>
+            <button type="button" onClick={() => handleSubmit('INVESTIGATING')} disabled={saveInvestigation.isPending} className="px-6 py-2 border border-brand/20 bg-surface text-brand text-control rounded-md disabled:opacity-60">
+              {saveInvestigation.isPending ? copy.saving : investigateModal.log.status === 'OPEN' ? copy.start : copy.saveProgress}
             </button>
             {investigateModal.log.status === 'INVESTIGATING' && (
-              <button type="button" onClick={() => handleSubmit('RESOLVED')} disabled={saveInvestigation.isPending} className="inline-flex min-h-10 items-center gap-2 rounded-md bg-emerald-700 px-6 py-2 text-sm font-bold text-white shadow-md transition-colors hover:bg-emerald-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-700 disabled:cursor-not-allowed disabled:opacity-60">
-                <CheckCircle2 size={16} /> Close Case
+              <button type="button" onClick={() => handleSubmit('RESOLVED')} disabled={saveInvestigation.isPending} className="inline-flex min-h-10 items-center rounded-md bg-emerald-700 px-6 py-2 text-control text-white shadow-md transition-colors hover:bg-emerald-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-700 disabled:cursor-not-allowed disabled:opacity-60">
+
+    {copy.closeCase}
               </button>
             )}
           </>
@@ -203,10 +207,10 @@ export default function MilkDropReports() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {DIAGNOSTIC_CATEGORIES.map(cat => (
               <div key={cat.id} className="p-4 rounded-xl border border-ink/10 bg-surface-raised">
-                <p className="font-bold text-sm mb-2">{cat.label}</p>
+                <p className="text-body-strong mb-2">{copy.categories[cat.id]}</p>
                 {cat.options.map(opt => (
-                  <label key={opt} className="flex items-center gap-2 text-sm">
-                    <input type="checkbox" checked={selectedReasons.includes(opt)} onChange={() => toggleReason(opt)} /> {opt}
+                  <label key={opt} className="flex items-center gap-2 text-field-label">
+                    <input type="checkbox" checked={selectedReasons.includes(opt)} onChange={() => toggleReason(opt)} /> {copy.reasons[opt] ?? opt}
                   </label>
                 ))}
               </div>
@@ -215,11 +219,11 @@ export default function MilkDropReports() {
           <textarea
             value={managerNotes}
             onChange={(e) => setManagerNotes(e.target.value)}
-            className="w-full p-3 border border-ink/20 rounded-lg text-sm"
-            placeholder="Add notes..."
+            className="w-full p-3 border border-ink/20 rounded-lg text-control"
+            placeholder={copy.notesPlaceholder}
             rows={3}
           />
-          {formError && <p role="alert" className="text-sm font-semibold text-danger">{formError}</p>}
+          {formError && <p role="alert" className="text-body-strong text-danger">{formError}</p>}
         </div>
       </BaseModal>
     </div>

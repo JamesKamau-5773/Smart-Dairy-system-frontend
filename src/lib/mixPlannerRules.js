@@ -1,4 +1,4 @@
-import { feedCopy } from '../i18n/feed.en';
+import { feedCopy } from '../i18n/feed';
 
 // What the mixing planner's buttons may do right now, and why not when they
 // can't. Pure, so the page only renders the answer.

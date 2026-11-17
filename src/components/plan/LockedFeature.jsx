@@ -1,4 +1,3 @@
-import { Lock } from 'lucide-react';
 import { useEntitlements } from '../../hooks/useEntitlements';
 import { isFeatureEnabled } from '../../lib/featureFlags';
 import { SITE } from '../../landing/content';
@@ -25,9 +24,6 @@ export default function LockedFeature({ feature, title, children }) {
 
   return (
     <section aria-labelledby={`locked-${feature}`} className="mx-auto max-w-md rounded-card border border-ink/10 bg-surface p-6 text-center sm:p-8">
-      <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-brand-50 text-brand">
-        <Lock size={20} aria-hidden="true" />
-      </div>
       <h2 id={`locked-${feature}`} className="text-lg font-bold text-ink">{copy.lockedTitle(title)}</h2>
       <p className="mt-2 text-sm leading-6 text-ink-muted">
         {plan?.name ? copy.lockedNamedPlan(plan.name, title) : copy.lockedPlan(title)}{' '}

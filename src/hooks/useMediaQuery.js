@@ -24,3 +24,6 @@ export function useMediaQuery(query) {
 
 /** Tailwind's `md` breakpoint: the sidebar is always shown from here up. */
 export const DESKTOP_QUERY = '(min-width: 768px)';
+
+/** Phones: inputs are 16px here (src/index.css), so long placeholders get a short form. */
+export const PHONE_QUERY = '(max-width: 640px)';

@@ -1,9 +1,9 @@
 import { useRef, useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { Camera, Paperclip } from 'lucide-react';
 import BaseModal from '../ui/BaseModal';
 import AlertBanner from '../ui/AlertBanner';
 import AttachmentThumb from './AttachmentThumb';
+import { financeCopy } from '../../i18n/finance';
 import { financeApi, getApiErrorMessage } from '../../lib/backendApi';
 import { RECEIPT_ACCEPT, prepareReceiptFile, readAttachments, receiptLimits } from '../../lib/receiptAttachments';
 import { formatPhotoSize } from '../../lib/animalPhoto';
@@ -14,6 +14,7 @@ import { useEntitlements } from '../../hooks/useEntitlements';
  * backend's limit). `onUploaded` refreshes the ledger so the row's count updates.
  */
 export default function ReceiptPhotosModal({ transaction, title, canUpload, onClose, onUploaded }) {
+  const copy = financeCopy.receiptPhotos;
   const queryClient = useQueryClient();
   const cameraInput = useRef(null);
   const fileInput = useRef(null);
@@ -35,8 +36,8 @@ export default function ReceiptPhotosModal({ transaction, title, canUpload, onCl
       onUploaded?.();
     },
     onError: (uploadError) => setError(uploadError?.response
-      ? getApiErrorMessage(uploadError, 'The receipt was not saved. Try again.')
-      : 'No internet connection. The receipt was not saved.'),
+      ? getApiErrorMessage(uploadError, copy.notSaved)
+      : copy.offline),
     onSettled: () => setProgress(null),
   });
 
@@ -59,11 +60,11 @@ export default function ReceiptPhotosModal({ transaction, title, canUpload, onCl
   };
 
   return (
-    <BaseModal isOpen onClose={close} title="Receipt photos" subtitle={title}>
+    <BaseModal isOpen onClose={close} title={copy.title} subtitle={title}>
       <div className="space-y-4">
         {error && <AlertBanner type="danger" message={error} compact />}
         {attachments.length === 0 ? (
-          <p className="text-sm text-ink-muted">No receipt photos yet. Add a photo of the paper receipt or invoice so you can find it later.</p>
+          <p className="text-body text-ink-muted">{copy.empty}</p>
         ) : (
           <ul className="grid grid-cols-3 gap-2 sm:grid-cols-5">
             {attachments.map((attachment) => <li key={attachment.id}><AttachmentThumb attachment={attachment} /></li>)}
@@ -72,23 +73,25 @@ export default function ReceiptPhotosModal({ transaction, title, canUpload, onCl
 
         {canUpload && (
           isFull ? (
-            <p className="text-xs text-ink-muted">This entry has the most receipts it can hold ({maxPerEntry}).</p>
+            <p className="text-meta text-ink-muted">{copy.full(maxPerEntry)}</p>
           ) : (
             <div className="space-y-2">
               <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-                <button type="button" onClick={() => cameraInput.current?.click()} disabled={upload.isPending} className="btn-command gap-2 text-sm">
-                  <Camera size={16} aria-hidden="true" /> Take photo
+                <button type="button" onClick={() => cameraInput.current?.click()} disabled={upload.isPending} className="btn-command">
+
+    {copy.takePhoto}
                 </button>
-                <button type="button" onClick={() => fileInput.current?.click()} disabled={upload.isPending} className="btn-secondary gap-2 text-sm">
-                  <Paperclip size={16} aria-hidden="true" /> Choose photo or PDF
+                <button type="button" onClick={() => fileInput.current?.click()} disabled={upload.isPending} className="btn-secondary">
+
+    {copy.choose}
                 </button>
               </div>
               <input ref={cameraInput} type="file" accept="image/*" capture="environment" onChange={handleFile} className="sr-only" tabIndex={-1} aria-hidden="true" />
               <input ref={fileInput} type="file" accept={RECEIPT_ACCEPT} onChange={handleFile} className="sr-only" tabIndex={-1} aria-hidden="true" />
-              <p className="text-xs text-ink-muted" role="status">
+              <p className="text-meta text-ink-muted" role="status">
                 {upload.isPending
-                  ? `Uploading${progress !== null ? ` ${progress}%` : '…'}`
-                  : `Photos are shrunk on this phone to save data. Up to ${maxPerEntry} per entry, ${formatPhotoSize(maxBytes)} each.`}
+                  ? copy.uploading(progress)
+                  : copy.hint(maxPerEntry, formatPhotoSize(maxBytes))}
               </p>
             </div>
           )

@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { DollarSign, Edit2, KeyRound, MoreVertical, Search, Trash2, UserCheck, UserMinus, UserPlus } from 'lucide-react';
+import { MoreVertical, Plus, Search } from 'lucide-react';
 import toast from 'react-hot-toast';
 import AddEmployeeModal from '../../components/forms/AddEmployeeModal';
 import EmployeeAccountInviteModal from '../../components/forms/EmployeeAccountInviteModal';
@@ -18,7 +18,7 @@ import { useUrlFilters } from '../../hooks/useUrlFilters';
 import { getApiErrorMessage, hrApi } from '../../lib/backendApi';
 import { accountLabel, hasAppAccount, roleLabel, staffStatus } from '../../lib/staffLabels';
 import { tone } from '../../components/ui/tones';
-
+import { staffCopy } from '../../i18n/staff';
 const money = (value) => `KES ${Number(value || 0).toLocaleString()}`;
 
 function StatusChip({ status }) {
@@ -30,6 +30,7 @@ const STAFF_FILTERS = { former: 'no' };
 const STAFF_FILTER_VALUES = { former: ['no', 'yes'] };
 
 export default function StaffRegistry() {
+  const copy = staffCopy.registry;
   const { tenantId } = useTenant();
   const {
     staff, isHydrating, addEmployee, inviteEmployeeAccount, provisionEmployeeAccount, updateEmployeePageAccess,
@@ -65,8 +66,8 @@ export default function StaffRegistry() {
   const fail = (fallback) => (error) => toast.error(getApiErrorMessage(error, fallback));
 
   const handleSaveProfile = (staffId, updatedData) => editEmployee(staffId, updatedData)
-    .then(() => toast.success('Profile saved.'))
-    .catch(fail('The profile was not saved.'));
+    .then(() => toast.success(copy.profileSaved))
+    .catch(fail(copy.profileNotSaved));
 
   // Salary and an advance are two backend calls; say exactly which one didn't happen.
   // The advance is its own recorded movement (and a ledger expense on the backend).
@@ -80,66 +81,66 @@ export default function StaffRegistry() {
         ...(typeof updatedData.statutoryDeductionsEnabled === 'boolean' ? { statutoryDeductionsEnabled: updatedData.statutoryDeductionsEnabled } : {}),
       });
     } catch (error) {
-      fail('Salary details were not saved.')(error);
+      fail(copy.salaryNotSaved)(error);
       return;
     }
     if (updatedData.advanceAmount > 0) {
       try {
         await issueAdvance(member, updatedData.advanceAmount);
       } catch (error) {
-        fail('Salary details were saved, but the advance was not issued. Try issuing it again.')(error);
+        fail(copy.advanceNotIssued)(error);
         return;
       }
     }
-    toast.success(updatedData.advanceAmount > 0 ? 'Salary saved and advance issued.' : 'Salary details saved.');
+    toast.success(updatedData.advanceAmount > 0 ? copy.salaryAndAdvance : copy.salarySaved);
     // Close so the advance field can't be submitted twice; the card shows the new balance.
     close();
   };
 
   const handleSaveMedical = (staffId, updatedData) => editEmployee(staffId, updatedData)
-    .then(() => toast.success('Medical details saved.'))
-    .catch(fail('Medical details were not saved.'));
+    .then(() => toast.success(copy.medicalSaved))
+    .catch(fail(copy.medicalNotSaved));
 
   const handleVerifyReturn = ({ returned, note }) => {
     if (!dialogStaff) return;
     verifyReturn(dialogStaff.id, returned, note)
-      .then(() => { toast.success('Return recorded.'); close(); })
-      .catch((error) => toast.error(getApiErrorMessage(error, 'The return was not recorded.')));
+      .then(() => { toast.success(copy.returnRecorded); close(); })
+      .catch((error) => toast.error(getApiErrorMessage(error, copy.returnNotRecorded)));
   };
 
   // The backend keeps the history, checks the loan balance and disables any login.
   const handleOffboard = async (member, details) => {
     await offboardEmployee(member.id, details);
     staffingRecommendationQuery.refetch();
-    toast.success(`${member.name} moved to former staff.`);
+    toast.success(copy.offboarded(member.name));
   };
 
   // For records added by mistake; the backend refuses anyone with payroll or advance history.
   const handleDelete = async (member) => {
     const confirmed = await confirmation.confirm({
-      title: `Delete ${member.name}?`,
-      message: 'Only for someone added by mistake. Anyone who has been paid or given an advance must be offboarded instead, to keep their records.',
-      confirmText: 'Delete',
+      title: copy.deleteTitle(member.name),
+      message: copy.deleteMessage,
+      confirmText: copy.deleteConfirm,
       type: 'danger',
     });
     if (!confirmed) return;
     try {
       await deleteEmployee(member.id);
       staffingRecommendationQuery.refetch();
-      toast.success(`${member.name} deleted.`);
+      toast.success(copy.deleted(member.name));
     } catch (error) {
       // Records with payroll, advances or ledger entries are kept; offer offboarding instead.
       if (getApiErrorCode(error) === 'HAS_HISTORY' && getApiErrorBody(error).can_offboard !== false) {
         const offboard = await confirmation.confirm({
-          title: `${member.name} can’t be deleted`,
-          message: `${member.name} has ${(getApiErrorBody(error).history ?? ['records']).join(' and ')} on record, which must be kept. Offboard them instead.`,
-          confirmText: 'Offboard instead',
+          title: copy.cantDeleteTitle(member.name),
+          message: copy.cantDeleteMessage(member.name, (getApiErrorBody(error).history ?? [copy.records]).join(copy.and)),
+          confirmText: copy.offboardInstead,
           type: 'warning',
         });
         if (offboard) open('offboard', member);
         return;
       }
-      toast.error(getApiErrorMessage(error, `${member.name} was not deleted.`));
+      toast.error(getApiErrorMessage(error, copy.notDeleted(member.name)));
     }
   };
 
@@ -147,9 +148,9 @@ export default function StaffRegistry() {
     try {
       await editEmployee(member.id, { status: 'ACTIVE' });
       staffingRecommendationQuery.refetch();
-      toast.success(`${member.name} is active again. Set their page access in Manage access.`);
+      toast.success(copy.rehired(member.name));
     } catch (error) {
-      toast.error(getApiErrorMessage(error, `${member.name} was not reactivated.`));
+      toast.error(getApiErrorMessage(error, copy.notRehired(member.name)));
     }
   };
 
@@ -159,7 +160,7 @@ export default function StaffRegistry() {
       createdEmployee = await addEmployee(employee);
       staffingRecommendationQuery.refetch();
     } catch (error) {
-      toast.error(getApiErrorMessage(error, 'Could not add this employee. Check the details and try again.'));
+      toast.error(getApiErrorMessage(error, copy.addFailed));
       throw error;
     }
 
@@ -169,10 +170,10 @@ export default function StaffRegistry() {
       } else if (access?.mode === 'provision') {
         await provisionEmployeeAccount(createdEmployee.id, { role: access.role, password: access.password, requires_password_reset: true });
       }
-      toast.success(access?.mode === 'none' ? 'Employee added.' : 'Employee and app access created.');
+      toast.success(access?.mode === 'none' ? copy.added : copy.addedWithAccess);
       return createdEmployee;
     } catch (error) {
-      toast.error(`Employee was saved, but app access was not created: ${getApiErrorMessage(error, 'try again from Manage access.')}`);
+      toast.error(copy.accessFailed(getApiErrorMessage(error, copy.accessRetry)));
       const partialFailure = new Error('Employee created but access provisioning failed.', { cause: error });
       partialFailure.employeeCreated = true;
       throw partialFailure;
@@ -181,19 +182,19 @@ export default function StaffRegistry() {
 
   const handleInviteEmployee = async (staffId, payload) => {
     const invitation = await inviteEmployeeAccount(staffId, payload);
-    toast.success('Invitation created.');
+    toast.success(copy.invited);
     return invitation;
   };
 
   const handleProvisionEmployee = async (staffId, payload) => {
     const provisioned = await provisionEmployeeAccount(staffId, payload);
-    toast.success('App account created.');
+    toast.success(copy.accountCreated);
     return provisioned;
   };
 
   const handleSavePageAccess = async (staffId, pageAccess) => {
     await updateEmployeePageAccess(staffId, pageAccess);
-    toast.success('Page access saved.');
+    toast.success(copy.accessSaved);
   };
 
   const formerCount = staff.filter((member) => member.status === 'INACTIVE').length;
@@ -206,16 +207,16 @@ export default function StaffRegistry() {
   // One list of actions for the desktop menu and the phone buttons.
   const actionsFor = (member) => {
     if (member.status === 'INACTIVE') {
-      return [{ key: 'rehire', label: 'Make active again', Icon: UserCheck, onClick: () => handleRehire(member) }];
+      return [{ key: 'rehire', label: copy.actions.rehire, onClick: () => handleRehire(member) }];
     }
     return [
-      ...(member.status === 'OVERDUE' ? [{ key: 'verify', label: 'Verify return', Icon: UserCheck, onClick: () => open('verify', member), primary: true }] : []),
-      { key: 'edit', label: 'Edit details', Icon: Edit2, onClick: () => open('edit', member) },
-      { key: 'advance', label: 'Salary & advance', Icon: DollarSign, onClick: () => open('edit', member) },
-      ...(member.loanBalance > 0 ? [{ key: 'repay', label: 'Record repayment', Icon: DollarSign, onClick: () => open('repay', member) }] : []),
-      { key: 'access', label: hasAppAccount(member.accountStatus) ? 'Manage access' : 'Give app access', Icon: KeyRound, onClick: () => open('access', member) },
-      { key: 'offboard', label: 'Offboard', Icon: UserMinus, onClick: () => open('offboard', member), danger: true },
-      { key: 'delete', label: 'Delete (added by mistake)', Icon: Trash2, onClick: () => handleDelete(member), danger: true },
+      ...(member.status === 'OVERDUE' ? [{ key: 'verify', label: copy.actions.verify, onClick: () => open('verify', member), primary: true }] : []),
+      { key: 'edit', label: copy.actions.edit, onClick: () => open('edit', member) },
+      { key: 'advance', label: copy.actions.advance, onClick: () => open('edit', member) },
+      ...(member.loanBalance > 0 ? [{ key: 'repay', label: copy.actions.repay, onClick: () => open('repay', member) }] : []),
+      { key: 'access', label: hasAppAccount(member.accountStatus) ? copy.actions.manageAccess : copy.actions.giveAccess, onClick: () => open('access', member) },
+      { key: 'offboard', label: copy.actions.offboard, onClick: () => open('offboard', member), danger: true },
+      { key: 'delete', label: copy.actions.delete, onClick: () => handleDelete(member), danger: true },
     ];
   };
 
@@ -224,30 +225,30 @@ export default function StaffRegistry() {
       <Confirmation {...confirmation} />
       <header className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <p className="text-[11px] font-semibold uppercase tracking-wider text-ink-muted">People</p>
-          <h1 className="text-2xl font-black tracking-tight text-ink sm:text-3xl">Staff Registry</h1>
-          <p className="mt-1 text-sm text-ink-muted">Employee details, salaries, advances and app access.</p>
+          <p className="text-[11px] font-semibold uppercase tracking-wider text-ink-muted">{copy.eyebrow}</p>
+          <h1 className="text-2xl font-black tracking-tight text-ink sm:text-3xl">{copy.title}</h1>
+          <p className="mt-1 text-sm text-ink-muted">{copy.subtitle}</p>
         </div>
         <button type="button" onClick={() => setIsAddEmployeeModalOpen(true)} className="btn-command gap-2 self-start text-sm">
-          <UserPlus size={16} aria-hidden="true" /> Add employee
+          <Plus size={16} aria-hidden="true" /> {copy.add}
         </button>
       </header>
 
       <section className="card-machined flex flex-col gap-2 p-4 sm:flex-row sm:items-center sm:justify-between sm:gap-6 sm:p-5">
         <div>
           <p className="text-[11px] font-semibold uppercase tracking-wider text-ink-muted">
-            {staffingRecommendation ? `${staffingRecommendation.employee_count} active employees` : 'Staffing guidance'}
+            {staffingRecommendation ? copy.activeEmployees(staffingRecommendation.employee_count) : copy.guidance}
           </p>
           <p className="mt-0.5 text-base font-bold capitalize text-ink">
             {staffingRecommendation
-              ? `${String(staffingRecommendation.farm_size).toLowerCase().replaceAll('_', ' ')} farm`
-              : staffingRecommendationQuery.isError ? 'Not available right now' : 'Loading…'}
+              ? copy.farmSize(copy.farmSizes[String(staffingRecommendation.farm_size).toLowerCase()] ?? String(staffingRecommendation.farm_size).toLowerCase().replaceAll('_', ' '))
+              : staffingRecommendationQuery.isError ? copy.notAvailable : copy.loading}
           </p>
         </div>
         <div className="max-w-2xl text-sm sm:text-right">
           {recommendedRoles.length > 0 && (
             <p className="font-semibold text-ink">
-              Suggested team: {recommendedRoles.map(({ label, count }) => `${count} ${label.toLowerCase()}${count === 1 ? '' : 's'}`).join(', ')}
+              {copy.suggestedTeam(recommendedRoles.map(({ label, count }) => copy.roleCount(count, label)).join(', '))}
             </p>
           )}
           {staffingRecommendation?.note && <p className="mt-0.5 text-xs text-ink-muted">{staffingRecommendation.note}</p>}
@@ -256,11 +257,11 @@ export default function StaffRegistry() {
 
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
         <label className="relative min-w-0 flex-1">
-          <span className="sr-only">Search staff</span>
+          <span className="sr-only">{copy.search}</span>
           <Search size={16} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-ink-muted" aria-hidden="true" />
           <input
             type="search"
-            placeholder="Search by name, role or phone"
+            placeholder={copy.searchPlaceholder}
             value={searchTerm}
             onChange={(event) => setSearchTerm(event.target.value)}
             className="input-machined w-full pl-9 text-sm"
@@ -269,7 +270,7 @@ export default function StaffRegistry() {
         {formerCount > 0 && (
           <label className="flex min-h-11 items-center gap-2 text-sm font-semibold text-ink">
             <input type="checkbox" checked={showFormer} onChange={(event) => setShowFormer(event.target.checked)} className="h-4 w-4 accent-brand" />
-            Show former staff ({formerCount})
+            {copy.showFormer(formerCount)}
           </label>
         )}
       </div>
@@ -278,14 +279,15 @@ export default function StaffRegistry() {
         <div className="space-y-3" aria-busy="true">{[0, 1, 2].map((key) => <Skeleton key={key} className="h-20 w-full" />)}</div>
       ) : staff.length === 0 ? (
         <section className="card-machined flex flex-col items-start gap-3 p-6">
-          <p className="text-base font-bold text-ink">No employees yet</p>
-          <p className="text-sm text-ink-muted">Add the people who work on the farm to pay them, track advances and give them app access.</p>
-          <button type="button" onClick={() => setIsAddEmployeeModalOpen(true)} className="btn-command gap-2 text-sm"><UserPlus size={16} aria-hidden="true" /> Add your first employee</button>
+          <p className="text-base font-bold text-ink">{copy.emptyTitle}</p>
+          <p className="text-sm text-ink-muted">{copy.emptyHint}</p>
+          <button type="button" onClick={() => setIsAddEmployeeModalOpen(true)} className="btn-command text-sm">
+        {copy.addFirst}</button>
         </section>
       ) : filteredStaff.length === 0 ? (
         <p className="text-sm text-ink-muted">
-          No employees match.{' '}
-          <button type="button" onClick={() => { setSearchTerm(''); setShowFormer(true); }} className="font-semibold text-brand hover:underline">Clear search</button>
+          {copy.noMatches}{' '}
+          <button type="button" onClick={() => { setSearchTerm(''); setShowFormer(true); }} className="font-semibold text-brand hover:underline">{copy.clearSearch}</button>
         </p>
       ) : (
         <>
@@ -293,12 +295,12 @@ export default function StaffRegistry() {
             <table className="w-full min-w-[860px] text-left">
               <thead className="border-b border-ink/10 text-[11px] font-semibold uppercase tracking-wider text-ink-muted">
                 <tr>
-                  <th scope="col" className="px-5 py-3">Employee</th>
-                  <th scope="col" className="px-5 py-3 text-right">Base salary</th>
-                  <th scope="col" className="px-5 py-3 text-right">Owes in advances</th>
-                  <th scope="col" className="px-5 py-3">App access</th>
-                  <th scope="col" className="px-5 py-3">Status</th>
-                  <th scope="col" className="px-5 py-3 text-right"><span className="sr-only">Actions</span></th>
+                  <th scope="col" className="px-5 py-3">{copy.columns.employee}</th>
+                  <th scope="col" className="px-5 py-3 text-right">{copy.columns.salary}</th>
+                  <th scope="col" className="px-5 py-3 text-right">{copy.columns.owes}</th>
+                  <th scope="col" className="px-5 py-3">{copy.columns.access}</th>
+                  <th scope="col" className="px-5 py-3">{copy.columns.status}</th>
+                  <th scope="col" className="px-5 py-3 text-right"><span className="sr-only">{copy.columns.actions}</span></th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-ink/10">
@@ -318,20 +320,20 @@ export default function StaffRegistry() {
                       <td className="px-5 py-3.5">
                         <div className="flex items-center justify-end gap-2">
                           {primary && (
-                            <button type="button" onClick={primary.onClick} className="btn-command gap-1.5 px-3 text-xs">
-                              <primary.Icon size={14} aria-hidden="true" /> {primary.label}
+                            <button type="button" onClick={primary.onClick} className="btn-command px-3 text-xs">
+                              {primary.label}
                             </button>
                           )}
                           <Popover>
                             <PopoverTrigger asChild>
-                              <button type="button" className="inline-flex h-9 w-9 items-center justify-center rounded-button border border-ink/15 text-ink-muted hover:border-brand/40 hover:text-brand" aria-label={`Actions for ${member.name}`}>
+                              <button type="button" className="inline-flex h-9 w-9 items-center justify-center rounded-button border border-ink/15 text-ink-muted hover:border-brand/40 hover:text-brand" aria-label={copy.actionsFor(member.name)}>
                                 <MoreVertical size={16} aria-hidden="true" />
                               </button>
                             </PopoverTrigger>
                             <PopoverContent align="end" className="w-52 p-1.5">
-                              {actions.filter((action) => !action.primary).map(({ key, label, Icon, onClick, danger }) => (
-                                <button key={key} type="button" onClick={onClick} className={`flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm ${danger ? 'text-danger hover:bg-danger-50' : 'text-ink hover:bg-brand-50'}`}>
-                                  <Icon size={14} aria-hidden="true" /> {label}
+                              {actions.filter((action) => !action.primary).map(({ key, label, onClick, danger }) => (
+                                <button key={key} type="button" onClick={onClick} className={`flex w-full items-center rounded-md px-3 py-2 text-left text-sm ${danger ? 'text-danger hover:bg-danger-50' : 'text-ink hover:bg-brand-50'}`}>
+                                  {label}
                                 </button>
                               ))}
                             </PopoverContent>
@@ -356,9 +358,9 @@ export default function StaffRegistry() {
                   <StatusChip status={member.status} />
                 </div>
                 <dl className="mt-3 grid grid-cols-2 gap-3 text-xs">
-                  <div><dt className="text-ink-muted">Base salary</dt><dd className="mt-0.5 font-semibold tabular-nums text-ink">{money(member.baseSalary)}</dd></div>
-                  <div><dt className="text-ink-muted">Owes in advances</dt><dd className="mt-0.5 font-semibold tabular-nums text-ink">{money(member.loanBalance)}</dd></div>
-                  <div className="col-span-2"><dt className="text-ink-muted">App access</dt><dd className="mt-0.5 font-semibold text-ink">{accountLabel(member.accountStatus)}</dd></div>
+                  <div><dt className="text-ink-muted">{copy.columns.salary}</dt><dd className="mt-0.5 font-semibold tabular-nums text-ink">{money(member.baseSalary)}</dd></div>
+                  <div><dt className="text-ink-muted">{copy.columns.owes}</dt><dd className="mt-0.5 font-semibold tabular-nums text-ink">{money(member.loanBalance)}</dd></div>
+                  <div className="col-span-2"><dt className="text-ink-muted">{copy.columns.access}</dt><dd className="mt-0.5 font-semibold text-ink">{accountLabel(member.accountStatus)}</dd></div>
                 </dl>
                 <div className="mt-3 flex flex-wrap gap-2">
                   {actionsFor(member).map(({ key, label, onClick, danger, primary }) => (
@@ -388,7 +390,7 @@ export default function StaffRegistry() {
           onClose={close}
           onSubmit={async (member, details) => {
             await recordRepayment(member, details);
-            toast.success(`Repayment of KES ${Number(details.amount).toLocaleString()} recorded.`);
+            toast.success(copy.repaid(Number(details.amount).toLocaleString()));
           }}
         />
       )}

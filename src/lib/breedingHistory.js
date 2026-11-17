@@ -1,25 +1,22 @@
-import { formatMonth } from './dateFormat';
+import { formatMonthYear } from './dateFormat';
+import { breedingCopy } from '../i18n/breeding';
 
 // Historical Checks: turning the backend's breeding logs into what the modal lists.
 // Display labels and grouping only. Dates, notes and statuses are the backend's own, and
-// nothing is filled in when they are missing.
+// nothing is filled in when they are missing. Labels are read when shown, in the chosen language.
 
-/** Display label for each normalized backend status. */
-export const OUTCOME_LABELS = Object.freeze({
-  Pregnant: 'Pregnant (In-Calf)',
-  Open: 'Open (Not Pregnant)',
-  Failed: 'Unsuccessful',
-  Pending: 'Pending Check',
-});
+/** Display label for a normalized backend status, e.g. "Pregnant (in-calf)". */
+export function outcomeLabel(status) {
+  return breedingCopy.outcomes[status] ?? breedingCopy.outcomes.Pending;
+}
 
 /** The status filter chips, by backend status. */
-export const HISTORY_FILTERS = Object.freeze([
-  { value: 'All', label: 'All' },
-  { value: 'Pregnant', label: 'Pregnant' },
-  { value: 'Open', label: 'Open' },
-  { value: 'Pending', label: 'Pending' },
-  { value: 'Failed', label: 'Unsuccessful' },
-]);
+export function historyFilters() {
+  return ['All', 'Pregnant', 'Open', 'Pending', 'Failed'].map((value) => ({
+    value,
+    label: value === 'All' ? breedingCopy.hub.all : breedingCopy.statuses[value],
+  }));
+}
 
 export const NO_AI_DATE_GROUP = 'no-ai-date';
 
@@ -38,9 +35,10 @@ export function groupHistoryByMonth(history) {
   return groups;
 }
 
-/** "Jan 2026", or "No AI date" for the group of records without one. */
+/** "January 2026", or the "unknown month" label for the group of records without an AI date. */
 export function historyMonthLabel(key) {
-  return key === NO_AI_DATE_GROUP ? 'No AI date' : formatMonth(key) ?? key;
+  const unknown = breedingCopy.hub.unknownMonth;
+  return key === NO_AI_DATE_GROUP ? unknown : formatMonthYear(`${key}-01`, unknown);
 }
 
 /** How many filter controls are in use (search text, a status other than All). */

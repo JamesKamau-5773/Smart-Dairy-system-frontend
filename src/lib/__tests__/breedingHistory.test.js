@@ -14,9 +14,9 @@ describe('breedingHistory', () => {
     expect(groups.get('2026-01').map((entry) => entry.id)).toEqual([1, 2]);
   });
 
-  it('labels months in the app date format', () => {
-    expect(historyMonthLabel('2026-01')).toBe('Jan 2026');
-    expect(historyMonthLabel(NO_AI_DATE_GROUP)).toBe('No AI date');
+  it('labels months in the app date format, and records without an AI date as an unknown month', () => {
+    expect(historyMonthLabel('2026-01')).toBe('January 2026');
+    expect(historyMonthLabel(NO_AI_DATE_GROUP)).toBe('Unknown month');
   });
 
   it('counts the filter controls in use', () => {

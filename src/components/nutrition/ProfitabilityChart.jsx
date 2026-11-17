@@ -1,8 +1,8 @@
-import { TrendingDown } from 'lucide-react';
 import { formatCostPerLitre } from '../../lib/feedCost';
 import { hasRowsToShow } from '../../lib/listLoadState';
 import { ListLoadNotices } from '../ui/ListLoadState';
 import Skeleton from '../ui/Skeleton';
+import { feedCopy } from '../../i18n/feed';
 
 const TITLE = 'Feed cost per litre of milk';
 const SUBTITLE = 'How much of your milk money goes to buying feed. Lower is better.';
@@ -26,13 +26,13 @@ export default function ProfitabilityChart({ trends, state = 'ready', error, onR
 
   return (
     <section className="card-machined flex flex-col p-5 sm:p-6" aria-label={TITLE}>
-      <h3 className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-wider text-ink-muted">
-        <TrendingDown size={16} aria-hidden="true" /> {TITLE}
-      </h3>
+      <h2 className="text-section-title text-ink-muted">
+        {TITLE}
+      </h2>
 
       {state !== 'ready' && (
         <div className="-mx-5 mt-3 sm:-mx-6">
-          <ListLoadNotices state={state} label="weekly feed costs" error={error} onRetry={onRetry} />
+          <ListLoadNotices state={state} label={feedCopy.costs.weeklyLabel} error={error} onRetry={onRetry} />
         </div>
       )}
       {state === 'loading' && (
@@ -41,14 +41,14 @@ export default function ProfitabilityChart({ trends, state = 'ready', error, onR
         </div>
       )}
       {!hasRowsToShow(state) ? null : points.length === 0 ? (
-        <p className="mt-2 text-sm text-ink-muted">No weekly cost data yet. It appears once batches are fed and milk is recorded.</p>
+        <p className="mt-2 text-body text-ink-muted">{feedCopy.costs.noWeekly}</p>
       ) : (
         <>
-          <p className="mt-1 border-b border-ink/10 pb-4 text-xs text-ink-muted">{SUBTITLE}</p>
+          <p className="mt-1 border-b border-ink/10 pb-4 text-meta text-ink-muted">{SUBTITLE}</p>
           <ol className="mt-4 flex min-h-[180px] items-end justify-between gap-2">
             {points.map((point) => (
               <li key={point.week} className="flex h-full min-w-0 flex-1 flex-col items-center justify-end">
-                <span className={`mb-1.5 font-mono text-[11px] font-semibold tabular-nums ${point.isCurrent ? 'text-ink' : 'text-ink-muted'}`}>
+                <span className={`mb-1.5 text-meta tabular-nums ${point.isCurrent ? 'text-ink' : 'text-ink-muted'}`}>
                   {formatCostPerLitre(point.cost, { suffix: '' })}
                 </span>
                 <div className="flex h-28 w-full max-w-[40px] items-end">
@@ -57,7 +57,7 @@ export default function ProfitabilityChart({ trends, state = 'ready', error, onR
                     style={{ height: `${barPercent(point.cost, max)}%` }}
                   />
                 </div>
-                <span className={`mt-2 truncate text-[11px] font-semibold ${point.isCurrent ? 'text-ink' : 'text-ink-muted'}`}>{point.week}</span>
+                <span className={`mt-2 truncate text-meta ${point.isCurrent ? 'text-ink' : 'text-ink-muted'}`}>{point.week}</span>
               </li>
             ))}
           </ol>

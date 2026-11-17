@@ -1,6 +1,5 @@
 import { useEffect, useRef } from 'react';
 import toast from 'react-hot-toast';
-import { Timer } from 'lucide-react';
 import { useCountdown } from '../../hooks/useCountdown';
 import { useLeaveDemo } from '../../hooks/useLeaveDemo';
 import { authApi } from '../../lib/backendApi';
@@ -58,8 +57,7 @@ export default function DemoTimeLeft({ expiresAt }) {
 
   const endingSoon = seconds <= ENDING_SOON_SECONDS;
   return (
-    <span className={`inline-flex items-center gap-1.5 whitespace-nowrap rounded-badge px-2 py-1 text-xs font-semibold tabular-nums ${endingSoon ? 'bg-warning-50 text-ink' : 'bg-brand-100 text-brand-900'}`}>
-      <Timer size={14} aria-hidden="true" />
+    <span className={`inline-flex items-center whitespace-nowrap rounded-badge px-2 py-1 text-xs font-semibold tabular-nums ${endingSoon ? 'bg-warning-50 text-ink' : 'bg-brand-100 text-brand-900'}`}>
       {copy.endsIn(formatTimeLeft(seconds))}
     </span>
   );

@@ -1,15 +1,13 @@
 import { useState } from 'react';
-import { AlertCircle, Beaker, Clock, Plus, RefreshCw, Tractor, Utensils } from 'lucide-react';
+import { AlertCircle } from 'lucide-react';
 import Skeleton from '../ui/Skeleton';
 import { FEEDING_GROUPS } from '../../lib/feedingGroups';
-import { feedCopy } from '../../i18n/feed.en';
+import { feedCopy } from '../../i18n/feed';
 import { tone } from '../ui/tones';
 
 const { currentMix: copy } = feedCopy;
 const critical = tone('critical');
 
-// Same icons as the mixing planner's tabs, so each mix type looks the same everywhere.
-const TYPE_ICONS = { dairy_meal: Beaker, main_meal: Tractor };
 const LOW_STOCK_DAYS = 3;
 
 /** Why "Record feeding" can't be pressed yet, or '' when it can. */
@@ -21,16 +19,15 @@ function recordFeedingBlocker({ feedingGroup, amount, remaining }) {
 }
 
 function CardHeader({ recipeType, title, subtitle }) {
-  const Icon = TYPE_ICONS[recipeType] ?? Beaker;
   return (
     <header className="flex items-start justify-between gap-3">
       <div className="min-w-0">
-        <p className="text-[11px] font-semibold uppercase tracking-wider text-ink-muted">{copy.heading}</p>
-        <h3 className="mt-1 break-words text-lg font-bold text-ink">{title}</h3>
-        {subtitle && <p className="mt-0.5 text-xs text-ink-muted">{subtitle}</p>}
+        <p className="text-label text-ink-muted">{copy.heading}</p>
+        <h2 className="mt-1 break-words text-section-title text-ink">{title}</h2>
+        {subtitle && <p className="mt-0.5 text-meta text-ink-muted">{subtitle}</p>}
       </div>
-      <span className="inline-flex shrink-0 items-center gap-1.5 rounded-badge bg-brand-50 px-2 py-1 text-xs font-semibold text-brand-dark">
-        <Icon size={14} aria-hidden="true" /> {copy.types[recipeType]}
+      <span className="inline-flex shrink-0 items-center rounded-badge bg-brand-50 px-2 py-1 text-badge text-brand-dark">
+        {copy.types[recipeType]}
       </span>
     </header>
   );
@@ -39,9 +36,9 @@ function CardHeader({ recipeType, title, subtitle }) {
 function StockMeter({ percent, isLow }) {
   return (
     <div>
-      <div className="mb-1.5 flex justify-between text-xs font-semibold text-ink">
+      <div className="mb-1.5 flex justify-between text-meta text-ink">
         <span>{copy.stockLevel}</span>
-        <span className="font-mono tabular-nums">{percent}%</span>
+        <span className="tabular-nums">{percent}%</span>
       </div>
       <div
         className="h-2 w-full overflow-hidden rounded-full bg-ink-100"
@@ -60,23 +57,20 @@ function StockMeter({ percent, isLow }) {
 function DepletionForecast({ daysLeft, feedingRate, isLow }) {
   if (daysLeft === null) {
     return (
-      <div className="flex gap-2.5 text-sm">
-        <Clock size={16} className="mt-0.5 shrink-0 text-ink-muted" aria-hidden="true" />
+      <div className="text-body">
         <div>
-          <p className="font-semibold text-ink">{copy.noForecast}</p>
-          <p className="text-xs text-ink-muted">{copy.noForecastHint}</p>
+          <p className="text-body-strong text-ink">{copy.noForecast}</p>
+          <p className="text-meta text-ink-muted">{copy.noForecastHint}</p>
         </div>
       </div>
     );
   }
   return (
-    <div className="flex gap-2.5 text-sm">
-      {isLow
-        ? <AlertCircle size={16} className={`mt-0.5 shrink-0 ${critical.icon}`} aria-hidden="true" />
-        : <Clock size={16} className="mt-0.5 shrink-0 text-brand" aria-hidden="true" />}
+    <div className="flex gap-2.5 text-body">
+      {isLow && <AlertCircle size={16} className={`mt-0.5 shrink-0 ${critical.icon}`} aria-hidden="true" />}
       <div>
-        <p className={`font-semibold ${isLow ? critical.icon : 'text-ink'}`}>{isLow ? copy.lowStock(daysLeft) : copy.daysLeft(daysLeft)}</p>
-        {feedingRate !== null && <p className="text-xs text-ink-muted">{copy.pace(feedingRate)}</p>}
+        <p className={`text-body-strong ${isLow ? critical.icon : 'text-ink'}`}>{isLow ? copy.lowStock(daysLeft) : copy.daysLeft(daysLeft)}</p>
+        {feedingRate !== null && <p className="text-meta text-ink-muted">{copy.pace(feedingRate)}</p>}
       </div>
     </div>
   );
@@ -87,8 +81,8 @@ function MixStats({ consumedWeight, remainingWeight }) {
     <dl className="grid grid-cols-2 divide-x divide-ink/10 rounded-card border border-ink/10">
       {[[copy.fedSoFar, consumedWeight], [copy.inStore, remainingWeight]].map(([label, value]) => (
         <div key={label} className="px-3 py-2.5 text-center">
-          <dt className="text-[11px] font-semibold uppercase tracking-wider text-ink-muted">{label}</dt>
-          <dd className="mt-0.5 font-mono text-base font-bold tabular-nums text-ink">{value === null || value === undefined ? copy.unknown : `${value} kg`}</dd>
+          <dt className="text-label text-ink-muted">{label}</dt>
+          <dd className="mt-0.5 text-body-strong tabular-nums text-ink">{value === null || value === undefined ? copy.unknown : `${value} kg`}</dd>
         </div>
       ))}
     </dl>
@@ -114,13 +108,13 @@ function RecordFeedingForm({ mix, isRecording, onRecordConsumption }) {
 
   return (
     <form onSubmit={submit} className="border-t border-ink/10 pt-4">
-      <label htmlFor={inputId} className="mb-2 block text-xs font-semibold text-ink">{copy.feedUsed}</label>
+      <label htmlFor={inputId} className="mb-2 block text-field-label text-ink">{copy.feedUsed}</label>
       <div className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto]">
         <select
           value={feedingGroup}
           onChange={(event) => setFeedingGroup(event.target.value)}
           aria-label={copy.group}
-          className="input-machined min-w-0 text-sm"
+          className="input-machined min-w-0 text-control"
           required
         >
           <option value="">{copy.selectGroup}</option>
@@ -136,18 +130,18 @@ function RecordFeedingForm({ mix, isRecording, onRecordConsumption }) {
           value={consumedWeight}
           onChange={(event) => setConsumedWeight(event.target.value)}
           placeholder={copy.upTo(mix.remainingWeight)}
-          className="input-machined min-w-0 font-mono text-sm tabular-nums"
+          className="input-machined min-w-0 text-control tabular-nums"
         />
         <button
           type="submit"
           disabled={isRecording || Boolean(blocker)}
           aria-describedby={blocker ? `${inputId}-blocker` : undefined}
-          className="btn-command gap-2 px-4 text-sm disabled:cursor-not-allowed disabled:opacity-50"
+          className="btn-command gap-2 px-4 text-control disabled:cursor-not-allowed disabled:opacity-50"
         >
-          <Utensils size={15} aria-hidden="true" /> {isRecording ? copy.recording : copy.record}
+          {isRecording ? copy.recording : copy.record}
         </button>
       </div>
-      {blocker && !isRecording && <p id={`${inputId}-blocker`} className="mt-2 text-xs text-ink-muted">{blocker}</p>}
+      {blocker && !isRecording && <p id={`${inputId}-blocker`} className="mt-2 text-meta text-ink-muted">{blocker}</p>}
     </form>
   );
 }
@@ -178,13 +172,13 @@ export default function CurrentMixCard({ recipeType = 'dairy_meal', mix, status 
             <Skeleton className="h-10 w-full" />
           </div>
         ) : status === 'offline' ? (
-          <p role="status" className="text-sm text-ink">{copy.loadOffline}</p>
+          <p role="status" className="text-body text-ink">{copy.loadOffline}</p>
         ) : (
           <>
-            <p role="alert" className="text-sm text-ink">{copy.loadFailed}</p>
+            <p role="alert" className="text-body text-ink">{copy.loadFailed}</p>
             {onRetry && (
-              <button type="button" onClick={onRetry} className="btn-secondary gap-2 self-start text-sm font-semibold">
-                <RefreshCw size={15} aria-hidden="true" /> {copy.retry}
+              <button type="button" onClick={onRetry} className="btn-secondary gap-2 self-start text-control">
+                {copy.retry}
               </button>
             )}
           </>
@@ -197,10 +191,10 @@ export default function CurrentMixCard({ recipeType = 'dairy_meal', mix, status 
     return (
       <section className="card-machined flex flex-col gap-4 p-5 sm:p-6" aria-label={typeLabel}>
         <CardHeader recipeType={recipeType} title={copy.emptyTitle(typeLabel)} />
-        <p className="text-sm text-ink-muted">{copy.emptyHint}</p>
+        <p className="text-body text-ink-muted">{copy.emptyHint}</p>
         {onMixBatch && (
-          <button type="button" onClick={onMixBatch} className="btn-secondary mt-auto gap-2 self-start text-sm font-semibold">
-            <Plus size={16} aria-hidden="true" /> {copy.emptyAction(typeLabel)}
+          <button type="button" onClick={onMixBatch} className="btn-secondary mt-auto gap-2 self-start text-control">
+            {copy.emptyAction(typeLabel)}
           </button>
         )}
       </section>
@@ -224,8 +218,8 @@ export default function CurrentMixCard({ recipeType = 'dairy_meal', mix, status 
         <RecordFeedingForm mix={mix} isRecording={isRecording} onRecordConsumption={onRecordConsumption} />
       )}
       {onMixBatch && (
-        <button type="button" onClick={onMixBatch} className="btn-ghost gap-2 self-start text-sm">
-          <Plus size={16} aria-hidden="true" /> {copy.mixAgain}
+        <button type="button" onClick={onMixBatch} className="btn-ghost gap-2 self-start text-control">
+          {copy.mixAgain}
         </button>
       )}
     </section>

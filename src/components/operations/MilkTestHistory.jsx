@@ -3,7 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { ChevronDown } from 'lucide-react';
 import { safetyApi } from '../../lib/backendApi';
 import { milkTestsKey } from '../../lib/milkSafety';
-import { safetyCopy as copy } from '../../i18n/safety.en';
+import { safetyCopy as copy } from '../../i18n/safety';
 
 // Date and time of a test, e.g. "3 Nov, 07:30"; null when unreadable.
 const formatTestTime = (value) => {

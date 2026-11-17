@@ -1,5 +1,4 @@
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Compass } from 'lucide-react';
 import { shellCopy } from '../i18n/shell';
 
 const { notFound: copy } = shellCopy;
@@ -21,9 +20,6 @@ export default function NotFound({ variant = 'app', homePath = '/app' }) {
 
   const content = (
     <section aria-labelledby="not-found-title" className="mx-auto w-full max-w-md rounded-card border border-ink/10 bg-surface p-6 text-center sm:p-8">
-      <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-brand-50 text-brand">
-        <Compass size={22} aria-hidden="true" />
-      </div>
       <h1 id="not-found-title" className="text-xl font-bold text-ink">{copy.title}</h1>
       <p className="mt-2 text-sm leading-6 text-ink-muted">
         {copy.message}
@@ -36,8 +32,8 @@ export default function NotFound({ variant = 'app', homePath = '/app' }) {
           <Link to={homePath} className="btn-command justify-center">{copy.goToDashboard}</Link>
         )}
         {canGoBack && (
-          <button type="button" onClick={() => navigate(-1)} className="btn-secondary inline-flex min-h-11 items-center justify-center gap-2">
-            <ArrowLeft size={16} aria-hidden="true" /> {copy.back}
+          <button type="button" onClick={() => navigate(-1)} className="btn-secondary inline-flex min-h-11 items-center justify-center">
+            {copy.back}
           </button>
         )}
       </div>

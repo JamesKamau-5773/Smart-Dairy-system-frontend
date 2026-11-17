@@ -27,14 +27,14 @@ test('feed setup journey on a phone', async ({ page }) => {
 
   await test.step('add a feed item without a SKU', async () => {
     await page.goto('/operations/inventory');
-    await page.getByRole('button', { name: /Add to Feedstore|Register your first item/ }).first().click();
+    await page.getByRole('button', { name: /Add to feedstore|Register your first item/i }).first().click();
     const dialog = page.getByRole('dialog').last();
     await dialog.locator('input[name="name"]').fill('Maize Germ');
     await dialog.locator('input[name="currentStock"]').fill('200');
     await dialog.locator('input[name="proteinGramsPerKg"]').fill('10');
     await dialog.locator('input[name="energyMjPerKg"]').fill('12');
     await dialog.locator('input[name="costPerKg"]').fill('32');
-    await dialog.getByRole('button', { name: /Save Resource/ }).click();
+    await dialog.getByRole('button', { name: /Save resource/i }).click();
     await expect(itemCard('Maize Germ')).toBeVisible();
   });
 
@@ -43,11 +43,11 @@ test('feed setup journey on a phone', async ({ page }) => {
     const dialog = page.getByRole('dialog', { name: 'Restock resource' });
     await dialog.getByLabel(/Quantity delivered/).fill('23.5');
     await dialog.getByLabel(/Also record this purchase/).check();
-    await dialog.getByRole('button', { name: /Confirm Delivery/ }).click();
+    await dialog.getByRole('button', { name: /Confirm delivery/i }).click();
     await expect(dialog.getByText('Enter the price per kg to record the expense.')).toBeVisible();
     await dialog.getByLabel(/Price paid per kg/).fill('34');
     await dialog.getByLabel(/Supplier/).fill('Unga Feeds');
-    await dialog.getByRole('button', { name: /Confirm Delivery/ }).click();
+    await dialog.getByRole('button', { name: /Confirm delivery/i }).click();
     await expect(itemCard('Maize Germ')).toContainText('223.5');
   });
 
@@ -64,7 +64,7 @@ test('feed setup journey on a phone', async ({ page }) => {
     await page.goto('/feed-nutrition/mix');
     const share = page.getByLabel('Maize Germ percentage');
     await share.fill('90');
-    await expect(page.getByRole('button', { name: /Save As Current Feed Mix/ })).toBeDisabled();
+    await expect(page.getByRole('button', { name: /Save as current feed mix/i })).toBeDisabled();
     await expect(page.getByText(/Change them to exactly 100% first/).first()).toBeVisible();
 
     // A real backend may list other ingredients for a new farm; give them 0%.
@@ -73,7 +73,7 @@ test('feed setup journey on a phone', async ({ page }) => {
     await share.fill('100');
     await page.getByLabel('Use this mix for').selectOption('lactating');
     await page.getByLabel('Concentrate per cow per day (kg)').fill('4');
-    await page.getByRole('button', { name: /Save As Current Feed Mix/ }).click();
+    await page.getByRole('button', { name: /Save as current feed mix/i }).click();
     await expect(page.getByText('Mix saved as the current feed mix.')).toBeVisible();
   });
 

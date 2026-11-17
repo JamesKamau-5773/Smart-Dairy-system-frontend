@@ -1,23 +1,27 @@
 import { useParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { AlertTriangle, Link2Off, Receipt } from 'lucide-react';
+import { AlertTriangle } from 'lucide-react';
 import { financeApi } from '../../lib/backendApi';
 import { normalizeStatement } from '../../lib/customerStatement';
 import { isFeatureEnabled } from '../../lib/featureFlags';
 import { formatMoneyText } from '../../components/ui/Money';
 import { Skeleton } from '../../components/ui';
 import { SITE } from '../../landing/content';
+import { financeCopy } from '../../i18n/finance';
 
 const STATUS_NOT_FOUND = 404;
 const MAX_RETRIES = 2;
 
-function Notice({ icon: Icon, title, children }) {
+// Only the load-failure notice carries an icon: it marks an error, the others are plain information.
+function Notice({ isError = false, title, children }) {
   return (
     <main className="flex min-h-screen items-center justify-center bg-surface-warm p-4">
       <section aria-labelledby="statement-notice" className="mx-auto w-full max-w-md rounded-card border border-ink/10 bg-surface p-6 text-center sm:p-8">
-        <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-brand-50 text-brand">
-          <Icon size={22} aria-hidden="true" />
-        </div>
+        {isError && (
+          <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-brand-50 text-brand">
+            <AlertTriangle size={22} aria-hidden="true" />
+          </div>
+        )}
         <h1 id="statement-notice" className="text-xl font-bold text-ink">{title}</h1>
         <div className="mt-2 text-sm leading-6 text-ink-muted">{children}</div>
       </section>
@@ -31,6 +35,7 @@ function Notice({ icon: Icon, title, children }) {
  * today's links use the buyer's phone number as the token (BR-016); while off, no request is made.
  */
 export default function CustomerPortal() {
+  const copy = financeCopy.portal;
   const { token } = useParams();
   const enabled = isFeatureEnabled('customerPortal');
 
@@ -45,27 +50,27 @@ export default function CustomerPortal() {
 
   if (!enabled) {
     return (
-      <Notice icon={Link2Off} title="Statement links aren’t available yet">
-        Ask the farm to send your statement on WhatsApp.
+      <Notice title={copy.offTitle}>
+        {copy.offMessage}
       </Notice>
     );
   }
   if (isLoading) {
-    return <main className="p-4 sm:p-8" aria-busy="true"><span className="sr-only">Loading statement…</span><Skeleton className="mx-auto h-96 w-full max-w-4xl" /></main>;
+    return <main className="p-4 sm:p-8" aria-busy="true"><span className="sr-only">{copy.loading}</span><Skeleton className="mx-auto h-96 w-full max-w-4xl" /></main>;
   }
   if (isError) {
     if (error?.response?.status === STATUS_NOT_FOUND) {
       return (
-        <Notice icon={Link2Off} title="This statement link isn’t valid">
-          It may be old or mistyped. Ask the farm for a new link.
+        <Notice title={copy.invalidTitle}>
+          {copy.invalidMessage}
         </Notice>
       );
     }
     return (
-      <Notice icon={AlertTriangle} title="We couldn’t load this statement">
-        <p>Check your connection and try again.</p>
+      <Notice isError title={copy.failedTitle}>
+        <p>{copy.failedMessage}</p>
         <button type="button" onClick={() => refetch()} disabled={isFetching} className="btn-command mt-6 inline-flex justify-center">
-          {isFetching ? 'Trying again…' : 'Try again'}
+          {isFetching ? copy.retrying : copy.retry}
         </button>
       </Notice>
     );
@@ -77,21 +82,22 @@ export default function CustomerPortal() {
     <main className="flex min-h-screen justify-center bg-surface-warm p-4 md:p-8">
       <div className="w-full max-w-4xl space-y-6">
         <header className="border-b border-ink/10 pb-6">
-          <p className="text-xs font-semibold uppercase tracking-wide text-ink-muted">Milk statement · {SITE.name}</p>
+          <p className="text-xs font-semibold uppercase tracking-wide text-ink-muted">{copy.eyebrow(SITE.name)}</p>
           <h1 className="mt-2 break-words text-2xl font-bold text-ink sm:text-3xl">{customerName ?? '—'}</h1>
         </header>
 
         <section aria-labelledby="statement-balance" className="rounded-card border border-ink/10 bg-surface p-6">
-          <h2 id="statement-balance" className="flex items-center gap-2 text-sm font-semibold uppercase tracking-wide text-ink-muted">
-            <Receipt size={16} aria-hidden="true" /> Balance
+          <h2 id="statement-balance" className="text-sm font-semibold uppercase tracking-wide text-ink-muted">
+
+  {copy.balance}
           </h2>
           <p className="mt-3 font-mono text-3xl font-semibold tabular-nums text-ink-strong">{formatMoneyText(balance)}</p>
         </section>
 
         <section aria-labelledby="statement-transactions" className="overflow-hidden rounded-card border border-ink/10 bg-surface">
-          <h2 id="statement-transactions" className="border-b border-ink/10 p-4 text-lg font-semibold text-ink sm:p-6">Transactions</h2>
+          <h2 id="statement-transactions" className="border-b border-ink/10 p-4 text-lg font-semibold text-ink sm:p-6">{copy.transactions}</h2>
           {transactions.length === 0 ? (
-            <p className="p-6 text-sm text-ink-muted">No transactions on this statement yet.</p>
+            <p className="p-6 text-sm text-ink-muted">{copy.noTransactions}</p>
           ) : (
             <ul className="divide-y divide-ink/10">
               {transactions.map((tx, index) => (

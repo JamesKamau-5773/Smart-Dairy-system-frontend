@@ -1,10 +1,7 @@
 import { useMemo, useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
-import { 
-  Users, Search, Plus, TrendingDown, CheckCircle2,
-  FileText, MessageCircle, MoreVertical, SlidersHorizontal
-} from 'lucide-react';
+import { Search, Plus, MoreVertical } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { useTenant } from '../../hooks/useTenant';
 import { useUrlFilters } from '../../hooks/useUrlFilters';
@@ -22,7 +19,10 @@ import { getListLoadState, hasRowsToShow } from '../../lib/listLoadState';
 import { formatCount } from '../../lib/numberFormat';
 import { SITE } from '../../landing/content';
 import { normalizeKenyanPhone } from '../../lib/phone';
-
+import { customerTypeLabel, financeCopy } from '../../i18n/finance';
+import { shellCopy } from '../../i18n/shell';
+import { PHONE_QUERY, useMediaQuery } from '../../hooks/useMediaQuery';
+import { commonCopy } from '../../i18n/common';
 // "KES 1,250.00"; "—" when the backend sent no figure (unknown is never shown as zero).
 const formatKes = formatMoneyText;
 
@@ -33,25 +33,23 @@ const toAmount = (value) => {
 };
 const balanceOf = (customer) => toAmount(customer?.account_balance ?? customer?.balance);
 const rateOf = (customer) => toAmount(customer?.agreed_rate_per_liter ?? customer?.rate_per_liter);
-const balanceStatus = (balance) => (balance === null ? 'Balance unknown' : balance > 0 ? 'Outstanding' : 'Settled');
+const balanceStatus = (balance) => {
+  const labels = financeCopy.balanceStatus;
+  return balance === null ? labels.unknown : balance > 0 ? labels.outstanding : labels.settled;
+};
 
 /**
  * SRP: Renders a single Financial KPI Widget.
  */
-const KPIWidget = ({ title, value, subtitle, icon: Icon, valueColor = "text-brand", state = 'ready' }) => (
+const KPIWidget = ({ title, value, subtitle, valueColor = "text-brand", state = 'ready' }) => (
   <div className="group relative overflow-hidden rounded-card border border-slate-200 border-t-[4px] border-t-brand-400 bg-white/90 p-6 backdrop-blur">
-    <div className="flex justify-between items-start mb-4">
-      <h3 className="text-[11px] font-black uppercase tracking-widest text-slate-600">
-        {title}
-      </h3>
-      <div className="rounded-button border border-brand-400/30 bg-brand-400/10 p-2 text-brand-400 transition-colors group-hover:bg-brand-400/20">
-        <Icon size={18} strokeWidth={2.5} />
-      </div>
-    </div>
-    <StatValue state={state} label="buyers" className={`mb-1 break-words font-mono text-2xl font-bold tabular-nums sm:text-3xl ${valueColor}`}>
+    <p className="mb-4 text-label text-slate-600">
+      {title}
+    </p>
+    <StatValue state={state} label={financeCopy.buyers.listLabel} className={`mb-1 break-words text-stat-value tabular-nums ${valueColor}`}>
       {value}
     </StatValue>
-    <p className="text-xs font-medium text-slate-600">{subtitle}</p>
+    <p className="text-meta text-slate-600">{subtitle}</p>
   </div>
 );
 
@@ -62,6 +60,10 @@ const BUYER_FILTERS = { status: 'all' };
 const BUYER_FILTER_VALUES = { status: ['all', 'outstanding', 'settled'] };
 
 export default function BuyersList() {
+  // Inputs are 16px on phones, so the long search hint would be cut off there.
+  const isPhone = useMediaQuery(PHONE_QUERY);
+  const copy = financeCopy.buyers;
+  const statementCopy = financeCopy.statement;
   const queryClient = useQueryClient();
   const { tenantId, farmId } = useTenant();
   const [searchTerm, setSearchTerm] = useState('');
@@ -92,13 +94,13 @@ export default function BuyersList() {
       if (isQueuedOffline(result)) {
         toast(queuedOfflineMessage());
       } else {
-        toast.success(`Customer created successfully!`);
+        toast.success(copy.created);
       }
       queryClient.invalidateQueries({ queryKey: ['customers', tenantId, farmId] });
       setIsAddPanelOpen(false);
     },
     onError: (error) => {
-      toast.error(getApiErrorMessage(error, 'Could not add this customer. Check the details and try again.'));
+      toast.error(getApiErrorMessage(error, copy.createFailed));
     },
   });
 
@@ -170,21 +172,21 @@ export default function BuyersList() {
     const selectedCustomers = safeCustomers.filter((customer) => selectedCustomerIds.includes(String(customer?.id)));
     const lines = selectedCustomers.map((customer) => {
       const balance = balanceOf(customer);
-      return `${customer?.name || 'Unnamed Buyer'} (ID ${customer?.id || '--'}): ${formatKes(balance)}`;
+      return statementCopy.line(customer?.name || statementCopy.unnamed, customer?.id || '--', formatKes(balance));
     });
-    const message = [`${SITE.name} - Customer Statements`, '', ...lines, '', `Open ${SITE.name} to review the full statement.`].join('\n');
+    const message = [statementCopy.titlePlural(SITE.name), '', ...lines, '', statementCopy.openApp(SITE.name)].join('\n');
     window.open(`https://wa.me/?text=${encodeURIComponent(message)}`, '_blank', 'noopener,noreferrer');
   };
 
   const shareCustomerStatement = (customer) => {
     const balance = balanceOf(customer);
     const message = [
-      `${SITE.name} - Customer Statement`,
-      `Buyer: ${customer?.name || 'Unnamed Buyer'}`,
-      `Account ID: ${customer?.id || '--'}`,
-      `Current balance: ${formatKes(balance)}`,
+      statementCopy.title(SITE.name),
+      statementCopy.buyer(customer?.name || statementCopy.unnamed),
+      statementCopy.account(customer?.id || '--'),
+      statementCopy.balance(formatKes(balance)),
       '',
-      `Open ${SITE.name} to review the full statement.`,
+      statementCopy.openApp(SITE.name),
     ].join('\n');
     // Straight to the buyer's chat when their number is a valid Kenyan mobile; otherwise
     // WhatsApp asks who to send it to, rather than opening a chat with a wrong number.
@@ -197,14 +199,13 @@ export default function BuyersList() {
       
       {/* Header Section with Primary Action */}
       <div className="mb-8 flex flex-col items-start justify-between gap-4 rounded-card border border-slate-200 border-l-[4px] border-l-brand-400 bg-white/90 p-5 backdrop-blur md:flex-row md:items-center">
-        <div className="flex items-center gap-4">
-          <div className="rounded-button border border-brand-400/30 bg-brand-400/10 p-3 text-brand-400"><Users size={20} /></div>
+        <div>
           <div>
-            <h1 className="m-0 font-display text-2xl font-bold text-ink-900">
-              Customer Billing
+            <h1 className="m-0 text-page-title text-ink-900">
+              {shellCopy.nav.items.buyers}
             </h1>
-            <p className="mt-1 max-w-xl text-sm text-slate-600">
-              Track buyer balances, manage profiles, and share milk statements via WhatsApp.
+            <p className="mt-1 max-w-xl text-body text-slate-600">
+              {copy.subtitle}
             </p>
           </div>
         </div>
@@ -213,10 +214,10 @@ export default function BuyersList() {
         {safeCustomers.length > 0 && (
           <button 
             onClick={() => setIsAddPanelOpen(true)}
-            className="flex items-center gap-2 rounded-button bg-brand-700 px-6 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-brand-900 w-full md:w-auto justify-center"
+            className="flex items-center gap-2 rounded-button bg-brand-700 px-6 py-2.5 text-control text-white transition-colors hover:bg-brand-900 w-full md:w-auto justify-center"
           >
-            <Plus size={18} />
-            Add New Buyer
+            <Plus size={18} aria-hidden="true" />
+            {copy.addNew}
           </button>
         )}
       </div>
@@ -224,25 +225,22 @@ export default function BuyersList() {
       {showBuyers && safeCustomers.length > 0 && (
         <div className="mb-8 grid grid-cols-2 gap-3 animate-in slide-in-from-bottom-4 md:grid-cols-3 md:gap-6">
           <KPIWidget 
-            title="Total Buyers" 
+            title={copy.totalBuyers}
             value={safeCustomers.length} 
-            subtitle="Active customers in your registry."
-            icon={Users} 
+            subtitle={copy.totalBuyersHint}
             state={loadState}
           />
           <KPIWidget 
-            title="Total Outstanding" 
+            title={copy.totalOutstanding}
             value={formatKes(totalOutstanding)}
-            subtitle="Unpaid balances across all buyers."
-            icon={TrendingDown}
+            subtitle={copy.totalOutstandingHint}
             valueColor="text-brand-dark"
             state={loadState}
           />
           <KPIWidget 
-            title="Settled Accounts" 
+            title={copy.settledAccounts}
             value={formatCount(settledBuyersCount)} 
-            subtitle="Buyers with zero balance."
-            icon={CheckCircle2}
+            subtitle={copy.settledAccountsHint}
             valueColor="text-brand" 
             state={loadState}
           />
@@ -252,75 +250,74 @@ export default function BuyersList() {
       <div>
         {safeCustomers.length > 0 && (
           <div className="space-y-4">
-            <section className="rounded-card border border-slate-200 bg-white/90 p-5 backdrop-blur md:p-6" aria-label="Buyer filters and bulk actions">
+            <section className="rounded-card border border-slate-200 bg-white/90 p-5 backdrop-blur md:p-6" aria-label={copy.filtersLabel}>
               <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
                 <div className="relative min-w-0 flex-1 lg:max-w-lg">
-                  <Search className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-brand" size={17} />
+                  <Search className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-brand" size={17} aria-hidden="true" />
                   <input
                     type="search"
-                    placeholder="Search name, ID, or phone number"
-                    className="h-10 w-full rounded-input border border-ink/20 bg-surface pl-10 pr-3 text-sm font-medium text-ink placeholder:text-ink-muted focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/30"
+                    aria-label={copy.searchPlaceholder}
+                    placeholder={isPhone ? commonCopy.filters.searchShort : copy.searchPlaceholder}
+                    className="h-10 w-full rounded-input border border-ink/20 bg-surface pl-10 pr-3 text-control text-ink placeholder:text-ink-muted focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/30"
                     value={searchTerm}
                     onChange={(event) => setSearchTerm(event.target.value)}
                   />
                 </div>
                 <label className="relative flex min-w-[190px] items-center">
-                  <SlidersHorizontal className="pointer-events-none absolute left-3.5 text-brand" size={16} />
-                  <span className="sr-only">Status</span>
+                  <span className="sr-only">{copy.status}</span>
                   <select
                     value={statusFilter}
                     onChange={(event) => setStatusFilter(event.target.value)}
-                    className="h-10 w-full appearance-none rounded-input border border-ink/20 bg-surface pl-10 pr-9 text-sm font-semibold text-ink focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/30"
-                    aria-label="Status"
+                    className="h-10 w-full appearance-none rounded-input border border-ink/20 bg-surface pl-3 pr-9 text-control text-ink focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/30"
+                    aria-label={copy.status}
                   >
-                    <option value="all">All statuses</option>
-                    <option value="outstanding">Outstanding</option>
-                    <option value="settled">Settled</option>
+                    <option value="all">{copy.allStatuses}</option>
+                    <option value="outstanding">{financeCopy.balanceStatus.outstanding}</option>
+                    <option value="settled">{financeCopy.balanceStatus.settled}</option>
                   </select>
                 </label>
                 {selectedCustomerIds.length > 0 && (
                   <button
                     type="button"
                     onClick={shareSelectedStatements}
-                    className="inline-flex h-10 items-center justify-center gap-2 rounded-button bg-brand-700 px-4 font-mono text-sm font-semibold tabular-nums text-white hover:bg-brand-900 lg:ml-auto"
+                    className="inline-flex h-10 items-center justify-center rounded-button bg-brand-700 px-4 text-control tabular-nums text-white hover:bg-brand-900 lg:ml-auto"
                   >
-                    <MessageCircle size={17} />
-                    Share Statements via WhatsApp ({selectedCustomerIds.length})
+                    {copy.shareSelected(selectedCustomerIds.length)}
                   </button>
                 )}
-                <p className={`font-mono text-xs font-semibold tabular-nums text-slate-600 ${selectedCustomerIds.length === 0 ? 'lg:ml-auto' : ''}`}>
-                  {filteredCustomers.length} of {safeCustomers.length} buyers
+                <p className={`text-meta tabular-nums text-slate-600 ${selectedCustomerIds.length === 0 ? 'lg:ml-auto' : ''}`}>
+                  {copy.showing(filteredCustomers.length, safeCustomers.length)}
                 </p>
               </div>
             </section>
 
-            <section className="overflow-hidden rounded-card border border-slate-200 bg-white/90 backdrop-blur" aria-label="Buyers data table">
+            <section className="overflow-hidden rounded-card border border-slate-200 bg-white/90 backdrop-blur" aria-label={copy.tableLabel}>
               <div className="hidden overflow-x-auto md:block">
                 <table className="w-full min-w-[1040px] border-collapse text-left">
                   <thead className="border-b border-slate-300">
-                    <tr className="text-xs font-bold uppercase tracking-wider text-slate-600">
+                    <tr className="text-label text-slate-600">
                       <th className="w-12 px-4 py-2.5">
                         <input
                           type="checkbox"
                           checked={allVisibleSelected}
                           onChange={toggleAllVisible}
                           className="h-4 w-4 rounded border-slate-400 text-brand-700 focus:ring-brand-400"
-                          aria-label="Select all visible buyers"
+                          aria-label={copy.selectAll}
                         />
                       </th>
-                      <th className="px-3 py-2.5">Buyer Name</th>
-                      <th className="px-3 py-2.5">ID</th>
-                      <th className="px-3 py-2.5">Phone Number</th>
-                      <th className="px-3 py-2.5 text-right">Agreed Rate</th>
-                      <th className="px-3 py-2.5 text-right">Current Balance</th>
-                      <th className="px-3 py-2.5">Status</th>
-                      <th className="px-4 py-2.5 text-right">Actions</th>
+                      <th className="px-3 py-2.5">{copy.columns.name}</th>
+                      <th className="px-3 py-2.5">{copy.columns.id}</th>
+                      <th className="px-3 py-2.5">{copy.columns.phone}</th>
+                      <th className="px-3 py-2.5 text-right">{copy.columns.rate}</th>
+                      <th className="px-3 py-2.5 text-right">{copy.columns.balance}</th>
+                      <th className="px-3 py-2.5">{copy.columns.status}</th>
+                      <th className="px-4 py-2.5 text-right">{copy.columns.actions}</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-200">
                     {filteredCustomers.map((buyer) => {
-                      const id = buyer?.id || 'Unknown ID';
-                      const contact = buyer?.phone_number || buyer?.contact || 'No contact';
+                      const id = buyer?.id || copy.unknownId;
+                      const contact = buyer?.phone_number || buyer?.contact || copy.noContact;
                       const balance = balanceOf(buyer);
                       const rate = rateOf(buyer);
                       const isSelected = selectedCustomerIds.includes(String(id));
@@ -333,23 +330,23 @@ export default function BuyersList() {
                               checked={isSelected}
                               onChange={() => toggleCustomer(id)}
                               className="h-4 w-4 rounded border-slate-400 text-brand-700 focus:ring-brand-400"
-                              aria-label={`Select ${buyer?.name || 'buyer'}`}
+                              aria-label={copy.select(buyer?.name || copy.buyer)}
                             />
                           </td>
                           <td className="px-3 py-2.5">
-                            <div className="font-semibold text-ink-900">{buyer?.name || 'Unnamed Buyer'}</div>
-                            <div className="mt-0.5 text-xs text-ink-600">{buyer?.type || 'Standard'}</div>
+                            <div className="text-body-strong text-ink-900">{buyer?.name || financeCopy.statement.unnamed}</div>
+                            <div className="mt-0.5 text-meta text-ink-600">{customerTypeLabel(buyer?.type)}</div>
                           </td>
-                          <td className="px-3 py-2.5 font-mono text-xs font-semibold tabular-nums text-ink-800">{id}</td>
-                          <td className="px-3 py-2.5 font-mono text-xs font-semibold tabular-nums text-ink-800">{contact}</td>
-                          <td className="px-3 py-2.5 text-right font-mono text-xs font-semibold tabular-nums text-ink-900">
+                          <td className="px-3 py-2.5 text-meta tabular-nums text-ink-800">{id}</td>
+                          <td className="px-3 py-2.5 text-meta tabular-nums text-ink-800">{contact}</td>
+                          <td className="px-3 py-2.5 text-right text-meta tabular-nums text-ink-900">
                             {formatKes(rate)}/L
                           </td>
-                          <td className="px-3 py-2.5 text-right font-mono text-xs font-bold tabular-nums text-brand">
+                          <td className="px-3 py-2.5 text-right text-meta tabular-nums text-brand">
                             {formatKes(balance)}
                           </td>
                           <td className="px-3 py-2.5">
-                            <span className="inline-flex items-center rounded-badge border border-brand/20 bg-brand-50 px-2 py-1 text-[11px] font-bold text-brand-dark">
+                            <span className="inline-flex items-center rounded-badge border border-brand/20 bg-brand-50 px-2 py-1 text-badge text-brand-dark">
                               {balanceStatus(balance)}
                             </span>
                           </td>
@@ -359,24 +356,26 @@ export default function BuyersList() {
                                 <button
                                   type="button"
                                   className="inline-flex h-8 w-8 items-center justify-center rounded-button border border-slate-300 bg-white text-slate-600 hover:border-brand-400 hover:bg-brand-50 hover:text-brand-900"
-                                  aria-label={`Actions for ${buyer?.name || 'buyer'}`}
+                                  aria-label={copy.actionsFor(buyer?.name || copy.buyer)}
                                 >
-                                  <MoreVertical size={16} />
+                                  <MoreVertical size={16} aria-hidden="true" />
                                 </button>
                               </PopoverTrigger>
                               <PopoverContent align="end" className="w-52 rounded-card border border-slate-200 bg-white/95 p-1.5  backdrop-blur">
                                 <Link
                                   to={`/finance/customers/${id}`}
-                                  className="flex items-center gap-2 rounded-button px-3 py-2 text-sm font-semibold text-ink-900 hover:bg-brand-50 hover:text-brand-900"
+                                  className="flex items-center rounded-button px-3 py-2 text-body-strong text-ink-900 hover:bg-brand-50 hover:text-brand-900"
                                 >
-                                  <FileText size={15} className="text-brand-400" /> Open statement
+
+      {copy.openStatement}
                                 </Link>
                                 <button
                                   type="button"
                                   onClick={() => shareCustomerStatement(buyer)}
-                                  className="flex w-full items-center gap-2 rounded-button px-3 py-2 text-left text-sm font-semibold text-ink-900 hover:bg-brand-50 hover:text-brand-900"
+                                  className="flex w-full items-center gap-2 rounded-button px-3 py-2 text-left text-control text-ink-900 hover:bg-brand-50 hover:text-brand-900"
                                 >
-                                  <MessageCircle size={15} className="text-brand-400" /> Share via WhatsApp
+
+      {copy.shareWhatsApp}
                                 </button>
                               </PopoverContent>
                             </Popover>
@@ -387,9 +386,8 @@ export default function BuyersList() {
                     {filteredCustomers.length === 0 && (
                       <tr>
                         <td colSpan={8} className="px-6 py-16 text-center">
-                          <Search className="mx-auto mb-3 text-ink-500" size={26} />
-                          <p className="font-display font-bold text-ink-900">No buyers match these filters</p>
-                          <p className="mt-1 text-sm font-medium text-ink-600">Adjust the search term or account status.</p>
+                          <p className="text-body-strong text-ink-900">{copy.noMatchesTitle}</p>
+                          <p className="mt-1 text-body text-ink-600">{copy.noMatchesHint}</p>
                           {buyerSuggestionChips}
                         </td>
                       </tr>
@@ -399,8 +397,8 @@ export default function BuyersList() {
               </div>
               <div className="divide-y divide-ink/10 md:hidden">
                 {filteredCustomers.map((buyer) => {
-                  const id = buyer?.id || 'Unknown ID';
-                  const contact = buyer?.phone_number || buyer?.contact || 'No contact';
+                  const id = buyer?.id || copy.unknownId;
+                  const contact = buyer?.phone_number || buyer?.contact || copy.noContact;
                   const balance = balanceOf(buyer);
                   const rate = rateOf(buyer);
                   const isSelected = selectedCustomerIds.includes(String(id));
@@ -408,35 +406,37 @@ export default function BuyersList() {
                     <article key={id} className={`min-w-0 space-y-3 p-4 ${isSelected ? 'bg-brand-50' : ''}`}>
                       <div className="flex min-w-0 items-start justify-between gap-3">
                         <div className="flex min-w-0 items-start gap-2">
-                          <input type="checkbox" checked={isSelected} onChange={() => toggleCustomer(id)} className="mt-1 h-4 w-4 shrink-0 accent-brand" aria-label={`Select ${buyer?.name || 'buyer'}`} />
+                          <input type="checkbox" checked={isSelected} onChange={() => toggleCustomer(id)} className="mt-1 h-4 w-4 shrink-0 accent-brand" aria-label={copy.select(buyer?.name || copy.buyer)} />
                           <div className="min-w-0">
-                            <p className="break-words font-semibold text-ink">{buyer?.name || 'Unnamed Buyer'}</p>
-                            <p className="mt-0.5 text-xs text-ink-muted">{buyer?.type || 'Standard'} · ID {id}</p>
+                            <p className="break-words text-body-strong text-ink">{buyer?.name || financeCopy.statement.unnamed}</p>
+                            <p className="mt-0.5 text-meta text-ink-muted">{copy.typeAndId(customerTypeLabel(buyer?.type), id)}</p>
                           </div>
                         </div>
-                        <span className="shrink-0 rounded-badge border border-brand/20 bg-brand-50 px-2 py-1 text-[10px] font-bold text-brand-dark">{balanceStatus(balance)}</span>
+                        <span className="shrink-0 rounded-badge border border-brand/20 bg-brand-50 px-2 py-1 text-badge text-brand-dark">{balanceStatus(balance)}</span>
                       </div>
-                      <dl className="grid grid-cols-2 gap-x-3 gap-y-2 border-t border-ink/10 pt-3 text-xs">
-                        <div className="min-w-0"><dt className="text-ink-muted">Agreed rate</dt><dd className="mt-1 break-words font-mono font-semibold text-ink">{formatKes(rate)}/L</dd></div>
-                        <div className="min-w-0"><dt className="text-ink-muted">Current balance</dt><dd className="mt-1 break-words font-mono font-bold text-brand">{formatKes(balance)}</dd></div>
+                      <dl className="grid grid-cols-2 gap-x-3 gap-y-2 border-t border-ink/10 pt-3 text-meta">
+                        <div className="min-w-0"><dt className="text-ink-muted">{copy.agreedRate}</dt><dd className="mt-1 break-words text-body-strong text-ink tabular-nums">{formatKes(rate)}/L</dd></div>
+                        <div className="min-w-0"><dt className="text-ink-muted">{copy.currentBalance}</dt><dd className="mt-1 break-words text-body-strong text-brand tabular-nums">{formatKes(balance)}</dd></div>
                       </dl>
                       <div className="flex min-w-0 flex-wrap items-center justify-between gap-2 border-t border-ink/10 pt-3">
-                        <p className="min-w-0 flex-1 break-all text-xs text-ink-muted">{contact}</p>
+                        <p className="min-w-0 flex-1 break-all text-meta text-ink-muted">{contact}</p>
                         <div className="flex shrink-0 gap-2">
-                          <Link to={`/finance/customers/${id}`} className="inline-flex min-h-10 items-center gap-1.5 rounded-button border border-brand/20 px-2.5 text-xs font-semibold text-brand-dark hover:bg-brand-50"><FileText size={14} /> Statement</Link>
-                          <button type="button" onClick={() => shareCustomerStatement(buyer)} className="inline-flex min-h-10 items-center gap-1.5 rounded-button bg-brand px-2.5 text-xs font-semibold text-white hover:bg-brand-dark"><MessageCircle size={14} /> WhatsApp</button>
+                          <Link to={`/finance/customers/${id}`} className="inline-flex min-h-10 items-center rounded-button border border-brand/20 px-2.5 text-meta text-brand-dark hover:bg-brand-50">
+          {copy.statement}</Link>
+                          <button type="button" onClick={() => shareCustomerStatement(buyer)} className="inline-flex min-h-10 items-center rounded-button bg-brand px-2.5 text-control text-white hover:bg-brand-dark">
+          {copy.whatsApp}</button>
                         </div>
                       </div>
                     </article>
                   );
                 })}
-                {filteredCustomers.length === 0 && <div className="p-6 text-center text-sm text-ink-muted"><p>No buyers match these filters.</p>{buyerSuggestionChips}</div>}
+                {filteredCustomers.length === 0 && <div className="p-6 text-center text-body text-ink-muted"><p>{copy.noMatches}</p>{buyerSuggestionChips}</div>}
               </div>
             </section>
           </div>
         )}
 
-        <ListLoadNotices state={loadState} label="buyers" error={customersQuery.error} onRetry={customersQuery.refetch} />
+        <ListLoadNotices state={loadState} label={copy.listLabel} error={customersQuery.error} onRetry={customersQuery.refetch} />
         {loadState === 'loading' && (
           <div className="space-y-3">
             {[1, 2, 3].map((i) => (
@@ -451,21 +451,17 @@ export default function BuyersList() {
         {/* First-time empty state: only once the backend has answered with no buyers. */}
         {showBuyers && safeCustomers.length === 0 && (
           <div className="mx-auto mt-12 flex max-w-3xl animate-fade-in flex-col items-center justify-center rounded-card border border-slate-200 bg-white/90 p-12 text-center backdrop-blur">
-            <div className="mb-6 rounded-full border border-brand-400/30 bg-brand-400/10 p-4">
-              <Users size={40} className="text-brand-400" />
-            </div>
-            
-            <h2 className="text-xl font-black text-ink mb-2">Set up your buyer registry</h2>
-            <p className="text-sm text-ink-muted max-w-md mb-8 leading-relaxed">
-              Add your milk buyers to automatically track daily deliveries, calculate running balances, and instantly generate digital statements.
+            <h2 className="text-section-title text-ink mb-2">{copy.emptyTitle}</h2>
+            <p className="text-body text-ink-muted max-w-md mb-8">
+              {copy.emptyHint}
             </p>
 
             <div className="flex flex-col sm:flex-row items-center gap-4 w-full sm:w-auto">
               <button 
                 onClick={() => setIsAddPanelOpen(true)}
-                className="w-full sm:w-auto flex items-center justify-center gap-2 bg-brand-700 text-white px-6 py-3 rounded-button font-bold text-sm hover:bg-brand-900 transition-colors"
+                className="w-full sm:w-auto flex items-center justify-center gap-2 bg-brand-700 text-white px-6 py-3 rounded-button text-control hover:bg-brand-900 transition-colors"
               >
-                <Plus size={18} /> Add Your First Buyer
+                <Plus size={18} aria-hidden="true" /> {copy.addFirst}
               </button>
 
             </div>
@@ -478,8 +474,8 @@ export default function BuyersList() {
       <SlidePanel 
         isOpen={isAddPanelOpen} 
         onClose={() => setIsAddPanelOpen(false)}
-        title="Register New Customer"
-        subtitle="Add a new customer to your milk billing registry."
+        title={copy.registerTitle}
+        subtitle={copy.registerSubtitle}
       >
         <CustomerForm
           onSave={createCustomer}

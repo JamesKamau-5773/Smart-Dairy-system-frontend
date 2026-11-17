@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { FlaskConical, Hand, RefreshCw, Search, ShieldAlert, ShieldCheck, Unlock } from 'lucide-react';
+import { Search, ShieldAlert, ShieldCheck } from 'lucide-react';
 import toast from 'react-hot-toast';
 import AlertBanner from '../../components/ui/AlertBanner';
 import Confirmation, { useConfirmation } from '../../components/ui/Confirmation';
@@ -18,7 +18,7 @@ import { hasRole } from '../../lib/roles';
 import { QUERY_KEYS } from '../../providers/QueryProvider';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTenant } from '../../hooks/useTenant';
-import { safetyCopy as copy } from '../../i18n/safety.en';
+import { safetyCopy as copy } from '../../i18n/safety';
 import { tone } from '../../components/ui/tones';
 
 // Risk is the strength of the app's blue (./tones), with the label in words.
@@ -103,13 +103,13 @@ function LockCard({ lock, tenantId, canRelease, canRecordTest, isReleasing, onRe
         <p className="text-[11px] font-semibold uppercase tracking-wider text-ink-muted">{copy.columns.clears}</p>
         <ClearsOn lockExpires={lock.lockExpires} />
         {canRecordTest && (
-          <button type="button" onClick={() => onRecordTest(lock)} className="btn-ghost gap-2 text-sm font-semibold">
-            <FlaskConical size={15} aria-hidden="true" /> {copy.recordTest}
+          <button type="button" onClick={() => onRecordTest(lock)} className="btn-ghost text-sm font-semibold">
+            {copy.recordTest}
           </button>
         )}
         {canRelease && (
-          <button type="button" onClick={() => onRelease(lock)} disabled={isReleasing} className="btn-secondary gap-2 text-sm font-semibold">
-            <Unlock size={15} aria-hidden="true" /> {copy.release}
+          <button type="button" onClick={() => onRelease(lock)} disabled={isReleasing} className="btn-secondary text-sm font-semibold">
+            {copy.release}
           </button>
         )}
       </div>
@@ -270,16 +270,15 @@ export default function MilkSafetyBoard() {
         <div className="flex flex-wrap gap-2 self-start sm:self-auto">
           {canRecord && (
             <>
-              <button type="button" onClick={() => openForm('hold')} className="btn-command gap-2 text-sm">
-                <Hand size={15} aria-hidden="true" /> {copy.placeHold}
+              <button type="button" onClick={() => openForm('hold')} className="btn-command text-sm">
+                {copy.placeHold}
               </button>
-              <button type="button" onClick={() => openForm('test')} className="btn-secondary gap-2 text-sm">
-                <FlaskConical size={15} aria-hidden="true" /> {copy.recordTest}
+              <button type="button" onClick={() => openForm('test')} className="btn-secondary text-sm">
+                {copy.recordTest}
               </button>
             </>
           )}
-          <button type="button" onClick={() => boardQuery.refetch()} disabled={boardQuery.isFetching} className="btn-ghost gap-2 text-sm">
-            <RefreshCw size={15} className={boardQuery.isFetching ? 'animate-spin' : ''} aria-hidden="true" />
+          <button type="button" onClick={() => boardQuery.refetch()} disabled={boardQuery.isFetching} className="btn-ghost text-sm">
             {boardQuery.isFetching ? copy.refreshing : copy.refresh}
           </button>
         </div>

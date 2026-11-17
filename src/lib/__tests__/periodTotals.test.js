@@ -176,4 +176,17 @@ describe('ledger grouping', () => {
     expect(summaryScope({ from: '2026-01-01', to: '2026-11-16' }, { isDefault: true })).toBe('2026');
     expect(summaryScope({ from: '2026-10-01', to: '2026-10-15' })).toBe('01 Oct 2026 – 15 Oct 2026');
   });
+
+  it('names the strip and group figures in Kiswahili when that is the chosen language', async () => {
+    const { ledgerGroupConfig, ledgerSummaryConfig } = await import('../../components/periods/periodConfigs');
+    const { setLocale } = await import('../../i18n/locale');
+    const summary = toLedgerSummary({ label: 'Nov 2026', current: { income: '100', expenses: '0', net: '100', unpaid: '0', count: 1 } });
+    setLocale('sw');
+    try {
+      expect(ledgerSummaryConfig.items(summary).map((item) => item.label)).toEqual(['Pesa zilizoingia', 'Pesa zilizotoka', 'Salio', 'Isiyolipwa']);
+      expect(ledgerGroupConfig.noun).toEqual(['rekodi', 'rekodi']);
+    } finally {
+      setLocale('en');
+    }
+  });
 });

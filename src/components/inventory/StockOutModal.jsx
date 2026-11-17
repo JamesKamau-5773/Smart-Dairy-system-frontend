@@ -1,13 +1,13 @@
 import { useState } from 'react';
 import BaseModal from '../ui/BaseModal';
 import SubmitButton from '../auth/SubmitButton';
-import { feedCopy } from '../../i18n/feed.en';
+import { feedCopy } from '../../i18n/feed';
 import { getFeedErrorMessage } from '../../lib/feedErrors';
 import { EMPTY_STOCK_OUT, STOCK_OUT_REASONS, isWriteOff, validateStockOut } from '../../lib/stockChangeForm';
 
 const { stockOut: copy } = feedCopy;
-const fieldClass = 'w-full rounded-lg border border-ink/15 bg-card p-3 text-sm font-bold text-ink outline-none focus:ring-2 focus:ring-brand/20';
-const labelClass = 'mb-1.5 block text-[10px] font-black uppercase tracking-widest text-ink-muted';
+const fieldClass = 'w-full rounded-lg border border-ink/15 bg-card p-3 text-control text-ink outline-none focus:ring-2 focus:ring-brand/20';
+const labelClass = 'mb-1.5 block text-field-label text-ink-muted';
 
 /** Use or write off stock. The parent mounts it per opening, so state starts clean. */
 export default function StockOutModal({ item, onClose, onSubmit }) {
@@ -48,7 +48,7 @@ export default function StockOutModal({ item, onClose, onSubmit }) {
           <select id="stock-out-reason" value={form.reason} onChange={(event) => setField('reason', event.target.value)} className={fieldClass}>
             {STOCK_OUT_REASONS.map(({ value }) => <option key={value} value={value}>{copy.reasons[value]}</option>)}
           </select>
-          {isWriteOff(form.reason) && <p className="mt-1.5 text-xs text-ink-muted">{copy.writeOffNote}</p>}
+          {isWriteOff(form.reason) && <p className="mt-1.5 text-meta text-ink-muted">{copy.writeOffNote}</p>}
         </div>
 
         <div>
@@ -64,7 +64,7 @@ export default function StockOutModal({ item, onClose, onSubmit }) {
             aria-invalid={errors.quantity ? true : undefined}
             className={fieldClass}
           />
-          {errors.quantity && <p className="mt-1 text-xs font-semibold text-danger">{errors.quantity}</p>}
+          {errors.quantity && <p className="mt-1 text-meta text-danger">{errors.quantity}</p>}
         </div>
 
         <div>
@@ -72,7 +72,7 @@ export default function StockOutModal({ item, onClose, onSubmit }) {
           <input id="stock-out-notes" value={form.notes} onChange={(event) => setField('notes', event.target.value)} placeholder={copy.notesPlaceholder} className={fieldClass} />
         </div>
 
-        {submitError && <p role="alert" className="text-xs font-semibold text-danger">{submitError}</p>}
+        {submitError && <p role="alert" className="text-meta text-danger">{submitError}</p>}
         <SubmitButton pending={pending} pendingLabel={copy.submitting}>{copy.submit}</SubmitButton>
       </form>
     </BaseModal>

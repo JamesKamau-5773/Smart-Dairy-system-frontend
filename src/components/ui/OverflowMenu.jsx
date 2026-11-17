@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { MoreVertical } from 'lucide-react';
 import { Popover, PopoverContent, PopoverTrigger } from './popover';
+import { commonCopy } from '../../i18n/common';
 
 const TONES = {
   default: 'text-ink',
@@ -8,11 +9,11 @@ const TONES = {
 };
 
 /**
- * ⋮ menu. `items`: [{ key, label, icon?, onSelect, tone?: 'danger', disabled? }]; falsy
+ * ⋮ menu. `items`: [{ key, label, onSelect, tone?: 'danger', disabled? }] (text only); falsy
  * entries are skipped, and nothing renders when no item is left.
  * `size` sets the trigger's tap target (44px on phones by default).
  */
-export default function OverflowMenu({ label, items, size = 'h-11 w-11 sm:h-8 sm:w-8', align = 'end', bordered = false }) {
+export default function OverflowMenu({ label = commonCopy.controls.moreActions, items, size = 'h-11 w-11 sm:h-8 sm:w-8', align = 'end', bordered = false }) {
   const [open, setOpen] = useState(false);
   const visible = (items ?? []).filter(Boolean);
   if (visible.length === 0) return null;
@@ -30,7 +31,7 @@ export default function OverflowMenu({ label, items, size = 'h-11 w-11 sm:h-8 sm
       </PopoverTrigger>
       <PopoverContent align={align} sideOffset={4} className="w-52 rounded-input border-ink/10 bg-card p-1">
         <div role="menu" aria-label={label}>
-          {visible.map(({ key, label: itemLabel, icon: Icon, onSelect, tone = 'default', disabled }) => (
+          {visible.map(({ key, label: itemLabel, onSelect, tone = 'default', disabled }) => (
             <button
               key={key}
               type="button"
@@ -40,9 +41,8 @@ export default function OverflowMenu({ label, items, size = 'h-11 w-11 sm:h-8 sm
                 setOpen(false);
                 onSelect();
               }}
-              className={`flex min-h-11 w-full items-center gap-2 !rounded-badge px-3 text-left text-sm font-medium hover:bg-ink-50 disabled:opacity-50 sm:min-h-9 ${TONES[tone] ?? TONES.default}`}
+              className={`flex min-h-11 w-full items-center !rounded-badge px-3 text-left text-control hover:bg-ink-50 disabled:opacity-50 sm:min-h-9 ${TONES[tone] ?? TONES.default}`}
             >
-              {Icon && <Icon size={14} aria-hidden="true" className="shrink-0" />}
               <span className="min-w-0 truncate">{itemLabel}</span>
             </button>
           ))}

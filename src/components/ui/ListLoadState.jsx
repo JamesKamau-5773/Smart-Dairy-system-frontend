@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { AlertTriangle, CloudOff, Loader2, RefreshCw } from 'lucide-react';
+import { AlertTriangle, CloudOff, Loader2 } from 'lucide-react';
 import Skeleton from './Skeleton';
 import { getApiErrorMessage } from '../../lib/backendApi';
 import { commonCopy } from '../../i18n/common';
@@ -44,11 +44,11 @@ export function ListLoadMessage({ state, label, error, onRetry }) {
       <div className={`mx-auto flex h-12 w-12 items-center justify-center rounded-full ${isOffline ? 'bg-brand-50 text-brand' : 'bg-danger-50 text-danger-900'}`}>
         <Icon size={20} aria-hidden="true" />
       </div>
-      <p className="font-semibold text-ink">{title}</p>
-      <p className="text-sm leading-6 text-ink-muted">{detail}</p>
+      <p className="text-body-strong text-ink">{title}</p>
+      <p className="text-body text-ink-muted">{detail}</p>
       {!isOffline && onRetry && (
-        <button type="button" onClick={() => onRetry()} className="btn-command inline-flex items-center gap-2">
-          <RefreshCw size={14} aria-hidden="true" /> {list.tryAgain}
+        <button type="button" onClick={() => onRetry()} className="btn-command inline-flex items-center">
+          {list.tryAgain}
         </button>
       )}
     </div>
@@ -58,15 +58,15 @@ export function ListLoadMessage({ state, label, error, onRetry }) {
 /** Slim notice shown above cached rows when a refresh failed. */
 export function StaleDataNotice({ label, error, onRetry }) {
   return (
-    <div role="status" className="flex flex-wrap items-center justify-between gap-3 border-b border-warning-500/30 bg-warning-50 px-4 py-3 text-sm text-ink">
+    <div role="status" className="flex flex-wrap items-center justify-between gap-3 border-b border-warning-500/30 bg-warning-50 px-4 py-3 text-body text-ink">
       <span className="flex min-w-0 items-start gap-2">
         <AlertTriangle size={16} className="mt-0.5 shrink-0 text-warning-700" aria-hidden="true" />
         <span>
           {commonCopy.list.stale(label)} {getApiErrorMessage(error, commonCopy.list.staleDetail)}
         </span>
       </span>
-      <button type="button" onClick={() => onRetry()} className="inline-flex items-center gap-1.5 text-sm font-semibold text-brand hover:underline">
-        <RefreshCw size={14} aria-hidden="true" /> {commonCopy.list.tryAgain}
+      <button type="button" onClick={() => onRetry()} className="inline-flex items-center text-control text-brand hover:underline">
+        {commonCopy.list.tryAgain}
       </button>
     </div>
   );
@@ -80,7 +80,7 @@ export function StatValue({ state, label, className, children }) {
   if (state === 'loading') return <Skeleton className="mt-3 h-7 w-20" />;
   if (state === 'offline' || state === 'error') {
     return (
-      <p className="mt-2 text-3xl font-black text-ink-muted" title={commonCopy.list.statUnavailable(label)}>
+      <p className="mt-2 text-stat-value text-ink-muted" title={commonCopy.list.statUnavailable(label)}>
         <span aria-hidden="true">—</span>
         <span className="sr-only">{commonCopy.list.statUnavailable(label)}</span>
       </p>
@@ -127,7 +127,7 @@ export function SlowLoadingHint({ label, after = 4000 }) {
   }, [after]);
   if (!visible) return null;
   return (
-    <p role="status" className="flex items-center gap-2 border-b border-ink/10 bg-brand-50 px-4 py-2.5 text-sm text-brand-900">
+    <p role="status" className="flex items-center gap-2 border-b border-ink/10 bg-brand-50 px-4 py-2.5 text-body text-brand-900">
       <Loader2 size={14} className="shrink-0 animate-spin motion-reduce:animate-none" aria-hidden="true" />
       {commonCopy.list.slow(label)}
     </p>

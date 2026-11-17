@@ -11,24 +11,16 @@ import { AuthProvider } from './contexts/AuthContext';
 import { TenantProvider } from './contexts/TenantContext';
 import { ThemeProvider } from './providers/ThemeProvider';
 import { installGlobalErrorCapture } from './lib/telemetry';
+import { readStoredTheme } from './lib/themePreference';
 
 // Capture uncaught errors / unhandled rejections into the telemetry buffer.
 installGlobalErrorCapture();
 
 registerSW({ immediate: true });
 
-// Initialize theme from localStorage before React renders to prevent flash of wrong theme.
-// This logic should match the one in ThemeProvider.
-try {
-  const theme = localStorage.getItem('color-theme');
-  if (theme) {
-    document.documentElement.dataset.theme = theme;
-  } else {
-    document.documentElement.dataset.theme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
-  }
-} catch {
-  // Storage can be unavailable in hardened browser contexts; CSS defaults remain valid.
-}
+// Set the theme before React renders, to prevent a flash of the wrong one. ThemeProvider
+// reads the same saved value (src/lib/themePreference.js).
+document.documentElement.dataset.theme = readStoredTheme();
 
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>

@@ -4,7 +4,7 @@ import { useAuth } from "../../contexts/AuthContext";
 import { canViewAdminControls } from "../../lib/roles";
 import { QUERY_KEYS } from "../../providers/QueryProvider";
 import { getApiErrorMessage, productionApi, safetyApi } from "../../lib/backendApi";
-import { AlertTriangle, Filter, Pencil, ShieldCheck, Trash2 } from "lucide-react";
+import { AlertTriangle, Filter } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import FastMilkLog from "../../components/operations/FastMilkLog";
@@ -109,13 +109,13 @@ const getBucket = (row) => row.bucket;
 const COLUMN_LAYOUT = [
   { id: 'lead', width: 'w-12' },
   { id: 'cow', width: 'w-[11rem]' },
-  { id: 'morning', align: 'right', mono: true, width: 'w-[5rem]' },
-  { id: 'midday', align: 'right', mono: true, width: 'w-[5rem]' },
-  { id: 'evening', align: 'right', mono: true, width: 'w-[5rem]' },
-  { id: 'milker', align: 'right', mono: true },
-  { id: 'total', align: 'right', mono: true, width: 'w-[6rem]', headerClassName: 'text-ink-900' },
+  { id: 'morning', align: 'right', width: 'w-[5rem]' },
+  { id: 'midday', align: 'right', width: 'w-[5rem]' },
+  { id: 'evening', align: 'right', width: 'w-[5rem]' },
+  { id: 'milker', align: 'right' },
+  { id: 'total', align: 'right', width: 'w-[6rem]', headerClassName: 'text-ink-900' },
   { id: 'status', align: 'center', width: 'w-[8rem]' },
-  { id: 'vsAvg', align: 'right', mono: true, width: 'w-[7rem]' },
+  { id: 'vsAvg', align: 'right', width: 'w-[7rem]' },
   { id: 'recordedBy', width: 'w-[7.5rem]' },
   { id: 'actions', align: 'right', width: 'w-[5rem]', headerClassName: 'pr-6' },
 ];
@@ -171,7 +171,7 @@ function normalizeYieldRow(row) {
     amount: amountCandidate.value,
     session: row?.session ?? row?.milking_session ?? row?.milkingSession ?? null,
     status: normalizeStatus(row?.status),
-    // TODO(BR-025): this record's litres against the cow's 5-day average, and whether the
+    // TODO(BR-026): this record's litres against the cow's 5-day average, and whether the
     // backend counts it as a significant drop. "—" until sent.
     vsAvgLitres: row?.vs_avg_litres ?? null,
     significantDrop: row?.significant_drop === true,
@@ -380,9 +380,9 @@ export default function YieldLog() {
       label={copy.actionsFor(formatCowIdentity({ cowName: row.cowName, cowTag: row.cowId }))}
       size={size}
       items={[
-        canVerify && row.status !== 'Verified' && { key: 'verify', label: copy.verify, icon: ShieldCheck, onSelect: () => handleVerifyEntry(row) },
-        { key: 'edit', label: copy.edit, icon: Pencil, onSelect: () => openEditLog(row) },
-        { key: 'delete', label: copy.delete, icon: Trash2, tone: 'danger', onSelect: () => handleDeleteFromTable(row) },
+        canVerify && row.status !== 'Verified' && { key: 'verify', label: copy.verify, onSelect: () => handleVerifyEntry(row) },
+        { key: 'edit', label: copy.edit, onSelect: () => openEditLog(row) },
+        { key: 'delete', label: copy.delete, tone: 'danger', onSelect: () => handleDeleteFromTable(row) },
       ]}
     />
   );
@@ -396,8 +396,8 @@ export default function YieldLog() {
     </Link>
   );
 
-  // A drop the backend counts as significant is bold red.
-  const vsAvgClass = (row) => (row.significantDrop ? 'font-bold text-danger-900' : 'font-medium text-ink-500');
+  // A drop the backend counts as significant is red and strong.
+  const vsAvgClass = (row) => (row.significantDrop ? 'text-body-strong text-danger-900' : 'text-body text-ink-500');
 
   // One milking record. The day group above it carries the date.
   const td = (id, extra = '') => cellClass(column[id], `!px-4 !py-3 whitespace-nowrap ${extra}`);
@@ -405,10 +405,10 @@ export default function YieldLog() {
   const renderRow = (row) => {
     const sessionColumn = sessionColumnOf(row.session);
     return (
-      <tr key={row.id} className="border-b border-ink-100 bg-card text-sm transition-colors hover:bg-ink-50">
+      <tr key={row.id} className="border-b border-ink-100 bg-card text-body transition-colors hover:bg-ink-50">
         <td className={td('lead')} />
         <td className={td('cow')}>
-          <div className="flex min-w-0 items-center gap-2 font-mono text-xs font-semibold tracking-tight text-ink-900">
+          <div className="flex min-w-0 items-center gap-2 text-body-strong text-ink-900">
             <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-brand" aria-hidden="true" />
             {cowLink(row)}
           </div>
@@ -416,13 +416,13 @@ export default function YieldLog() {
         {['morning', 'midday', 'evening'].map((id) => (
           <td key={id} className={td(id, 'tabular-nums text-ink-700')}>{sessionColumn === id ? litres(row) : ''}</td>
         ))}
-        <td className={td('milker', 'truncate text-[11px] tabular-nums text-ink-500')}>{formatMilker(row.milker)}</td>
-        <td className={td('total', 'font-bold tabular-nums text-ink-900')}>{litres(row)}</td>
+        <td className={td('milker', 'truncate text-meta tabular-nums text-ink-500')}>{formatMilker(row.milker)}</td>
+        <td className={td('total', 'text-body-strong tabular-nums text-ink-900')}>{litres(row)}</td>
         <td className={td('status')}><MilkStatusBadge status={row.status} /></td>
-        <td className={td('vsAvg', `text-xs tabular-nums ${vsAvgClass(row)}`)}>
+        <td className={td('vsAvg', `tabular-nums ${vsAvgClass(row)}`)}>
           {formatSignedLitres(row.vsAvgLitres)}
         </td>
-        <td className={td('recordedBy', 'truncate text-xs text-ink-600')}>{recordedByText(row)}</td>
+        <td className={td('recordedBy', 'truncate text-meta text-ink-600')}>{recordedByText(row)}</td>
         <td className={td('actions', 'pr-6')}>
           <div className="inline-flex text-ink-400 hover:text-brand">{actionsMenu(row)}</div>
         </td>
@@ -436,27 +436,27 @@ export default function YieldLog() {
     <article key={row.id} className="min-w-0 space-y-3 bg-card p-4">
       <div className="flex min-w-0 items-start gap-3">
         <div className="min-w-0 flex-1">
-          <div className="flex min-w-0 items-center gap-2 font-mono text-xs font-semibold tracking-tight text-ink-900">
+          <div className="flex min-w-0 items-center gap-2 text-body-strong text-ink-900">
             <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-brand" aria-hidden="true" />
             {cowLink(row)}
           </div>
-          <p className="mt-1 text-xs text-ink-500">{sessionLabel(row.session)}</p>
+          <p className="mt-1 text-meta text-ink-500">{sessionLabel(row.session)}</p>
         </div>
-        <p className="shrink-0 pt-0.5 font-mono text-lg font-bold tabular-nums text-ink-900">{formatLitres(row.amount)}</p>
+        <p className="shrink-0 pt-0.5 text-stat-value text-ink-900">{formatLitres(row.amount)}</p>
         {actionsMenu(row, 'h-11 w-11')}
       </div>
-      <dl className="m-0 grid grid-cols-2 gap-x-3 gap-y-2 border-t border-ink-100 pt-3 text-xs">
+      <dl className="m-0 grid grid-cols-2 gap-x-3 gap-y-2 border-t border-ink-100 pt-3 text-meta">
         <div className="min-w-0">
           <dt className="text-ink-500">{copy.columns.status}</dt>
           <dd className="m-0 mt-1"><MilkStatusBadge status={row.status} /></dd>
         </div>
         <div className="min-w-0">
           <dt className="text-ink-500">{copy.columns.vsAvg}</dt>
-          <dd className={`m-0 mt-1 font-mono tabular-nums ${vsAvgClass(row)}`}>{formatSignedLitres(row.vsAvgLitres)}</dd>
+          <dd className={`m-0 mt-1 tabular-nums ${vsAvgClass(row)}`}>{formatSignedLitres(row.vsAvgLitres)}</dd>
         </div>
         <div className="min-w-0">
           <dt className="text-ink-500">{copy.columns.milker}</dt>
-          <dd className="m-0 mt-1 break-all font-mono text-ink-700">{formatMilker(row.milker)}</dd>
+          <dd className="m-0 mt-1 break-all tabular-nums text-ink-700">{formatMilker(row.milker)}</dd>
         </div>
         <div className="min-w-0">
           <dt className="text-ink-500">{copy.columns.recordedBy}</dt>
@@ -511,8 +511,8 @@ export default function YieldLog() {
         <div role="status" className={`${SURFACE} flex items-start gap-3 p-3 sm:p-4`}>
           <AlertTriangle size={18} className="mt-0.5 shrink-0 text-brand-dark" aria-hidden="true" />
           <div className="min-w-0">
-            <h3 className="text-sm font-semibold text-ink">{copy.medicineTitle}</h3>
-            <p className="mt-0.5 text-xs text-ink-muted">{copy.medicineMessage(hardlocks.length)}</p>
+            <p className="text-body-strong text-ink">{copy.medicineTitle}</p>
+            <p className="mt-0.5 text-meta text-ink-muted">{copy.medicineMessage(hardlocks.length)}</p>
           </div>
         </div>
       )}
@@ -521,14 +521,14 @@ export default function YieldLog() {
 
       <section aria-label={copy.sectionLabel} className="flex flex-col overflow-hidden rounded-xl border border-ink/10 bg-card shadow-sm">
         <div className="border-b border-ink-200 bg-ink-50/50 p-4">
-          <Toolbar end={hasMilkRowsToShow && <p role="status" className="m-0 whitespace-nowrap text-xs font-medium text-ink-500">{copy.showing(milkRows.length, totalRecords)}</p>}>
+          <Toolbar end={hasMilkRowsToShow && <p role="status" className="m-0 whitespace-nowrap text-meta text-ink-500">{copy.showing(milkRows.length, totalRecords)}</p>}>
             <ToolbarSearch label={copy.searchLabel} value={filters.cowId} onChange={(value) => updateFilter('cowId', value)} placeholder={copy.searchPlaceholder} />
             <button
               type="button"
               onClick={() => setFiltersOpen((prev) => !prev)}
               aria-expanded={filtersOpen}
               aria-controls="production-filter-panel"
-              className="inline-flex min-h-11 items-center gap-2 whitespace-nowrap rounded-md border border-ink-300 bg-card px-3 text-sm font-medium text-ink-700 shadow-sm transition-colors hover:bg-ink-50 sm:min-h-9"
+              className="inline-flex min-h-11 items-center gap-2 whitespace-nowrap rounded-md border border-ink-300 bg-card px-3 text-control text-ink-700 shadow-sm transition-colors hover:bg-ink-50 sm:min-h-9"
             >
               <Filter size={16} className="text-ink-400" aria-hidden="true" /> {commonCopy.filters.filters}
             </button>
@@ -537,7 +537,7 @@ export default function YieldLog() {
           </Toolbar>
           {filtersOpen && (
             <div id="production-filter-panel" className="grid grid-cols-1 gap-3 pb-2 pt-3 sm:grid-cols-2">
-              <label className="space-y-1 text-xs font-semibold text-ink-muted">
+              <label className="space-y-1 text-field-label text-ink-muted">
                 {copy.session}
                 <select value={filters.session} onChange={(e) => updateFilter('session', e.target.value)} className="input-machined">
                   <option value="all">{commonCopy.filters.all}</option>

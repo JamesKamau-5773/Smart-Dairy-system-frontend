@@ -1,6 +1,5 @@
 import { useRef, useState } from 'react';
 import { useNavigate, Link, useLocation } from 'react-router-dom';
-import { UserRound } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import AlertBanner from '../../components/ui/AlertBanner';
 import AuthLayout from '../../components/auth/AuthLayout';
@@ -101,8 +100,7 @@ export default function LoginPage() {
       <form onSubmit={handleSubmit} noValidate className="space-y-5">
         {rememberedLogin ? (
           <div className="flex items-center justify-between gap-3 rounded-card border border-brand/10 bg-brand/5 px-4 py-3">
-            <span className="flex min-w-0 items-center gap-3 text-sm font-semibold text-ink-900">
-              <UserRound size={18} className="shrink-0 text-brand" aria-hidden="true" />
+            <span className="flex min-w-0 items-center text-sm font-semibold text-ink-900">
               <span className="truncate font-mono">{maskIdentifier(rememberedLogin)}</span>
             </span>
             <button type="button" onClick={switchAccount} className="shrink-0 text-sm font-semibold text-brand underline-offset-4 hover:underline">

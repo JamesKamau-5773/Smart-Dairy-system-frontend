@@ -20,7 +20,7 @@ function caption(span) {
   return `${formatDateRange(span.from, span.to)}, by ${span.granularity}`;
 }
 
-const moneyCell = (amount, props) => (amount == null ? '—' : <Money amount={amount} size="sm" {...props} />);
+const moneyCell = (amount, props) => (amount == null ? '—' : <Money amount={amount} {...props} />);
 
 /**
  * Money in and out for the Farm Reporting Dashboard's range, a bar per day (up to a month)
@@ -51,7 +51,7 @@ export default function MoneyFlowChart({ start, end, search, customerSelected = 
   let body;
   if (customerSelected) {
     // TODO(BR-023): show the chart for the chosen customers once group totals accept them.
-    body = <p className="text-sm text-ink-muted">This chart can’t be narrowed to customers yet. Clear the customer filter to see money in and out.</p>;
+    body = <p className="text-body text-ink-muted">This chart can’t be narrowed to customers yet. Clear the customer filter to see money in and out.</p>;
   } else if (series.loadState === 'loading') {
     body = <div aria-busy="true" className="h-36 animate-pulse rounded-input bg-ink/5" />;
   } else if (series.loadState === 'error' || series.loadState === 'offline') {
@@ -68,22 +68,22 @@ export default function MoneyFlowChart({ start, end, search, customerSelected = 
           axisLabel={(item) => axisLabel(span.granularity, item.key)}
           onSelect={openLedger}
         />
-        <details className="text-sm">
-          <summary className="min-h-11 cursor-pointer py-2 text-xs font-semibold text-brand sm:min-h-0">Show as a table</summary>
+        <details className="text-body">
+          <summary className="min-h-11 cursor-pointer py-2 text-control text-brand sm:min-h-0">Show as a table</summary>
           <table className="mt-2 w-full table-fixed border-collapse text-left">
             <caption className="sr-only">Money in and out, {caption(span)}</caption>
             <thead>
-              <tr className="border-b border-ink/10 text-[10px] uppercase tracking-wider text-ink-muted">
-                <th scope="col" className="py-1.5 pr-2 font-semibold">{span.granularity === 'day' ? 'Day' : 'Month'}</th>
-                <th scope="col" className="py-1.5 pr-2 text-right font-semibold">Money in</th>
-                <th scope="col" className="py-1.5 pr-2 text-right font-semibold">Money out</th>
-                <th scope="col" className="py-1.5 text-right font-semibold">Net</th>
+              <tr className="border-b border-ink/10 text-ink-muted">
+                <th scope="col" className="py-1.5 pr-2">{span.granularity === 'day' ? 'Day' : 'Month'}</th>
+                <th scope="col" className="py-1.5 pr-2 text-right">Money in</th>
+                <th scope="col" className="py-1.5 pr-2 text-right">Money out</th>
+                <th scope="col" className="py-1.5 text-right">Net</th>
               </tr>
             </thead>
             <tbody>
               {items.map((item) => (
                 <tr key={item.key} className="border-b border-ink/5">
-                  <th scope="row" className="py-1.5 pr-2 font-normal text-ink">{item.label}</th>
+                  <th scope="row" className="py-1.5 pr-2 text-body text-ink">{item.label}</th>
                   <td className="py-1.5 pr-2 text-right">{moneyCell(item.income)}</td>
                   <td className="py-1.5 pr-2 text-right">{moneyCell(item.expenses)}</td>
                   <td className="py-1.5 text-right">{moneyCell(item.net, { tone: 'net' })}</td>
@@ -99,8 +99,8 @@ export default function MoneyFlowChart({ start, end, search, customerSelected = 
   return (
     <section aria-label="Money in and out" className={`${SURFACE} space-y-3 p-4 sm:p-5`}>
       <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
-        <h3 className="text-sm font-semibold text-ink">Money in and out</h3>
-        <p className="text-xs text-ink-muted">{caption(span)}</p>
+        <h2 className="text-section-title text-ink">Money in and out</h2>
+        <p className="text-meta text-ink-muted">{caption(span)}</p>
       </div>
       {body}
     </section>

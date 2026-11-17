@@ -148,7 +148,7 @@ export function normalizeBreedingLog(log = {}) {
     daysPostAI,
     status,
     notes: log.note ?? log.notes ?? '',
-    // When the backend last changed the record. TODO(BR-024): confirm `updated_at` is sent.
+    // When the backend last changed the record. TODO(BR-025): confirm `updated_at` is sent.
     updatedAt: log.updatedAt ?? log.updated_at ?? null,
   };
 }

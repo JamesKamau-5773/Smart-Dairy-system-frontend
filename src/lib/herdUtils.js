@@ -7,12 +7,25 @@ import { getSearchSuggestions, matchesSearch } from './fuzzySearch';
 
 import { formatDateTime, getRelativeTime } from './audit';
 import { formatDate as formatDisplayDate } from './dateFormat';
+import { herdCopy } from '../i18n/herd';
 
+/**
+ * An animal's age in months as the backend sent it (`ageMonths`, `age_months` or
+ * `age_in_months`), or null when it sent none. Never 0 for "unknown".
+ */
+export function readAgeMonths(source = {}) {
+  const value = source?.ageMonths ?? source?.age_months ?? source?.age_in_months;
+  if (value === null || value === undefined || value === '') return null;
+  const months = Number(value);
+  return Number.isFinite(months) && months >= 0 ? months : null;
+}
+
+/** "3y 10m" for a known age, null when unknown (render it with <AnimalAge />). */
 export function formatAge(ageMonths) {
-  if (typeof ageMonths !== 'number' || !Number.isFinite(ageMonths)) return 'N/A';
+  if (typeof ageMonths !== 'number' || !Number.isFinite(ageMonths)) return null;
   const years = Math.floor(ageMonths / 12);
   const months = ageMonths % 12;
-  return `${years}y ${months}m`;
+  return herdCopy.age.short(years, months);
 }
 
 // Day-first display ("03 Nov 2026"); one formatter for the whole app.
@@ -82,7 +95,7 @@ function getRelatedRecordName(value) {
 
 export function normalizeHerdCow(cow = {}, fallback = {}) {
   const identity = normalizeCowIdentity({ ...fallback, ...cow });
-  const ageMonths = Number(cow.ageMonths ?? cow.age_months ?? fallback.ageMonths ?? 0);
+  const ageMonths = readAgeMonths(cow) ?? readAgeMonths(fallback);
   const status = cow.current_status ?? cow.currentStatus ?? cow.status ?? cow.lactation_status ?? fallback.status ?? 'Cow';
   const displayId = identity.earTag || identity.recordId;
   const recordId = identity.recordId || identity.earTag;

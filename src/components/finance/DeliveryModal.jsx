@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
-import { Save, Droplets } from 'lucide-react';
 import BaseModal from '../ui/BaseModal';
 import { todayLocalIso } from '../../lib/localDate';
+import { financeCopy } from '../../i18n/finance';
 
 const INITIAL_STATE = {
   date: todayLocalIso(),
@@ -11,6 +11,7 @@ const INITIAL_STATE = {
 };
 
 export default function DeliveryModal({ isOpen, onClose, onSave, delivery, customer, isSaving }) {
+  const copy = financeCopy.delivery;
   const [formData, setFormData] = useState(INITIAL_STATE);
   const isEditMode = !!delivery;
 
@@ -63,22 +64,21 @@ export default function DeliveryModal({ isOpen, onClose, onSave, delivery, custo
     <BaseModal
       isOpen
       onClose={onClose}
-      title={isEditMode ? 'Edit milk delivery' : 'Log milk delivery'}
-      icon={<Droplets size={16} />}
+      title={isEditMode ? copy.editTitle : copy.logTitle}
       size="xl"
-      closeLabel="Close milk delivery form"
+      closeLabel={copy.close}
       onSubmit={handleSubmit}
       footerActions={(
         <>
-          <button type="button" onClick={onClose} disabled={isSaving} className="px-4 py-2 font-black text-xs text-ink-muted uppercase">
-            Cancel
+          <button type="button" onClick={onClose} disabled={isSaving} className="px-4 py-2 text-control text-ink-muted">
+            {copy.cancel}
           </button>
           <button
             type="submit"
             disabled={isSaving || !formData.date || !formData.liters_delivered || personalUseExceedsDelivered}
-            className="flex items-center px-4 py-2 bg-brand text-white rounded-lg font-black text-xs uppercase  hover:bg-brand-dark disabled:bg-slate-300 disabled:cursor-not-allowed"
+            className="flex items-center px-4 py-2 bg-brand text-white rounded-lg text-control hover:bg-brand-dark disabled:bg-slate-300 disabled:cursor-not-allowed"
           >
-            <Save size={14} className="mr-2" /> {isEditMode ? 'Save Changes' : 'Log Delivery'}
+            {isEditMode ? copy.saveChanges : copy.log}
           </button>
         </>
       )}
@@ -86,7 +86,7 @@ export default function DeliveryModal({ isOpen, onClose, onSave, delivery, custo
       <div className="space-y-5">
         <div className="grid grid-cols-2 gap-4">
           <div>
-            <label htmlFor="delivery-date" className="block text-[10px] font-black text-ink-muted uppercase mb-1.5">Delivery Date</label>
+            <label htmlFor="delivery-date" className="block text-field-label text-ink-muted mb-1.5">{copy.date}</label>
             <input
               id="delivery-date"
               required
@@ -95,11 +95,11 @@ export default function DeliveryModal({ isOpen, onClose, onSave, delivery, custo
               onChange={handleChange}
               type="date"
               disabled={isSaving}
-              className="w-full px-3 py-2 border border-slate-300 rounded-lg text-xs font-bold"
+              className="w-full px-3 py-2 border border-slate-300 rounded-lg text-control"
             />
           </div>
           <div>
-            <label htmlFor="delivery-liters-delivered" className="block text-[10px] font-black text-ink-muted uppercase mb-1.5">Liters Delivered</label>
+            <label htmlFor="delivery-liters-delivered" className="block text-field-label text-ink-muted mb-1.5">{copy.delivered}</label>
             <input
               id="delivery-liters-delivered"
               required
@@ -111,14 +111,14 @@ export default function DeliveryModal({ isOpen, onClose, onSave, delivery, custo
               step="0.1"
               placeholder="0.0"
               disabled={isSaving}
-              className="w-full px-3 py-2 border border-slate-300 rounded-lg text-xs font-bold"
+              className="w-full px-3 py-2 border border-slate-300 rounded-lg text-control"
             />
           </div>
         </div>
 
         <div>
-          <label htmlFor="delivery-personal-consumption" className="block text-[10px] font-black text-ink-muted uppercase mb-1.5">
-            Personal Consumption (Not Billable)
+          <label htmlFor="delivery-personal-consumption" className="block text-field-label text-ink-muted mb-1.5">
+            {copy.personal}
           </label>
           <input
             id="delivery-personal-consumption"
@@ -130,39 +130,39 @@ export default function DeliveryModal({ isOpen, onClose, onSave, delivery, custo
             step="0.1"
             placeholder="0.0"
             disabled={isSaving}
-            className="w-full px-3 py-2 border border-slate-300 rounded-lg text-xs font-bold"
+            className="w-full px-3 py-2 border border-slate-300 rounded-lg text-control"
           />
-          <p className="mt-1 text-[10px] text-ink-muted">
-            Liters kept out of this delivery for the farmer's own use — excluded from the customer's bill.
+          <p className="mt-1 text-meta text-ink-muted">
+            {copy.personalHint}
           </p>
           {personalUseExceedsDelivered && (
-            <p className="mt-1 text-[10px] font-bold text-danger">
-              Personal consumption cannot exceed liters delivered.
+            <p className="mt-1 text-meta text-danger">
+              {copy.personalTooMuch}
             </p>
           )}
         </div>
 
         <div className="grid grid-cols-2 gap-4 rounded-lg bg-slate-50 border border-slate-200 p-3">
           <div>
-            <p className="text-[10px] font-black text-ink-muted uppercase">Billable Liters</p>
-            <p className="text-sm font-black text-ink">{billableLiters.toFixed(1)} L</p>
+            <p className="text-label text-ink-muted">{copy.billable}</p>
+            <p className="text-body-strong text-ink">{billableLiters.toFixed(1)} L</p>
           </div>
           <div>
-            <p className="text-[10px] font-black text-ink-muted uppercase">Estimated Amount</p>
-            <p className="text-sm font-black text-ink">KES {estimatedAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
-            <p className="text-[9px] text-ink-muted">The final amount is calculated when you save.</p>
+            <p className="text-label text-ink-muted">{copy.estimate}</p>
+            <p className="text-body-strong text-ink">KES {estimatedAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
+            <p className="text-meta text-ink-muted">{copy.estimateHint}</p>
           </div>
         </div>
 
         <div>
-          <label htmlFor="delivery-notes" className="block text-[10px] font-black text-ink-muted uppercase mb-1.5">Notes (Optional)</label>
+          <label htmlFor="delivery-notes" className="block text-field-label text-ink-muted mb-1.5">{copy.notes}</label>
           <textarea
             id="delivery-notes"
             name="notes"
             value={formData.notes}
             onChange={handleChange}
             disabled={isSaving}
-            className="w-full px-3 py-2 border border-slate-300 rounded-lg text-xs font-bold h-16"
+            className="w-full px-3 py-2 border border-slate-300 rounded-lg text-control h-16"
           />
         </div>
       </div>

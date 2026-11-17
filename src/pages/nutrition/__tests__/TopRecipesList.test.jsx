@@ -31,7 +31,7 @@ describe('TopRecipesList', () => {
     );
 
     const table = screen.getByRole('table');
-    ['Rank', 'Mix Name', 'Daily Milk Average', 'Cost per Liter'].forEach((heading) => {
+    ['Rank', 'Mix name', 'Daily milk average', 'Cost per litre'].forEach((heading) => {
       expect(within(table).getByRole('columnheader', { name: heading })).toBeTruthy();
     });
     expect(within(table).getByText('Boma Rhodes, dry maize stalks, and Napier grass')).toBeTruthy();
@@ -40,7 +40,7 @@ describe('TopRecipesList', () => {
 
     fireEvent.click(within(table).getByRole('button', { name: /Boma Rhodes/ }));
 
-    expect(within(table).getByText('Formula Breakdown')).toBeTruthy();
+    expect(within(table).getByText('Formula breakdown')).toBeTruthy();
     expect(within(table).getByText('Dry maize stalks')).toBeTruthy();
     expect(within(table).getByText('30%')).toBeTruthy();
   });

@@ -2,7 +2,6 @@ import { useQuery } from '@tanstack/react-query';
 import { useTenant } from '../hooks/useTenant';
 import { QUERY_KEYS } from '../providers/QueryProvider';
 import { productionApi } from '../lib/backendApi';
-import { Activity, Droplets, TrendingUp, DollarSign, LineChart as ChartIcon, ShoppingCart, Archive } from 'lucide-react';
 import React, { Suspense, lazy, useMemo, useState } from 'react';
 import { subDays } from 'date-fns';
 import { buildDailyTrend, metricFromSummary } from '../lib/dashboardUtils';
@@ -17,23 +16,17 @@ import WelcomeChecklist from '../components/dashboard/WelcomeChecklist';
 import MilestoneBanner from '../components/dashboard/MilestoneBanner';
 import Money from '../components/ui/Money';
 import { swahiliGreeting } from '../lib/welcomeProgress';
+import { dashboardCopy } from '../i18n/dashboard';
 import { Skeleton } from '@/components/ui';
 
-const SummaryCard = ({ title, value, unit, icon: Icon, trend, loading = false }) => (
+const SummaryCard = ({ title, value, unit, loading = false }) => (
   <div className="glass-panel p-6 flex flex-col justify-between min-h-[180px] relative overflow-hidden group">
-    <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity text-brand">
-      <Icon size={64} strokeWidth={1} />
-    </div>
-    
     <div className="flex justify-between items-start z-10">
       <div className="space-y-1">
         <span className="font-sans text-[11px] font-bold uppercase tracking-wider text-ink-muted">
           {title}
         </span>
         <div className="h-1 w-8 bg-brand rounded-full"></div>
-      </div>
-      <div className="p-2 border border-ink/10 bg-surface rounded-lg ">
-        <Icon size={18} className="text-brand" />
       </div>
     </div>
 
@@ -52,6 +45,7 @@ const SummaryCard = ({ title, value, unit, icon: Icon, trend, loading = false })
   </div>
 );
 export default function CommandCenter() {
+  const copy = dashboardCopy.summary;
   const { tenantId, farmId } = useTenant();
   const [dateRange, setDateRange] = useState({
     from: subDays(new Date(), 29),
@@ -149,8 +143,8 @@ export default function CommandCenter() {
       
       <div className="flex justify-between items-end border-b border-ink/10 pb-4">
         <div>
-          <h2 className="font-sans font-bold text-3xl tracking-tight text-brand m-0">Daily Summary</h2>
-          <p className="font-sans text-sm text-ink-muted mt-1">{swahiliGreeting()} · Live farm data</p>
+          <h2 className="font-sans font-bold text-3xl tracking-tight text-brand m-0">{copy.title}</h2>
+          <p className="font-sans text-sm text-ink-muted mt-1">{swahiliGreeting()} · {copy.liveData}</p>
         </div>
       </div>
 
@@ -178,7 +172,7 @@ export default function CommandCenter() {
         <section className="rounded-xl border border-brand/20 bg-brand-50 px-4 py-3 text-sm text-brand-dark">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <p>
-              Some dashboard totals could not be loaded. Check your connection and retry.
+              {copy.totalsFailed}
             </p>
             <button
               type="button"
@@ -186,7 +180,7 @@ export default function CommandCenter() {
               disabled={isRetryingSummary}
               className="inline-flex items-center justify-center rounded-lg border border-brand/30 bg-surface px-3 py-1.5 text-xs font-bold uppercase tracking-wider text-brand-dark transition hover:bg-brand-50 disabled:cursor-not-allowed disabled:opacity-60"
             >
-              {isRetryingSummary ? 'Retrying...' : 'Retry'}
+              {isRetryingSummary ? copy.retrying : copy.retry}
             </button>
           </div>
         </section>
@@ -194,47 +188,48 @@ export default function CommandCenter() {
 
       <section className="grid grid-cols-2 gap-3 md:grid-cols-3 md:gap-4">
         <div className="card-machined bg-surface p-5 border border-ink/5">
-          <p className="text-xs font-bold text-ink-muted uppercase tracking-wider">Transaction Revenue</p>
+          <p className="text-xs font-bold text-ink-muted uppercase tracking-wider">{copy.revenue}</p>
           <h3 className="mt-2 break-words text-xl font-black text-brand sm:text-2xl">
-            {summaryQuery.isLoading ? 'Loading...' : hasSummaryError ? 'Unavailable' : kesOrDash(summary?.revenue_total_kes)}
+            {summaryQuery.isLoading ? copy.loading : hasSummaryError ? copy.unavailable : kesOrDash(summary?.revenue_total_kes)}
           </h3>
           {summary?.revenue_breakdown?.report_sales_revenue_kes != null && (
             <p className="mt-2 text-[11px] leading-4 text-ink-muted">
-              Report reference: KES {Number(summary.revenue_breakdown.report_sales_revenue_kes).toLocaleString()}
+              {copy.reportReference(Number(summary.revenue_breakdown.report_sales_revenue_kes).toLocaleString())}
             </p>
           )}
         </div>
         <div className="card-machined bg-surface p-5 border border-ink/5">
-          <p className="text-xs font-bold text-ink-muted uppercase tracking-wider">Today's Feed Cost</p>
+          <p className="text-xs font-bold text-ink-muted uppercase tracking-wider">{copy.feedCost}</p>
           <h3 className="mt-2 break-words text-xl font-black text-ink sm:text-2xl">
-            {summaryQuery.isLoading ? 'Loading...' : hasSummaryError ? 'Unavailable' : kesOrDash(summary?.feed_cost_total_kes)}
+            {summaryQuery.isLoading ? copy.loading : hasSummaryError ? copy.unavailable : kesOrDash(summary?.feed_cost_total_kes)}
           </h3>
         </div>
         <div className="card-machined bg-brand/5 p-5 border-2 border-brand/20 ">
-          <p className="text-xs font-bold text-brand uppercase tracking-wider">Daily Profit</p>
+          <p className="text-xs font-bold text-brand uppercase tracking-wider">{copy.profit}</p>
           <h3 className="mt-2 break-words text-xl font-black text-brand sm:text-2xl">
-            {summaryQuery.isLoading ? 'Loading...' : hasSummaryError ? 'Unavailable' : kesOrDash(summary?.net_margin_kes)}
+            {summaryQuery.isLoading ? copy.loading : hasSummaryError ? copy.unavailable : kesOrDash(summary?.net_margin_kes)}
           </h3>
         </div>
       </section>
 
       <section className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
-        <SummaryCard title="Total Milk (Today)" value={totalLitersToday === null ? '—' : totalLitersToday.toFixed(1)} unit="Liters" icon={Droplets} loading={summaryQuery.isLoading} />
-        <SummaryCard title="Saleable Milk (Today)" value={summaryQuery.isLoading ? '—' : (summary?.saleable_liters ?? 0).toFixed(1)} unit="Liters" icon={Droplets} loading={summaryQuery.isLoading} />
-        <SummaryCard title="Milk Sold (Today)" value={summaryQuery.isLoading ? '—' : (summary?.total_sold_liters ?? 0).toFixed(1)} unit="Liters" icon={ShoppingCart} loading={summaryQuery.isLoading} />
-        <SummaryCard title="Milk Remaining" value={summaryQuery.isLoading ? '—' : (summary?.remaining_milk_liters ?? 0).toFixed(1)} unit="Liters" icon={Archive} loading={summaryQuery.isLoading} />
-        <SummaryCard title="Cows Milked" value={cowsMilked ?? '—'} unit="Cows" icon={Activity} loading={summaryQuery.isLoading} />
-        <SummaryCard title="Avg. per Cow" value={averageYieldPerCow ?? '—'} unit="L/cow" icon={TrendingUp} loading={summaryQuery.isLoading} />
-        <SummaryCard title="Profit per Liter" value={summaryQuery.isLoading ? '—' : <Money amount={profitPerLiter} currency={summary?.currency ?? 'KES'} />} icon={DollarSign} loading={summaryQuery.isLoading} />
+        <SummaryCard title={copy.totalMilk} value={totalLitersToday === null ? '—' : totalLitersToday.toFixed(1)} unit={copy.liters} loading={summaryQuery.isLoading} />
+        <SummaryCard title={copy.saleableMilk} value={summaryQuery.isLoading ? '—' : (summary?.saleable_liters ?? 0).toFixed(1)} unit={copy.liters} loading={summaryQuery.isLoading} />
+        <SummaryCard title={copy.milkSold} value={summaryQuery.isLoading ? '—' : (summary?.total_sold_liters ?? 0).toFixed(1)} unit={copy.liters} loading={summaryQuery.isLoading} />
+        <SummaryCard title={copy.milkRemaining} value={summaryQuery.isLoading ? '—' : (summary?.remaining_milk_liters ?? 0).toFixed(1)} unit={copy.liters} loading={summaryQuery.isLoading} />
+        <SummaryCard title={copy.cowsMilked} value={cowsMilked ?? '—'} unit={copy.cows} loading={summaryQuery.isLoading} />
+        <SummaryCard title={copy.averagePerCow} value={averageYieldPerCow ?? '—'} unit={copy.perCow} loading={summaryQuery.isLoading} />
+        <SummaryCard title={copy.profitPerLiter} value={summaryQuery.isLoading ? '—' : <Money amount={profitPerLiter} currency={summary?.currency ?? 'KES'} />} loading={summaryQuery.isLoading} />
       </section>
 
       <div className="card-machined bg-surface p-8 border border-ink/10">
         <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-8 gap-4">
-          <h3 className="font-sans font-bold text-xl text-brand flex items-center gap-2">
-            <ChartIcon size={20} className="text-accent" /> Milk Production Trend
+          <h3 className="font-sans font-bold text-xl text-brand">
+
+            {copy.trendTitle}
           </h3>
-          <div className="inline-flex rounded-lg border border-ink/10 bg-surface p-1" role="group" aria-label="Milk production trend range">
-            {[['30', '30 days'], ['90', '90 days'], ['all', 'All time']].map(([value, label]) => (
+          <div className="inline-flex rounded-lg border border-ink/10 bg-surface p-1" role="group" aria-label={copy.trendRange}>
+            {[['30', copy.ranges[30]], ['90', copy.ranges[90]], ['all', copy.ranges.all]].map(([value, label]) => (
               <button key={value} type="button" onClick={() => selectTrendRange(value)} aria-pressed={selectedRange === value} className={`rounded-md px-3 py-1.5 text-xs font-semibold transition-colors ${selectedRange === value ? 'bg-brand text-surface' : 'text-ink-muted hover:bg-surface-raised hover:text-brand'}`}>
                 {label}
               </button>
@@ -243,7 +238,7 @@ export default function CommandCenter() {
         </div>
         <div className="h-80 w-full bg-surface-warm/30 rounded-xl">
           {trendState !== 'ready' && (
-            <ListLoadNotices state={trendState} label="daily milk totals" error={trendQuery.error} onRetry={trendQuery.refetch} />
+            <ListLoadNotices state={trendState} label={copy.trendLabel} error={trendQuery.error} onRetry={trendQuery.refetch} />
           )}
           {trendState === 'loading' && <Skeleton className="h-full w-full" />}
           {hasRowsToShow(trendState) && (

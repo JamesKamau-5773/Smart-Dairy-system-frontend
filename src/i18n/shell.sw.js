@@ -15,7 +15,6 @@ export const shellCopy = {
     roleUnknown: 'Haijulikani',
     noRole: 'Hana jukumu',
     language: 'Lugha',
-    density: 'Mpangilio wa skrini', // REVIEW: "interface density"
     dataSaver: 'Okoa data',
     dataSaverHint: 'Inaficha picha za ng’ombe hadi uziguse na inasasisha mara chache, ili kuokoa data ya simu.',
     signOut: 'Toka',
@@ -49,12 +48,8 @@ export const shellCopy = {
     titles: {
       dashboard: 'Dashibodi',
       production: 'Rekodi za Maziwa',
-      buyers: 'Orodha ya Wanunuzi',
       ledger: 'Daftari la Hesabu',
       milkUsage: 'Matumizi ya Maziwa',
-      feedMixing: 'Kuchanganya Chakula',
-      clinical: 'Rekodi za Matibabu',
-      stock: 'Bidhaa za Stoo', // REVIEW
     },
   },
 
@@ -82,14 +77,14 @@ export const shellCopy = {
       dailyRoutine: 'Ratiba ya Kila Siku',
       farmTasks: 'Kazi za Shambani',
       cowRegister: 'Daftari la Ng’ombe',
-      breeding: 'Uzalishaji na Vizazi', // REVIEW: "Breeding & Genetics"
+      breeding: 'AI na Mimba',
       medical: 'Rekodi za Matibabu',
       milkDrops: 'Tahadhari za Maziwa Kupungua',
       todayFeeding: 'Ulishaji wa Leo',
       feedDashboard: 'Akiba ya Chakula na Gharama',
       feedMixes: 'Michanganyiko ya Chakula',
       ingredients: 'Viambato',
-      milkLab: 'Mpango wa Maziwa ya Ndama', // REVIEW: "Milk Feeding Planner" (calves)
+      milkLab: 'Mpango wa Maziwa na Ulishaji', // REVIEW: "Milk Feeding Planner"
       unitHelpers: 'Vipimo vya Kienyeji', // REVIEW: local units such as kasuku, gorogoro
       buyers: 'Orodha ya Wanunuzi',
       customers: 'Wateja',

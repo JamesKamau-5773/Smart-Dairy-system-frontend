@@ -7,6 +7,9 @@
 //   node e2e/manual/period-pages-screens.mjs before   # or: after
 //
 // Output: docs/audit/screens/<label>-<page>-<width>.png (or SCREENS_OUT_DIR)
+// Pages: SCREENS_PAGES=register,home,ledger,production-log,reports,inventory,record-milk,herd,breeding,medical,milk-drops,animal,milk-history
+//   milk-usage,routine,tasks,feeding,feed-planner,feed-mixes,milk-lab,units,
+//   buyers,customers,customer-profile,customer-value,cow-profit,milk-inventory (default: ledger,production-log,reports)
 import { chromium } from '@playwright/test';
 import { mkdirSync } from 'node:fs';
 
@@ -14,6 +17,19 @@ const LABEL = process.argv[2] ?? 'after';
 const BASE_URL = process.env.SCREENS_BASE_URL ?? 'http://localhost:4173';
 const API_ORIGIN = 'http://api.e2e.test';
 const OUT_DIR = process.env.SCREENS_OUT_DIR ?? 'docs/audit/screens';
+// 'register' is shot before signing in; 'home' is wherever registering lands.
+const ROUTES = { register: '/register', home: null, ledger: '/finance/ledger', 'production-log': '/operations/yield', reports: '/operations/reports?period=custom&start_date=2026-09-01&end_date=2026-11-16', inventory: '/operations/inventory', 'record-milk': '/operations/yield',
+  herd: '/operations/herd', breeding: '/operations/breeding', medical: '/operations/records', 'milk-drops': '/operations/milk-drop-reports',
+  animal: '/operations/animal/1', 'milk-history': '/operations/animal/1/milk-history',
+  'milk-usage': '/operations/milk-usage', routine: '/operations/routine', tasks: '/tasks', feeding: '/feeding', 'feed-planner': '/feed-nutrition',
+  'feed-mixes': '/feed-nutrition/mix', 'milk-lab': '/operations/lab', units: '/operations/unit-conversions',
+  buyers: '/finance/buyers', customers: '/operations/customers', 'customer-profile': '/finance/customers/4',
+  'customer-value': '/finance/reports/dairy-unit-economics', 'cow-profit': '/finance/reports/animal-economics', 'milk-inventory': '/operations/reports/milk-inventory' };
+// Pages shot after a click on the loaded route (a form opened over it).
+const OPEN = { 'record-milk': (page) => page.getByRole('button', { name: /Record milk/i }).first().click() };
+const PAGES = (process.env.SCREENS_PAGES ?? 'ledger,production-log,reports').split(',').map((name) => name.trim()).filter(Boolean);
+const unknownPage = PAGES.find((name) => !(name in ROUTES));
+if (unknownPage) throw new Error(`Unknown page "${unknownPage}". Known: ${Object.keys(ROUTES).join(', ')}`);
 
 // ── Ledger fixtures ────────────────────────────────────────────────────────────
 const isoWeek = (iso) => {
@@ -179,9 +195,80 @@ const YIELD = [
 ];
 // The yield list's `summary` (status counts for the same filters), as the backend sends it.
 const YIELD_SUMMARY = { total_records: 2, total_volume: 23.5, verified_count: 1, recorded_count: 1, flagged_count: 0, isolated_count: 0 };
-const CALF_FEEDINGS = {
-  items: [{ id: 1, disposition_date: '2026-11-06', calf_id: 9, calf_name: 'Success', calf_tag: 'S-009', liters: 4, notes: '' }],
-  count: 1,
+
+// ── Herd fixtures (typography phase 3) ─────────────────────────────────────────
+const COWS = [
+  { id: 1, tag_number: 'KE-0012', name: 'Neema', breed_status: 'Friesian', current_status: 'Lactating', date_of_birth: '2021-03-14', last_calved: '2026-08-02', updated_at: '2026-11-15T07:30:00Z' },
+  { id: 2, tag_number: 'KE-0046', name: 'Malaika wa Kwanza', breed_status: 'Ayrshire', current_status: 'Lactating', date_of_birth: '2020-06-01', last_calved: '2026-05-19', updated_at: '2026-11-14T18:05:00Z' },
+  { id: 3, tag_number: 'KE-0101', name: 'Zawadi', breed_status: 'Friesian', current_status: 'Dry', date_of_birth: '2019-11-23', last_calved: '2025-12-30', updated_at: '2026-11-10T09:00:00Z' },
+  { id: 4, tag_number: 'KE-0150', name: 'Baraka', breed_status: 'Jersey', current_status: 'Heifer', date_of_birth: '2024-09-09', last_calved: null, updated_at: '2026-11-01T12:00:00Z' },
+];
+const HERD = { items: COWS, meta: { total: COWS.length, pages: 1 }, summary: { total_count: 4, milking_count: 2, dry_count: 1, average_age_months: 46, latest_calved: '2026-08-02' } };
+const BREEDING_LOGS = [
+  { id: 11, cow_id: 1, cow_tag: 'KE-0012', cow_name: 'Neema', ai_date: '2026-10-01', sire_code: 'FR-2231', semen_source: 'farm_stock', status: 'Pending', expected_calving_date: '2027-07-11', days_post_ai: 47 },
+  { id: 12, cow_id: 2, cow_tag: 'KE-0046', cow_name: 'Malaika wa Kwanza', ai_date: '2026-07-20', sire_code: 'AY-0907', semen_source: 'vet_provided', status: 'Pregnant', expected_calving_date: '2027-04-29', days_post_ai: 120 },
+];
+const SEMEN = [{ id: 21, bull_name: 'Kahuho Star', sire_code: 'FR-2231', breed: 'Friesian', straws_left: 6, quantity: 6, breed_improvement: 'Milk volume' }];
+const VET_VISITS = [
+  { id: 31, cow_id: 1, cow_tag: 'KE-0012', cow_name: 'Neema', visit_date: '2026-11-12', severity: 'High', status: 'Under Treatment', signs_of_sickness: 'Swollen quarter, clots in milk', diagnosis: 'Clinical mastitis', medications: 'Intramammary antibiotic, 3 days', follow_up_date: '2026-11-15' },
+  { id: 32, cow_id: 3, cow_tag: 'KE-0101', cow_name: 'Zawadi', visit_date: '2026-10-28', severity: 'Low', status: 'Closed', signs_of_sickness: 'Lame on hind leg', diagnosis: 'Hoof overgrowth', medications: 'Hoof trimming' },
+];
+const MILK_DROPS = [{ id: 41, cow_id: 2, cow_tag: 'KE-0046', cow_name: 'Malaika wa Kwanza', date: '2026-11-14', delta_liters: -4.5, missing_milk: 4.5, status: 'OPEN' }];
+const MILK_HISTORY = {
+  animal: COWS[0],
+  sessions: [
+    { id: 51, date: '2026-11-15', session: 'Morning', liters: 9.5, milker: 'Wanjiru', status: 'Verified' },
+    { id: 52, date: '2026-11-15', session: 'Evening', liters: 7.0, milker: 'Wanjiru', status: 'Pending' },
+    { id: 53, date: '2026-11-14', session: 'Morning', liters: 9.0, milker: 'Kamau', status: 'Verified' },
+  ],
+  stats: { total_logged: 1240.5, session_count: 168, average_yield: 16.4, peak_yield: 21.0 },
+  meta: { total: 3, pages: 1 },
+};
+
+// ── Operations & feeding fixtures (typography phase 4) ─────────────────────────
+const FEEDING_TODAY = {
+  totals: { total_active_animals: 12, total_daily_feed_kg: 84.5 },
+  active_batches: [{ batch_id: 7, mix_name: 'Dairy mix A', remaining_kg: 310, days_left: 4 }],
+  groups: [
+    { feeding_group: 'lactating', headcount: 8, feeding_times_per_day: 2, kg_per_head_per_feeding: 3.5, group_batch_per_feeding_kg: 28, daily_group_batch_kg: 56, active_batch_id: 7, mix_name: 'Dairy mix A', ready: true, quantity_label: '28 kg per feeding', physical_measures: { group_buckets_per_feeding: 2 } },
+    { feeding_group: 'dry', headcount: 3, feeding_times_per_day: 2, kg_per_head_per_feeding: 2, group_batch_per_feeding_kg: 6, daily_group_batch_kg: 12, active_batch_id: null, ready: false, not_ready_reason: 'NO_ACTIVE_BATCH', not_ready_message: 'No active batch for this group.' },
+  ],
+};
+const RECIPES = [
+  { id: 1, name: 'Dairy mix A', recipe_type: 'LACTATING', target_protein_percentage: 16, ingredients: [{ name: 'Maize germ', percentage: 60 }, { name: 'Sunflower cake', percentage: 30 }, { name: 'Mineral lick', percentage: 10 }] },
+  { id: 2, name: 'Dry cow mix', recipe_type: 'DRY', target_protein_percentage: 12, ingredients: [{ name: 'Wheat bran', percentage: 70 }, { name: 'Cotton seed cake', percentage: 30 }] },
+];
+const CONVERSIONS = [{ id: 1, item_id: 3, item_name: 'Dairy meal', unit_name: 'Bucket', kg_equivalent: 8.5 }, { id: 2, item_id: 4, item_name: 'Maize germ', unit_name: 'Sack', kg_equivalent: 70 }];
+const ROUTINE = [
+  { id: 1, title: 'Morning milking', start_time: '05:00', end_time: '06:30', notes: 'Clean udders first.', checklist_items: ['Wash udders', 'Strip test', 'Milk'], display_order: 1 },
+  { id: 2, title: 'Feeding', start_time: '07:00', end_time: '07:45', notes: '', checklist_items: ['Dairy mix A to lactating cows'], display_order: 2 },
+];
+const DISPOSITIONS = [
+  { id: 1, disposition_date: '2026-11-15', disposition_type: 'CALF_FEEDING', liters: 4, calf_name: 'Baraka', calf_tag: 'KE-0150', notes: '', recorded_by: 'Wanjiru' },
+  { id: 2, disposition_date: '2026-11-14', disposition_type: 'HOUSEHOLD', liters: 2, notes: 'Family use', recorded_by: 'Kamau' },
+];
+
+// ── Finance, supply and report fixtures (typography phase 5a) ──────────────────
+const CUSTOMERS = [
+  { id: 4, name: 'Brookside Dairy', type: 'Cooperative', contact_person: 'Jane Wambui', phone_number: '+254712345678', agreed_rate_per_liter: 45, account_balance: 12500, daily_contract_liters: 40 },
+  { id: 5, name: 'Auntie Grace', type: 'Individual', contact_person: '', phone_number: '+254722000111', agreed_rate_per_liter: 50, account_balance: -636, daily_contract_liters: 3 },
+  { id: 6, name: 'Mama Mboga Hotel', type: 'Hotel', contact_person: 'Peter Otieno', phone_number: '+254733222444', agreed_rate_per_liter: 55, account_balance: 0, daily_contract_liters: 10 },
+];
+const DELIVERIES = [
+  { id: 71, customer_id: 4, date: '2026-11-15', liters_delivered: 40, billable_liters: 40, personal_consumption_liters: 0, billed_amount: 1800, amount: 1800 },
+  { id: 72, customer_id: 4, date: '2026-11-14', liters_delivered: 38.5, billable_liters: 38.5, personal_consumption_liters: 0, billed_amount: 1732.5, amount: 1732.5 },
+];
+const INVENTORY = [
+  { id: 3, name: 'Dairy meal', category: 'Bulk Feed', unit: 'kg', current_qty: 420, reorder_level: 200, item_code: 'FD-001', is_active: true },
+  { id: 4, name: 'Maize germ', category: 'Bulk Feed', unit: 'kg', current_qty: 90, reorder_level: 150, item_code: 'FD-002', is_active: true },
+  { id: 8, name: 'Teat dip', category: 'Medicine', unit: 'litre', current_qty: 6, reorder_level: 2, item_code: 'MD-010', is_active: true },
+];
+const MILK_INVENTORY = {
+  summary: { total_produced: 1240.5, total_sold: 1102, total_unsold: 138.5 },
+  daily_records: [
+    { date: '2026-11-15', produced: 82, sold: 75, unsold: 7, remaining: 7 },
+    { date: '2026-11-14', produced: 79.5, sold: 70, unsold: 9.5, remaining: 9.5 },
+  ],
 };
 
 function handle(method, path, params, body) {
@@ -202,7 +289,24 @@ function handle(method, path, params, body) {
   if (path === '/production/summary') return [200, PRODUCTION_SUMMARY];
   if (path === '/production/group-totals') return [200, PRODUCTION_GROUPS];
   if (path === '/production/yield') return [200, { items: YIELD, summary: YIELD_SUMMARY, meta: { pages: 1 } }];
-  if (path === '/production/milk-dispositions') return [200, CALF_FEEDINGS];
+  if (path === '/herd') return [200, HERD];
+  if (path === '/herd/1' || path === '/animals/1') return [200, COWS[0]];
+  if (path === '/animals/1/milk-history') return [200, MILK_HISTORY];
+  if (path === '/animals/1/events') return [200, { items: [{ id: 61, type: 'Health', title: 'Mastitis treatment started', description: 'Intramammary antibiotic, 3 days.', date: '2026-11-12' }, { id: 62, type: 'Breeding', title: 'AI service', description: 'Sire FR-2231.', date: '2026-10-01' }], meta: { total: 2, pages: 1 } }];
+  if (path === '/operations/breeding-logs') return [200, BREEDING_LOGS];
+  if (path === '/operations/semen-inventory') return [200, SEMEN];
+  if (path === '/clinical/vet-visits' || path === '/medical/records') return [200, VET_VISITS];
+  if (path === '/production/milk-drop-alerts') return [200, MILK_DROPS];
+  if (path === '/v1/nutrition/feeding/today') return [200, FEEDING_TODAY];
+  if (path === '/feed/recipes') return [200, RECIPES];
+  if (path === '/units/conversions') return [200, CONVERSIONS];
+  if (path === '/routine/plans') return [200, ROUTINE];
+  if (path === '/production/milk-dispositions') return [200, { items: DISPOSITIONS, count: DISPOSITIONS.length }];
+  if (path === '/finance/customers') return [200, CUSTOMERS];
+  if (path === '/finance/customers/4') return [200, CUSTOMERS[0]];
+  if (path === '/finance/deliveries') return [200, DELIVERIES];
+  if (path === '/inventory/items') return [200, INVENTORY];
+  if (path === '/reports/milk-inventory') return [200, MILK_INVENTORY];
   return [200, []];
 }
 
@@ -226,31 +330,38 @@ async function capture(browser, width, height) {
     await route.fulfill({ status, contentType: 'application/json', body: JSON.stringify(payload) });
   });
 
-  await page.goto(`${BASE_URL}/register`);
-  await page.getByLabel('Farm name').fill('Shamba');
-  await page.getByLabel('Phone number').fill('0712000000');
-  await page.getByLabel('Password', { exact: true }).fill('Maziwa1234a');
-  await page.getByRole('button', { name: /Create farm account/ }).click();
-  await page.waitForURL((url) => !url.pathname.includes('/register'));
-
-  const shots = [
-    ['ledger', '/finance/ledger'],
-    ['production-log', '/operations/yield'],
-    ['reports', '/operations/reports?period=custom&start_date=2026-09-01&end_date=2026-11-16'],
-  ];
-  for (const [name, route] of shots) {
-    await page.goto(`${BASE_URL}${route}`);
+  // The app scrolls inside <main>, not the document, so grow the viewport to fit it.
+  const shoot = async (name) => {
     await page.waitForLoadState('networkidle');
     await page.waitForTimeout(600);
-    // The app scrolls inside <main>, not the document, so grow the viewport to fit it.
     const fullHeight = await page.evaluate(() => {
       const scroller = document.querySelector('main .overflow-y-auto');
-      return scroller ? Math.ceil(scroller.scrollHeight + scroller.getBoundingClientRect().top + 96) : 0;
+      const content = scroller ? scroller.scrollHeight + scroller.getBoundingClientRect().top : document.documentElement.scrollHeight;
+      return Math.ceil(content + 96);
     });
     await page.setViewportSize({ width, height: Math.max(height, fullHeight) });
     await page.waitForTimeout(400);
     await page.screenshot({ path: `${OUT_DIR}/${LABEL}-${name}-${width}.png` });
     await page.setViewportSize({ width, height });
+  };
+
+  await page.goto(`${BASE_URL}/register`);
+  if (PAGES.includes('register')) await shoot('register');
+  await page.getByLabel('Farm name').fill('Shamba');
+  await page.getByLabel('Phone number').fill('0712000000');
+  await page.getByLabel('Password', { exact: true }).fill('Maziwa1234a');
+  await page.getByRole('button', { name: /Create farm account/ }).click();
+  await page.waitForURL((url) => !url.pathname.includes('/register'));
+  if (PAGES.includes('home')) await shoot('home');
+
+  for (const name of PAGES.filter((page) => ROUTES[page])) {
+    if (name === 'register') continue;
+    await page.goto(`${BASE_URL}${ROUTES[name]}`);
+    if (OPEN[name]) {
+      await page.waitForLoadState('networkidle');
+      await OPEN[name](page);
+    }
+    await shoot(name);
   }
   await context.close();
 }

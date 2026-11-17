@@ -12,7 +12,7 @@ vi.mock('../../../lib/localDate', async (importOriginal) => ({ ...(await importO
 const columns = [
   { id: 'session', header: 'Session', width: 'w-[8rem]' },
   { id: 'cow', header: 'Cow' },
-  { id: 'total', header: 'Litres', align: 'right', mono: true, width: 'w-[8rem]' },
+  { id: 'total', header: 'Litres', align: 'right', width: 'w-[8rem]' },
   { id: 'actions', header: 'Actions', align: 'right', width: 'w-[8rem]' },
 ];
 const column = Object.fromEntries(columns.map((entry) => [entry.id, entry]));

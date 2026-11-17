@@ -22,7 +22,8 @@ Everything below is open. Suggested order:
 5. **Data the browser still works out for itself:** BR-002, BR-003, BR-004, BR-008, BR-009,
    BR-011, BR-012, BR-013, and the open questions in `docs/contracts/period-totals.md`.
    **Summary strips and the dashboard chart: BR-021, BR-022, BR-023.**
-6. **Language: BR-018.**
+   **Production Log and breeding fields shown as "—" until sent: BR-025, BR-026, BR-027.**
+6. **Language: BR-018, BR-024** (receipt status values in the contract).
 7. **Safe saves and missing features:** BR-005, BR-006, BR-007, BR-010.
 
 Each entry names the frontend files waiting on it; search for `TODO(BR-0xx)`.
@@ -674,9 +675,30 @@ Requests:
 
 ---
 
-## BR-024 — Breeding logs: `updated_at` on each record
+## BR-024 — Publish the receipt status values in the API contract
 
-**Status:** Open · **Raised:** 2026-11-17 · **Frontend:** `lib/breedingUtils.js` (`TODO(BR-024)`), `pages/operations/BreedingHub.jsx` (Historical Checks)
+**Status:** Open · **Raised:** 2026-11-17 · **Frontend:** `components/finance/ReceiptPreview.jsx`, `i18n/__tests__/statusStrings.test.js`
+
+The receipt preview shows `status` from `GET /api/finance/receipts/{id}`. Every status the app
+shows needs an English and a Kiswahili string, keyed by the exact value the backend sends, and a
+test fails when one is missing. The contract doesn't list the receipt statuses, so for now the
+frontend shows the value in sentence case ("ISSUED" → "Issued") with no translation.
+
+Requests:
+
+1. **List the values in the contract.** Add the complete set of receipt `status` values to
+   `docs/backend-integration-contract.md` (or the OpenAPI schema), with what each means. The
+   model currently defines `ISSUED` and `VOIDED` (`app/models/finance.py`, `ReceiptStatus`);
+   please confirm that is the full set and that the API sends them exactly as written.
+2. **Treat new values as a contract change.** Adding a value later should be announced the same
+   way, so the frontend can add its strings before the value reaches farmers.
+
+When this is done, the frontend adds `financeCopy.receipt.statuses` in en and sw, an entry in
+`BACKEND_STATUS_ENUMS` in the status-strings test, and drops the TODO in `ReceiptPreview.jsx`.
+
+## BR-025 — Breeding logs: `updated_at` on each record
+
+**Status:** Open · **Raised:** 2026-11-17 · **Frontend:** `lib/breedingUtils.js` (`TODO(BR-025)`), `pages/operations/BreedingHub.jsx` (Historical Checks)
 
 Historical Checks has an "Updated" column. It used to show the day the page was opened for every
 record, and grouped every record under the current month because of it. It now groups by the AI
@@ -693,9 +715,9 @@ If it is already sent under another name, say which and the frontend will read t
 
 ---
 
-## BR-025 — Milk records: change against the cow's 5-day average
+## BR-026 — Milk records: change against the cow's 5-day average
 
-**Status:** Open · **Raised:** 2026-11-17 · **Frontend:** `pages/operations/productionLog.jsx` (`TODO(BR-025)`, the "vs 5-day Avg" column)
+**Status:** Open · **Raised:** 2026-11-17 · **Frontend:** `pages/operations/productionLog.jsx` (`TODO(BR-026)`, the "vs 5-day Avg" column)
 
 The Production Log has a **vs 5-day Avg** column, with a significant drop in bold red. The
 frontend never works this out; it shows "—" until the backend sends it. On each row of
@@ -713,9 +735,9 @@ frontend never works this out; it shows "—" until the backend sends it. On eac
 
 ---
 
-## BR-026 — Calf feedings: total litres
+## BR-027 — Calf feedings: total litres
 
-**Status:** Open · **Raised:** 2026-11-17 · **Frontend:** `lib/backendApi.js` (`listMilkDispositionsWithTotals`, `TODO(BR-026)`), `components/operations/RecentCalfFeedings.jsx`
+**Status:** Open · **Raised:** 2026-11-17 · **Frontend:** `lib/backendApi.js` (`listMilkDispositionsWithTotals`, `TODO(BR-027)`), `components/operations/RecentCalfFeedings.jsx`
 
 The Production Log's "Recent calf milk allocations" card reads "53 feedings · 310.00 L allocated".
 `GET /api/production/milk-dispositions` already sends `count`; it shows "— allocated" until the

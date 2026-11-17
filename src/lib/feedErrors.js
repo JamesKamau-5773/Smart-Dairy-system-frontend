@@ -1,4 +1,4 @@
-import { feedCopy } from '../i18n/feed.en';
+import { feedCopy } from '../i18n/feed';
 import { getApiErrorCode } from './apiErrors';
 import { getApiErrorMessage } from './backendApi';
 

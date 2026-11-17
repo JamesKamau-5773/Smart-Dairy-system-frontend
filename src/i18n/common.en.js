@@ -1,7 +1,7 @@
 /**
  * Text for shared building blocks used on many pages: confirmation dialogs, list load states,
  * filters, period totals and grouped lists, the session-expired sheet, restored drafts, the
- * offline queue and the density switch. A page passes its own nouns in (e.g. "milk records"),
+ * offline queue. A page passes its own nouns in (e.g. "milk records"),
  * so these sentences are written to read well around any noun.
  */
 export const commonCopy = {
@@ -16,15 +16,36 @@ export const commonCopy = {
     typeAfter: 'to confirm',
   },
 
-  density: {
-    soft: 'Soft',
-    softHint: 'Soft typography',
-    dense: 'Dense',
-    denseHint: 'Dense typography (higher contrast)',
-  },
-
   modal: {
     close: 'Close',
+  },
+
+  // Names for buttons that show only an icon (screen readers read these).
+  controls: {
+    moreActions: 'More actions',
+    close: 'Close',
+    back: 'Back',
+    showPassword: 'Show password',
+    hidePassword: 'Hide password',
+    increase: 'Increase',
+    decrease: 'Decrease',
+    showDetails: 'Show details',
+    hideDetails: 'Hide details',
+    dismiss: 'Dismiss',
+    pickDate: (label) => `Pick ${label.toLowerCase()} from a calendar`,
+    dismissMilestone: 'Dismiss milestone',
+    hideChecklist: 'Hide the setup checklist',
+    about: (label) => `About ${label}`,
+    explainCostTypes: 'Explain cost classifications',
+    toggleSuggestions: 'Show or hide suggestions',
+    showConfirmPassword: 'Show confirmation password',
+    hideConfirmPassword: 'Hide confirmation password',
+    showPasswords: 'Show passwords',
+    hidePasswords: 'Hide passwords',
+    actionsFor: (name) => `Actions for ${name}`,
+    previousMonth: 'Go to the previous month',
+    nextMonth: 'Go to the next month',
+    syncStatus: (online, pending) => `${online ? 'Online' : 'Offline'}, ${pending} pending changes`,
   },
 
   draft: {
@@ -85,6 +106,8 @@ export const commonCopy = {
     reset: 'Reset',
     filters: 'Filters',
     all: 'All',
+    // A search box's placeholder on a phone, where the page's longer one is cut off.
+    searchShort: 'Search',
   },
 
   summary: {
@@ -105,5 +128,36 @@ export const commonCopy = {
     totalsFailed: 'Group totals couldn’t load, so headers show —.',
     ungrouped: 'Date group not available',
     emptyDay: 'No records loaded for this day.',
+  },
+
+  // "Updated 3 hours ago" and similar (lib/audit.js).
+  time: {
+    unknown: 'Unknown',
+    justNow: 'Just now',
+    minutesAgo: (count) => `${count} minute${count > 1 ? 's' : ''} ago`,
+    hoursAgo: (count) => `${count} hour${count > 1 ? 's' : ''} ago`,
+    daysAgo: (count) => `${count} day${count > 1 ? 's' : ''} ago`,
+  },
+
+  photo: {
+    dataSaverHint: 'Data saver is on. Tap to load this photo.',
+    show: 'Show photo',
+  },
+
+  // Small shared controls.
+  ui: {
+    dismiss: 'Dismiss',
+    close: 'Close',
+    moreActions: 'More actions',
+    didYouMean: 'Did you mean',
+    syncStatus: 'Open synchronization status',
+  },
+  dateRange: {
+    label: 'Custom date range',
+    from: 'From',
+    to: 'To',
+    reversed: 'The From date must be on or before the To date.',
+    cancel: 'Cancel',
+    apply: 'Apply',
   },
 };

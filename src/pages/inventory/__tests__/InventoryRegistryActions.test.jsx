@@ -113,13 +113,13 @@ describe('InventoryRegistry', () => {
     const dialog = await screen.findByRole('dialog', { name: 'Restock resource' });
     fireEvent.change(within(dialog).getByLabelText(/Quantity delivered/), { target: { value: '23.5' } });
     fireEvent.click(within(dialog).getByLabelText(/Also record this purchase/));
-    fireEvent.click(within(dialog).getByRole('button', { name: /Confirm Delivery/ }));
+    fireEvent.click(within(dialog).getByRole('button', { name: /Confirm delivery/ }));
     expect(within(dialog).getByText('Enter the price per kg to record the expense.')).toBeTruthy();
     expect(api.createMovement).not.toHaveBeenCalled();
 
     fireEvent.change(within(dialog).getByLabelText(/Price paid per kg/), { target: { value: '42' } });
     fireEvent.change(within(dialog).getByLabelText(/Supplier/), { target: { value: 'Unga Feeds' } });
-    fireEvent.click(within(dialog).getByRole('button', { name: /Confirm Delivery/ }));
+    fireEvent.click(within(dialog).getByRole('button', { name: /Confirm delivery/ }));
 
     await waitFor(() => expect(api.createMovement).toHaveBeenCalledWith(expect.objectContaining({
       item_id: 34, quantity: 23.5, unit_cost: 42, supplier_name: 'Unga Feeds', record_expense: true,
@@ -133,7 +133,7 @@ describe('InventoryRegistry', () => {
     fireEvent.click(within(await card('Sunflower Cake')).getByRole('button', { name: 'Restock' }));
     const dialog = await screen.findByRole('dialog', { name: 'Restock resource' });
     fireEvent.change(within(dialog).getByLabelText(/Quantity delivered/), { target: { value: '5' } });
-    fireEvent.click(within(dialog).getByRole('button', { name: /Confirm Delivery/ }));
+    fireEvent.click(within(dialog).getByRole('button', { name: /Confirm delivery/ }));
 
     expect(await within(dialog).findByText('Quantity is too large.')).toBeTruthy();
     expect(within(dialog).getByLabelText(/Quantity delivered/).value).toBe('5');
@@ -184,6 +184,6 @@ describe('InventoryRegistry', () => {
     renderRegistry('/operations/inventory?category=Bulk%20Feed');
     await card('Sunflower Cake');
     expect(screen.queryByRole('heading', { name: 'Syringes' })).toBeNull();
-    expect(screen.getByDisplayValue('Bulk Feed')).toBeTruthy();
+    expect(screen.getByDisplayValue('Bulk feed')).toBeTruthy();
   });
 });

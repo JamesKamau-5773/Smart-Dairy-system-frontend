@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
-import { PackagePlus, Wheat } from 'lucide-react';
+import { Plus } from 'lucide-react';
 import toast from 'react-hot-toast';
 import CurrentMixCard from '../../components/nutrition/CurrentMixCard';
 import ProfitabilityChart from '../../components/nutrition/ProfitabilityChart';
@@ -14,6 +14,7 @@ import { readFeedCostPerLitre } from '../../lib/feedCost';
 import { MIX_TYPES, buildDraftFromBatch, selectActiveMixByType } from '../../lib/activeMixes';
 import { getListLoadState } from '../../lib/listLoadState';
 import { ListLoadNotices } from '../../components/ui/ListLoadState';
+import { feedCopy } from '../../i18n/feed';
 
 export default function NutritionDashboard() {
   const navigate = useNavigate();
@@ -71,10 +72,10 @@ export default function NutritionDashboard() {
         queryClient.invalidateQueries({ queryKey: ['nutrition-active-batch-roi-trend-weekly', tenantId, farmId] }),
         queryClient.invalidateQueries({ queryKey: ['feeding-today', tenantId, farmId] }),
       ]);
-      toast.success('Feeding recorded.');
+      toast.success(feedCopy.today.feedingRecorded);
     },
     onError: (error) => {
-      toast.error(getApiErrorMessage(error, 'Could not record feeding. Check the details and try again.'));
+      toast.error(getApiErrorMessage(error, feedCopy.errors.recordFeeding));
     },
   });
 
@@ -107,11 +108,8 @@ export default function NutritionDashboard() {
       {/* ── HEADER ── */}
       <div className="flex flex-col gap-4 border-b border-ink/10 pb-6 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <div className="inline-flex items-center gap-2 rounded-full bg-brand/10 px-3 py-1 text-[10px] font-bold uppercase tracking-widest text-brand">
-            <Wheat size={12} aria-hidden="true" /> {LABELS.FEEDING_AREA}
-          </div>
-          <h1 className="mt-3 text-3xl font-black tracking-tight text-ink">{LABELS.FEED_DASHBOARD}</h1>
-          <p className="mt-2 max-w-2xl text-sm leading-7 text-ink-muted">
+          <h1 className="text-page-title text-ink">{LABELS.FEED_DASHBOARD}</h1>
+          <p className="mt-2 max-w-2xl text-body text-ink-muted">
             Track what feed is in stock, what it costs, and which mix helps your cows give more milk.
           </p>
         </div>
@@ -119,16 +117,16 @@ export default function NutritionDashboard() {
         <button
           type="button"
           onClick={() => navigate('/feed-nutrition/mix')}
-          className="btn-command gap-2 px-4 py-2.5 text-sm"
+          className="btn-command gap-2 px-4 py-2.5 text-control"
         >
-          <PackagePlus size={18} aria-hidden="true" /> Create New Feed Batch
+          <Plus size={18} aria-hidden="true" /> {feedCopy.costs.createBatch}
         </button>
       </div>
 
       {/* ── WHAT'S BEING FED: one card per mix type ── */}
       {costState !== 'loading' && costState !== 'ready' && (
         <div className="overflow-hidden rounded-card border border-ink/10 bg-surface">
-          <ListLoadNotices state={costState} label="feed costs" error={costQuery.error} onRetry={costQuery.refetch} />
+          <ListLoadNotices state={costState} label={feedCopy.costs.listLabel} error={costQuery.error} onRetry={costQuery.refetch} />
         </div>
       )}
       <div className="grid gap-6 lg:grid-cols-2">

@@ -1,4 +1,5 @@
-import LABELS from '../lib/labels';
+// The raw English labels: this file is the English source, so it must not follow the language.
+import { labelsCopy as LABELS } from './labels.en';
 
 /**
  * Text for the signed-in app shell: header, menu, bottom navigation, connection banner and the
@@ -14,7 +15,6 @@ export const shellCopy = {
     roleUnknown: 'N/A',
     noRole: 'No role assigned',
     language: 'Language',
-    density: 'Interface density',
     dataSaver: 'Data saver',
     dataSaverHint: 'Hides cow photos until you tap them and refreshes less often, to save mobile data.',
     signOut: 'Sign out',
@@ -49,12 +49,8 @@ export const shellCopy = {
     titles: {
       dashboard: 'Dashboard',
       production: 'Production Log',
-      buyers: 'Buyer List',
       ledger: 'Ledger',
       milkUsage: 'Milk Usage',
-      feedMixing: 'Feed Mixing',
-      clinical: 'Clinical Registry',
-      stock: 'Stock Registry',
     },
   },
 
@@ -82,7 +78,7 @@ export const shellCopy = {
       dailyRoutine: LABELS.DAILY_ROUTINE,
       farmTasks: 'Farm Task View',
       cowRegister: 'Cow Register',
-      breeding: 'Breeding & Genetics',
+      breeding: 'AI & Pregnancy',
       medical: LABELS.MEDICAL_RECORDS,
       milkDrops: 'Milk Drop Alerts',
       todayFeeding: LABELS.TODAY_FEEDING,
@@ -91,7 +87,7 @@ export const shellCopy = {
       ingredients: LABELS.FEED_INGREDIENTS,
       milkLab: LABELS.MILK_LAB,
       unitHelpers: 'Unit Helpers',
-      buyers: 'Buyers List',
+      buyers: 'Buyer List',
       customers: 'Customer Management',
       inventory: 'Inventory',
       ledger: 'Ledger',

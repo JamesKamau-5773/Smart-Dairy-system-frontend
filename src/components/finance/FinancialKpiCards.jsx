@@ -1,5 +1,4 @@
 import React from 'react';
-import { ShieldCheck } from 'lucide-react';
 
 const KpiCard = ({ title, value, subtext, children, valueClassName = 'text-ink' }) => (
   <div className="bg-white p-6 rounded-xl border border-slate-100 ">
@@ -46,12 +45,7 @@ const FinancialKpiCards = ({ kpis, totalProfit, isCoopMember }) => {
         />
       )}
       <KpiCard title="Tax Status" subtext="// Linked to: Bahati_01">
-        <div className="mt-4 flex items-center gap-3">
-          <div className="p-2 bg-emerald-50 border border-emerald-100 text-emerald-600 rounded-lg">
-            <ShieldCheck size={18} />
-          </div>
-          <div className="font-black text-xs text-ink">eTIMS sync active</div>
-        </div>
+        <div className="mt-4 font-black text-xs text-ink">eTIMS sync active</div>
       </KpiCard>
     </div>
   );

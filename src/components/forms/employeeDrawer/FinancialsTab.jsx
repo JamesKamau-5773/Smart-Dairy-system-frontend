@@ -1,11 +1,13 @@
 import StatutoryDeductionsToggle from '../StatutoryDeductionsToggle';
+import { staffCopy } from '../../../i18n/staff';
 
 export default function FinancialsTab({ financialData, setFinancialData, onSubmit, onClose }) {
+  const copy = staffCopy.drawer;
   return (
     <form onSubmit={onSubmit} className="space-y-4">
       <div className="grid gap-4 rounded-md border border-ink/15 bg-card p-4 sm:grid-cols-2">
         <label className="space-y-1.5 sm:col-span-2">
-          <span className="text-xs font-semibold uppercase tracking-wider text-ink-muted">Base salary (KES)</span>
+          <span className="text-xs font-semibold uppercase tracking-wider text-ink-muted">{copy.baseSalary}</span>
           <input
             type="number"
             min="0"
@@ -16,7 +18,7 @@ export default function FinancialsTab({ financialData, setFinancialData, onSubmi
         </label>
 
         <label className="space-y-1.5">
-          <span className="text-xs font-semibold uppercase tracking-wider text-ink-muted">Advance amount (KES)</span>
+          <span className="text-xs font-semibold uppercase tracking-wider text-ink-muted">{copy.advance}</span>
           <input
             type="number"
             min="0"
@@ -24,11 +26,11 @@ export default function FinancialsTab({ financialData, setFinancialData, onSubmi
             onChange={(event) => setFinancialData((current) => ({ ...current, advanceAmount: event.target.value }))}
             className="w-full rounded-md border border-ink/15 bg-card px-3 py-3 text-sm text-ink outline-none transition-colors focus:border-brand focus:ring-2 focus:ring-brand/15"
           />
-          <span className="block text-xs text-ink-muted">Also recorded in the ledger as Labour / Wages: Salary advance.</span>
+          <span className="block text-xs text-ink-muted">{copy.advanceHint}</span>
         </label>
 
         <label className="space-y-1.5">
-          <span className="text-xs font-semibold uppercase tracking-wider text-ink-muted">Monthly deduction (KES)</span>
+          <span className="text-xs font-semibold uppercase tracking-wider text-ink-muted">{copy.monthlyDeduction}</span>
           <input
             type="number"
             min="0"
@@ -48,15 +50,15 @@ export default function FinancialsTab({ financialData, setFinancialData, onSubmi
 
         <div className="sm:col-span-2 grid gap-3 rounded-md border border-ink/15 bg-ink-50 p-4 sm:grid-cols-3">
           <div>
-            <p className="text-xs font-semibold uppercase tracking-wider text-ink-muted">Current loan balance</p>
+            <p className="text-xs font-semibold uppercase tracking-wider text-ink-muted">{copy.loanBalance}</p>
             <p className="mt-1 text-lg font-semibold text-ink">KES {financialData.loanBalance.toLocaleString()}</p>
           </div>
           <div>
-            <p className="text-xs font-semibold uppercase tracking-wider text-ink-muted">Repayment rate</p>
+            <p className="text-xs font-semibold uppercase tracking-wider text-ink-muted">{copy.repaymentRate}</p>
             <p className="mt-1 text-lg font-semibold text-ink">KES {Number(financialData.monthlyDeduction || 0).toLocaleString()}</p>
           </div>
           <div>
-            <p className="text-xs font-semibold uppercase tracking-wider text-ink-muted">Advance this month</p>
+            <p className="text-xs font-semibold uppercase tracking-wider text-ink-muted">{copy.advanceThisMonth}</p>
             <p className="mt-1 text-lg font-semibold text-ink">KES {Number(financialData.advanceAmount || 0).toLocaleString()}</p>
           </div>
         </div>
@@ -68,13 +70,13 @@ export default function FinancialsTab({ financialData, setFinancialData, onSubmi
           onClick={onClose}
           className="rounded-md border border-ink/15 bg-card px-4 py-2 text-xs font-semibold uppercase tracking-[0.18em] text-ink-muted transition-colors hover:bg-ink-50"
         >
-          Cancel
+          {copy.cancel}
         </button>
         <button
           type="submit"
           className="rounded-md bg-brand px-4 py-2 text-xs font-semibold uppercase tracking-[0.18em] text-white transition-colors hover:bg-brand-dark"
         >
-          Apply financial changes
+          {copy.applyFinancials}
         </button>
       </div>
     </form>

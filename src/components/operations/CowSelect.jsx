@@ -1,5 +1,5 @@
 import { formatCowIdentity } from '../../lib/cowIdentity';
-import { safetyCopy as copy } from '../../i18n/safety.en';
+import { safetyCopy as copy } from '../../i18n/safety';
 
 /** A labelled select of the farm's cows, by name and ear tag. */
 export default function CowSelect({ id, cows, value, onChange, disabled = false }) {

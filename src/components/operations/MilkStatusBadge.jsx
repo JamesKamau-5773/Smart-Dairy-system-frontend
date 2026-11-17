@@ -1,5 +1,6 @@
 import { AlertTriangle, CheckCircle, RefreshCcw, ShieldCheck } from 'lucide-react';
 import { productionCopy } from '../../i18n/production';
+import { enumLabel } from '../../lib/enumLabel';
 
 // Each status has its own icon as well as its colour, so it never rests on colour alone.
 const STYLES = {
@@ -11,11 +12,11 @@ const OTHER = { tone: 'border-ink-200 bg-ink-50 text-ink-700', Icon: ShieldCheck
 
 /** A milk record's status (normalized: Verified, Pending, Flagged, Isolated); "—" when the backend sent none. */
 export default function MilkStatusBadge({ status }) {
-  if (!status) return <span className="text-xs text-ink-muted">—</span>;
+  if (!status) return <span className="text-meta text-ink-muted">—</span>;
   const { tone, Icon } = STYLES[status] ?? OTHER;
   return (
-    <span className={`inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-sm border px-2.5 py-1 font-sans text-[11px] font-semibold ${tone}`}>
-      <Icon size={12} strokeWidth={2.5} aria-hidden="true" /> {productionCopy.statuses[status] ?? status}
+    <span className={`inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-sm border px-2.5 py-1 text-badge ${tone}`}>
+      <Icon size={12} strokeWidth={2.5} aria-hidden="true" /> {enumLabel(productionCopy.statuses, status)}
     </span>
   );
 }

@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { AlertTriangle, Info, XCircle, CheckCircle2, RefreshCw, ArrowRight, X } from 'lucide-react';
+import { AlertTriangle, Info, XCircle, CheckCircle2, X } from 'lucide-react';
 import { INVERSE, tone } from './tones';
+import { commonCopy } from '../../i18n/common';
 import { useDrawAttention } from '../../hooks/useDrawAttention';
 
 // Tones come from the app's palette (./tones): brand blue and ink, with the
@@ -139,16 +140,16 @@ export default function AlertBanner({
             <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1">
               {action && (action.href ? (
                 <a href={action.href} target="_blank" rel="noopener noreferrer" className={linkClass}>
-                  {action.label} <ArrowRight size={14} aria-hidden="true" />
+                  {action.label}
                 </a>
               ) : (
                 <button type="button" onClick={action.onClick} className={linkClass}>
-                  {action.label} <ArrowRight size={14} aria-hidden="true" />
+                  {action.label}
                 </button>
               ))}
               {onRetry && (
                 <button type="button" onClick={onRetry} className={linkClass}>
-                  <RefreshCw size={14} aria-hidden="true" /> Try again
+                  {commonCopy.list.tryAgain}
                 </button>
               )}
             </div>
@@ -162,7 +163,7 @@ export default function AlertBanner({
               <button
                 type="button"
                 onClick={() => dismiss()}
-                aria-label="Dismiss"
+                aria-label={commonCopy.ui.dismiss}
                 className={`-m-1.5 flex h-9 w-9 items-center justify-center rounded-button focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/30 ${look.control}`}
               >
                 <X size={16} aria-hidden="true" />

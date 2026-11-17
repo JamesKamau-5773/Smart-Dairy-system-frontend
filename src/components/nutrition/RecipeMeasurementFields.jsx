@@ -1,10 +1,10 @@
-import { feedCopy } from '../../i18n/feed.en';
+import { feedCopy } from '../../i18n/feed';
 import { QUANTITY_BASES } from '../../lib/recipeMeasurements';
 
 const { mix: copy } = feedCopy;
 
-const inputClass = 'w-full rounded-lg border border-ink/20 bg-surface-raised px-3 py-2 text-sm font-bold text-ink focus:outline-none focus:ring-2 focus:ring-brand/40';
-const labelClass = 'block text-[10px] font-black uppercase tracking-wider text-ink-muted';
+const inputClass = 'w-full rounded-lg border border-ink/20 bg-surface-raised px-3 py-2 text-control text-ink focus:outline-none focus:ring-2 focus:ring-brand/40';
+const labelClass = 'block text-field-label text-ink-muted';
 
 function NumberField({ id, label, hint, value, error, onChange }) {
   return (
@@ -21,8 +21,8 @@ function NumberField({ id, label, hint, value, error, onChange }) {
         aria-invalid={error ? true : undefined}
         className={inputClass}
       />
-      {error && <p className="text-xs font-semibold text-danger">{error}</p>}
-      {!error && hint && <p className="text-[10px] font-semibold text-ink-muted">{hint}</p>}
+      {error && <p className="text-meta text-danger">{error}</p>}
+      {!error && hint && <p className="text-meta text-ink-muted">{hint}</p>}
     </div>
   );
 }
@@ -33,7 +33,7 @@ export default function RecipeMeasurementFields({ measures, errors = {}, onChang
 
   return (
     <fieldset className="mb-4 space-y-3 rounded-lg border border-ink/10 p-3">
-      <legend className="px-1 text-xs font-black text-ink-strong">{copy.measuresTitle}</legend>
+      <legend className="px-1 text-field-label text-ink-strong">{copy.measuresTitle}</legend>
 
       <div className="space-y-1">
         <label htmlFor="mix-quantity-basis" className={labelClass}>{copy.basis}</label>
@@ -53,7 +53,7 @@ export default function RecipeMeasurementFields({ measures, errors = {}, onChang
         />
       )}
 
-      <p className="pt-1 text-[10px] font-black uppercase tracking-wider text-ink-muted">{copy.bucketTitle}</p>
+      <p className="pt-1 text-label text-ink-muted">{copy.bucketTitle}</p>
       <div className="grid grid-cols-2 gap-2">
         <NumberField id="mix-bulk-density" label={copy.bulkDensity} value={measures.bulk_density_kg_per_litre} error={errors.bulk_density_kg_per_litre} onChange={set('bulk_density_kg_per_litre')} />
         <NumberField id="mix-bucket-volume" label={copy.bucketVolume} value={measures.bucket_volume_litres} error={errors.bucket_volume_litres} onChange={set('bucket_volume_litres')} />
