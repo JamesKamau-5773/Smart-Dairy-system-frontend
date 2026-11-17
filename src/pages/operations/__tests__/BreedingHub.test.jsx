@@ -3,6 +3,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import BreedingHub from '../BreedingHub';
+import { shellCopy } from '../../../i18n/shell';
 
 globalThis.React = React;
 afterEach(cleanup);
@@ -84,6 +85,12 @@ describe('BreedingHub history and pending edits', () => {
     mocks.listSemenInventory.mockResolvedValue([]);
     mocks.listHerd.mockResolvedValue([{ id: 46, tag_number: 'COWBR001', name: 'Malaika' }]);
     mocks.geneticProgress.mockResolvedValue([]);
+  });
+
+  it('titles the page with the sidebar label ("AI & Pregnancy"), from the same key', async () => {
+    renderHub();
+    expect(screen.getByRole('heading', { level: 1 }).textContent).toBe(shellCopy.nav.items.breeding);
+    expect(shellCopy.nav.items.breeding).toBe('AI & Pregnancy');
   });
 
   it('opens the shared service form with values when a pending card is edited', async () => {

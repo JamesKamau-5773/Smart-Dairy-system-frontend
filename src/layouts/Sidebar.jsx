@@ -1,14 +1,14 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useFocusTrap } from '../hooks/useFocusTrap';
 import { DESKTOP_QUERY, useMediaQuery } from '../hooks/useMediaQuery';
-import { NavLink, useLocation } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { X, ChevronRight, ChevronDown } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import FarmSwitcher from './FarmSwitcher';
 import { canSeeBuyers, canSeeLedger, canSeeProductionLog, UNIT_HELPER_ROLES } from '../lib/navAccess';
 import { canAccessCommandCenter, canViewAdminControls, isCooperativeAdmin, isSuperAdmin, hasRole, hasPageAccess } from '../lib/roles';
-import { isNavItemActive, navItemHref } from '../lib/navigation';
-import { FEED_CATEGORY } from '../lib/inventoryItemRules';
+import { navItemHref } from '../lib/navigation';
+import { activeNavRoute, NAV_GROUPS, NAV_ROUTES } from '../lib/navRoutes';
 import { shellCopy } from '../i18n/shell';
 import { SITE } from '../landing/content';
 
@@ -50,89 +50,42 @@ export default function Sidebar({ mobileOpen = false, setMobileOpen = () => {} }
     ? hasPageAccess(currentUser, 'reports') || hasPageAccess(currentUser, 'safety')
     : hasRole(currentUser, ['ADMIN', 'FARM_MANAGER', 'FARMER']);
 
-  const navGroups = [
-    {
-      id: 'platform',
-      items: [
-        { label: copy.items.systemAdmin, to: '/system-admin/dashboard', visible: isPlatformAdmin },
-      ],
-    },
-    {
-      id: 'cooperative',
-      items: [
-        { label: copy.items.memberOnboarding, to: '/cooperative-admin/members', visible: canManageMemberAccess },
-      ],
-    },
-    {
-      id: null,
-      items: [
-        { label: copy.items.commandCenter, to: '/dashboard', visible: showCommandCenter },
-      ],
-    },
-    {
-      id: 'operations',
-      items: [
-        { label: copy.items.production, to: '/operations/yield', visible: canSeeProductionLog(currentUser) },
-        { label: copy.items.milkUsage, to: '/operations/milk-usage', visible: hasPageAccess(currentUser, 'production') },
-        { label: copy.items.dailyRoutine, to: '/operations/routine', visible: hasPageAccess(currentUser, 'tasks') },
-        { label: copy.items.farmTasks, to: '/tasks', visible: canViewHerdsmanView && hasPageAccess(currentUser, 'tasks') },
-      ],
-    },
-    {
-      id: 'herd',
-      items: [
-        { label: copy.items.cowRegister, to: '/operations/herd', visible: hasPageAccess(currentUser, 'herd') },
-        { label: copy.items.breeding, to: '/operations/breeding', visible: canViewBreeding && hasPageAccess(currentUser, 'breeding') },
-        { label: copy.items.medical, to: '/operations/records', visible: hasPageAccess(currentUser, 'medical') },
-        // NEW: Added Milk Drop Reports right under Medical Records
-        { label: copy.items.milkDrops, to: '/operations/milk-drop-reports', visible: hasPageAccess(currentUser, 'medical') },
-      ],
-    },
-    {
-      id: 'feeding',
-      items: [
-        { label: copy.items.todayFeeding, to: '/feeding', visible: Boolean(currentUser) && hasPageAccess(currentUser, 'feeding') },
-        { label: copy.items.feedDashboard, to: '/feed-nutrition', visible: canViewFeedNutrition && hasPageAccess(currentUser, 'feed'), exact: true },
-        { label: copy.items.feedMixes, to: '/feed-nutrition/mix', visible: canViewFeedNutrition && hasPageAccess(currentUser, 'feed') },
-        // Inventory filtered to feed: one page, two ways in (Feeding and Finance & Supply).
-        { label: copy.items.ingredients, to: '/operations/inventory', query: { category: FEED_CATEGORY }, visible: showAdminControls && hasPageAccess(currentUser, 'inventory') },
-        { label: copy.items.milkLab, to: '/operations/lab', visible: canViewFeedNutrition && hasPageAccess(currentUser, 'feed') },
-        // Straight to the page (not the old /settings redirect), shown only to the roles its route allows.
-        { label: copy.items.unitHelpers, to: '/operations/unit-conversions', visible: hasRole(currentUser, UNIT_HELPER_ROLES) && hasPageAccess(currentUser, 'feed') },
-      ],
-    },
-    {
-      id: 'finance',
-      items: [
-        { label: copy.items.buyers, to: '/finance/buyers', visible: canSeeBuyers(currentUser) },
-        { label: copy.items.customers, to: '/operations/customers', visible: canViewCustomers && hasPageAccess(currentUser, 'customers') },
-        { label: copy.items.inventory, to: '/operations/inventory', visible: showAdminControls && hasPageAccess(currentUser, 'inventory') },
-        { label: copy.items.ledger, to: '/finance/ledger', visible: canSeeLedger(currentUser) },
-      ],
-    },
-    {
-      id: 'reports',
-      items: [
-        { label: copy.items.farmReports, to: '/operations/reports', visible: canViewMilkReport && hasPageAccess(currentUser, 'reports') },
-        { label: copy.items.customerValue, to: '/finance/reports/dairy-unit-economics', visible: showAdminControls && hasPageAccess(currentUser, 'reports') },
-        { label: copy.items.cowProfit, to: '/finance/reports/animal-economics', visible: showAdminControls && hasPageAccess(currentUser, 'reports') },
-        { label: copy.items.milkInventory, to: '/operations/reports/milk-inventory', visible: canViewMilkReport && hasPageAccess(currentUser, 'reports') },
-      ],
-    },
-    {
-      id: 'compliance',
-      items: [
-        { label: copy.items.safety, to: '/operations/safety', visible: canViewMilkReport && hasPageAccess(currentUser, 'safety') },
-      ],
-    },
-    {
-      id: 'hr',
-      items: [
-        { label: copy.items.staff, to: '/hr/staff', visible: canViewStaffRegistry && hasPageAccess(currentUser, 'staff') },
-        { label: copy.items.payroll, to: '/hr/payroll', visible: canViewPayroll && hasPageAccess(currentUser, 'payroll') },
-      ],
-    },
-  ];
+  // Who may see each link (roles, plan, page access). Paths, groups and order: lib/navRoutes.
+  const canSee = {
+    systemAdmin: isPlatformAdmin,
+    memberOnboarding: canManageMemberAccess,
+    commandCenter: showCommandCenter,
+    production: canSeeProductionLog(currentUser),
+    milkUsage: hasPageAccess(currentUser, 'production'),
+    dailyRoutine: hasPageAccess(currentUser, 'tasks'),
+    farmTasks: canViewHerdsmanView && hasPageAccess(currentUser, 'tasks'),
+    cowRegister: hasPageAccess(currentUser, 'herd'),
+    breeding: canViewBreeding && hasPageAccess(currentUser, 'breeding'),
+    medical: hasPageAccess(currentUser, 'medical'),
+    milkDrops: hasPageAccess(currentUser, 'medical'),
+    todayFeeding: Boolean(currentUser) && hasPageAccess(currentUser, 'feeding'),
+    feedDashboard: canViewFeedNutrition && hasPageAccess(currentUser, 'feed'),
+    feedMixes: canViewFeedNutrition && hasPageAccess(currentUser, 'feed'),
+    ingredients: showAdminControls && hasPageAccess(currentUser, 'inventory'),
+    milkLab: canViewFeedNutrition && hasPageAccess(currentUser, 'feed'),
+    unitHelpers: hasRole(currentUser, UNIT_HELPER_ROLES) && hasPageAccess(currentUser, 'feed'),
+    buyers: canSeeBuyers(currentUser),
+    customers: canViewCustomers && hasPageAccess(currentUser, 'customers'),
+    inventory: showAdminControls && hasPageAccess(currentUser, 'inventory'),
+    ledger: canSeeLedger(currentUser),
+    farmReports: canViewMilkReport && hasPageAccess(currentUser, 'reports'),
+    customerValue: showAdminControls && hasPageAccess(currentUser, 'reports'),
+    cowProfit: showAdminControls && hasPageAccess(currentUser, 'reports'),
+    milkInventory: canViewMilkReport && hasPageAccess(currentUser, 'reports'),
+    safety: canViewMilkReport && hasPageAccess(currentUser, 'safety'),
+    staff: canViewStaffRegistry && hasPageAccess(currentUser, 'staff'),
+    payroll: canViewPayroll && hasPageAccess(currentUser, 'payroll'),
+  };
+  const navGroups = NAV_GROUPS.map((id) => ({
+    id,
+    items: NAV_ROUTES.filter((route) => route.group === id)
+      .map((route) => ({ ...route, label: copy.items[route.id], visible: Boolean(canSee[route.id]) })),
+  }));
 
   const visibleGroups = navGroups
     .map((group) => ({
@@ -143,9 +96,9 @@ export default function Sidebar({ mobileOpen = false, setMobileOpen = () => {} }
     .filter((group) => group.items.length > 0);
   const allNavItems = visibleGroups.flatMap((group) => group.items);
 
-  const activeGroupId = visibleGroups.find((group) =>
-    group.items.some((item) => isNavItemActive(item, location, allNavItems))
-  )?.id || null;
+  // The same resolver the phone bottom nav uses (lib/navRoutes): one active link at most.
+  const activeItem = activeNavRoute(location, allNavItems);
+  const activeGroupId = activeItem?.group ?? null;
 
   const isGroupCollapsed = (groupId) =>
     mobileOpen && Boolean(groupId) && Boolean(collapsedGroups[groupId]);
@@ -218,16 +171,15 @@ export default function Sidebar({ mobileOpen = false, setMobileOpen = () => {} }
             )}
             <div className={`flex-col gap-2 ${group.id && isGroupCollapsed(group.id) ? 'hidden md:flex' : 'flex'}`}>
               {group.items.map((item) => {
-                const itemIsActive = isNavItemActive(item, location, allNavItems);
+                const itemIsActive = activeItem?.id === item.id;
 
                 return (
-                  <NavLink
-                    key={navItemHref(item)}
+                  <Link
+                    key={item.id}
                     to={navItemHref(item)}
-                    end={item.exact}
                     onClick={() => setMobileOpen(false)}
                     aria-current={itemIsActive ? 'page' : undefined}
-                    // Active state comes from isNavItemActive, which also reads the query.
+                    // Active state comes from activeNavRoute, which also reads the query.
                     // Hover is a plain light background only; the left border belongs to the active item.
                     className={`flex items-center pl-3.5 pr-4 py-3 min-h-[44px] font-sans font-semibold text-sm transition-colors duration-100 border-l-2 rounded-md relative ${
                       itemIsActive
@@ -236,7 +188,7 @@ export default function Sidebar({ mobileOpen = false, setMobileOpen = () => {} }
                     }`}
                   >
                     {item.label}
-                  </NavLink>
+                  </Link>
                 );
               })}
             </div>

@@ -1,3 +1,4 @@
+import { plural } from './locale';
 /**
  * Kiswahili for the herd. Same keys as herd.en.js; anything missing falls back to English.
  * Lines marked REVIEW need checking by a native speaker before release.
@@ -17,7 +18,7 @@ export const herdCopy = {
     Culled: 'Ameondolewa', // REVIEW: culled
   },
   age: {
-    unknown: 'Haijulikani',
+    notRecorded: 'Umri haujarekodiwa',
     short: (years, months) => `miaka ${years} miezi ${months}`,
   },
 
@@ -50,7 +51,7 @@ export const herdCopy = {
     healthSaved: (tag) => `Rekodi ya matibabu imehifadhiwa kwa ${tag} — inaonekana pia kwenye Rekodi za Matibabu.`,
     breedingBuildFailed: 'Imeshindwa kutengeneza rekodi sahihi ya uzalishaji kutoka kwa taarifa ulizoweka.',
     certificateUploadFailed: 'Huduma ya AI imehifadhiwa, lakini cheti hakikuweza kupakiwa. Tafadhali jaribu kukiambatisha tena.',
-    breedingSaved: (tag, withCertificate) => `Rekodi ya uzalishaji imehifadhiwa kwa ${tag}${withCertificate ? ' pamoja na cheti' : ''} — inaonekana pia kwenye Uzalishaji na Vizazi.`,
+    breedingSaved: (tag, withCertificate) => `Rekodi ya uzalishaji imehifadhiwa kwa ${tag}${withCertificate ? ' pamoja na cheti' : ''} — inaonekana pia kwenye AI na Mimba.`,
     birthRecorded: (tag) => `Uzazi umerekodiwa kwa ${tag}. Rekodi ya mnyama imesasishwa.`,
     eventLogged: (type, tag) => `Tukio la ${type.toLowerCase()} limerekodiwa kwa ${tag}.`,
     saveFailed: 'Imeshindwa kuhifadhi tukio hili. Angalia taarifa kisha ujaribu tena.',
@@ -59,7 +60,7 @@ export const herdCopy = {
     eventFallbackTitle: (type) => `Tukio la ${type.toLowerCase()}`,
     eventFallbackDescription: 'Hakuna maelezo zaidi.',
     logAction: 'Rekodi tukio',
-    timelinePage: (page, pages, total) => `Ukurasa ${page} kati ya ${pages} · matukio ${total} kwa jumla`,
+    timelinePage: (page, pages, total) => `Ukurasa ${page} kati ya ${pages} · ${plural(total, { one: 'tukio {n} kwa jumla', other: 'matukio {n} kwa jumla' })}`,
     previous: 'Iliyotangulia',
     next: 'Inayofuata',
 
@@ -159,8 +160,6 @@ export const herdCopy = {
 
   registry: {
     eyebrow: 'Orodha ya mifugo',
-    titleStart: 'Mifugo',
-    titleEnd: 'Yangu',
     subtitle: 'Orodha kamili ya wanyama wote kwenye boma lako na hali yao ya sasa.',
     totalAnimals: 'Wanyama wote',
     milking: 'Wanaokamuliwa',
@@ -211,7 +210,7 @@ export const herdCopy = {
     lastCalvedShort: 'Alizaa mwisho',
     ageShort: 'Umri',
     updatedShort: 'Imesasishwa',
-    showing: (shown, total) => `Inaonyesha wanyama ${shown} kati ya ${total}.`,
+    showing: (shown, total) => plural(total, { one: `Inaonyesha mnyama ${shown} kati ya {n}.`, other: `Inaonyesha wanyama ${shown} kati ya {n}.` }),
     noMatches: 'Hakuna mnyama anayelingana na utafutaji au vichujio vyako.',
     empty: 'Bado huna mifugo.',
     didYouMean: 'Ulimaanisha',

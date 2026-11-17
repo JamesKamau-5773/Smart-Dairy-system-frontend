@@ -1,26 +1,32 @@
-import { NavLink } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { BookOpen, LayoutDashboard, Users, Wallet } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { getDefaultLandingPath } from '../lib/roles';
 import { canSeeBuyers, canSeeLedger, canSeeProductionLog } from '../lib/navAccess';
 import { shellCopy } from '../i18n/shell';
+import { activeTabId, BOTTOM_TABS, navRoute } from '../lib/navRoutes';
 
 const { bottomNav: copy } = shellCopy;
 
-const tabs = [
-  { id: 'dashboard', to: null, icon: LayoutDashboard, visible: () => true },
-  // Same checks as the sidebar (lib/navAccess), so a tab never leads to a locked page.
-  { id: 'production', to: '/operations/yield', icon: BookOpen, visible: canSeeProductionLog },
-  { id: 'buyers', to: '/finance/buyers', icon: Users, visible: canSeeBuyers },
-  { id: 'ledger', to: '/finance/ledger', icon: Wallet, visible: canSeeLedger },
-];
+// The tabs, in order, with the sidebar destination each stands for: lib/navRoutes (BOTTOM_TABS).
+// Here: each tab's icon and who sees it. Same checks as the sidebar (lib/navAccess), so a tab
+// never leads to a locked page.
+const TAB_ICONS = { dashboard: LayoutDashboard, production: BookOpen, buyers: Users, ledger: Wallet };
+const TAB_VISIBLE = { dashboard: () => true, production: canSeeProductionLog, buyers: canSeeBuyers, ledger: canSeeLedger };
 
 export default function MobileBottomNav() {
   const { currentUser } = useAuth();
+  const location = useLocation();
   const landingPath = getDefaultLandingPath(currentUser);
-  const items = tabs
-    .filter((tab) => tab.visible(currentUser))
-    .map((tab) => ({ ...tab, label: copy[tab.id], to: tab.to ?? landingPath }));
+  const activeId = activeTabId(location, landingPath);
+  const items = BOTTOM_TABS
+    .filter((tab) => TAB_VISIBLE[tab.id](currentUser))
+    .map((tab) => ({
+      ...tab,
+      icon: TAB_ICONS[tab.id],
+      label: copy[tab.id],
+      to: tab.id === 'dashboard' ? landingPath : navRoute(tab.navId).to,
+    }));
 
   return (
     <nav
@@ -29,18 +35,19 @@ export default function MobileBottomNav() {
     >
       <div className="grid w-full" style={{ gridTemplateColumns: `repeat(${items.length}, minmax(0, 1fr))` }}>
         {items.map(({ id, label, to, icon: Icon }) => (
-          <NavLink
+          <Link
             key={id}
             to={to}
-            className={({ isActive }) => `flex min-h-[64px] min-w-0 flex-col items-center justify-center gap-1 border-t-2 px-1 py-2 text-center transition-colors ${
-              isActive
+            aria-current={id === activeId ? 'page' : undefined}
+            className={`flex min-h-[64px] min-w-0 flex-col items-center justify-center gap-1 border-t-2 px-1 py-2 text-center transition-colors ${
+              id === activeId
                 ? 'border-brand-400 bg-brand-50 text-brand-900'
                 : 'border-transparent text-ink-muted hover:bg-brand-50 hover:text-brand-900'
             }`}
           >
             <Icon size={19} aria-hidden="true" />
             <span className="max-w-full truncate text-[10px] font-semibold leading-tight">{label}</span>
-          </NavLink>
+          </Link>
         ))}
       </div>
     </nav>

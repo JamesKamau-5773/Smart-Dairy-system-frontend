@@ -1,3 +1,4 @@
+import { plural } from './locale';
 /** Text for buyers, customers, the ledger, deliveries, receipts and the money reports. */
 export const financeCopy = {
   // Labels for the customer types saved with a customer; any other type is shown as typed.
@@ -34,7 +35,7 @@ export const financeCopy = {
     status: 'Status',
     allStatuses: 'All statuses',
     shareSelected: (count) => `Share Statements via WhatsApp (${count})`,
-    showing: (shown, total) => `${shown} of ${total} buyers`,
+    showing: (shown, total) => `${shown} of ${plural(total, { one: '{n} buyer', other: '{n} buyers' })}`,
     tableLabel: 'Buyers data table',
     selectAll: 'Select all visible buyers',
     columns: { name: 'Buyer Name', id: 'ID', phone: 'Phone Number', rate: 'Agreed Rate', balance: 'Current Balance', status: 'Status', actions: 'Actions' },
@@ -568,7 +569,7 @@ export const financeCopy = {
     profitTitle: 'Profitability & Customer Loyalty',
     profitPerLiter: 'Profit per Liter',
     assumedLifespan: 'Assumed Customer Lifespan',
-    months: (count) => `${count} months`,
+    months: (count) => plural(count, { one: '{n} month', other: '{n} months' }),
     projected: 'Projected Profit per Customer',
     totalRevenue: 'Total Revenue',
     deliveryRevenue: 'Customer Delivery Revenue',

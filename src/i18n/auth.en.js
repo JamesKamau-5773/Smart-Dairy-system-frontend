@@ -1,3 +1,4 @@
+import { plural } from './locale';
 /**
  * Every user-facing string in the sign-in, sign-up, verification and password
  * recovery flows. Screens read from here instead of hard-coding text, so a
@@ -229,7 +230,7 @@ export const authCopy = {
   demo: {
     starting: 'Starting your demo farm…',
     ready: 'Your demo farm is ready.',
-    readyFor: (minutes) => `Your demo farm is ready. You have ${minutes} minutes to explore.`,
+    readyFor: (minutes) => `Your demo farm is ready. You have ${plural(minutes, { one: '{n} minute', other: '{n} minutes' })} to explore.`,
     failedTitle: 'The demo didn’t start',
     retry: 'Try again',
     createFarm: 'Create your free farm',

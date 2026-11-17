@@ -5,6 +5,7 @@
 import { formatDateTime } from './audit';
 import { resolveBackendAssetUrl } from './apiClient';
 import { formatCowIdentity, normalizeCowIdentity } from './cowIdentity';
+import { readAgeMonths } from './herdUtils';
 
 export function getAvatarLabel(animal) {
   const nameInitial = animal?.name?.trim()?.charAt(0)?.toUpperCase();
@@ -90,7 +91,7 @@ function formatParentReference(parent, fallbackName, fallbackId) {
 
 export function normalizeAnimal(animal = {}, id = '') {
   const identity = normalizeCowIdentity({ ...animal, id: animal.id ?? animal.cow_id ?? id });
-  const ageMonths = Number(animal.ageMonths ?? animal.age_months ?? 0);
+  const ageMonths = readAgeMonths(animal);
   const yesterdayYieldLiters = Number(
     animal.yesterdayYieldLiters ?? animal.yesterday_yield_liters ?? 0
   );

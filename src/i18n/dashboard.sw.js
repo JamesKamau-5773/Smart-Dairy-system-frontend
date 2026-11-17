@@ -1,3 +1,4 @@
+import { plural } from './locale';
 /**
  * Kiswahili for the dashboard. Same keys as dashboard.en.js; anything missing falls back to
  * English. Lines marked REVIEW need checking by a native speaker before release.
@@ -125,9 +126,9 @@ export const dashboardCopy = {
     saved: 'Ratiba imehifadhiwa. Mchungaji ataiona kwenye Kazi za Shambani.',
     title: 'Ratiba ya Kila Siku',
     subtitle: 'Weka ratiba ya kila siku. Maelezo utakayoandika hapa yataonekana kama orodha ya kazi kwenye simu ya mchungaji.',
-    blocks: (count) => `Vipindi ${count}`,
+    blocks: (count) => plural(count, { one: 'Kipindi {n}', other: 'Vipindi {n}' }),
     withNotes: (count) => `${count} vyenye maelezo`,
-    activeSteps: (count) => `Hatua ${count} zinazotumika`,
+    activeSteps: (count) => plural(count, { one: 'Hatua {n} inayotumika', other: 'Hatua {n} zinazotumika' }),
     unsaved: (count) => `Mabadiliko ambayo hayajahifadhiwa (${count})`,
     savedAt: (time) => `Imehifadhiwa ${time}`,
     empty: 'Bado hakuna ratiba ya kila siku kwa shamba hili. Vipindi vya muda haviwezi kuongezwa kutoka skrini hii kwa sasa.',

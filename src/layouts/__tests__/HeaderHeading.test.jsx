@@ -30,6 +30,14 @@ describe('top bar title and the page h1', () => {
     expect(screen.getByRole('heading', { level: 1 })).toBeTruthy();
   });
 
+  it('uses the sidebar labels for the herd list and breeding (one key each)', () => {
+    renderAt('/operations/herd');
+    expect(screen.getByText('Cow Register')).toBeTruthy();
+    cleanup();
+    renderAt('/operations/breeding');
+    expect(screen.getByText('AI & Pregnancy')).toBeTruthy();
+  });
+
   it('matches whole paths, with :id standing for one segment', () => {
     expect(pageOwnsHeading('/finance/ledger/')).toBe(true);
     expect(pageOwnsHeading('/operations/reports/milk-inventory')).toBe(false);

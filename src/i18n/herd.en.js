@@ -1,3 +1,4 @@
+import { plural } from './locale';
 /**
  * Text for the herd: the cow register, a cow's record and the labels shared by herd screens.
  * Values that need runtime data are functions.
@@ -18,7 +19,7 @@ export const herdCopy = {
     Culled: 'Culled',
   },
   age: {
-    unknown: 'N/A',
+    notRecorded: 'Age not recorded',
     short: (years, months) => `${years}y ${months}m`,
   },
 
@@ -51,7 +52,7 @@ export const herdCopy = {
     healthSaved: (tag) => `Medical record saved for ${tag} — also visible on Medical Records.`,
     breedingBuildFailed: 'Unable to build a valid breeding log from the entered details.',
     certificateUploadFailed: 'AI service was saved, but the certificate could not be uploaded. Please retry the attachment.',
-    breedingSaved: (tag, withCertificate) => `Breeding log saved for ${tag}${withCertificate ? ' with certificate attached' : ''} — also visible on Breeding & Genetics.`,
+    breedingSaved: (tag, withCertificate) => `Breeding log saved for ${tag}${withCertificate ? ' with certificate attached' : ''} — also visible on AI & Pregnancy.`,
     birthRecorded: (tag) => `Birth recorded for ${tag}. The animal record is up to date.`,
     eventLogged: (type, tag) => `Logged ${type.toLowerCase()} event for ${tag}.`,
     saveFailed: 'Could not save this event. Check the details and try again.',
@@ -61,7 +62,7 @@ export const herdCopy = {
     eventFallbackTitle: (type) => `${type} event`,
     eventFallbackDescription: 'No additional details provided.',
     logAction: 'Log action',
-    timelinePage: (page, pages, total) => `Showing page ${page} of ${pages} · ${total} total events`,
+    timelinePage: (page, pages, total) => `Showing page ${page} of ${pages} · ${plural(total, { one: '{n} total event', other: '{n} total events' })}`,
     previous: 'Previous',
     next: 'Next',
 
@@ -156,14 +157,12 @@ export const herdCopy = {
       feedingPlan: 'Feeding plan',
       loadingGoal: 'Loading saved milk goal...',
       extraMilk: 'Extra milk needed / day',
-      days: (count) => `${count} days`,
+      days: (count) => plural(count, { one: '{n} day', other: '{n} days' }),
     },
   },
 
   registry: {
     eyebrow: 'Herd list',
-    titleStart: 'My',
-    titleEnd: 'Herd',
     subtitle: 'A complete list of all animals in your boma and their current status.',
     totalAnimals: 'Total animals',
     milking: 'Milking',
@@ -175,7 +174,7 @@ export const herdCopy = {
     error: 'Error',
     success: 'Success',
     summary: 'Registry summary',
-    cowCount: (count) => `${count} cows`,
+    cowCount: (count) => plural(count, { one: '{n} cow', other: '{n} cows' }),
     notAvailable: 'Not available',
     lastUpdated: (when) => `Last updated ${when}`,
     averageAge: 'Average age',
@@ -214,7 +213,7 @@ export const herdCopy = {
     lastCalvedShort: 'Last calved',
     ageShort: 'Age',
     updatedShort: 'Updated',
-    showing: (shown, total) => `Showing ${shown} of ${total} animals.`,
+    showing: (shown, total) => `Showing ${shown} of ${plural(total, { one: '{n} animal', other: '{n} animals' })}.`,
     noMatches: 'No animals match your search or filters.',
     empty: 'Your herd is empty.',
     didYouMean: 'Did you mean',

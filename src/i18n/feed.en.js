@@ -1,3 +1,4 @@
+import { plural } from './locale';
 /**
  * User-facing text added for the feed planning and inventory API changes
  * (backend/docs/FEED_INVENTORY_API_CHANGES.md). Values that need runtime data
@@ -149,10 +150,10 @@ export const feedCopy = {
   batch: {
     suggestTitle: 'Suggested batch size',
     suggestFor: 'Enough for',
-    days: (count) => `${count} days`,
+    days: (count) => plural(count, { one: '{n} day', other: '{n} days' }),
     suggestButton: 'Suggest size',
     suggesting: 'Working it out…',
-    suggestion: (kg, days) => `About ${kg} kg feeds your herd for ${days} days, after what’s already in store.`,
+    suggestion: (kg, days) => `About ${kg} kg feeds your herd for ${plural(days, { one: '{n} day', other: '{n} days' })}, after what’s already in store.`,
     useSuggestion: 'Use suggestion',
     cappedToStock: (kg, ingredient) => `Your stock only covers ${kg} kg${ingredient ? ` (${ingredient} runs out first)` : ''}, so the suggestion was reduced to that.`,
   },
@@ -165,8 +166,8 @@ export const feedCopy = {
     },
     mixedOn: 'Mixed on',
     stockLevel: 'Left in store',
-    daysLeft: (days) => `About ${days} days left at the recorded pace`,
-    lowStock: (days) => `Running low: about ${days} days left`,
+    daysLeft: (days) => plural(days, { one: 'About {n} day left at the recorded pace', other: 'About {n} days left at the recorded pace' }),
+    lowStock: (days) => plural(days, { one: 'Running low: about {n} day left', other: 'Running low: about {n} days left' }),
     pace: (kg) => `Based on recorded use of ${kg} kg a day.`,
     noForecast: 'No forecast yet',
     noForecastHint: 'Record feeding as it happens to work out the daily rate and days left.',
@@ -224,8 +225,8 @@ export const feedCopy = {
     amountInvalid: (max) => `Enter an amount between 0 and ${max} kg.`,
     batchesTitle: 'Feed in store',
     remaining: (kg) => `${kg} kg left`,
-    daysLeft: (days) => `about ${days} days`,
-    totals: (animals, kg) => `${animals} animals · ${kg} kg feed needed today`,
+    daysLeft: (days) => plural(days, { one: 'about {n} day', other: 'about {n} days' }),
+    totals: (animals, kg) => `${plural(animals, { one: '{n} animal', other: '{n} animals' })} · ${kg} kg feed needed today`,
     retry: 'Try again',
   },
 
@@ -259,8 +260,11 @@ export const feedCopy = {
     wholeHerd: 'Whole Herd',
     usingSaved: (targeted, active) => `Using saved goals for ${targeted} out of ${active} cows that are currently milking.`,
     usingHerd: 'Using the whole-herd goal you entered in the calculator.',
-    notIncluded: (count) => `${count} cows are milking but do not have saved goals yet, so they were not included in this calculation.`,
-    localTargets: (count) => `${count} local fallback target(s) detected`,
+    notIncluded: (count) => plural(count, {
+      one: '{n} cow is milking but does not have a saved goal yet, so it was not included in this calculation.',
+      other: '{n} cows are milking but do not have saved goals yet, so they were not included in this calculation.',
+    }),
+    localTargets: (count) => plural(count, { one: '{n} local fallback target detected', other: '{n} local fallback targets detected' }),
     allFromBackend: 'All loaded targets are from backend API',
     title: 'Milk Feeding Planner',
     subtitle: 'Plan the right amount of feed to help your cows reach milk goals without wasting feed.',
@@ -409,7 +413,7 @@ export const feedCopy = {
     empty: 'No feeding groups are available yet.',
     columns: { group: 'Group / quantity basis', headcount: 'Headcount', perHeadDay: 'kg/head/day', perHeadFeeding: 'kg/head/feeding', dailyBatch: 'Daily group batch', batchFeeding: 'Batch/feeding', recipe: 'Recipe' },
     editProfile: (group) => `Edit ${group} profile`,
-    total: (count) => `Total (${count} active animals)`,
+    total: (count) => `Total (${plural(count, { one: '{n} active animal', other: '{n} active animals' })})`,
     assigned: 'Assigned',
     notAssigned: 'Not assigned',
     headcount: 'Headcount',
@@ -452,7 +456,7 @@ export const feedCopy = {
     recording: 'Recording batch...',
     confirm: (kg) => `Confirm ${kg} kg batch`,
     totalSize: 'Total batch size (kg)',
-    maxBatch: (count, kg) => `All ${count} ingredients can make one complete batch of up to ${kg} kg at these shares.`,
+    maxBatch: (count, kg) => plural(count, { one: `The {n} ingredient can make one complete batch of up to ${kg} kg at this share.`, other: `All {n} ingredients can make one complete batch of up to ${kg} kg at these shares.` }),
     useMax: 'Use maximum batch',
     totalBatch: 'Total batch',
     proteinContent: 'Protein content',

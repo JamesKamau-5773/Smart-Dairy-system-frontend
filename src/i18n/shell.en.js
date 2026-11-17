@@ -82,7 +82,7 @@ export const shellCopy = {
       dailyRoutine: LABELS.DAILY_ROUTINE,
       farmTasks: 'Farm Task View',
       cowRegister: 'Cow Register',
-      breeding: 'Breeding & Genetics',
+      breeding: 'AI & Pregnancy',
       medical: LABELS.MEDICAL_RECORDS,
       milkDrops: 'Milk Drop Alerts',
       todayFeeding: LABELS.TODAY_FEEDING,

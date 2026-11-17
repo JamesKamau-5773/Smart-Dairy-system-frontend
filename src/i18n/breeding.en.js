@@ -1,3 +1,4 @@
+import { plural } from './locale';
 /** Text for AI and pregnancy: the breeding hub, AI service, heat and semen forms. */
 export const breedingCopy = {
   // Labels for the values the backend uses; the values themselves never change.
@@ -16,11 +17,9 @@ export const breedingCopy = {
 
   hub: {
     eyebrow: 'Herd reproduction',
-    titleStart: 'AI &',
-    titleEnd: 'Pregnancy',
     onHeat: (count) => `${count} on heat`,
-    pendingChecks: (total, due) => `${total} pending checks (${due} due)`,
-    straws: (count) => `${count} straws in tank`,
+    pendingChecks: (total, due) => `${plural(total, { one: '{n} check pending', other: '{n} checks pending' })} · ${due} due`,
+    straws: (count) => plural(count, { one: '{n} straw in tank', other: '{n} straws in tank' }),
     recordHeat: 'Record heat',
     logService: 'Log AI service',
     heatAlerts: 'Action needed: Cows in heat',
@@ -35,7 +34,7 @@ export const breedingCopy = {
     saving: 'Saving...',
     markOpen: 'Mark open',
     confirmPregnant: 'Confirm pregnant',
-    waitDays: (days) => `Wait ${days} days`,
+    waitDays: (days) => plural(days, { one: 'Wait {n} day', other: 'Wait {n} days' }),
     editFor: (cow) => `Edit AI service for ${cow}`,
     edit: 'Edit',
     marked: (outcome) => `Cow marked as ${outcome}. Records updated.`,
@@ -115,12 +114,12 @@ export const breedingCopy = {
       selected: 'Selected item',
       code: (code) => `Code: ${code}`,
       noCode: 'N/A',
-      current: (count) => `Current stock: ${count} straws`,
+      current: (count) => plural(count, { one: 'Current stock: {n} straw', other: 'Current stock: {n} straws' }),
       add: 'Add straws *',
       placeholder: 'e.g. 20',
       amountInvalid: 'Enter a quantity greater than 0.',
       noItem: 'Select an inventory item before restocking.',
-      done: (name, amount) => `Restocked ${name} by ${amount} straws.`,
+      done: (name, amount) => `Restocked ${name} by ${plural(amount, { one: '{n} straw', other: '{n} straws' })}.`,
       failed: 'Could not restock this semen inventory. Check the quantity and try again.',
       saving: 'Saving...',
       submit: 'Restock',

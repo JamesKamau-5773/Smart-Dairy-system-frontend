@@ -62,6 +62,30 @@ export function subscribeLocale(listener) {
   return () => listeners.delete(listener);
 }
 
+// ── Plurals ───────────────────────────────────────────────────────────────────
+// Plural forms come from the language's CLDR rules (Intl.PluralRules), so copy never checks
+// `count === 1` itself. English and Kiswahili both have "one" and "other".
+const pluralRules = new Map();
+
+/** The plural category ("one", "other", …) for `count` in `locale` (default: the current one). */
+export function pluralCategory(count, locale = currentLocale) {
+  if (!pluralRules.has(locale)) pluralRules.set(locale, new Intl.PluralRules(LOCALES[locale]?.htmlLang ?? locale));
+  // Counts often arrive formatted ("1,234"); unknown ones ("—") read as "other".
+  const value = typeof count === 'number' ? count : Number(String(count).replace(/[\s,]/g, ''));
+  return Number.isFinite(value) ? pluralRules.get(locale).select(value) : 'other';
+}
+
+/**
+ * The form of `forms` for `count`, with `{n}` replaced by the count as given (so a formatted
+ * "1,234" stays formatted). Falls back to `other`.
+ *
+ * @example plural(count, { one: '{n} check pending', other: '{n} checks pending' })
+ */
+export function plural(count, forms) {
+  const form = forms[pluralCategory(count)] ?? forms.other;
+  return form.replaceAll('{n}', String(count));
+}
+
 const isPlainObject = (value) => value !== null && typeof value === 'object' && !Array.isArray(value);
 
 function valueAt(root, path) {

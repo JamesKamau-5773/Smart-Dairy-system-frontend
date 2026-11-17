@@ -2,16 +2,13 @@ import CowPhoto from '../../ui/CowPhoto';
 import { Skeleton } from '../../ui';
 import { getAvatarLabel } from './animalRecordUtils';
 import { formatDate } from '../../../lib/dateFormat';
-import { formatAge } from '../../../lib/herdUtils';
+import AnimalAge from '../AnimalAge';
 import { herdCopy, herdStatusLabel, pregnancyLabel } from '../../../i18n/herd';
 
 export default function AnimalSummaryCards({ animal, isLoading }) {
   const copy = herdCopy.record.summary;
   const displayAnimal = animal ?? {};
   const pregnancyStatus = displayAnimal.pregnancyStatus ?? 'Unknown';
-  const ageLabel = displayAnimal.age ?? (displayAnimal.ageMonths !== undefined && displayAnimal.ageMonths !== null
-    ? formatAge(Number(displayAnimal.ageMonths))
-    : copy.notApplicable);
   const birthDate = displayAnimal.dateOfBirth ?? displayAnimal.date_of_birth ?? displayAnimal.dob;
   const birthDateLabel = formatDate(birthDate, copy.notRecorded);
 
@@ -39,7 +36,7 @@ export default function AnimalSummaryCards({ animal, isLoading }) {
           <div className="mb-4 text-label text-brand">{copy.ageStatus}</div>
           <div className="mb-4">
             <div className="mb-1 text-label text-ink-muted">{copy.currentAge}</div>
-            <div className="text-stat-value text-ink-strong">{isLoading ? <Skeleton className="h-6 w-24" /> : ageLabel}</div>
+            <div className="text-stat-value text-ink-strong">{isLoading ? <Skeleton className="h-6 w-24" /> : <AnimalAge months={displayAnimal.ageMonths ?? null} />}</div>
           </div>
           <div className="mb-4">
             <div className="mb-1 text-label text-ink-muted">{copy.dateOfBirth}</div>

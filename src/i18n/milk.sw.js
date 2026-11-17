@@ -1,3 +1,4 @@
+import { plural } from './locale';
 /**
  * Kiswahili for the milk record form (keys as milk.en.js; anything missing falls back to English).
  * Lines marked REVIEW need checking by a native speaker before release.
@@ -80,7 +81,7 @@ export const milkCopy = {
     status: 'Hali',
     session: 'Kipindi',
     all: 'Zote',
-    showing: (shown, total) => `Inaonyesha vipindi ${shown} kati ya ${total}`,
+    showing: (shown, total) => plural(total, { one: `Inaonyesha kipindi ${shown} kati ya {n}`, other: `Inaonyesha vipindi ${shown} kati ya {n}` }),
     recordsTitle: 'Rekodi za vipindi vya kukamua',
     recordsSubtitle: 'Vipindi vya karibuni vya kukamua kwanza.',
     notAvailable: 'Haipatikani',
