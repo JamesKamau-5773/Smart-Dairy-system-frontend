@@ -12,7 +12,7 @@ import { adminCopy } from '../../i18n/admin';
 const copy = adminCopy.coopSetup;
 
 const panelClassName = 'rounded-2xl border border-ink/10 bg-white/90  backdrop-blur';
-const inputClassName = 'mt-2 w-full rounded-lg border border-ink/10 bg-[#fbfcfa] px-4 py-3 text-sm text-ink-strong outline-none transition focus:border-brand focus:ring-2 focus:ring-brand/15';
+const inputClassName = 'mt-2 w-full rounded-lg border border-ink/10 bg-[#fbfcfa] px-4 py-3 text-control text-ink-strong outline-none transition focus:border-brand focus:ring-2 focus:ring-brand/15';
 
 const extractCooperativeId = (response) => (
   response?.cooperative_id
@@ -28,18 +28,18 @@ function SectionHeader({ eyebrow, title, description, accent = 'brand' }) {
 
   return (
     <header className="mb-6">
-      <p className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-[0.16em] ${accentClass}`}>
+      <p className={`inline-flex items-center rounded-full px-3 py-1 text-label ${accentClass}`}>
         {eyebrow}
       </p>
-      <h2 className="mt-4 text-3xl font-black tracking-tight text-ink-strong">{title}</h2>
-      <p className="mt-2 text-sm leading-6 text-ink-muted">{description}</p>
+      <h2 className="mt-4 text-section-title text-ink-strong">{title}</h2>
+      <p className="mt-2 text-body text-ink-muted">{description}</p>
     </header>
   );
 }
 
 function FormField({ label, children }) {
   return (
-    <label className="block text-xs font-semibold uppercase tracking-[0.14em] text-ink-muted">
+    <label className="block text-field-label text-ink-muted">
       {label}
       {children}
     </label>
@@ -235,7 +235,7 @@ export default function SuperAdminCooperativeSetupPage() {
             </button>
 
             {!cooperativeId && (
-              <p className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
+              <p className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-meta text-amber-800">
                 {copy.unlockHint}
               </p>
             )}
@@ -249,9 +249,9 @@ export default function SuperAdminCooperativeSetupPage() {
         </div>
       )}
 
-      <div className="mx-auto mt-6 max-w-6xl rounded-xl border border-ink/10 bg-white/75 p-4 text-sm text-ink-muted  backdrop-blur">
+      <div className="mx-auto mt-6 max-w-6xl rounded-xl border border-ink/10 bg-white/75 p-4 text-body text-ink-muted backdrop-blur">
         {copy.nextBefore}
-        <Link to="/cooperative-admin/members" className="font-semibold text-brand underline underline-offset-4">
+        <Link to="/cooperative-admin/members" className="text-body-strong text-brand underline underline-offset-4">
           {copy.nextLink}
         </Link>
         {copy.nextAfter}

@@ -38,9 +38,9 @@ export default function SlidePanel({ isOpen, onClose, title, subtitle, headerMet
       <aside className="absolute right-0 top-0 flex h-full w-full max-w-[44rem] flex-col border-l border-slate-200 bg-white/95 backdrop-blur">
         <div className="flex items-start justify-between border-b border-gray-200 bg-gray-50 px-6 py-5">
           <div className="min-w-0">
-            <h2 className="truncate text-xl font-semibold text-gray-900">{title}</h2>
+            <h2 className="truncate text-section-title text-gray-900">{title}</h2>
             {headerMeta}
-            {subtitle && <p className="mt-1 text-sm font-medium text-gray-500">{subtitle}</p>}
+            {subtitle && <p className="mt-1 text-body text-gray-500">{subtitle}</p>}
           </div>
           <button
             type="button"

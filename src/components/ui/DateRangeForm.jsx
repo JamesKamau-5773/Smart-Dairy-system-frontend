@@ -25,13 +25,13 @@ export default function DateRangeForm({ initial, max, onApply, onCancel }) {
       }}
     >
       <div className="grid grid-cols-2 gap-2">
-        <DateField label={copy.from} value={from} onChange={setFrom} max={max} inputClassName="input-machined h-10 min-h-0 !py-2 text-sm" />
-        <DateField label={copy.to} value={to} onChange={setTo} max={max} inputClassName="input-machined h-10 min-h-0 !py-2 text-sm" />
+        <DateField label={copy.from} value={from} onChange={setFrom} max={max} inputClassName="input-machined h-10 min-h-0 !py-2" />
+        <DateField label={copy.to} value={to} onChange={setTo} max={max} inputClassName="input-machined h-10 min-h-0 !py-2" />
       </div>
-      {reversed && <p role="alert" className="text-xs text-danger-900">{copy.reversed}</p>}
+      {reversed && <p role="alert" className="text-meta text-danger-900">{copy.reversed}</p>}
       <div className="flex justify-end gap-2">
-        <button type="button" onClick={onCancel} className="btn-secondary min-h-11 px-3 text-sm sm:min-h-9">{copy.cancel}</button>
-        <button type="submit" disabled={!canApply} className="btn-command min-h-11 px-3 text-sm disabled:opacity-50 sm:min-h-9">{copy.apply}</button>
+        <button type="button" onClick={onCancel} className="btn-secondary min-h-11 px-3 text-control sm:min-h-9">{copy.cancel}</button>
+        <button type="submit" disabled={!canApply} className="btn-command min-h-11 px-3 text-control disabled:opacity-50 sm:min-h-9">{copy.apply}</button>
       </div>
     </form>
   );

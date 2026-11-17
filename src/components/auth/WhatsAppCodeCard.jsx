@@ -31,21 +31,21 @@ export default function WhatsAppCodeCard({ waLink, messageText, whatsappNumber, 
         target="_blank"
         rel="noopener noreferrer"
         onClick={onOpen}
-        className="btn-command w-full gap-2 py-4 text-base"
+        className="btn-command w-full gap-2 py-4 text-control"
       >
         {buttonLabel}
       </a>
 
       <div className="rounded-card border border-ink/10 bg-surface p-4">
-        <p className="text-xs font-semibold text-ink-muted">{authCopy.verifyPhone.codeLabel}</p>
+        <p className="text-meta text-ink-muted">{authCopy.verifyPhone.codeLabel}</p>
         <div className="mt-1 flex items-center justify-between gap-3">
-          <span className="font-mono text-2xl font-bold tracking-wider text-ink-900">{messageText}</span>
-          <button type="button" onClick={copyCode} className="btn-ghost shrink-0 text-sm">
+          <span className="text-stat-value text-ink-900">{messageText}</span>
+          <button type="button" onClick={copyCode} className="btn-ghost shrink-0 text-control">
             <span aria-live="polite">{copied ? authCopy.common.copied : authCopy.common.copy}</span>
           </button>
         </div>
         {whatsappNumber && (
-          <p className="mt-2 text-xs text-ink-muted">{authCopy.verifyPhone.codeManual(displayPhone(whatsappNumber))}</p>
+          <p className="mt-2 text-meta text-ink-muted">{authCopy.verifyPhone.codeManual(displayPhone(whatsappNumber))}</p>
         )}
       </div>
     </div>

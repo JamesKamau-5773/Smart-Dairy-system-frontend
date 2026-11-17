@@ -96,8 +96,8 @@ export default function ForgotPasswordPage() {
   return (
     <AuthLayout offline={!online}>
       <header className="mb-6">
-        <h1 className="text-2xl font-bold tracking-tight text-ink-900 sm:text-3xl">{sent ? copy.sentTitle : copy.title}</h1>
-        {!sent && <p className="mt-2 text-sm text-ink-muted">{copy.subtitle}</p>}
+        <h1 className="text-page-title text-ink-900">{sent ? copy.sentTitle : copy.title}</h1>
+        {!sent && <p className="mt-2 text-body text-ink-muted">{copy.subtitle}</p>}
       </header>
 
       {sent ? (
@@ -117,14 +117,14 @@ export default function ForgotPasswordPage() {
         <form onSubmit={submit} noValidate className="space-y-5">
           {options.channels.length > 1 && (
             <fieldset>
-              <legend className="mb-2 block text-sm font-semibold text-ink-900">{copy.channelLabel}</legend>
+              <legend className="mb-2 block text-field-label text-ink-900">{copy.channelLabel}</legend>
               <div className="grid grid-cols-2 gap-2">
                 {options.channels.map((option) => {
                   const selected = channel === option.id;
                   return (
                     <label
                       key={option.id}
-                      className={`flex min-h-12 cursor-pointer items-center justify-center rounded-card border px-3 text-sm font-semibold ${selected ? 'border-brand bg-brand/5 text-brand' : 'border-ink/15 text-ink-900'}`}
+                      className={`flex min-h-12 cursor-pointer items-center justify-center rounded-card border px-3 text-field-label ${selected ? 'border-brand bg-brand/5 text-brand' : 'border-ink/15 text-ink-900'}`}
                     >
                       <input
                         type="radio"
@@ -185,11 +185,11 @@ export default function ForgotPasswordPage() {
         </form>
       )}
 
-      <p className="mt-6 text-xs text-ink-muted">{options.adminHint}</p>
+      <p className="mt-6 text-meta text-ink-muted">{options.adminHint}</p>
 
-      <p className="mt-6 border-t border-ink/10 pt-6 text-center text-sm text-ink-muted">
+      <p className="mt-6 border-t border-ink/10 pt-6 text-center text-body text-ink-muted">
         {copy.remembered}{' '}
-        <Link to="/login" className="font-semibold text-brand underline-offset-4 hover:underline">{common.logIn}</Link>
+        <Link to="/login" className="text-body-strong text-brand underline-offset-4 hover:underline">{common.logIn}</Link>
       </p>
     </AuthLayout>
   );
@@ -209,7 +209,7 @@ function SentStep({ sent, expiresIn, resendIn, pending, error, online, onResend,
 
       {isWhatsApp && (
         <>
-          <ol className="list-decimal space-y-1 pl-5 text-sm text-ink-900">
+          <ol className="list-decimal space-y-1 pl-5 text-body text-ink-900">
             <li>{copy.whatsappStep1}</li>
             <li>{copy.whatsappStep2}</li>
             <li>{copy.whatsappStep3}</li>
@@ -220,17 +220,17 @@ function SentStep({ sent, expiresIn, resendIn, pending, error, online, onResend,
             whatsappNumber={sent.whatsapp_number}
             buttonLabel={copy.openWhatsApp}
           />
-          {expiresIn > 0 && <p className="text-xs text-ink-muted">{copy.expiresIn(formatClock(expiresIn))}</p>}
+          {expiresIn > 0 && <p className="text-meta text-ink-muted">{copy.expiresIn(formatClock(expiresIn))}</p>}
         </>
       )}
 
       {error && <AlertBanner type="danger" message={error} />}
 
       <div className="flex flex-col gap-2 sm:flex-row">
-        <button type="button" onClick={onResend} className="btn-secondary flex-1 text-sm font-semibold" disabled={pending || resendIn > 0 || !online}>
+        <button type="button" onClick={onResend} className="btn-secondary flex-1 text-control" disabled={pending || resendIn > 0 || !online}>
           {resendIn > 0 ? common.waitSeconds(resendIn) : copy.sendAgain}
         </button>
-        <button type="button" onClick={onStartOver} className="btn-ghost flex-1 text-sm">
+        <button type="button" onClick={onStartOver} className="btn-ghost flex-1 text-control">
           {copy.useOther}
         </button>
       </div>

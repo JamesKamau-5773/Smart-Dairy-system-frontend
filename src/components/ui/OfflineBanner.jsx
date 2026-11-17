@@ -19,7 +19,7 @@ export default function OfflineBanner() {
     Icon = CloudOff;
     message = (
       <>
-        <strong className="font-semibold">{copy.title}</strong>{' '}
+        <strong className="text-body-strong">{copy.title}</strong>{' '}
         {copy.body}
         {pendingCount > 0 && <> {copy.waiting(pendingCount)}</>}
       </>
@@ -38,11 +38,11 @@ export default function OfflineBanner() {
 
   return (
     <>
-      <div role="status" aria-live="polite" className={`flex flex-wrap items-center gap-x-3 gap-y-2 border-b px-4 py-2.5 text-sm sm:px-6 ${tone}`}>
+      <div role="status" aria-live="polite" className={`flex flex-wrap items-center gap-x-3 gap-y-2 border-b px-4 py-2.5 text-body sm:px-6 ${tone}`}>
         <Icon size={16} aria-hidden="true" className={`shrink-0 ${Icon === Loader2 && flushing ? 'animate-spin' : ''}`} />
         <p className="min-w-0 flex-1">{message}</p>
         {pendingCount > 0 && (
-          <button type="button" onClick={() => setInspectorOpen(true)} className="shrink-0 text-sm font-semibold text-brand-800 underline-offset-2 hover:underline">
+          <button type="button" onClick={() => setInspectorOpen(true)} className="shrink-0 text-control text-brand-800 underline-offset-2 hover:underline">
             {copy.review}
           </button>
         )}

@@ -55,13 +55,13 @@ export default function SessionExpiredSheet() {
         className="w-full max-w-sm space-y-4 rounded-modal border border-ink/10 bg-white p-6"
       >
         <div>
-          <h2 id="session-expired-title" className="text-lg font-bold text-ink">{commonCopy.session.title}</h2>
-          <p className="mt-1 text-sm text-ink-muted">
+          <h2 id="session-expired-title" className="text-section-title text-ink">{commonCopy.session.title}</h2>
+          <p className="mt-1 text-body text-ink-muted">
             {commonCopy.session.message}
           </p>
         </div>
 
-        <label className="block text-sm font-semibold text-ink" htmlFor="session-username">
+        <label className="block text-field-label text-ink" htmlFor="session-username">
           {commonCopy.session.identifier}
           <input
             id="session-username"
@@ -71,7 +71,7 @@ export default function SessionExpiredSheet() {
             className="input-machined mt-1 w-full"
           />
         </label>
-        <label className="block text-sm font-semibold text-ink" htmlFor="session-password">
+        <label className="block text-field-label text-ink" htmlFor="session-password">
           {commonCopy.session.password}
           <input
             id="session-password"
@@ -84,9 +84,9 @@ export default function SessionExpiredSheet() {
           />
         </label>
 
-        {error && <p role="alert" className="text-sm text-danger-900">{error}</p>}
+        {error && <p role="alert" className="text-body text-danger-900">{error}</p>}
         {pendingCount > 0 && (
-          <p className="rounded-input bg-warning-50 p-3 text-sm text-ink">
+          <p className="rounded-input bg-warning-50 p-3 text-body text-ink">
             {commonCopy.session.pending(pendingCount)}
           </p>
         )}
@@ -95,7 +95,7 @@ export default function SessionExpiredSheet() {
           <button type="submit" disabled={isSubmitting} className="btn-command w-full justify-center disabled:opacity-60">
             {isSubmitting ? commonCopy.session.signingIn : commonCopy.session.signIn}
           </button>
-          <button type="button" onClick={logout} className="w-full rounded-button px-4 py-2 text-sm font-semibold text-ink-muted hover:bg-ink/5">
+          <button type="button" onClick={logout} className="w-full rounded-button px-4 py-2 text-control text-ink-muted hover:bg-ink/5">
             {commonCopy.session.signOut}
           </button>
         </div>
@@ -137,11 +137,11 @@ function DemoSessionEndedSheet() {
       className="w-full max-w-sm space-y-4 rounded-modal border border-ink/10 bg-white p-6"
     >
       <div>
-        <h2 id="demo-ended-title" className="text-lg font-bold text-ink">{copy.expiredTitle}</h2>
-        <p className="mt-1 text-sm text-ink-muted">{copy.expiredMessage}</p>
+        <h2 id="demo-ended-title" className="text-section-title text-ink">{copy.expiredTitle}</h2>
+        <p className="mt-1 text-body text-ink-muted">{copy.expiredMessage}</p>
       </div>
 
-      {error && <p role="alert" className="text-sm text-danger-900">{error}</p>}
+      {error && <p role="alert" className="text-body text-danger-900">{error}</p>}
 
       <div className="flex flex-col gap-2">
         <button type="button" onClick={leave.toRegister} className="btn-command w-full justify-center">
@@ -150,7 +150,7 @@ function DemoSessionEndedSheet() {
         <button type="button" onClick={restart} disabled={isRestarting} aria-busy={isRestarting || undefined} className="btn-secondary w-full justify-center disabled:opacity-60">
           {isRestarting ? copy.restarting : copy.restart}
         </button>
-        <button type="button" onClick={leave.toHome} className="w-full rounded-button px-4 py-2 text-sm font-semibold text-ink-muted hover:bg-ink/5">
+        <button type="button" onClick={leave.toHome} className="w-full rounded-button px-4 py-2 text-control text-ink-muted hover:bg-ink/5">
           {copy.backHome}
         </button>
       </div>

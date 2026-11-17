@@ -8,10 +8,10 @@ const describedBy = (id, hint, error) => [error && `${id}-error`, hint && `${id}
 function FieldShell({ id, label, hint, error, footer, children }) {
   return (
     <div className="space-y-1.5">
-      <label htmlFor={id} className="block text-sm font-semibold text-ink-900">{label}</label>
+      <label htmlFor={id} className="block text-field-label text-ink-900">{label}</label>
       {children}
-      {error && <p id={`${id}-error`} className="text-sm font-medium text-danger">{error}</p>}
-      {hint && <p id={`${id}-hint`} className="text-xs text-ink-muted">{hint}</p>}
+      {error && <p id={`${id}-error`} className="text-body text-danger">{error}</p>}
+      {hint && <p id={`${id}-hint`} className="text-meta text-ink-muted">{hint}</p>}
       {footer}
     </div>
   );
@@ -26,7 +26,7 @@ export const TextField = forwardRef(function TextField({ id, label, hint, error,
         id={id}
         aria-invalid={error ? true : undefined}
         aria-describedby={describedBy(id, hint, error)}
-        className={`input-machined text-base ${error ? 'border-danger' : ''} ${className}`}
+        className={`input-machined text-control ${error ? 'border-danger' : ''} ${className}`}
         {...inputProps}
       />
     </FieldShell>
@@ -53,7 +53,7 @@ export const PhoneField = forwardRef(function PhoneField({
       label={label}
       hint={hint}
       placeholder={placeholder}
-      className={`font-mono ${className}`}
+      className={`tabular-nums ${className}`}
       onChange={handleChange}
       {...inputProps}
     />
@@ -72,7 +72,7 @@ export const PasswordField = forwardRef(function PasswordField({ id, label = aut
           type={visible ? 'text' : 'password'}
           aria-invalid={error ? true : undefined}
           aria-describedby={describedBy(id, hint, error)}
-          className={`input-machined pr-14 text-base ${error ? 'border-danger' : ''}`}
+          className={`input-machined pr-14 text-control ${error ? 'border-danger' : ''}`}
           {...inputProps}
         />
         <button

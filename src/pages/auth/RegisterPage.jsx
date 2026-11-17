@@ -146,13 +146,13 @@ export default function RegisterPage() {
   return (
     <AuthLayout
       offline={!online}
-      headerAction={<Link to="/login" className="btn-secondary text-sm">{common.logIn}</Link>}
+      headerAction={<Link to="/login" className="btn-secondary text-control">{common.logIn}</Link>}
     >
       <header className="mb-6">
-        <h1 className="text-2xl font-bold tracking-tight text-ink-900 sm:text-3xl">
+        <h1 className="text-page-title text-ink-900">
           {isOwnerSetup ? copy.ownerTitle : copy.title}
         </h1>
-        <p className="mt-2 text-sm text-ink-muted">
+        <p className="mt-2 text-body text-ink-muted">
           {isOwnerSetup ? copy.ownerSubtitle : copy.subtitle}
         </p>
       </header>
@@ -221,7 +221,7 @@ export default function RegisterPage() {
         )}
 
         {welcomeName ? (
-          <p role="status" className="btn-command w-full py-4 text-base">
+          <p role="status" className="btn-command w-full py-4 text-control">
             {copy.welcome(welcomeName)}
           </p>
         ) : (
@@ -235,13 +235,13 @@ export default function RegisterPage() {
         <>
           <AuthDivider />
           <GoogleSignInButton next="/app" disabled={!online} />
-          <p className="mt-6 rounded-card border border-ink/10 bg-surface p-4 text-sm text-ink-muted">{copy.inviteNote}</p>
+          <p className="mt-6 rounded-card border border-ink/10 bg-surface p-4 text-body text-ink-muted">{copy.inviteNote}</p>
         </>
       )}
 
-      <p className="mt-6 border-t border-ink/10 pt-6 text-center text-sm text-ink-muted">
+      <p className="mt-6 border-t border-ink/10 pt-6 text-center text-body text-ink-muted">
         {copy.haveAccount}{' '}
-        <Link to="/login" className="font-semibold text-brand underline-offset-4 hover:underline">{common.logIn}</Link>
+        <Link to="/login" className="text-body-strong text-brand underline-offset-4 hover:underline">{common.logIn}</Link>
       </p>
     </AuthLayout>
   );

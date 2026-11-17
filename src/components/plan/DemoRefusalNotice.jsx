@@ -26,7 +26,7 @@ export default function DemoRefusalNotice() {
           <span>{message}</span>
           <button
             type="button"
-            className="btn-command self-start px-3 py-1.5 text-sm"
+            className="btn-command self-start px-3 py-1.5 text-control"
             onClick={() => { toast.dismiss(t.id); leave.toRegister(); }}
           >
             {copy.createFarm}

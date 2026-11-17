@@ -7,7 +7,7 @@ export default function MilkTrendChart({ data }) {
   // If no data or empty array, show a friendly placeholder instead of a blank box
   if (!data || data.length === 0) {
     return (
-      <div className="flex items-center justify-center h-full text-ink/40 font-bold text-sm">
+      <div className="flex items-center justify-center h-full text-ink/40 text-body-strong">
         {copy.noTrend}
       </div>
     );
@@ -17,8 +17,8 @@ export default function MilkTrendChart({ data }) {
     <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={320}>
       <LineChart data={data} margin={{ top: 5, right: 20, left: -10, bottom: 5 }}>
         <CartesianGrid strokeDasharray="3 3" strokeOpacity={0.2} />
-        <XAxis dataKey="date" tick={{ fontSize: 12 }} />
-        <YAxis tick={{ fontSize: 12 }} unit=" L" />
+        <XAxis dataKey="date" />
+        <YAxis unit=" L" />
         <Tooltip
           // A day with no milk recorded is a gap (null), not 0 L.
           formatter={(value) => [value === null || value === undefined ? copy.noMilk : `${Number(value).toFixed(1)} L`, copy.dailyProduction]}

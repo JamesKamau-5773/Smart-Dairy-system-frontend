@@ -32,11 +32,11 @@ export default function PasswordStrength({ password, personal, serverViolations 
           ))}
         </div>
         {/* Announced as it changes, without moving focus. */}
-        <span role="status" aria-live="polite" className="min-w-12 text-right text-xs font-semibold text-ink-muted">
+        <span role="status" aria-live="polite" className="min-w-12 text-right text-meta text-ink-muted">
           {copy.strength[strength] && <><span className="sr-only">{copy.strengthLabel}: </span>{copy.strength[strength]}</>}
         </span>
       </div>
-      <ul className="space-y-1 text-xs">
+      <ul className="space-y-1 text-meta">
         {rules.map((rule) => {
           const met = password.length > 0 && !violations.has(rule);
           return (

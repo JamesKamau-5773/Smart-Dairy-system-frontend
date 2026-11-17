@@ -44,14 +44,14 @@ export default function RequiredPasswordResetPage() {
   return (
     <main className="flex min-h-screen items-center justify-center bg-surface-warm px-4 py-8">
       <section className="w-full max-w-md rounded-lg border border-ink-200 bg-surface-strong p-6 sm:p-8" aria-labelledby="reset-password-title">
-        <h1 id="reset-password-title" className="font-display text-2xl font-semibold text-ink-strong">{copy.title}</h1>
-        <p className="mt-2 text-sm leading-6 text-ink-muted">{copy.subtitle}</p>
+        <h1 id="reset-password-title" className="text-page-title text-ink-strong">{copy.title}</h1>
+        <p className="mt-2 text-body text-ink-muted">{copy.subtitle}</p>
 
         {error && <div className="mt-5"><AlertBanner type="danger" title={copy.errorTitle} message={error} /></div>}
 
         <form onSubmit={handleSubmit} className="mt-6 space-y-5">
           <div>
-            <label htmlFor="new-password" className="mb-2 block text-xs font-semibold text-ink-normal">{copy.newPassword}</label>
+            <label htmlFor="new-password" className="mb-2 block text-field-label text-ink-normal">{copy.newPassword}</label>
             <div className="relative">
               <input
                 id="new-password"
@@ -60,25 +60,25 @@ export default function RequiredPasswordResetPage() {
                 onChange={(event) => setPassword(event.target.value)}
                 minLength={12}
                 autoComplete="new-password"
-                className="glass-input w-full rounded-md px-4 py-3 pr-12 text-sm text-ink-normal focus:outline-none focus:ring-2 focus:ring-brand/30"
+                className="glass-input w-full rounded-md px-4 py-3 pr-12 text-control text-ink-normal focus:outline-none focus:ring-2 focus:ring-brand/30"
                 required
               />
               <button type="button" onClick={() => setShowPassword((visible) => !visible)} className="absolute right-2 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center text-ink-muted" aria-label={showPassword ? copy.hidePasswords : copy.showPasswords}>
                 {showPassword ? <EyeOff size={18} aria-hidden="true" /> : <Eye size={18} aria-hidden="true" />}
               </button>
             </div>
-            <p className="mt-1.5 text-xs text-ink-muted">{copy.hint}</p>
+            <p className="mt-1.5 text-meta text-ink-muted">{copy.hint}</p>
           </div>
 
           <div>
-            <label htmlFor="confirm-password" className="mb-2 block text-xs font-semibold text-ink-normal">{copy.confirmPassword}</label>
+            <label htmlFor="confirm-password" className="mb-2 block text-field-label text-ink-normal">{copy.confirmPassword}</label>
             <input
               id="confirm-password"
               type={showPassword ? 'text' : 'password'}
               value={confirmPassword}
               onChange={(event) => setConfirmPassword(event.target.value)}
               autoComplete="new-password"
-              className="glass-input w-full rounded-md px-4 py-3 text-sm text-ink-normal focus:outline-none focus:ring-2 focus:ring-brand/30"
+              className="glass-input w-full rounded-md px-4 py-3 text-control text-ink-normal focus:outline-none focus:ring-2 focus:ring-brand/30"
               required
             />
           </div>

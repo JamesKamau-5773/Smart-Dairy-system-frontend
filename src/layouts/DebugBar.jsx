@@ -25,15 +25,15 @@ export default function DebugBar() {
     <>
       <aside className="fixed inset-x-0 bottom-20 z-[70] hidden border-t border-brand-400 bg-ink-950 px-3 py-2 text-white md:bottom-0 md:left-60 md:block xl:left-64" aria-label="Development diagnostics">
         <div className="flex items-center gap-2 overflow-x-auto">
-          <div className="shrink-0 border-r border-white/20 pr-3 text-xs font-bold uppercase">
+          <div className="shrink-0 border-r border-white/20 pr-3 text-label">
             Debug Bar
           </div>
           <DevToggle />
           <OfflineIndicator onOpenInspector={() => setInspectorOpen(true)} />
-          <div className={`shrink-0 rounded-input border px-3 py-1.5 text-xs font-semibold ${backendHealthy ? 'border-brand-400/40 bg-brand-900 text-brand-100' : 'border-warning-500/50 bg-warning-500/10 text-warning-50'}`}>
+          <div className={`shrink-0 rounded-input border px-3 py-1.5 text-meta ${backendHealthy ? 'border-brand-400/40 bg-brand-900 text-brand-100' : 'border-warning-500/50 bg-warning-500/10 text-warning-50'}`}>
             {backendHealthy ? 'Backend Healthy' : 'Backend Syncing'}
           </div>
-          <div className="ml-auto shrink-0 rounded-input border border-white/20 bg-white/10 px-3 py-1.5 text-xs font-semibold">
+          <div className="ml-auto shrink-0 rounded-input border border-white/20 bg-white/10 px-3 py-1.5 text-meta">
             Status Secure
           </div>
         </div>

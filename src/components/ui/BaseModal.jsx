@@ -82,8 +82,8 @@ export default function BaseModal({
       >
         <header className="flex shrink-0 items-start justify-between gap-4 border-b border-ink-200 p-4 sm:p-6">
           <div className="min-w-0">
-            <h2 id={titleId} className="break-words text-lg font-bold text-ink sm:text-xl">{title}</h2>
-            {subtitle && <p className="mt-1 text-sm text-ink-500">{subtitle}</p>}
+            <h2 id={titleId} className="break-words text-section-title text-ink">{title}</h2>
+            {subtitle && <p className="mt-1 text-body text-ink-500">{subtitle}</p>}
           </div>
           <button
             type="button"

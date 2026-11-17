@@ -48,9 +48,6 @@ export const shellCopy = {
     },
     titles: {
       dashboard: 'Dashboard',
-      production: 'Production Log',
-      ledger: 'Ledger',
-      milkUsage: 'Milk Usage',
     },
   },
 

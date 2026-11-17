@@ -47,9 +47,6 @@ export const shellCopy = {
     },
     titles: {
       dashboard: 'Dashibodi',
-      production: 'Rekodi za Maziwa',
-      ledger: 'Daftari la Hesabu',
-      milkUsage: 'Matumizi ya Maziwa',
     },
   },
 

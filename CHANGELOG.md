@@ -4,6 +4,16 @@ What changed for farmers and staff using Maziwa Smart. Newest first.
 
 ## Unreleased
 
+### One type scale across the whole app (typography phase 6)
+
+- **Sign-in and sign-up, the dashboards, the menus, pop-ups, banners and admin pages use the same
+  type scale as the rest of the app.** Nothing in the app is smaller than 12px any more.
+- **The top bar names every page as the menu does**, so a customer profile no longer shows a bare
+  number and the dashboard reads "Command Center" in the menu, the top bar and the page.
+- The phone tab bar's labels are easier to read; "Production Log" wraps onto two lines instead of
+  being cut off.
+- Dashboard figures and the farm set-up steps are written in sentence case in English and Kiswahili.
+
 ### Clearer text on the safety and staff pages (typography phase 5b)
 
 - **Safety Dashboard, Staff Registry and Payroll use the new type scale.** Each title is the page's

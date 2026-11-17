@@ -36,7 +36,7 @@ export default function DemoTimeLeft({ expiresAt }) {
         <span>{copy.endingSoon(Math.ceil(seconds / 60))}</span>
         <button
           type="button"
-          className="btn-command self-start px-3 py-1.5 text-sm"
+          className="btn-command self-start px-3 py-1.5 text-control"
           onClick={() => { toast.dismiss(t.id); leave.toRegister(); }}
         >
           {copy.createFarm}
@@ -57,7 +57,7 @@ export default function DemoTimeLeft({ expiresAt }) {
 
   const endingSoon = seconds <= ENDING_SOON_SECONDS;
   return (
-    <span className={`inline-flex items-center whitespace-nowrap rounded-badge px-2 py-1 text-xs font-semibold tabular-nums ${endingSoon ? 'bg-warning-50 text-ink' : 'bg-brand-100 text-brand-900'}`}>
+    <span className={`inline-flex items-center whitespace-nowrap rounded-badge px-2 py-1 text-meta tabular-nums ${endingSoon ? 'bg-warning-50 text-ink' : 'bg-brand-100 text-brand-900'}`}>
       {copy.endsIn(formatTimeLeft(seconds))}
     </span>
   );

@@ -32,9 +32,9 @@ export default function MilestoneBanner({ tenantId, farmId, totalLitres, milkLoa
 
   return (
     <section role="status" className="card-machined flex items-center gap-4 bg-brand/5 p-5">
-      <p className="flex-1 text-sm text-ink-900">
-        <span className="block text-lg font-bold">
-          <span className="font-mono">{status.reached.toLocaleString('en-KE')}</span> {dashboardCopy.milestone.reached}
+      <p className="flex-1 text-body text-ink-900">
+        <span className="block text-body-strong">
+          <span className="tabular-nums">{status.reached.toLocaleString('en-KE')}</span> {dashboardCopy.milestone.reached}
         </span>
         {dashboardCopy.milestone.message}
       </p>

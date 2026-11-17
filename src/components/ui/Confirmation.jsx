@@ -81,17 +81,17 @@ function ConfirmationDialog({
           <div className={`flex-shrink-0 ${config.iconColor}`}>
             <Icon size={24} aria-hidden="true" />
           </div>
-          <h2 className="text-lg font-bold text-ink">{title}</h2>
+          <h2 className="text-section-title text-ink">{title}</h2>
         </div>
 
         <div className={`mb-6 rounded-lg ${config.bgColor} p-3`}>
-          <p className="text-sm leading-relaxed text-ink-muted">{message}</p>
+          <p className="text-body text-ink-muted">{message}</p>
         </div>
 
         {needsTyping && (
           <div className="mb-6 space-y-2">
-            <label htmlFor={inputId} className="block text-sm font-semibold text-ink">
-              {commonCopy.confirm.typeBefore} <span className="font-mono font-bold">{requireText}</span> {commonCopy.confirm.typeAfter}
+            <label htmlFor={inputId} className="block text-field-label text-ink">
+              {commonCopy.confirm.typeBefore} <span className="text-body-strong tabular-nums">{requireText}</span> {commonCopy.confirm.typeAfter}
             </label>
             <input
               id={inputId}
@@ -114,7 +114,7 @@ function ConfirmationDialog({
             type="button"
             onClick={onCancel}
             disabled={isLoading}
-            className="btn-secondary min-h-11 flex-1 px-4 py-2.5 text-sm font-semibold"
+            className="btn-secondary min-h-11 flex-1 px-4 py-2.5 text-control"
             aria-label={cancelText}
           >
             {cancelText}
@@ -122,7 +122,7 @@ function ConfirmationDialog({
           <button
             type="submit"
             disabled={!canConfirm}
-            className={`btn-command min-h-11 flex-1 ${config.buttonColor} px-4 py-2.5 text-sm font-semibold text-white disabled:opacity-50`}
+            className={`btn-command min-h-11 flex-1 ${config.buttonColor} px-4 py-2.5 text-control text-white disabled:opacity-50`}
             aria-label={confirmText}
           >
             {isLoading ? commonCopy.confirm.pleaseWait : confirmText}

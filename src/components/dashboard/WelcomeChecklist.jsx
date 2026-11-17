@@ -77,8 +77,8 @@ export default function WelcomeChecklist({ tenantId, farmId, milkRecordCount, mi
     return (
       <section aria-labelledby="welcome-done-title" className="card-machined flex flex-col gap-4 bg-brand/5 p-6 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h2 id="welcome-done-title" className="text-xl font-bold text-ink-900">{copy.doneTitle}</h2>
-          <p className="mt-1 text-sm text-ink-muted">{copy.doneMessage}</p>
+          <h2 id="welcome-done-title" className="text-section-title text-ink-900">{copy.doneTitle}</h2>
+          <p className="mt-1 text-body text-ink-muted">{copy.doneMessage}</p>
         </div>
         <button type="button" onClick={() => setStored('done')} className="btn-command shrink-0">{copy.done}</button>
       </section>
@@ -94,8 +94,8 @@ export default function WelcomeChecklist({ tenantId, farmId, milkRecordCount, mi
     <section aria-labelledby="welcome-title" className="card-machined p-6">
       <div className="flex items-start justify-between gap-4">
         <div>
-          <h2 id="welcome-title" className="text-xl font-bold text-ink-900">{copy.title}</h2>
-          <p className="mt-1 text-sm text-ink-muted">{copy.progress(doneCount, steps.length)}</p>
+          <h2 id="welcome-title" className="text-section-title text-ink-900">{copy.title}</h2>
+          <p className="mt-1 text-body text-ink-muted">{copy.progress(doneCount, steps.length)}</p>
         </div>
         <button
           type="button"
@@ -125,9 +125,9 @@ export default function WelcomeChecklist({ tenantId, farmId, milkRecordCount, mi
             <li key={step.id}>
               {step.done ? (
                 <div className="flex items-center gap-4 rounded-card border border-ink/10 bg-surface p-4">
-                  <p className="flex-1 font-semibold text-ink-muted">{step.title}</p>
+                  <p className="flex-1 text-body-strong text-ink-muted">{step.title}</p>
                   {/* A word, not a tick, so "done" doesn't rest on colour alone. */}
-                  <span className="shrink-0 rounded-badge bg-brand-50 px-2 py-0.5 text-xs font-semibold text-brand-dark">
+                  <span className="shrink-0 rounded-badge bg-brand-50 px-2 py-0.5 text-badge text-brand-dark">
           {copy.doneBadge}</span>
                 </div>
               ) : (
@@ -138,10 +138,10 @@ export default function WelcomeChecklist({ tenantId, farmId, milkRecordCount, mi
                   }`}
                 >
                   <span className="min-w-0 flex-1">
-                    <span className="block font-semibold text-ink-900">
+                    <span className="block text-body-strong text-ink-900">
                       <span className="sr-only">{copy.step(index + 1)}</span>{step.title}
                     </span>
-                    <span className="block text-sm text-ink-muted">{step.description}</span>
+                    <span className="block text-body text-ink-muted">{step.description}</span>
                   </span>
                 </Link>
               )}

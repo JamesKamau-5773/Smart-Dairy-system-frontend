@@ -158,7 +158,7 @@ export default function Sidebar({ mobileOpen = false, setMobileOpen = () => {} }
                 <button
                   type="button"
                   onClick={() => mobileOpen && toggleGroup(group.id)}
-                  className={`w-full px-4 py-1.5 flex items-center justify-between text-xs font-bold tracking-wider uppercase rounded-md md:py-0 md:cursor-default transition-colors ${activeGroupId === group.id ? 'text-ink-700' : 'text-ink-400'}`}
+                  className={`w-full px-4 py-1.5 flex items-center justify-between text-label rounded-md md:py-0 md:cursor-default transition-colors ${activeGroupId === group.id ? 'text-ink-700' : 'text-ink-400'}`}
                   aria-expanded={mobileOpen ? !isGroupCollapsed(group.id) : true}
                   aria-label={copy.toggleSection(group.title)}
                 >
@@ -181,7 +181,7 @@ export default function Sidebar({ mobileOpen = false, setMobileOpen = () => {} }
                     aria-current={itemIsActive ? 'page' : undefined}
                     // Active state comes from activeNavRoute, which also reads the query.
                     // Hover is a plain light background only; the left border belongs to the active item.
-                    className={`flex items-center pl-3.5 pr-4 py-3 min-h-[44px] font-sans font-semibold text-sm transition-colors duration-100 border-l-2 rounded-md relative ${
+                    className={`flex items-center pl-3.5 pr-4 py-3 min-h-[44px] text-body-strong transition-colors duration-100 border-l-2 rounded-md relative ${
                       itemIsActive
                         ? 'border-brand-400 bg-ink-900 text-white'
                         : 'border-transparent text-ink-600 hover:bg-ink-100 hover:text-ink-900'

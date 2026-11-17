@@ -46,7 +46,8 @@ export default function MobileBottomNav() {
             }`}
           >
             <Icon size={19} aria-hidden="true" />
-            <span className="max-w-full truncate text-[10px] font-semibold leading-tight">{label}</span>
+            {/* Wraps to two lines rather than cutting a label off at 13px ("Production Log"). */}
+            <span className="max-w-full break-words text-center text-meta">{label}</span>
           </Link>
         ))}
       </div>

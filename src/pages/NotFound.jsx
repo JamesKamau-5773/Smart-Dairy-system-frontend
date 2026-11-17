@@ -20,11 +20,11 @@ export default function NotFound({ variant = 'app', homePath = '/app' }) {
 
   const content = (
     <section aria-labelledby="not-found-title" className="mx-auto w-full max-w-md rounded-card border border-ink/10 bg-surface p-6 text-center sm:p-8">
-      <h1 id="not-found-title" className="text-xl font-bold text-ink">{copy.title}</h1>
-      <p className="mt-2 text-sm leading-6 text-ink-muted">
+      <h1 id="not-found-title" className="text-page-title text-ink">{copy.title}</h1>
+      <p className="mt-2 text-body text-ink-muted">
         {copy.message}
       </p>
-      <p className="mt-3 break-all font-mono text-xs text-ink-muted">{pathname}</p>
+      <p className="mt-3 break-all text-meta text-ink-muted tabular-nums">{pathname}</p>
       <div className="mt-6 flex flex-col gap-3">
         {isPublic ? (
           <Link to="/login" className="btn-command justify-center">{copy.goToLogin}</Link>

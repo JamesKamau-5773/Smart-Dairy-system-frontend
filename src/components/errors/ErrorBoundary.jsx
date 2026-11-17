@@ -61,20 +61,20 @@ export default class ErrorBoundary extends React.Component {
               </div>
             </div>
 
-            <h1 className="mb-2 text-center text-xl font-bold text-ink">
+            <h1 className="mb-2 text-center text-page-title text-ink">
               {isPage ? copy.pageTitle : copy.appTitle}
             </h1>
-            <p className="mb-6 text-center text-sm text-ink-muted">
+            <p className="mb-6 text-center text-body text-ink-muted">
               {copy.message}
             </p>
 
             {import.meta.env.DEV && this.state.error && (
-              <div className="mb-6 max-h-40 overflow-auto rounded-input bg-danger-50 p-3 font-mono text-xs text-danger-900">
-                <p className="font-bold">Error:</p>
+              <div className="mb-6 max-h-40 overflow-auto rounded-input bg-danger-50 p-3 text-meta text-danger-900 tabular-nums">
+                <p className="text-body-strong">Error:</p>
                 <p>{this.state.error.toString()}</p>
                 {this.state.errorInfo?.componentStack && (
                   <>
-                    <p className="mt-2 font-bold">Component Stack:</p>
+                    <p className="mt-2 text-body-strong">Component Stack:</p>
                     <p>{this.state.errorInfo.componentStack}</p>
                   </>
                 )}
@@ -85,21 +85,21 @@ export default class ErrorBoundary extends React.Component {
               <button
                 type="button"
                 onClick={this.handleReset}
-                className="flex items-center justify-center rounded-button bg-brand px-4 py-2.5 font-medium text-white transition-colors hover:bg-brand-dark"
+                className="flex items-center justify-center rounded-button bg-brand px-4 py-2.5 text-control text-white transition-colors hover:bg-brand-dark"
               >
                 {copy.tryAgain}
               </button>
               <button
                 type="button"
                 onClick={() => window.location.reload()}
-                className="rounded-button border border-ink/10 bg-surface px-4 py-2.5 font-medium text-ink transition-colors hover:bg-brand-50"
+                className="rounded-button border border-ink/10 bg-surface px-4 py-2.5 text-control text-ink transition-colors hover:bg-brand-50"
               >
                 {copy.reload}
               </button>
             </div>
 
             {this.state.errorCount > 3 && (
-              <p className="mt-4 rounded-input bg-warning-50 p-3 text-sm text-ink">
+              <p className="mt-4 rounded-input bg-warning-50 p-3 text-body text-ink">
                 {copy.keepsHappening(SITE.phoneDisplay)}
               </p>
             )}

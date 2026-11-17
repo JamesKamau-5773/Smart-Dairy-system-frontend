@@ -26,18 +26,18 @@ export default function GoogleCompletePage() {
   const online = useOnlineStatus();
 
   return (
-    <AuthLayout offline={!online} headerAction={<Link to="/login" className="btn-secondary text-sm">{common.logIn}</Link>}>
+    <AuthLayout offline={!online} headerAction={<Link to="/login" className="btn-secondary text-control">{common.logIn}</Link>}>
       {SIGNED_IN_RESULTS.has(result) ? (
         <CompleteSignIn next={next} />
       ) : result === 'signup_required' ? (
         <GoogleSignupForm next={next} online={online} />
       ) : result === 'link_required' ? (
         <Outcome type="info" title={copy.linkRequiredTitle} message={copy.linkRequired}>
-          <Link to="/login" className="btn-command w-full py-4 text-base">{common.logIn}</Link>
+          <Link to="/login" className="btn-command w-full py-4 text-control">{common.logIn}</Link>
         </Outcome>
       ) : result === 'linked' ? (
         <Outcome type="success" title={copy.linkedTitle} message={copy.linked}>
-          <Link to={next} className="btn-command w-full py-4 text-base">{common.continue}</Link>
+          <Link to={next} className="btn-command w-full py-4 text-control">{common.continue}</Link>
         </Outcome>
       ) : (
         <Outcome type="danger" title={copy.errorTitle} message={copy.errors[errorCode] ?? copy.errors.default}>
@@ -94,7 +94,7 @@ function CompleteSignIn({ next }) {
   }
 
   return (
-    <p role="status" className="flex items-center gap-2 text-sm text-ink-muted">
+    <p role="status" className="flex items-center gap-2 text-body text-ink-muted">
       <Loader2 size={18} className="animate-spin" aria-hidden="true" /> {copy.completing}
     </p>
   );
