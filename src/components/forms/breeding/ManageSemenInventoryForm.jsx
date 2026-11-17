@@ -104,12 +104,12 @@ export default function ManageSemenInventoryForm({
     <form className="space-y-4" onSubmit={handleSubmit}>
       <div className="space-y-4">
         <div className="border-b border-ink/10 pb-3">
-          <h4 className="text-sm font-bold uppercase tracking-widest text-brand">{copy.section}</h4>
+          <h3 className="text-section-title text-brand">{copy.section}</h3>
         </div>
 
         {/* Name */}
         <div>
-          <label className="mb-1 block text-xs font-bold uppercase tracking-wider text-ink-muted">{copy.name}</label>
+          <label className="mb-1 block text-field-label text-ink-muted">{copy.name}</label>
           <input
             className={`input-machined w-full ${formErrors.name ? 'border-rose-300 bg-rose-50' : ''}`}
             value={inventoryForm.name}
@@ -120,13 +120,13 @@ export default function ManageSemenInventoryForm({
             placeholder={copy.namePlaceholder}
             aria-invalid={!!formErrors.name}
           />
-          {formErrors.name && <p className="mt-1 text-xs text-rose-600">{formErrors.name}</p>}
+          {formErrors.name && <p className="mt-1 text-meta text-rose-600">{formErrors.name}</p>}
         </div>
 
         {/* Code & Straws */}
         <div className="grid gap-4 md:grid-cols-2">
           <div>
-            <label className="mb-1 block text-xs font-bold uppercase tracking-wider text-ink-muted">{copy.code}</label>
+            <label className="mb-1 block text-field-label text-ink-muted">{copy.code}</label>
             <input
               className={`input-machined w-full ${formErrors.code ? 'border-rose-300 bg-rose-50' : ''}`}
               value={inventoryForm.code}
@@ -137,10 +137,10 @@ export default function ManageSemenInventoryForm({
               placeholder={copy.codePlaceholder}
               aria-invalid={!!formErrors.code}
             />
-            {formErrors.code && <p className="mt-1 text-xs text-rose-600">{formErrors.code}</p>}
+            {formErrors.code && <p className="mt-1 text-meta text-rose-600">{formErrors.code}</p>}
           </div>
           <div>
-            <label className="mb-1 block text-xs font-bold uppercase tracking-wider text-ink-muted">{copy.straws}</label>
+            <label className="mb-1 block text-field-label text-ink-muted">{copy.straws}</label>
             <input
               type="number"
               min="0"
@@ -153,13 +153,13 @@ export default function ManageSemenInventoryForm({
               placeholder={copy.strawsPlaceholder}
               aria-invalid={!!formErrors.strawsLeft}
             />
-            {formErrors.strawsLeft && <p className="mt-1 text-xs text-rose-600">{formErrors.strawsLeft}</p>}
+            {formErrors.strawsLeft && <p className="mt-1 text-meta text-rose-600">{formErrors.strawsLeft}</p>}
           </div>
         </div>
 
         {/* Breed Improvement */}
         <div>
-          <label className="mb-1 block text-xs font-bold uppercase tracking-wider text-ink-muted">{copy.improves}</label>
+          <label className="mb-1 block text-field-label text-ink-muted">{copy.improves}</label>
           <input
             className={`input-machined w-full ${formErrors.improves ? 'border-rose-300 bg-rose-50' : ''}`}
             value={inventoryForm.improves}
@@ -170,7 +170,7 @@ export default function ManageSemenInventoryForm({
             placeholder={copy.improvesPlaceholder}
             aria-invalid={!!formErrors.improves}
           />
-          {formErrors.improves && <p className="mt-1 text-xs text-rose-600">{formErrors.improves}</p>}
+          {formErrors.improves && <p className="mt-1 text-meta text-rose-600">{formErrors.improves}</p>}
         </div>
       </div>
 
@@ -179,7 +179,7 @@ export default function ManageSemenInventoryForm({
         <button
           type="submit"
           disabled={isSaving}
-          className="btn-command px-4 py-2 text-sm"
+          className="btn-command px-4 py-2 text-control"
         >
           {isSaving ? copy.saving : copy.submit}
         </button>

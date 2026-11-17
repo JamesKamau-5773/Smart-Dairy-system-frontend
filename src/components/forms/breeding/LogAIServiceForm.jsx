@@ -221,12 +221,12 @@ export default function LogAIServiceForm({
     <form className="space-y-4" onSubmit={handleSubmit}>
       <div className="space-y-4">
         <div className="border-b border-ink/10 pb-3">
-          <h4 className="text-sm font-bold uppercase tracking-widest text-brand">{copy.details}</h4>
+          <h3 className="text-section-title text-brand">{copy.details}</h3>
         </div>
 
         {/* Cow Selection */}
         <div>
-          <label className="mb-1 block text-xs font-bold uppercase tracking-wider text-ink-muted">{copy.cow}</label>
+          <label className="mb-1 block text-field-label text-ink-muted">{copy.cow}</label>
           <div className="relative" ref={cowPickerRef}>
             <input
               className={`input-machined w-full pr-10 ${formErrors.cowId ? 'border-rose-300 bg-rose-50' : ''}`}
@@ -254,7 +254,7 @@ export default function LogAIServiceForm({
             {isCowPickerOpen && (
               <div className="absolute z-30 mt-1 max-h-56 w-full overflow-y-auto rounded-lg border border-ink/10 bg-surface ">
                 {filteredCowOptions.length === 0 ? (
-                  <div className="px-3 py-2 text-xs text-ink-muted">{copy.noHerdMatches}</div>
+                  <div className="px-3 py-2 text-meta text-ink-muted">{copy.noHerdMatches}</div>
                 ) : (
                   filteredCowOptions.map((option) => (
                     <button
@@ -267,8 +267,8 @@ export default function LogAIServiceForm({
                       }}
                       className="flex w-full items-center justify-between gap-3 border-b border-ink/5 px-3 py-2 text-left last:border-b-0 hover:bg-brand/5"
                     >
-                      <span className="text-sm font-semibold text-ink-strong">{option.id}</span>
-                      <span className="truncate text-xs text-ink-muted">{option.name || copy.noName}</span>
+                      <span className="text-body-strong text-ink-strong">{option.id}</span>
+                      <span className="truncate text-meta text-ink-muted">{option.name || copy.noName}</span>
                     </button>
                   ))
                 )}
@@ -276,15 +276,15 @@ export default function LogAIServiceForm({
             )}
           </div>
           {herdOptions.length > 0 && (
-            <p className="mt-1 text-[11px] text-ink-muted">{copy.herdHint}</p>
+            <p className="mt-1 text-meta text-ink-muted">{copy.herdHint}</p>
           )}
-          {formErrors.cowId && <p className="mt-1 text-xs text-rose-600">{formErrors.cowId}</p>}
+          {formErrors.cowId && <p className="mt-1 text-meta text-rose-600">{formErrors.cowId}</p>}
         </div>
 
         {/* AI Date, Time & Sire Code */}
         <div className="grid gap-4 md:grid-cols-2">
           <div>
-            <label className="mb-1 block text-xs font-bold uppercase tracking-wider text-ink-muted">{copy.aiDate}</label>
+            <label className="mb-1 block text-field-label text-ink-muted">{copy.aiDate}</label>
             <input
               type="date"
               className="input-machined w-full"
@@ -293,7 +293,7 @@ export default function LogAIServiceForm({
             />
           </div>
           <div>
-            <label className="mb-1 block text-xs font-bold uppercase tracking-wider text-ink-muted">{copy.aiTime}</label>
+            <label className="mb-1 block text-field-label text-ink-muted">{copy.aiTime}</label>
             <input
               type="time"
               className="input-machined w-full"
@@ -304,22 +304,22 @@ export default function LogAIServiceForm({
         </div>
 
         <div>
-          <label className="mb-1 block text-xs font-bold uppercase tracking-wider text-ink-muted">
+          <label className="mb-1 block text-field-label text-ink-muted">
 
       {copy.certificateImage}
           </label>
           <input
             type="file"
             accept="image/*"
-            className="input-machined w-full text-sm"
+            className="input-machined w-full text-control"
             onChange={(event) => setCertificateFile(event.target.files?.[0] ?? null)}
           />
-          <p className="mt-1 text-[11px] text-ink-muted">{copy.certificateHint}</p>
+          <p className="mt-1 text-meta text-ink-muted">{copy.certificateHint}</p>
         </div>
 
         <div className="grid gap-4 md:grid-cols-2">
           <div>
-            <label className="mb-1 block text-xs font-bold uppercase tracking-wider text-ink-muted">{copy.technician}</label>
+            <label className="mb-1 block text-field-label text-ink-muted">{copy.technician}</label>
             <input
               className="input-machined w-full"
               value={logForm.technician}
@@ -328,7 +328,7 @@ export default function LogAIServiceForm({
             />
           </div>
           <div>
-            <label className="mb-1 block text-xs font-bold uppercase tracking-wider text-ink-muted">{copy.sireCode}</label>
+            <label className="mb-1 block text-field-label text-ink-muted">{copy.sireCode}</label>
             <input
               className={`input-machined w-full ${formErrors.sireCode ? 'border-rose-300 bg-rose-50' : ''}`}
               value={logForm.sireCode}
@@ -338,13 +338,13 @@ export default function LogAIServiceForm({
               }}
               placeholder={copy.sireCodePlaceholder}
             />
-            {formErrors.sireCode && <p className="mt-1 text-xs text-rose-600">{formErrors.sireCode}</p>}
+            {formErrors.sireCode && <p className="mt-1 text-meta text-rose-600">{formErrors.sireCode}</p>}
           </div>
         </div>
 
         <div className="grid gap-4 md:grid-cols-2">
           <div>
-            <label className="mb-1 block text-xs font-bold uppercase tracking-wider text-ink-muted">{copy.ownerName}</label>
+            <label className="mb-1 block text-field-label text-ink-muted">{copy.ownerName}</label>
             <input
               className="input-machined w-full"
               value={logForm.ownerName}
@@ -353,7 +353,7 @@ export default function LogAIServiceForm({
             />
           </div>
           <div>
-            <label className="mb-1 block text-xs font-bold uppercase tracking-wider text-ink-muted">{copy.farmLocation}</label>
+            <label className="mb-1 block text-field-label text-ink-muted">{copy.farmLocation}</label>
             <input
               className="input-machined w-full"
               value={logForm.farmLocation}
@@ -365,7 +365,7 @@ export default function LogAIServiceForm({
 
         <div className="grid gap-4 md:grid-cols-2">
           <div>
-            <label className="mb-1 block text-xs font-bold uppercase tracking-wider text-ink-muted">{copy.certificateNumber}</label>
+            <label className="mb-1 block text-field-label text-ink-muted">{copy.certificateNumber}</label>
             <input
               className="input-machined w-full"
               value={logForm.certificateNumber}
@@ -374,7 +374,7 @@ export default function LogAIServiceForm({
             />
           </div>
           <div>
-            <label className="mb-1 block text-xs font-bold uppercase tracking-wider text-ink-muted">{copy.serviceFee}</label>
+            <label className="mb-1 block text-field-label text-ink-muted">{copy.serviceFee}</label>
             <input
               type="number"
               min="0"
@@ -394,14 +394,14 @@ export default function LogAIServiceForm({
             checked={logForm.isRepeatService}
             onChange={(event) => setLogForm((current) => ({ ...current, isRepeatService: event.target.checked }))}
           />
-          <label htmlFor="repeat-service" className="text-sm font-semibold text-ink-strong cursor-pointer">
+          <label htmlFor="repeat-service" className="text-field-label text-ink-strong cursor-pointer">
             {copy.repeatService}
           </label>
         </div>
 
         {/* Notes */}
         <div>
-          <label className="mb-1 block text-xs font-bold uppercase tracking-wider text-ink-muted">{copy.notes}</label>
+          <label className="mb-1 block text-field-label text-ink-muted">{copy.notes}</label>
           <textarea
             className="input-machined w-full min-h-[96px]"
             value={logForm.note}
@@ -412,9 +412,9 @@ export default function LogAIServiceForm({
 
         {/* Semen Source */}
         <div>
-          <label className="mb-2 block text-xs font-bold uppercase tracking-wider text-ink-muted">{copy.semenSource}</label>
+          <label className="mb-2 block text-field-label text-ink-muted">{copy.semenSource}</label>
           <div className={`grid grid-cols-1 gap-2 rounded-lg border p-2 md:grid-cols-2 ${formErrors.semenSource ? 'border-rose-300 bg-rose-50' : 'border-ink/10 bg-surface-raised'}`}>
-            <label className="flex cursor-pointer items-center gap-2 rounded-md border border-ink/10 bg-surface px-3 py-2 text-sm font-semibold text-ink-strong hover:border-brand/30">
+            <label className="flex cursor-pointer items-center gap-2 rounded-md border border-ink/10 bg-surface px-3 py-2 text-field-label text-ink-strong hover:border-brand/30">
               <input
                 type="radio"
                 name="semen-source"
@@ -427,7 +427,7 @@ export default function LogAIServiceForm({
               />
               {breedingCopy.sources.farm_stock}
             </label>
-            <label className="flex cursor-pointer items-center gap-2 rounded-md border border-ink/10 bg-surface px-3 py-2 text-sm font-semibold text-ink-strong hover:border-brand/30">
+            <label className="flex cursor-pointer items-center gap-2 rounded-md border border-ink/10 bg-surface px-3 py-2 text-field-label text-ink-strong hover:border-brand/30">
               <input
                 type="radio"
                 name="semen-source"
@@ -441,12 +441,12 @@ export default function LogAIServiceForm({
               {breedingCopy.sources.vet_provided}
             </label>
           </div>
-          {formErrors.semenSource && <p className="mt-1 text-xs text-rose-600">{formErrors.semenSource}</p>}
+          {formErrors.semenSource && <p className="mt-1 text-meta text-rose-600">{formErrors.semenSource}</p>}
         </div>
 
         {logForm.semenSource === 'vet_provided' && (
           <div>
-            <label className="mb-1 block text-xs font-bold uppercase tracking-wider text-ink-muted">
+            <label className="mb-1 block text-field-label text-ink-muted">
               {copy.sirePta}
             </label>
             <input
@@ -466,7 +466,7 @@ export default function LogAIServiceForm({
         <button
           type="submit"
           disabled={isSaving}
-          className="btn-command px-4 py-2 text-sm"
+          className="btn-command px-4 py-2 text-control"
         >
           {isSaving ? copy.saving : editingLogId ? copy.update : copy.save}
         </button>

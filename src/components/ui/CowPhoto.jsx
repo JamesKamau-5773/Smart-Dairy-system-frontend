@@ -20,7 +20,7 @@ export default function CowPhoto({ src, alt, size, fallback = null, className = 
         className="flex h-full w-full items-center justify-center text-brand hover:bg-brand-50"
         title={commonCopy.photo.dataSaverHint}
       >
-        <span className="text-[10px] font-semibold leading-tight">{commonCopy.photo.show}</span>
+        <span className="text-meta">{commonCopy.photo.show}</span>
       </button>
     );
   }

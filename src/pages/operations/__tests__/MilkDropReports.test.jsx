@@ -83,7 +83,7 @@ describe('MilkDropReports data handling', () => {
     renderPage();
 
     fireEvent.click(await screen.findByRole('button', { name: 'Investigating' }));
-    fireEvent.click(screen.getByRole('button', { name: 'Close Case' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Close case' }));
 
     await waitFor(() => {
       expect(apiMocks.investigateMilkDropAlert).toHaveBeenCalledWith(8, {

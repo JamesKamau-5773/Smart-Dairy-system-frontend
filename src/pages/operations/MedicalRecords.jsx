@@ -364,8 +364,8 @@ export default function VetRecords() {
       <div className="rounded-[28px] border border-ink/10 bg-[linear-gradient(135deg,rgba(223,249,255,0.95),rgba(255,255,255,0.98))] p-5 sm:p-6 ">
         <div className="flex flex-col gap-4 border-b border-ink/10 pb-5 lg:flex-row lg:items-end lg:justify-between">
           <div className="space-y-2">
-            <h2 className="font-sans text-3xl font-black tracking-tight text-brand sm:text-4xl">{LABELS.MEDICAL_RECORDS}</h2>
-            <p className="max-w-2xl text-sm leading-6 text-ink">{copy.subtitle}</p>
+            <h1 className="text-page-title text-brand">{LABELS.MEDICAL_RECORDS}</h1>
+            <p className="max-w-2xl text-body text-ink">{copy.subtitle}</p>
           </div>
 
           <button
@@ -391,32 +391,32 @@ export default function VetRecords() {
           <div className="rounded-2xl border border-ink/10 bg-surface/90 p-4 ">
             <div>
               <div>
-                <p className="text-[10px] font-bold uppercase tracking-widest text-ink-muted">{copy.openCases}</p>
-                <StatValue state={recordsLoadState} label={copy.listLabel} className="mt-2 text-3xl font-black text-ink">{stats.open}</StatValue>
+                <p className="text-label text-ink-muted">{copy.openCases}</p>
+                <StatValue state={recordsLoadState} label={copy.listLabel} className="mt-2 text-stat-value text-ink">{stats.open}</StatValue>
               </div>
             </div>
           </div>
           <div className="rounded-2xl border border-ink/10 bg-surface/90 p-4 ">
             <div>
               <div>
-                <p className="text-[10px] font-bold uppercase tracking-widest text-ink-muted">{copy.criticalCases}</p>
-                <StatValue state={recordsLoadState} label={copy.listLabel} className="mt-2 text-3xl font-black text-ink">{stats.critical}</StatValue>
+                <p className="text-label text-ink-muted">{copy.criticalCases}</p>
+                <StatValue state={recordsLoadState} label={copy.listLabel} className="mt-2 text-stat-value text-ink">{stats.critical}</StatValue>
               </div>
             </div>
           </div>
           <div className="rounded-2xl border border-ink/10 bg-surface/90 p-4 ">
             <div>
               <div>
-                <p className="text-[10px] font-bold uppercase tracking-widest text-ink-muted">{copy.followUpsDue}</p>
-                <StatValue state={recordsLoadState} label={copy.listLabel} className="mt-2 text-3xl font-black text-ink">{stats.dueToday}</StatValue>
+                <p className="text-label text-ink-muted">{copy.followUpsDue}</p>
+                <StatValue state={recordsLoadState} label={copy.listLabel} className="mt-2 text-stat-value text-ink">{stats.dueToday}</StatValue>
               </div>
             </div>
           </div>
           <div className="rounded-2xl border border-ink/10 bg-surface/90 p-4 ">
             <div>
               <div>
-                <p className="text-[10px] font-bold uppercase tracking-widest text-ink-muted">{copy.resolved}</p>
-                <StatValue state={recordsLoadState} label={copy.listLabel} className="mt-2 text-3xl font-black text-ink">{stats.resolved}</StatValue>
+                <p className="text-label text-ink-muted">{copy.resolved}</p>
+                <StatValue state={recordsLoadState} label={copy.listLabel} className="mt-2 text-stat-value text-ink">{stats.resolved}</StatValue>
               </div>
             </div>
           </div>
@@ -426,22 +426,22 @@ export default function VetRecords() {
       <div className="rounded-[28px] border border-ink/10 bg-surface/90 p-4 sm:p-5 ">
         <div className="flex flex-col gap-3 border-b border-ink/10 pb-4 sm:flex-row sm:items-center sm:justify-between">
           <div className="space-y-1">
-            <div className="text-[10px] font-bold uppercase tracking-widest text-ink-muted">
+            <div className="text-label text-ink-muted">
 
     {copy.searchAndFilters}
             </div>
-            <p className="text-sm leading-6 text-ink-muted">{copy.filtersHint}</p>
+            <p className="text-body text-ink-muted">{copy.filtersHint}</p>
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
-            <span className="rounded-full border border-ink/10 bg-surface-warm/60 px-3 py-1 text-[10px] font-bold uppercase tracking-widest text-ink-muted">
+            <span className="rounded-full border border-ink/10 bg-surface-warm/60 px-3 py-1 text-badge text-ink-muted">
               {copy.activeFilters(activeFilterCount)}
             </span>
             <button
               type="button"
               onClick={() => setFiltersOpen((current) => !current)}
               aria-expanded={filtersOpen}
-                className="inline-flex items-center gap-1.5 rounded-lg border border-ink/10 bg-surface px-3 py-1.5 text-xs font-semibold text-ink  transition-all hover:border-brand/20 hover:bg-brand/5 hover:text-brand"
+                className="inline-flex items-center gap-1.5 rounded-lg border border-ink/10 bg-surface px-3 py-1.5 text-control text-ink transition-all hover:border-brand/20 hover:bg-brand/5 hover:text-brand"
             >
               {filtersOpen ? <ChevronUp size={12} aria-hidden="true" /> : <ChevronDown size={12} aria-hidden="true" />}
               {filtersOpen ? copy.hideFilters : copy.showFilters}
@@ -452,7 +452,7 @@ export default function VetRecords() {
         {filtersOpen && (
           <div className="mt-4 grid gap-4 lg:grid-cols-[1.3fr_0.7fr_0.7fr_auto] lg:items-end">
             <label className="space-y-2">
-              <span className="block text-[10px] font-bold uppercase tracking-widest text-ink-muted">
+              <span className="block text-field-label text-ink-muted">
 
     {copy.searchRecords}
               </span>
@@ -468,7 +468,7 @@ export default function VetRecords() {
             </label>
 
             <label className="space-y-2">
-              <span className="block text-[10px] font-bold uppercase tracking-widest text-ink-muted">
+              <span className="block text-field-label text-ink-muted">
 
     {copy.status}
               </span>
@@ -481,7 +481,7 @@ export default function VetRecords() {
             </label>
 
             <label className="space-y-2">
-              <span className="block text-[10px] font-bold uppercase tracking-widest text-ink-muted">
+              <span className="block text-field-label text-ink-muted">
 
     {copy.severity}
               </span>
@@ -513,20 +513,20 @@ export default function VetRecords() {
           <div className="mb-6">
             <div>
               <div className="flex flex-wrap items-center gap-2">
-                <h3 className="font-bold text-brand text-base sm:text-lg">{editingRecordId ? copy.editTitle : LABELS.LOG_NEW_CLINICAL}</h3>
+                <h2 className="text-section-title text-brand">{editingRecordId ? copy.editTitle : LABELS.LOG_NEW_CLINICAL}</h2>
                 {editingRecordId && (
-                  <span className="inline-flex items-center rounded-full border border-brand/20 bg-brand/10 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-brand">
+                  <span className="inline-flex items-center rounded-full border border-brand/20 bg-brand/10 px-2.5 py-0.5 text-badge text-brand">
                     {copy.editing}
                   </span>
                 )}
               </div>
-              <p className="text-sm text-ink leading-6">{copy.formHint}</p>
+              <p className="text-body text-ink">{copy.formHint}</p>
             </div>
           </div>
 
           <form className="grid grid-cols-1 gap-6 md:grid-cols-2" onSubmit={handleSaveRecord}>
             <div className="space-y-2">
-              <label className="text-[10px] font-bold uppercase tracking-wider text-ink-strong">{copy.cow}</label>
+              <label className="text-field-label text-ink-strong">{copy.cow}</label>
               <input
                 className={`input-machined w-full ${formErrors.cowTag ? 'border-brand bg-brand-50' : ''}`}
                 placeholder={copy.cowPlaceholder}
@@ -543,12 +543,12 @@ export default function VetRecords() {
                   </option>
                 ))}
               </datalist>
-              <p className="text-[11px] text-ink-muted">{copy.cowHint}</p>
-              {formErrors.cowTag && <p id="cowTag-error" className="mt-1 flex items-center gap-1 text-xs text-brand-dark"><AlertCircle size={12} aria-hidden="true" /> {formErrors.cowTag}</p>}
+              <p className="text-meta text-ink-muted">{copy.cowHint}</p>
+              {formErrors.cowTag && <p id="cowTag-error" className="mt-1 flex items-center gap-1 text-meta text-brand-dark"><AlertCircle size={12} aria-hidden="true" /> {formErrors.cowTag}</p>}
             </div>
 
             <div className="space-y-2">
-              <label className="text-[10px] font-bold uppercase tracking-wider text-ink-strong">{copy.date}</label>
+              <label className="text-field-label text-ink-strong">{copy.date}</label>
               <input
                 type="date"
                 className="input-machined w-full"
@@ -558,7 +558,7 @@ export default function VetRecords() {
             </div>
 
             <div className="md:col-span-2 space-y-2">
-              <label className="text-[10px] font-bold uppercase tracking-wider text-ink-strong">{copy.signs}</label>
+              <label className="text-field-label text-ink-strong">{copy.signs}</label>
               <textarea
                 className={`input-machined min-h-[110px] w-full ${formErrors.symptoms ? 'border-brand bg-brand-50' : ''}`}
                 placeholder={copy.signsPlaceholder}
@@ -567,11 +567,11 @@ export default function VetRecords() {
                 aria-invalid={!!formErrors.symptoms}
                 aria-describedby={formErrors.symptoms ? 'symptoms-error' : undefined}
               />
-              {formErrors.symptoms && <p id="symptoms-error" className="mt-1 flex items-center gap-1 text-xs text-brand-dark"><AlertCircle size={12} aria-hidden="true" /> {formErrors.symptoms}</p>}
+              {formErrors.symptoms && <p id="symptoms-error" className="mt-1 flex items-center gap-1 text-meta text-brand-dark"><AlertCircle size={12} aria-hidden="true" /> {formErrors.symptoms}</p>}
             </div>
 
             <div className="space-y-2">
-              <label className="text-[10px] font-bold uppercase tracking-wider text-ink-strong">{LABELS.DIAGNOSIS} *</label>
+              <label className="text-field-label text-ink-strong">{LABELS.DIAGNOSIS} *</label>
               <input
                 className={`input-machined w-full ${formErrors.diagnosis ? 'border-brand bg-brand-50' : ''}`}
                 placeholder={copy.diagnosisPlaceholder}
@@ -580,11 +580,11 @@ export default function VetRecords() {
                 aria-invalid={!!formErrors.diagnosis}
                 aria-describedby={formErrors.diagnosis ? 'diagnosis-error' : undefined}
               />
-              {formErrors.diagnosis && <p id="diagnosis-error" className="mt-1 flex items-center gap-1 text-xs text-brand-dark"><AlertCircle size={12} aria-hidden="true" /> {formErrors.diagnosis}</p>}
+              {formErrors.diagnosis && <p id="diagnosis-error" className="mt-1 flex items-center gap-1 text-meta text-brand-dark"><AlertCircle size={12} aria-hidden="true" /> {formErrors.diagnosis}</p>}
             </div>
 
             <div className="space-y-2">
-              <label className="text-[10px] font-bold uppercase tracking-wider text-ink-strong">{LABELS.MEDICATIONS_PRESCRIBED} *</label>
+              <label className="text-field-label text-ink-strong">{LABELS.MEDICATIONS_PRESCRIBED} *</label>
               <input
                 className={`input-machined w-full ${formErrors.medications ? 'border-brand bg-brand-50' : ''}`}
                 placeholder={copy.medicationsPlaceholder}
@@ -593,11 +593,11 @@ export default function VetRecords() {
                 aria-invalid={!!formErrors.medications}
                 aria-describedby={formErrors.medications ? 'medications-error' : undefined}
               />
-              {formErrors.medications && <p id="medications-error" className="mt-1 flex items-center gap-1 text-xs text-brand-dark"><AlertCircle size={12} aria-hidden="true" /> {formErrors.medications}</p>}
+              {formErrors.medications && <p id="medications-error" className="mt-1 flex items-center gap-1 text-meta text-brand-dark"><AlertCircle size={12} aria-hidden="true" /> {formErrors.medications}</p>}
             </div>
 
             <div className="md:col-span-2 space-y-2">
-              <label className="text-[10px] font-bold uppercase tracking-wider text-ink-strong">{LABELS.RECOMMENDATIONS_REMARKS} *</label>
+              <label className="text-field-label text-ink-strong">{LABELS.RECOMMENDATIONS_REMARKS} *</label>
               <textarea
                 className={`input-machined min-h-[100px] w-full ${formErrors.recommendations ? 'border-brand bg-brand-50' : ''}`}
                 placeholder={copy.recommendationsPlaceholder}
@@ -606,11 +606,11 @@ export default function VetRecords() {
                 aria-invalid={!!formErrors.recommendations}
                 aria-describedby={formErrors.recommendations ? 'recommendations-error' : undefined}
               />
-              {formErrors.recommendations && <p id="recommendations-error" className="mt-1 flex items-center gap-1 text-xs text-brand-dark"><AlertCircle size={12} aria-hidden="true" /> {formErrors.recommendations}</p>}
+              {formErrors.recommendations && <p id="recommendations-error" className="mt-1 flex items-center gap-1 text-meta text-brand-dark"><AlertCircle size={12} aria-hidden="true" /> {formErrors.recommendations}</p>}
             </div>
 
             <div className="space-y-2">
-              <label className="text-[10px] font-bold uppercase tracking-wider text-ink-strong">{copy.vet}</label>
+              <label className="text-field-label text-ink-strong">{copy.vet}</label>
               <input
                 className={`input-machined w-full ${formErrors.vet ? 'border-brand bg-brand-50' : ''}`}
                 placeholder={copy.vetPlaceholder}
@@ -619,11 +619,11 @@ export default function VetRecords() {
                 aria-invalid={!!formErrors.vet}
                 aria-describedby={formErrors.vet ? 'vet-error' : undefined}
               />
-              {formErrors.vet && <p id="vet-error" className="mt-1 flex items-center gap-1 text-xs text-brand-dark"><AlertCircle size={12} aria-hidden="true" /> {formErrors.vet}</p>}
+              {formErrors.vet && <p id="vet-error" className="mt-1 flex items-center gap-1 text-meta text-brand-dark"><AlertCircle size={12} aria-hidden="true" /> {formErrors.vet}</p>}
             </div>
 
             <div className="space-y-2">
-              <label className="text-[10px] font-bold uppercase tracking-wider text-ink-strong">{copy.followUp(form.status === 'Follow-up Due')}</label>
+              <label className="text-field-label text-ink-strong">{copy.followUp(form.status === 'Follow-up Due')}</label>
               <input
                 type="date"
                 className={`input-machined w-full ${formErrors.followUp ? 'border-brand bg-brand-50' : ''}`}
@@ -633,11 +633,11 @@ export default function VetRecords() {
                 aria-invalid={!!formErrors.followUp}
                 aria-describedby={formErrors.followUp ? 'followUp-error' : undefined}
               />
-              {formErrors.followUp && <p id="followUp-error" className="mt-1 flex items-center gap-1 text-xs text-brand-dark"><AlertCircle size={12} aria-hidden="true" /> {formErrors.followUp}</p>}
+              {formErrors.followUp && <p id="followUp-error" className="mt-1 flex items-center gap-1 text-meta text-brand-dark"><AlertCircle size={12} aria-hidden="true" /> {formErrors.followUp}</p>}
             </div>
 
             <div className="space-y-2">
-              <label className="text-[10px] font-bold uppercase tracking-wider text-ink-strong">{copy.severity}</label>
+              <label className="text-field-label text-ink-strong">{copy.severity}</label>
               <select className="input-machined w-full" value={form.severity} onChange={(event) => handleFieldChange('severity', event.target.value)}>
                 <option value="Low">{severityLabel('Low')}</option>
                 <option value="Medium">{severityLabel('Medium')}</option>
@@ -646,7 +646,7 @@ export default function VetRecords() {
             </div>
 
             <div className="space-y-2">
-              <label className="text-[10px] font-bold uppercase tracking-wider text-ink-strong">{copy.status}</label>
+              <label className="text-field-label text-ink-strong">{copy.status}</label>
               <select className="input-machined w-full" value={form.status} onChange={(event) => handleFieldChange('status', event.target.value)}>
                 <option value="Under Treatment">{treatmentStatusLabel('Under Treatment')}</option>
                 <option value="Follow-up Due">{treatmentStatusLabel('Follow-up Due')}</option>
@@ -678,7 +678,7 @@ export default function VetRecords() {
 
       <div className="card-machined bg-surface/90 overflow-hidden ">
         <div className="border-b border-ink/10 px-4 py-3 sm:px-6">
-          <div className="text-[10px] font-bold uppercase tracking-widest text-ink-muted">
+          <div className="text-label text-ink-muted">
 
     {copy.registry}
           </div>
@@ -692,13 +692,13 @@ export default function VetRecords() {
         <table className={`hidden w-full text-left ${hasRecordsToShow || recordsLoadState === 'loading' ? 'md:table' : ''}`}>
           <thead className="bg-brand/10 text-ink-muted">
             <tr>
-              <th className="p-4 text-[10px] font-bold uppercase text-ink-muted">{copy.columns.date}</th>
-              <th className="p-4 text-[10px] font-bold uppercase text-ink-muted">{copy.columns.cow}</th>
-              <th className="p-4 text-[10px] font-bold uppercase text-ink-muted">{copy.columns.severity}</th>
-              <th className="p-4 text-[10px] font-bold uppercase text-ink-muted">{copy.columns.status}</th>
-              <th className="p-4 text-[10px] font-bold uppercase text-ink-muted">{LABELS.DIAGNOSIS}</th>
-              <th className="p-4 text-[10px] font-bold uppercase text-ink-muted">{LABELS.MEDICATIONS_PRESCRIBED}</th>
-              <th className="p-4 text-[10px] font-bold uppercase text-ink-muted">{LABELS.VIEW_DETAIL}</th>
+              <th className="px-3 py-3 text-label text-ink-muted">{copy.columns.date}</th>
+              <th className="px-3 py-3 text-label text-ink-muted">{copy.columns.cow}</th>
+              <th className="px-3 py-3 text-label text-ink-muted">{copy.columns.severity}</th>
+              <th className="px-3 py-3 text-label text-ink-muted">{copy.columns.status}</th>
+              <th className="px-3 py-3 text-label text-ink-muted">{LABELS.DIAGNOSIS}</th>
+              <th className="px-3 py-3 text-label text-ink-muted">{LABELS.MEDICATIONS_PRESCRIBED}</th>
+              <th className="px-3 py-3 text-label text-ink-muted">{LABELS.VIEW_DETAIL}</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-ink/5" aria-busy={recordsLoadState === 'loading'}>
@@ -709,29 +709,29 @@ export default function VetRecords() {
               renderGroupMeta={(items) => copy.recordCount(items.length)}
               renderItem={(visit) => (
               <tr key={visit.id} className="hover:bg-surface/55">
-                <td className="p-4 font-mono text-xs text-ink-strong">{visit.date}</td>
-                <td className="p-4">
-                  <div className="font-bold text-brand">{visit.cow}</div>
-                  <div className="text-xs text-ink-muted">{copy.updatedBy(getRelativeTime(visit.updatedAt), visit.updatedBy)}</div>
+                <td className="whitespace-nowrap px-3 py-3 text-meta text-ink-strong tabular-nums">{visit.date}</td>
+                <td className="px-3 py-3">
+                  <div className="text-body-strong text-brand">{visit.cow}</div>
+                  <div className="text-meta text-ink-muted">{copy.updatedBy(getRelativeTime(visit.updatedAt), visit.updatedBy)}</div>
                 </td>
-                <td className="p-4">
-                  <span className={`inline-flex rounded-full border px-3 py-1 text-[10px] font-bold uppercase tracking-wider ${SEVERITY_STYLES[visit.severity]}`}>{severityLabel(visit.severity)}</span>
+                <td className="px-3 py-3">
+                  <span className={`inline-flex whitespace-nowrap rounded-full border px-3 py-1 text-badge ${SEVERITY_STYLES[visit.severity]}`}>{severityLabel(visit.severity)}</span>
                 </td>
-                <td className="p-4">
-                  <span className={`inline-flex rounded-full border px-3 py-1 text-[10px] font-bold uppercase tracking-wider ${STATUS_STYLES[visit.status]}`}>{treatmentStatusLabel(visit.status)}</span>
+                <td className="px-3 py-3">
+                  <span className={`inline-flex whitespace-nowrap rounded-full border px-3 py-1 text-badge ${STATUS_STYLES[visit.status]}`}>{treatmentStatusLabel(visit.status)}</span>
                 </td>
-                <td className="p-4 text-sm text-ink-strong">
+                <td className="px-3 py-3 text-body text-ink-strong">
                   <div className="max-w-[260px]">
                     <p>{visit.diagnosis}</p>
-                    <p className="mt-1 text-xs text-ink-muted">{visit.vet}</p>
+                    <p className="mt-1 text-meta text-ink-muted">{visit.vet}</p>
                   </div>
                 </td>
-                <td className="p-4 text-sm text-ink-muted">{visit.meds}</td>
-                <td className="p-4 text-right">
+                <td className="px-3 py-3 text-body text-ink-muted">{visit.meds}</td>
+                <td className="px-3 py-3 text-right">
                   <button
                     type="button"
                     onClick={() => setSelectedRecord(visit)}
-                    className="inline-flex items-center rounded-full bg-brand/10 px-4 py-2 text-sm font-semibold text-brand transition-colors hover:bg-brand/15"
+                    className="inline-flex items-center whitespace-nowrap rounded-full bg-brand/10 px-4 py-2 text-control text-brand transition-colors hover:bg-brand/15"
                     aria-label={copy.openFor(visit.cow)}
                   >
                     {copy.openFile}
@@ -745,14 +745,14 @@ export default function VetRecords() {
                   <div className="mx-auto max-w-md space-y-3 text-ink-muted">
                     {records.length === 0 ? (
                       <>
-                        <p className="font-semibold text-ink">{copy.empty}</p>
+                        <p className="text-body-strong text-ink">{copy.empty}</p>
                         <button type="button" onClick={startNewVisit} className="btn-command">{LABELS.LOG_NEW_VISIT}</button>
                       </>
                     ) : (
                       <>
-                        <p className="font-semibold text-ink">{copy.noMatches}</p>
+                        <p className="text-body-strong text-ink">{copy.noMatches}</p>
                         {recordSuggestionChips}
-                        <p className="text-sm leading-6">{copy.noMatchesHint}</p>
+                        <p className="text-body">{copy.noMatchesHint}</p>
                         <button type="button" onClick={clearFilters} className="btn-command bg-surface-raised text-ink">
                           {copy.clearFilters}
                         </button>
@@ -771,30 +771,30 @@ export default function VetRecords() {
             <article key={visit.id} className="min-w-0 space-y-3 p-4">
               <div className="flex min-w-0 items-start justify-between gap-3">
                 <div className="min-w-0">
-                  <p className="font-mono text-xs text-ink-muted">{visit.date}</p>
-                  <p className="mt-1 break-words font-bold text-brand">{visit.cow}</p>
-                  <p className="mt-1 break-words text-xs text-ink-muted">{copy.updatedBy(getRelativeTime(visit.updatedAt), visit.updatedBy)}</p>
+                  <p className="text-meta text-ink-muted tabular-nums">{visit.date}</p>
+                  <p className="mt-1 break-words text-body-strong text-brand">{visit.cow}</p>
+                  <p className="mt-1 break-words text-meta text-ink-muted">{copy.updatedBy(getRelativeTime(visit.updatedAt), visit.updatedBy)}</p>
                 </div>
-                <button type="button" onClick={() => setSelectedRecord(visit)} className="inline-flex h-9 shrink-0 items-center rounded-lg border border-brand/20 px-2 text-xs font-semibold text-brand" aria-label={copy.openFor(visit.cow)}>
+                <button type="button" onClick={() => setSelectedRecord(visit)} className="inline-flex h-9 shrink-0 items-center rounded-lg border border-brand/20 px-2 text-control text-brand" aria-label={copy.openFor(visit.cow)}>
           {copy.open}</button>
               </div>
               <div className="flex flex-wrap gap-2">
-                <span className={`rounded-full border px-2.5 py-1 text-[10px] font-bold uppercase ${SEVERITY_STYLES[visit.severity]}`}>{severityLabel(visit.severity)}</span>
-                <span className={`rounded-full border px-2.5 py-1 text-[10px] font-bold uppercase ${STATUS_STYLES[visit.status]}`}>{treatmentStatusLabel(visit.status)}</span>
+                <span className={`rounded-full border px-2.5 py-1 text-badge ${SEVERITY_STYLES[visit.severity]}`}>{severityLabel(visit.severity)}</span>
+                <span className={`rounded-full border px-2.5 py-1 text-badge ${STATUS_STYLES[visit.status]}`}>{treatmentStatusLabel(visit.status)}</span>
               </div>
-              <div className="min-w-0 border-t border-ink/10 pt-3 text-sm">
-                <p className="break-words font-medium text-ink">{visit.diagnosis}</p>
-                <p className="mt-1 break-words text-xs text-ink-muted">{copy.veterinarian(visit.vet)}</p>
-                <p className="mt-2 break-words text-xs text-ink-muted">{copy.medication(visit.meds || copy.noneRecorded)}</p>
+              <div className="min-w-0 border-t border-ink/10 pt-3 text-body">
+                <p className="break-words text-ink">{visit.diagnosis}</p>
+                <p className="mt-1 break-words text-meta text-ink-muted">{copy.veterinarian(visit.vet)}</p>
+                <p className="mt-2 break-words text-meta text-ink-muted">{copy.medication(visit.meds || copy.noneRecorded)}</p>
               </div>
             </article>
           ))}
           {hasRecordsToShow && filteredRecords.length === 0 && (records.length === 0 ? (
-            <div className="flex flex-col items-center gap-3 p-6 text-center text-sm text-ink-muted">
+            <div className="flex flex-col items-center gap-3 p-6 text-center text-body text-ink-muted">
               <p>{copy.empty}</p>
               <button type="button" onClick={startNewVisit} className="btn-command">{LABELS.LOG_NEW_VISIT}</button>
             </div>
-          ) : <div className="p-6 text-center text-sm text-ink-muted"><p>{copy.noMatches}</p>{recordSuggestionChips}</div>)}
+          ) : <div className="p-6 text-center text-body text-ink-muted"><p>{copy.noMatches}</p>{recordSuggestionChips}</div>)}
         </div>
       </div>
 
@@ -803,49 +803,49 @@ export default function VetRecords() {
           <div className="space-y-6">
             <div className="rounded-2xl border border-ink/10 bg-surface-warm/40 p-4 sm:p-5">
               <div className="mb-3 text-brand">
-                <p className="text-xs font-bold uppercase tracking-wider">{copy.visitSummary}</p>
+                <p className="text-label">{copy.visitSummary}</p>
               </div>
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-3 xl:grid-cols-4">
                 <div>
-                  <p className="mb-1 text-[10px] font-bold uppercase tracking-wider text-ink-muted">{copy.date_}</p>
-                  <p className="text-sm font-mono text-ink-strong">{selectedRecord.date}</p>
+                  <p className="mb-1 text-label text-ink-muted">{copy.date_}</p>
+                  <p className="text-body text-ink-strong tabular-nums">{selectedRecord.date}</p>
                 </div>
                 <div>
-                  <p className="mb-1 text-[10px] font-bold uppercase tracking-wider text-ink-muted">{copy.cow_}</p>
-                  <p className="text-sm font-semibold text-brand">{selectedRecord.cow}</p>
+                  <p className="mb-1 text-label text-ink-muted">{copy.cow_}</p>
+                  <p className="text-body-strong text-brand">{selectedRecord.cow}</p>
                 </div>
                 <div>
-                  <p className="mb-1 text-[10px] font-bold uppercase tracking-wider text-ink-muted">{copy.severity}</p>
-                  <p className="text-sm text-ink-strong">{severityLabel(selectedRecord.severity)}</p>
+                  <p className="mb-1 text-label text-ink-muted">{copy.severity}</p>
+                  <p className="text-body text-ink-strong">{severityLabel(selectedRecord.severity)}</p>
                 </div>
                 <div>
-                  <p className="mb-1 text-[10px] font-bold uppercase tracking-wider text-ink-muted">{copy.status}</p>
-                  <p className="text-sm text-ink-strong">{treatmentStatusLabel(selectedRecord.status)}</p>
+                  <p className="mb-1 text-label text-ink-muted">{copy.status}</p>
+                  <p className="text-body text-ink-strong">{treatmentStatusLabel(selectedRecord.status)}</p>
                 </div>
               </div>
             </div>
 
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div className="rounded-2xl border border-ink/10 bg-surface p-4">
-                <p className="mb-1 text-[10px] font-bold uppercase tracking-wider text-ink-muted">{copy.signs_}</p>
-                <p className="text-sm leading-6 text-ink-strong">{selectedRecord.reason}</p>
+                <p className="mb-1 text-label text-ink-muted">{copy.signs_}</p>
+                <p className="text-body text-ink-strong">{selectedRecord.reason}</p>
               </div>
               <div className="rounded-2xl border border-ink/10 bg-surface p-4">
-                <p className="mb-1 text-[10px] font-bold uppercase tracking-wider text-ink-muted">{copy.diagnosis}</p>
-                <p className="text-sm leading-6 text-ink-strong">{selectedRecord.diagnosis}</p>
+                <p className="mb-1 text-label text-ink-muted">{copy.diagnosis}</p>
+                <p className="text-body text-ink-strong">{selectedRecord.diagnosis}</p>
               </div>
               <div className="rounded-2xl border border-ink/10 bg-surface p-4 sm:col-span-2">
-                <p className="mb-1 text-[10px] font-bold uppercase tracking-wider text-ink-muted">{copy.medicationPlan}</p>
-                <p className="text-sm leading-6 text-ink-strong">{selectedRecord.meds}</p>
+                <p className="mb-1 text-label text-ink-muted">{copy.medicationPlan}</p>
+                <p className="text-body text-ink-strong">{selectedRecord.meds}</p>
               </div>
               <div className="rounded-2xl border border-ink/10 bg-surface p-4 sm:col-span-2">
-                <p className="mb-1 text-[10px] font-bold uppercase tracking-wider text-ink-muted">{copy.recommendations}</p>
-                <p className="text-sm leading-6 text-ink-strong">{selectedRecord.recommendations}</p>
+                <p className="mb-1 text-label text-ink-muted">{copy.recommendations}</p>
+                <p className="text-body text-ink-strong">{selectedRecord.recommendations}</p>
               </div>
               <div className="rounded-2xl border border-ink/10 bg-surface p-4 sm:col-span-2">
-                <p className="mb-1 text-[10px] font-bold uppercase tracking-wider text-ink-muted">{copy.auditTrail}</p>
-                <p className="text-sm leading-6 text-ink-strong">{copy.auditUpdated(selectedRecord.updatedBy, getRelativeTime(selectedRecord.updatedAt))}</p>
-                <p className="text-xs text-ink-muted">{copy.createdAt(selectedRecord.createdAt)}</p>
+                <p className="mb-1 text-label text-ink-muted">{copy.auditTrail}</p>
+                <p className="text-body text-ink-strong">{copy.auditUpdated(selectedRecord.updatedBy, getRelativeTime(selectedRecord.updatedAt))}</p>
+                <p className="text-meta text-ink-muted">{copy.createdAt(selectedRecord.createdAt)}</p>
               </div>
             </div>
 

@@ -11,6 +11,7 @@ import { CardSkeletons, ListLoadNotices, TableSkeletonRows } from '../../compone
 import { getListLoadState, hasRowsToShow } from '../../lib/listLoadState';
 import { formatLitres } from '../../lib/numberFormat';
 import { healthCopy } from '../../i18n/health';
+import { enumLabel } from '../../lib/enumLabel';
 
 const TABLE_COLUMNS = 4;
 
@@ -92,16 +93,16 @@ export default function MilkDropReports() {
   };
 
   return (
-    <div className="p-4 sm:p-6 max-w-6xl mx-auto font-sans animate-reveal">
+    <div className="p-4 sm:p-6 max-w-6xl mx-auto animate-reveal">
       <div className="flex flex-col sm:flex-row sm:justify-between sm:items-end gap-4 mb-6">
         <div>
           <div className="text-brand mb-1">
-            <h1 className="text-xl sm:text-2xl font-bold text-ink">{copy.title}</h1>
+            <h1 className="text-page-title text-ink">{copy.title}</h1>
           </div>
-          <p className="text-xs sm:text-sm text-ink/50 font-medium">{copy.subtitle}</p>
+          <p className="text-meta text-ink/50">{copy.subtitle}</p>
         </div>
         <div className="flex gap-2">
-          <button className="flex-1 sm:flex-none flex items-center justify-center px-4 py-2 bg-surface text-ink border border-ink/20 rounded-md text-sm font-semibold hover:bg-surface-raised">
+          <button className="flex-1 sm:flex-none flex items-center justify-center px-4 py-2 bg-surface text-ink border border-ink/20 rounded-md text-control hover:bg-surface-raised">
 
     {copy.filter}
           </button>
@@ -118,9 +119,9 @@ export default function MilkDropReports() {
         )}
         {showReports && (<>
         <div className="hidden overflow-x-auto md:block">
-        <table className="w-full min-w-[640px] text-left text-sm">
+        <table className="w-full min-w-[640px] text-left text-body">
           <thead>
-            <tr className="border-b border-ink/10 text-xs font-semibold uppercase tracking-wide text-ink/50">
+            <tr className="border-b border-ink/10 text-label text-ink/50">
               <th className="px-6 py-3">{copy.columns.date}</th>
               <th className="px-6 py-3">{copy.columns.cow}</th>
               <th className="px-6 py-3">{copy.columns.missing}</th>
@@ -136,15 +137,15 @@ export default function MilkDropReports() {
               renderItem={(report) => (
               <tr key={report.id} className="hover:bg-brand/5">
                 <td className="px-6 py-4">{formatAlertDate(report.date_time)}</td>
-                <td className="px-6 py-4 font-bold">{formatCowIdentity(report)}</td>
-                <td className="px-6 py-4 font-bold text-brand-dark">{formatMissingMilk(report.missing_milk)}</td>
+                <td className="px-6 py-4 text-body-strong">{formatCowIdentity(report)}</td>
+                <td className="px-6 py-4 text-body-strong text-brand-dark">{formatMissingMilk(report.missing_milk)}</td>
                 <td className="px-6 py-4">
                   {report.status === 'OPEN' ? (
-                    <button onClick={() => openInvestigateModal(report)} className="text-brand font-bold">{copy.checkCow}</button>
+                    <button onClick={() => openInvestigateModal(report)} className="text-brand text-control">{copy.checkCow}</button>
                   ) : report.status === 'INVESTIGATING' ? (
-                    <button onClick={() => openInvestigateModal(report)} className="font-bold text-brand-dark">{copy.investigating}</button>
+                    <button onClick={() => openInvestigateModal(report)} className="text-control text-brand-dark">{copy.investigating}</button>
                   ) : (
-                    <span className="inline-flex items-center font-bold text-brand">
+                    <span className="inline-flex items-center text-body-strong text-brand">
                     {copy.closed}</span>
                   )}
                 </td>
@@ -164,19 +165,19 @@ export default function MilkDropReports() {
             <article key={report.id} className="min-w-0 space-y-3 p-4">
               <div className="flex min-w-0 items-start justify-between gap-3">
                 <div className="min-w-0">
-                  <time className="text-xs text-ink-muted">{formatAlertDate(report.date_time)}</time>
-                  <h3 className="mt-1 break-words font-semibold text-ink">{formatCowIdentity(report)}</h3>
+                  <time className="text-meta text-ink-muted">{formatAlertDate(report.date_time)}</time>
+                  <h2 className="mt-1 break-words text-section-title text-ink">{formatCowIdentity(report)}</h2>
                 </div>
-                <span className="shrink-0 rounded-full border border-brand/20 bg-brand-50 px-2 py-1 text-[10px] font-bold text-brand-dark">{copy.statuses[report.status] ?? report.status}</span>
+                <span className="shrink-0 rounded-full border border-brand/20 bg-brand-50 px-2 py-1 text-badge text-brand-dark">{enumLabel(copy.statuses, report.status)}</span>
               </div>
-              <div className="flex items-center justify-between gap-3 border-t border-ink/10 pt-3 text-sm">
+              <div className="flex items-center justify-between gap-3 border-t border-ink/10 pt-3 text-body">
                 <span className="text-ink-muted">{copy.missingMilk}</span>
-                <span className="font-mono font-bold tabular-nums text-brand-dark">{formatMissingMilk(report.missing_milk)}</span>
+                <span className="text-body-strong tabular-nums text-brand-dark">{formatMissingMilk(report.missing_milk)}</span>
               </div>
-              {report.status !== 'RESOLVED' && <button type="button" onClick={() => openInvestigateModal(report)} className="w-full rounded-button bg-brand px-3 py-2 text-sm font-semibold text-white">{report.status === 'OPEN' ? copy.checkCowShort : copy.continueInvestigation}</button>}
+              {report.status !== 'RESOLVED' && <button type="button" onClick={() => openInvestigateModal(report)} className="w-full rounded-button bg-brand px-3 py-2 text-control text-white">{report.status === 'OPEN' ? copy.checkCowShort : copy.continueInvestigation}</button>}
             </article>
           ))}
-          {reports.length === 0 && <p className="p-6 text-center text-sm text-ink-muted">{copy.empty}</p>}
+          {reports.length === 0 && <p className="p-6 text-center text-body text-ink-muted">{copy.empty}</p>}
         </div>
         </>)}
       </div>
@@ -189,12 +190,12 @@ export default function MilkDropReports() {
         size="3xl"
         footerActions={investigateModal.log && (
           <>
-            <button onClick={closeModal} className="px-4 py-2 text-sm font-bold">{copy.cancel}</button>
-            <button type="button" onClick={() => handleSubmit('INVESTIGATING')} disabled={saveInvestigation.isPending} className="px-6 py-2 border border-brand/20 bg-surface text-brand text-sm font-bold rounded-md disabled:opacity-60">
+            <button onClick={closeModal} className="px-4 py-2 text-control">{copy.cancel}</button>
+            <button type="button" onClick={() => handleSubmit('INVESTIGATING')} disabled={saveInvestigation.isPending} className="px-6 py-2 border border-brand/20 bg-surface text-brand text-control rounded-md disabled:opacity-60">
               {saveInvestigation.isPending ? copy.saving : investigateModal.log.status === 'OPEN' ? copy.start : copy.saveProgress}
             </button>
             {investigateModal.log.status === 'INVESTIGATING' && (
-              <button type="button" onClick={() => handleSubmit('RESOLVED')} disabled={saveInvestigation.isPending} className="inline-flex min-h-10 items-center rounded-md bg-emerald-700 px-6 py-2 text-sm font-bold text-white shadow-md transition-colors hover:bg-emerald-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-700 disabled:cursor-not-allowed disabled:opacity-60">
+              <button type="button" onClick={() => handleSubmit('RESOLVED')} disabled={saveInvestigation.isPending} className="inline-flex min-h-10 items-center rounded-md bg-emerald-700 px-6 py-2 text-control text-white shadow-md transition-colors hover:bg-emerald-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-700 disabled:cursor-not-allowed disabled:opacity-60">
 
     {copy.closeCase}
               </button>
@@ -206,9 +207,9 @@ export default function MilkDropReports() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {DIAGNOSTIC_CATEGORIES.map(cat => (
               <div key={cat.id} className="p-4 rounded-xl border border-ink/10 bg-surface-raised">
-                <p className="font-bold text-sm mb-2">{copy.categories[cat.id]}</p>
+                <p className="text-body-strong mb-2">{copy.categories[cat.id]}</p>
                 {cat.options.map(opt => (
-                  <label key={opt} className="flex items-center gap-2 text-sm">
+                  <label key={opt} className="flex items-center gap-2 text-field-label">
                     <input type="checkbox" checked={selectedReasons.includes(opt)} onChange={() => toggleReason(opt)} /> {copy.reasons[opt] ?? opt}
                   </label>
                 ))}
@@ -218,11 +219,11 @@ export default function MilkDropReports() {
           <textarea
             value={managerNotes}
             onChange={(e) => setManagerNotes(e.target.value)}
-            className="w-full p-3 border border-ink/20 rounded-lg text-sm"
+            className="w-full p-3 border border-ink/20 rounded-lg text-control"
             placeholder={copy.notesPlaceholder}
             rows={3}
           />
-          {formError && <p role="alert" className="text-sm font-semibold text-danger">{formError}</p>}
+          {formError && <p role="alert" className="text-body-strong text-danger">{formError}</p>}
         </div>
       </BaseModal>
     </div>

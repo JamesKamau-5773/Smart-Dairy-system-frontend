@@ -493,18 +493,18 @@ export default function HerdRegistry() {
   const herdSuggestions = herdSearch.trim() && visibleHerd.length === 0 ? getHerdSearchSuggestions(herdState, herdSearch) : [];
   const emptyHerdContent = (
     <div className="flex flex-col items-center gap-2">
-      <p className="text-sm font-medium text-ink-muted">
+      <p className="text-body text-ink-muted">
         {hasActiveFilters ? copy.noMatches : copy.empty}
       </p>
       {herdSuggestions.length > 0 && (
-        <div className="flex flex-wrap items-center justify-center gap-2 text-sm">
+        <div className="flex flex-wrap items-center justify-center gap-2 text-body">
           <span className="text-ink-muted">{copy.didYouMean}</span>
           {herdSuggestions.map((cow) => (
             <button
               key={cow.recordId || cow.id}
               type="button"
               onClick={() => setHerdSearch(cow.name && cow.name !== 'Unnamed' ? cow.name : cow.id)}
-              className="rounded-full border border-brand/30 bg-brand-50 px-3 py-1 font-semibold text-brand hover:bg-brand-100"
+              className="rounded-full border border-brand/30 bg-brand-50 px-3 py-1 text-control text-brand hover:bg-brand-100"
             >
               {cow.name && cow.name !== 'Unnamed' ? `${cow.name} · ${cow.id}` : cow.id}
             </button>
@@ -512,7 +512,7 @@ export default function HerdRegistry() {
         </div>
       )}
       {hasActiveFilters ? (
-        <button type="button" onClick={handleClearFilters} className="mt-1 text-xs font-bold text-brand hover:underline">
+        <button type="button" onClick={handleClearFilters} className="mt-1 text-control text-brand hover:underline">
           {copy.clearFilters}
         </button>
       ) : (
@@ -533,30 +533,30 @@ export default function HerdRegistry() {
       {/* ── HEADER ── */}
       <div className="flex flex-col gap-4 border-b border-ink/10 pb-6 md:flex-row md:items-end md:justify-between">
         <div>
-          <h2 className="m-0 font-sans text-3xl font-bold tracking-tight text-brand">
+          <h1 className="m-0 text-page-title text-brand">
             {copy.titleStart} <span className="text-ink-muted">{copy.titleEnd}</span>
-          </h2>
-          <p className="mt-2 font-mono text-xs text-ink-muted">
+          </h1>
+          <p className="mt-2 text-body text-ink-muted">
             {copy.subtitle}
           </p>
         </div>
 
-        <div className="grid grid-cols-3 gap-3 md:min-w-[360px]">
+        <div className="grid grid-cols-3 gap-3 md:min-w-[26rem] md:shrink-0">
           <div className="card-machined bg-surface/80 p-3">
-            <div className="text-[10px] font-bold uppercase tracking-wider text-ink-muted">{copy.totalAnimals}</div>
-            <div className="text-2xl font-black text-ink-strong">
+            <div className="text-label text-ink-muted">{copy.totalAnimals}</div>
+            <div className="text-stat-value text-ink-strong">
               <StatValue state={summaryLoadState} label={copy.statLabel}>{countText(herdSummary.totalAnimals)}</StatValue>
             </div>
           </div>
           <div className="card-machined bg-surface/80 p-3">
-            <div className="text-[10px] font-bold uppercase tracking-wider text-ink-muted">{copy.milking}</div>
-            <div className="text-2xl font-black text-ink-strong">
+            <div className="text-label text-ink-muted">{copy.milking}</div>
+            <div className="text-stat-value text-ink-strong">
               <StatValue state={summaryLoadState} label={copy.statLabel}>{countText(herdSummary.milkingCount)}</StatValue>
             </div>
           </div>
           <div className="card-machined bg-surface/80 p-3">
-            <div className="text-[10px] font-bold uppercase tracking-wider text-ink-muted">{copy.dry}</div>
-            <div className="text-2xl font-black text-ink-strong">
+            <div className="text-label text-ink-muted">{copy.dry}</div>
+            <div className="text-stat-value text-ink-strong">
               <StatValue state={summaryLoadState} label={copy.statLabel}>{countText(herdSummary.dryCount)}</StatValue>
             </div>
           </div>
@@ -566,7 +566,7 @@ export default function HerdRegistry() {
           <button
             type="button"
             onClick={() => setIsAddOpen(true)}
-            className="btn-command flex items-center gap-2"
+            className="btn-command flex shrink-0 items-center gap-2 whitespace-nowrap"
             aria-label={copy.addCowLabel}
           >
             {copy.addCow}
@@ -604,48 +604,48 @@ export default function HerdRegistry() {
         {/* Summary Strip */}
         <div className="mb-6 grid gap-3 border-b border-ink/10 pb-4 sm:grid-cols-2 xl:grid-cols-4">
           <div className="rounded-lg border border-ink/10 bg-surface-raised px-4 py-3">
-            <div className="text-[10px] font-bold uppercase tracking-widest text-ink-muted">{copy.summary}</div>
-            <div className="mt-1 text-lg font-black text-brand">{copy.cowCount(countText(herdSummary.totalAnimals))}</div>
+            <div className="text-label text-ink-muted">{copy.summary}</div>
+            <div className="mt-1 text-stat-value text-brand">{copy.cowCount(countText(herdSummary.totalAnimals))}</div>
             <div
-              className="text-[9px] text-ink-muted mt-1"
+              className="text-meta text-ink-muted mt-1"
               title={herdSummary.latestUpdatedAt ? formatDateTime(herdSummary.latestUpdatedAt) : copy.notAvailable}
             >
               {copy.lastUpdated(herdSummary.latestUpdatedAt ? getRelativeTime(herdSummary.latestUpdatedAt) : copy.notAvailable)}
             </div>
           </div>
           <div className="rounded-lg border border-ink/10 bg-surface-raised px-4 py-3">
-            <div className="text-[10px] font-bold uppercase tracking-widest text-ink-muted">{copy.averageAge}</div>
-            <div className="mt-1 text-lg font-black text-ink-strong">{formatAge(herdSummary.averageAgeMonths)}</div>
+            <div className="text-label text-ink-muted">{copy.averageAge}</div>
+            <div className="mt-1 text-stat-value text-ink-strong">{formatAge(herdSummary.averageAgeMonths)}</div>
           </div>
           <div className="rounded-lg border border-ink/10 bg-surface-raised px-4 py-3">
-            <div className="text-[10px] font-bold uppercase tracking-widest text-ink-muted">{copy.milkingDry}</div>
-            <div className="mt-1 text-lg font-black text-ink-strong">
+            <div className="text-label text-ink-muted">{copy.milkingDry}</div>
+            <div className="mt-1 text-stat-value text-ink-strong">
               {countText(herdSummary.milkingCount)}{' '}
-              <span className="text-sm font-bold text-ink-muted">/ {countText(herdSummary.dryCount)}</span>
+              <span className="text-body-strong text-ink-muted">/ {countText(herdSummary.dryCount)}</span>
             </div>
           </div>
           <div className="rounded-lg border border-ink/10 bg-surface-raised px-4 py-3">
-            <div className="text-[10px] font-bold uppercase tracking-widest text-ink-muted">{copy.latestCalved}</div>
-            <div className="mt-1 text-sm font-black text-ink-strong">{formatDate(herdSummary.latestCalved)}</div>
+            <div className="text-label text-ink-muted">{copy.latestCalved}</div>
+            <div className="mt-1 text-body-strong text-ink-strong">{formatDate(herdSummary.latestCalved)}</div>
           </div>
         </div>
 
         {/* Controls */}
         <div className="mb-6 rounded-2xl border border-ink/10 bg-surface/90 p-4 ">
           <div className="flex flex-col gap-3 border-b border-ink/10 pb-4 lg:flex-row lg:items-center lg:justify-between">
-            <div className="text-ink-strong font-bold text-sm">
-              <span className="leading-none">{copy.organize}</span>
+            <div className="text-ink-strong text-body-strong">
+              <span>{copy.organize}</span>
             </div>
 
             <div className="flex flex-wrap items-center gap-2">
-              <span className="rounded-full border border-ink/10 bg-surface-warm/60 px-3 py-1 text-[10px] font-bold uppercase tracking-widest text-ink-muted">
+              <span className="rounded-full border border-ink/10 bg-surface-warm/60 px-3 py-1 text-badge text-ink-muted">
                 {copy.activeFilters(activeFilterCount)}
               </span>
               <button
                 type="button"
                 onClick={() => setControlsOpen((current) => !current)}
                 aria-expanded={controlsOpen}
-                className="inline-flex items-center gap-1.5 rounded-lg border border-ink/10 bg-surface px-3 py-1.5 text-xs font-semibold text-ink  transition-all hover:border-brand/20 hover:bg-brand/5 hover:text-brand"
+                className="inline-flex items-center gap-1.5 rounded-lg border border-ink/10 bg-surface px-3 py-1.5 text-control text-ink transition-all hover:border-brand/20 hover:bg-brand/5 hover:text-brand"
               >
                 {controlsOpen ? <ChevronUp size={12} aria-hidden="true" /> : <ChevronDown size={12} aria-hidden="true" />}
                 {controlsOpen ? copy.hideFilters : copy.showFilters}
@@ -663,20 +663,20 @@ export default function HerdRegistry() {
                   value={herdSearch}
                   onChange={(event) => setHerdSearch(event.target.value)}
                   placeholder={copy.searchPlaceholder}
-                  className="w-full bg-transparent text-sm font-semibold text-ink-strong outline-none placeholder:text-ink-muted"
+                  className="w-full bg-transparent text-control text-ink-strong outline-none placeholder:text-ink-muted"
                   aria-label={copy.searchLabel}
                 />
               </div>
 
               <div className="flex items-center gap-2 rounded-lg border border-ink/20 bg-surface/95 px-3 py-2">
-                <label className="text-xs font-bold uppercase tracking-wider text-ink-strong" htmlFor="herd-sort">
+                <label className="text-field-label text-ink-strong" htmlFor="herd-sort">
                   {copy.sortBy}
                 </label>
                 <select
                   id="herd-sort"
                   value={sortBy}
                   onChange={(event) => setSortBy(event.target.value)}
-                  className="bg-transparent text-sm font-semibold text-ink-strong outline-none"
+                  className="bg-transparent text-control text-ink-strong outline-none"
                   aria-label={copy.sortLabel}
                 >
                   <option value="age">{copy.sort.age}</option>
@@ -696,7 +696,7 @@ export default function HerdRegistry() {
                     key={option.value}
                     type="button"
                     onClick={() => setStatusFilter(option.value)}
-                    className={`rounded-lg border px-3 py-2 text-xs font-bold transition-colors ${
+                    className={`rounded-lg border px-3 py-2 text-control transition-colors ${
                       statusFilter === option.value
                         ? 'border-brand bg-brand text-surface'
                         : 'border-ink/10 bg-surface-raised text-ink-muted hover:border-brand/20 hover:text-brand'
@@ -711,7 +711,7 @@ export default function HerdRegistry() {
                 <button
                   type="button"
                   onClick={handleClearFilters}
-                  className={`rounded-lg border px-3 py-2 text-xs font-bold transition-colors ${
+                  className={`rounded-lg border px-3 py-2 text-control transition-colors ${
                     hasActiveFilters
                       ? 'border-brand/20 bg-brand/5 text-brand hover:bg-brand/10'
                       : 'border-ink/10 bg-surface-raised text-ink-muted'
@@ -732,28 +732,28 @@ export default function HerdRegistry() {
           <table className="w-full border-collapse text-left">
             <thead>
               <tr className="bg-surface-raised border-b border-ink/10">
-                <th className="px-3 py-2 text-[10px] font-black uppercase tracking-wider text-ink-strong">
+                <th className="px-3 py-2 text-label text-ink-strong">
                   {copy.columns.earTag}
                 </th>
-                <th className="px-3 py-2 text-[10px] font-black uppercase tracking-wider text-ink-strong">
+                <th className="px-3 py-2 text-label text-ink-strong">
                   {copy.columns.name}
                 </th>
-                <th className="px-3 py-2 text-[10px] font-black uppercase tracking-wider text-ink-strong">
+                <th className="px-3 py-2 text-label text-ink-strong">
                   {copy.columns.breed}
                 </th>
-                <th className="px-3 py-2 text-[10px] font-black uppercase tracking-wider text-ink-strong">
+                <th className="px-3 py-2 text-label text-ink-strong">
                   {copy.columns.lastCalved}
                 </th>
-                <th className="px-3 py-2 text-[10px] font-black uppercase tracking-wider text-ink-strong">
+                <th className="px-3 py-2 text-label text-ink-strong">
                   {copy.columns.age}
                 </th>
-                <th className="px-3 py-2 text-[10px] font-black uppercase tracking-wider text-ink-strong">
+                <th className="px-3 py-2 text-label text-ink-strong">
                   {copy.columns.status}
                 </th>
-                <th className="px-3 py-2 text-[10px] font-black uppercase tracking-wider text-ink-strong">
+                <th className="px-3 py-2 text-label text-ink-strong">
                   {copy.columns.updated}
                 </th>
-                <th className="px-3 py-2 text-[10px] font-black uppercase tracking-wider text-ink-strong text-right">
+                <th className="px-3 py-2 text-label text-ink-strong text-right">
                   {copy.columns.actions}
                 </th>
               </tr>
@@ -802,43 +802,43 @@ export default function HerdRegistry() {
                       <td className="px-3 py-2.5">
                         <Link
                           to={`/operations/animal/${routeId}`}
-                          className="font-sans font-black text-brand hover:underline"
+                          className="text-body-strong text-brand hover:underline"
                         >
                           {cow.id}
                         </Link>
                       </td>
-                      <td className="px-3 py-2.5 text-sm font-semibold text-ink">{cow.name}</td>
-                      <td className="px-3 py-2.5 text-sm text-ink-muted">{cow.breed}</td>
-                      <td className="px-3 py-2.5 text-sm text-ink-muted">{formatDate(cow.lastCalved)}</td>
-                      <td className="px-3 py-2.5 text-sm text-ink-muted">
+                      <td className="px-3 py-2.5 text-body-strong text-ink">{cow.name}</td>
+                      <td className="px-3 py-2.5 text-body text-ink-muted">{cow.breed}</td>
+                      <td className="px-3 py-2.5 text-body text-ink-muted">{formatDate(cow.lastCalved)}</td>
+                      <td className="px-3 py-2.5 text-body text-ink-muted">
                         {formatAge(cow.ageMonths)}
                       </td>
                       <td className="px-3 py-2.5">
                         <span
-                          className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-bold ${statusTone(cow.status)}`}
+                          className={`inline-flex items-center rounded-full border px-2 py-0.5 text-badge ${statusTone(cow.status)}`}
                         >
                           {herdStatusLabel(cow.status)}
                         </span>
                       </td>
-                      <td className="px-3 py-2.5 text-xs text-ink-muted">
+                      <td className="px-3 py-2.5 text-meta text-ink-muted">
                         {hasValidTimestamp(cow.updatedAt) ? (
                           <>
-                            <div className="text-[10px] text-ink" title={formatDateTime(cow.updatedAt)}>
+                            <div className="text-meta text-ink" title={formatDateTime(cow.updatedAt)}>
                               {formatDateTime(cow.updatedAt)}
                             </div>
-                            <div className="text-[9px] text-ink-muted/60">
+                            <div className="text-meta text-ink-muted/60">
                               {getRelativeTime(cow.updatedAt)}{cow.updatedBy ? ` · ${cow.updatedBy}` : ''}
                             </div>
                           </>
                         ) : (
-                          <div className="text-[10px] text-ink-muted">-</div>
+                          <div className="text-meta text-ink-muted">-</div>
                         )}
                       </td>
                       <td className="px-3 py-2.5 text-right">
                         <div className="flex items-center justify-end gap-2">
                           <Link
                             to={`/operations/animal/${routeId}`}
-                            className="btn-command gap-2 px-3 py-2 text-[11px]"
+                            className="btn-command gap-2 px-3 py-2 text-control"
                             aria-label={copy.viewRecordFor(cow.name)}
                           >
                             {copy.view}
@@ -848,9 +848,9 @@ export default function HerdRegistry() {
                               <button type="button" className="inline-flex h-8 w-8 items-center justify-center rounded-button border border-slate-300 text-slate-600 hover:border-brand-400 hover:text-brand-700" aria-label={copy.actionsFor(cow.name)}><MoreVertical size={16} aria-hidden="true" /></button>
                             </PopoverTrigger>
                             <PopoverContent align="end" className="w-40 p-1.5">
-                              <button type="button" onClick={() => handleOpenEdit(cow)} className="flex w-full items-center rounded-md px-3 py-2 text-left text-sm text-ink-900 hover:bg-brand-50">
+                              <button type="button" onClick={() => handleOpenEdit(cow)} className="flex w-full items-center rounded-md px-3 py-2 text-left text-control text-ink-900 hover:bg-brand-50">
             {copy.edit}</button>
-                              <button type="button" onClick={() => handleDeleteCow(routeId, cow.name, cow.id)} className="flex w-full items-center rounded-md px-3 py-2 text-left text-sm text-danger hover:bg-danger/10">
+                              <button type="button" onClick={() => handleDeleteCow(routeId, cow.name, cow.id)} className="flex w-full items-center rounded-md px-3 py-2 text-left text-control text-danger hover:bg-danger/10">
             {copy.delete}</button>
                             </PopoverContent>
                           </Popover>
@@ -871,25 +871,25 @@ export default function HerdRegistry() {
                 return (
                   <article key={`${cow.id}-${routeId || 'card'}`} className="min-w-0 rounded-xl border border-ink/10 bg-surface p-4">
                     <div className="flex items-start justify-between gap-3">
-                      <div className="min-w-0"><Link to={`/operations/animal/${routeId}`} className="text-sm font-bold text-brand">{cow.name || cow.id}</Link><p className="mt-1 text-xs text-ink-muted">{copy.tag(cow.id, cow.breed)}</p></div>
-                      <span className={`shrink-0 rounded-full border px-2 py-1 text-[10px] font-bold ${statusTone(cow.status)}`}>{herdStatusLabel(cow.status)}</span>
+                      <div className="min-w-0"><Link to={`/operations/animal/${routeId}`} className="text-body-strong text-brand">{cow.name || cow.id}</Link><p className="mt-1 text-meta text-ink-muted">{copy.tag(cow.id, cow.breed)}</p></div>
+                      <span className={`shrink-0 rounded-full border px-2 py-1 text-badge ${statusTone(cow.status)}`}>{herdStatusLabel(cow.status)}</span>
                     </div>
-                    <div className="mt-3 grid grid-cols-2 gap-3 rounded-lg bg-surface-raised p-3 text-xs">
-                      <div><p className="text-ink-muted">{copy.lastCalvedShort}</p><p className="mt-1 font-semibold text-ink">{formatDate(cow.lastCalved)}</p></div>
-                      <div><p className="text-ink-muted">{copy.ageShort}</p><p className="mt-1 font-semibold text-ink">{formatAge(cow.ageMonths)}</p></div>
-                      <div className="col-span-2"><p className="text-ink-muted">{copy.updatedShort}</p><p className="mt-1 font-semibold text-ink">{hasValidTimestamp(cow.updatedAt) ? `${getRelativeTime(cow.updatedAt)}${cow.updatedBy ? ` · ${cow.updatedBy}` : ''}` : '—'}</p></div>
+                    <div className="mt-3 grid grid-cols-2 gap-3 rounded-lg bg-surface-raised p-3 text-meta">
+                      <div><p className="text-ink-muted">{copy.lastCalvedShort}</p><p className="mt-1 text-body-strong text-ink">{formatDate(cow.lastCalved)}</p></div>
+                      <div><p className="text-ink-muted">{copy.ageShort}</p><p className="mt-1 text-body-strong text-ink">{formatAge(cow.ageMonths)}</p></div>
+                      <div className="col-span-2"><p className="text-ink-muted">{copy.updatedShort}</p><p className="mt-1 text-body-strong text-ink">{hasValidTimestamp(cow.updatedAt) ? `${getRelativeTime(cow.updatedAt)}${cow.updatedBy ? ` · ${cow.updatedBy}` : ''}` : '—'}</p></div>
                     </div>
                     <div className="mt-3 flex gap-2">
-                      <Link to={`/operations/animal/${routeId}`} className="flex-1 rounded-lg bg-brand px-3 py-2 text-center text-xs font-semibold text-white">{copy.viewRecord}</Link>
-                      <button type="button" onClick={() => handleOpenEdit(cow)} className="rounded-lg border border-brand/20 px-3 py-2 text-xs font-semibold text-brand">{copy.edit}</button>
-                      <button type="button" onClick={() => handleDeleteCow(routeId, cow.name, cow.id)} className="rounded-lg border border-brand/20 px-3 py-2 text-xs font-semibold text-brand">{copy.delete}</button>
+                      <Link to={`/operations/animal/${routeId}`} className="flex-1 rounded-lg bg-brand px-3 py-2 text-center text-meta text-white">{copy.viewRecord}</Link>
+                      <button type="button" onClick={() => handleOpenEdit(cow)} className="rounded-lg border border-brand/20 px-3 py-2 text-control text-brand">{copy.edit}</button>
+                      <button type="button" onClick={() => handleDeleteCow(routeId, cow.name, cow.id)} className="rounded-lg border border-brand/20 px-3 py-2 text-control text-brand">{copy.delete}</button>
                     </div>
                   </article>
                 );
               })}
         </div>
 
-        <div className="mt-4 text-xs text-ink-muted">
+        <div className="mt-4 text-meta text-ink-muted">
           {copy.showing(visibleHerd.length, countText(herdSummary.totalAnimals))}
         </div>
       </div>
@@ -904,7 +904,7 @@ export default function HerdRegistry() {
         <form className="space-y-4" onSubmit={handleAddCow}>
           {/* ID Field */}
           <div>
-            <label className="block text-xs font-bold uppercase text-ink-muted mb-1">
+            <label className="block text-field-label text-ink-muted mb-1">
               {form.earTag}
             </label>
             <input
@@ -921,7 +921,7 @@ export default function HerdRegistry() {
               aria-describedby={formErrors.tagNumber ? 'tag-number-error' : undefined}
             />
             {formErrors.tagNumber && (
-              <p id="tag-number-error" className="mt-1 text-xs text-rose-600 flex items-center gap-1">
+              <p id="tag-number-error" className="mt-1 text-meta text-rose-600 flex items-center gap-1">
                 <AlertCircle size={12} aria-hidden="true" /> {formErrors.tagNumber}
               </p>
             )}
@@ -929,7 +929,7 @@ export default function HerdRegistry() {
 
           {/* Name Field */}
           <div>
-            <label className="block text-xs font-bold uppercase text-ink-muted mb-1">{form.name}</label>
+            <label className="block text-field-label text-ink-muted mb-1">{form.name}</label>
             <input
               type="text"
               className="input-machined w-full"
@@ -942,7 +942,7 @@ export default function HerdRegistry() {
 
           {/* Breed Field */}
           <div>
-            <label className="block text-xs font-bold uppercase text-ink-muted mb-1">
+            <label className="block text-field-label text-ink-muted mb-1">
               {form.breed}
             </label>
             <input
@@ -957,7 +957,7 @@ export default function HerdRegistry() {
 
           {/* DOB Field */}
           <div>
-            <label className="block text-xs font-bold uppercase text-ink-muted mb-1">{form.dateOfBirth}</label>
+            <label className="block text-field-label text-ink-muted mb-1">{form.dateOfBirth}</label>
             <input
               type="date"
               className={`input-machined w-full ${formErrors.dateOfBirth ? 'border-rose-300 bg-rose-50' : ''}`}
@@ -971,7 +971,7 @@ export default function HerdRegistry() {
               aria-describedby={formErrors.dateOfBirth ? 'date-of-birth-error' : undefined}
             />
             {formErrors.dateOfBirth && (
-              <p id="date-of-birth-error" className="mt-1 text-xs text-rose-600 flex items-center gap-1">
+              <p id="date-of-birth-error" className="mt-1 text-meta text-rose-600 flex items-center gap-1">
                 <AlertCircle size={12} aria-hidden="true" /> {formErrors.dateOfBirth}
               </p>
             )}
@@ -979,7 +979,7 @@ export default function HerdRegistry() {
 
           {/* NEW FIELD: Current Status */}
           <div>
-            <label className="block text-xs font-bold uppercase text-ink-muted mb-1">{form.status}</label>
+            <label className="block text-field-label text-ink-muted mb-1">{form.status}</label>
             <select
               className="input-machined w-full"
               value={newCow.current_status}
@@ -996,7 +996,7 @@ export default function HerdRegistry() {
 
           {/* NEW FIELD: Sire Name */}
           <div>
-            <label className="block text-xs font-bold uppercase text-ink-muted mb-1">{form.sire}</label>
+            <label className="block text-field-label text-ink-muted mb-1">{form.sire}</label>
             <input
               type="text"
               className="input-machined w-full"
@@ -1009,10 +1009,10 @@ export default function HerdRegistry() {
 
           {/* NEW FIELD: Dam (Mother) */}
           <div>
-            <label className="block text-xs font-bold uppercase text-ink-muted mb-1">{form.dam}</label>
-            {herdOptionsFailed && <p role="status" className="mb-1 text-xs text-ink-muted">{form.damLoadFailed}</p>}
+            <label className="block text-field-label text-ink-muted mb-1">{form.dam}</label>
+            {herdOptionsFailed && <p role="status" className="mb-1 text-meta text-ink-muted">{form.damLoadFailed}</p>}
             {loadingHerdOptions ? (
-              <p className="text-sm text-ink-muted">{form.damLoading}</p>
+              <p className="text-body text-ink-muted">{form.damLoading}</p>
             ) : (
               <select
                 className="input-machined w-full"
@@ -1051,7 +1051,7 @@ export default function HerdRegistry() {
               className="w-4 h-4 cursor-pointer"
               aria-label={form.hasCalved}
             />
-            <label htmlFor="hasCalved" className="text-sm font-semibold text-ink-strong cursor-pointer">
+            <label htmlFor="hasCalved" className="text-field-label text-ink-strong cursor-pointer">
               {form.hasCalved}
             </label>
           </div>
@@ -1092,11 +1092,11 @@ export default function HerdRegistry() {
                   src={editingCow?.photoUrl}
                   alt={form.photoAlt(editingCow?.name)}
                   size={80}
-                  fallback={<span className="text-xs font-semibold text-ink-muted">No photo</span>}
+                  fallback={<span className="text-meta text-ink-muted">No photo</span>}
                 />
               </div>
               <div className="min-w-0 flex-1">
-                <label className="mb-1 block text-xs font-bold uppercase text-ink-muted" htmlFor="edit-animal-photo">
+                <label className="mb-1 block text-field-label text-ink-muted" htmlFor="edit-animal-photo">
                   {form.photo}
                 </label>
                 <input
@@ -1106,9 +1106,9 @@ export default function HerdRegistry() {
                   accept={ANIMAL_PHOTO_ACCEPT}
                   onChange={handlePhotoSelection}
                   disabled={isPhotoSaving || isPhotoPreparing}
-                  className="block w-full text-xs text-ink-muted file:mr-3 file:rounded-md file:border-0 file:bg-brand/10 file:px-3 file:py-2 file:font-bold file:text-brand hover:file:bg-brand/15"
+                  className="block w-full text-control text-ink-muted file:mr-3 file:rounded-md file:border-0 file:bg-brand/10 file:px-3 file:py-2 file:text-control file:text-brand hover:file:bg-brand/15"
                 />
-                <p className="mt-1 truncate text-xs text-ink-muted" aria-live="polite">
+                <p className="mt-1 truncate text-meta text-ink-muted" aria-live="polite">
                   {isPhotoPreparing
                     ? form.photoShrinking
                     : editPhotoFile
@@ -1144,7 +1144,7 @@ export default function HerdRegistry() {
           </div>
 
           <div>
-            <label className="block text-xs font-bold uppercase text-ink-muted mb-1">
+            <label className="block text-field-label text-ink-muted mb-1">
               {form.earTag}
             </label>
             <input
@@ -1161,14 +1161,14 @@ export default function HerdRegistry() {
               aria-describedby={editFormErrors.tagNumber ? 'edit-tag-number-error' : undefined}
             />
             {editFormErrors.tagNumber && (
-              <p id="edit-tag-number-error" className="mt-1 text-xs text-rose-600 flex items-center gap-1">
+              <p id="edit-tag-number-error" className="mt-1 text-meta text-rose-600 flex items-center gap-1">
                 <AlertCircle size={12} aria-hidden="true" /> {editFormErrors.tagNumber}
               </p>
             )}
           </div>
 
           <div>
-            <label className="block text-xs font-bold uppercase text-ink-muted mb-1">{form.name}</label>
+            <label className="block text-field-label text-ink-muted mb-1">{form.name}</label>
             <input
               type="text"
               className="input-machined w-full"
@@ -1180,7 +1180,7 @@ export default function HerdRegistry() {
           </div>
 
           <div>
-            <label className="block text-xs font-bold uppercase text-ink-muted mb-1">
+            <label className="block text-field-label text-ink-muted mb-1">
               {form.breed}
             </label>
             <input
@@ -1194,7 +1194,7 @@ export default function HerdRegistry() {
           </div>
 
           <div>
-            <label className="block text-xs font-bold uppercase text-ink-muted mb-1">{form.dateOfBirth}</label>
+            <label className="block text-field-label text-ink-muted mb-1">{form.dateOfBirth}</label>
             <input
               type="date"
               className={`input-machined w-full ${editFormErrors.dateOfBirth ? 'border-rose-300 bg-rose-50' : ''}`}
@@ -1208,7 +1208,7 @@ export default function HerdRegistry() {
               aria-describedby={editFormErrors.dateOfBirth ? 'edit-date-of-birth-error' : undefined}
             />
             {editFormErrors.dateOfBirth && (
-              <p id="edit-date-of-birth-error" className="mt-1 text-xs text-rose-600 flex items-center gap-1">
+              <p id="edit-date-of-birth-error" className="mt-1 text-meta text-rose-600 flex items-center gap-1">
                 <AlertCircle size={12} aria-hidden="true" /> {editFormErrors.dateOfBirth}
               </p>
             )}
@@ -1216,7 +1216,7 @@ export default function HerdRegistry() {
 
           {/* NEW FIELD: Current Status */}
           <div>
-            <label className="block text-xs font-bold uppercase text-ink-muted mb-1">{form.status}</label>
+            <label className="block text-field-label text-ink-muted mb-1">{form.status}</label>
             <select
               className="input-machined w-full"
               value={editCow.current_status}
@@ -1232,7 +1232,7 @@ export default function HerdRegistry() {
           </div>
 
           <div>
-            <label className="block text-xs font-bold uppercase text-ink-muted mb-1">{form.birthWeight}</label>
+            <label className="block text-field-label text-ink-muted mb-1">{form.birthWeight}</label>
             <input
               type="number"
               min="0"
@@ -1247,7 +1247,7 @@ export default function HerdRegistry() {
 
           {/* NEW FIELD: Sire Name */}
           <div>
-            <label className="block text-xs font-bold uppercase text-ink-muted mb-1">{form.sire}</label>
+            <label className="block text-field-label text-ink-muted mb-1">{form.sire}</label>
             <input
               type="text"
               className="input-machined w-full"
@@ -1260,10 +1260,10 @@ export default function HerdRegistry() {
 
           {/* NEW FIELD: Dam (Mother) */}
           <div>
-            <label className="block text-xs font-bold uppercase text-ink-muted mb-1">{form.dam}</label>
-            {herdOptionsFailed && <p role="status" className="mb-1 text-xs text-ink-muted">{form.damLoadFailed}</p>}
+            <label className="block text-field-label text-ink-muted mb-1">{form.dam}</label>
+            {herdOptionsFailed && <p role="status" className="mb-1 text-meta text-ink-muted">{form.damLoadFailed}</p>}
             {loadingHerdOptions ? (
-              <p className="text-sm text-ink-muted">{form.damLoading}</p>
+              <p className="text-body text-ink-muted">{form.damLoading}</p>
             ) : (
               <select
                 className="input-machined w-full"

@@ -93,7 +93,7 @@ function groupHistoryByMonth(history) {
 
 function HistoryStatusBadge({ status }) {
   return (
-    <span className={`inline-flex rounded-full border px-2 py-1 text-[10px] font-black uppercase tracking-wider ${getStatusTone(status)}`}>
+    <span className={`inline-flex rounded-full border px-2 py-1 text-badge ${getStatusTone(status)}`}>
       {outcomeLabel(status)}
     </span>
   );
@@ -107,19 +107,19 @@ function BreedingHeader({ metrics, onLogService, onRecordHeat }) {
   return (
     <div className="flex flex-col gap-6 border-b border-ink/10 pb-6 md:flex-row md:items-end md:justify-between">
       <div>
-        <h2 className="m-0 font-sans text-3xl font-bold tracking-tight text-brand mb-4">
+        <h1 className="m-0 text-page-title text-brand mb-4">
           {copy.titleStart} <span className="text-ink-muted">{copy.titleEnd}</span>
-        </h2>
+        </h1>
 
         {/* Compact KPI Chips */}
         <div className="flex flex-wrap items-center gap-3">
-          <div className="flex items-center rounded-md bg-danger/10 px-3 py-1.5 text-xs font-bold text-danger border border-danger/20">
+          <div className="flex items-center rounded-md bg-danger/10 px-3 py-1.5 text-meta text-danger border border-danger/20">
             {copy.onHeat(metrics.onHeat)}
           </div>
-          <div className="flex items-center rounded-md bg-surface-raised px-3 py-1.5 text-xs font-bold text-ink-strong border border-ink/10">
+          <div className="flex items-center rounded-md bg-surface-raised px-3 py-1.5 text-meta text-ink-strong border border-ink/10">
             {copy.pendingChecks(metrics.pendingTotal, metrics.pendingDueNow)}
           </div>
-          <div className="flex items-center rounded-md bg-brand/5 px-3 py-1.5 text-xs font-bold text-brand border border-brand/10">
+          <div className="flex items-center rounded-md bg-brand/5 px-3 py-1.5 text-meta text-brand border border-brand/10">
             {copy.straws(metrics.totalStraws ?? '—')}
           </div>
         </div>
@@ -127,13 +127,13 @@ function BreedingHeader({ metrics, onLogService, onRecordHeat }) {
 
       {/* Fixed Primary Action Button */}
       <div className="flex flex-wrap gap-2">
-        <button onClick={onRecordHeat} className="btn-secondary flex items-center text-sm">
+        <button onClick={onRecordHeat} className="btn-secondary flex items-center text-control">
 
   {copy.recordHeat}
         </button>
         <button
           onClick={onLogService}
-          className="btn-command flex items-center text-sm bg-brand text-surface  hover:bg-brand-dark transition-colors"
+          className="btn-command flex items-center text-control bg-brand text-surface hover:bg-brand-dark transition-colors"
         >
 
   {copy.logService}
@@ -147,7 +147,7 @@ function SimpleModalSection({ title, children }) {
   return (
     <div className="space-y-4">
       <div className="border-b border-ink/10 pb-3">
-        <h4 className="text-sm font-bold uppercase tracking-widest text-brand">{title}</h4>
+        <h3 className="text-section-title text-brand">{title}</h3>
       </div>
       {children}
     </div>
@@ -163,20 +163,20 @@ function HeatAlerts({ alerts, onLogService }) {
 
   return (
     <div className="card-machined border-danger/20 bg-danger/5 p-6 ">
-      <h3 className="mb-4 text-sm font-bold uppercase tracking-wider text-danger">
+      <h2 className="mb-4 text-section-title text-danger">
 
   {copy.heatAlerts}
-      </h3>
+      </h2>
       <div className="space-y-3">
         {alerts.map((alert) => (
           <div key={alert.id} className="flex items-center justify-between rounded-lg bg-surface p-4  border border-danger/10">
             <div>
-              <h4 className="font-black text-brand text-lg">{formatCowIdentity(alert)}</h4>
-              <p className="text-xs font-bold text-danger mt-1">{copy.heatObserved(breedingCopy.intensities[alert.intensity] ?? alert.intensity)}</p>
-              <p className="mt-1 text-xs text-ink-muted">{copy.nextWindow(alert.nextWindowStart, alert.nextWindowEnd)}</p>
+              <h3 className="text-section-title text-brand">{formatCowIdentity(alert)}</h3>
+              <p className="text-meta text-danger mt-1">{copy.heatObserved(breedingCopy.intensities[alert.intensity] ?? alert.intensity)}</p>
+              <p className="mt-1 text-meta text-ink-muted">{copy.nextWindow(alert.nextWindowStart, alert.nextWindowEnd)}</p>
             </div>
             <div className="text-right">
-              <button type="button" onClick={() => onLogService(alert)} className="btn-command px-3 py-2 text-xs">
+              <button type="button" onClick={() => onLogService(alert)} className="btn-command px-3 py-2 text-control">
 
   {copy.logAi}
               </button>
@@ -196,12 +196,12 @@ function VetQueueItem({ log, onOutcome, onEdit, isUpdating }) {
   const isReady = log.daysPostAI >= 45;
 
   return (
-    <div className={`flex flex-col gap-4 rounded-lg border p-4 transition-colors md:flex-row md:items-center md:justify-between ${
+    <div className={`flex flex-col gap-4 rounded-lg border p-4 transition-colors ${
       isReady ? 'border-brand/20 bg-surface' : 'border-ink/5 bg-surface/50 opacity-80'
     }`}>
       <div>
-        <h4 className={`font-bold text-base ${isReady ? 'text-brand' : 'text-ink-strong'}`}>{formatCowLabel(log)}</h4>
-        <div className="mt-1 flex gap-3 font-mono text-xs text-ink-muted">
+        <h3 className={`text-section-title ${isReady ? 'text-brand' : 'text-ink-strong'}`}>{formatCowLabel(log)}</h3>
+        <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-meta text-ink-muted tabular-nums [&>span]:whitespace-nowrap">
           <span>{copy.served(log.aiDate || '--')}</span>
           <span aria-hidden="true">•</span>
           <span>{copy.bull(log.sireCode || '--')}</span>
@@ -218,16 +218,16 @@ function VetQueueItem({ log, onOutcome, onEdit, isUpdating }) {
             </>
           )}
           <span aria-hidden="true">•</span>
-          <span className={`rounded-full border px-2 py-0.5 font-sans text-[10px] font-bold uppercase tracking-wide ${getSemenSourceTone(log.semenSource)}`}>
+          <span className={`rounded-full border px-2 py-0.5 text-badge ${getSemenSourceTone(log.semenSource)}`}>
             {formatSemenSource(log.semenSource)}
           </span>
         </div>
       </div>
 
-      <div className="flex items-center gap-4 md:gap-6">
-        <div className="text-right">
-          <span className="block text-[10px] font-bold uppercase tracking-wider text-ink-muted">{copy.daysSinceAi}</span>
-          <span className={`text-lg font-black ${isReady ? 'text-brand' : 'text-ink-muted'}`}>
+      <div className="flex flex-wrap items-center gap-3 md:gap-4">
+        <div>
+          <span className="block text-label text-ink-muted">{copy.daysSinceAi}</span>
+          <span className={`text-body-strong ${isReady ? 'text-brand' : 'text-ink-muted'}`}>
             {log.daysPostAI}
           </span>
         </div>
@@ -237,27 +237,27 @@ function VetQueueItem({ log, onOutcome, onEdit, isUpdating }) {
             <button
               onClick={() => onOutcome(log.id, 'Open')}
               disabled={isUpdating}
-              className="btn-danger gap-1 px-3 py-2 text-xs"
+              className="btn-danger gap-1 whitespace-nowrap px-3 py-2 text-control"
             >
               {isUpdating ? copy.saving : copy.markOpen}
             </button>
             <button
               onClick={() => onOutcome(log.id, 'Pregnant')}
               disabled={isUpdating}
-              className="btn-command gap-1 px-3 py-2 text-xs"
+              className="btn-command gap-1 whitespace-nowrap px-3 py-2 text-control"
             >
               {isUpdating ? copy.saving : copy.confirmPregnant}
             </button>
           </div>
         ) : (
-          <div className="rounded-md border border-ink/10 bg-surface-raised px-4 py-2 text-xs font-bold text-ink-muted">
+          <div className="rounded-md border border-ink/10 bg-surface-raised px-4 py-2 text-meta text-ink-muted">
             {copy.waitDays(45 - log.daysPostAI)}
           </div>
         )}
         <button
           type="button"
           onClick={() => onEdit(log)}
-          className="btn-secondary inline-flex items-center gap-1 px-3 py-2 text-xs"
+          className="btn-secondary ml-auto inline-flex items-center gap-1 whitespace-nowrap px-3 py-2 text-control"
           aria-label={copy.editFor(formatCowLabel(log))}
         >
 
@@ -276,10 +276,10 @@ function SemenInventory({ stock, loadState, error, onRetry, onAddInventory, onRe
   return (
     <div className="card-machined bg-surface p-6 h-full border border-ink/5 ">
       <div className="flex items-center justify-between mb-6">
-        <h3 className="text-base font-bold text-brand">
+        <h2 className="text-section-title text-brand">
 
   {copy.title}
-        </h3>
+        </h2>
       </div>
 
       <div className="space-y-3">
@@ -290,7 +290,7 @@ function SemenInventory({ stock, loadState, error, onRetry, onAddInventory, onRe
           </div>
         )}
         {hasRowsToShow(loadState) && stock.length === 0 && (
-          <div className="flex flex-col items-start gap-3 rounded-lg border border-dashed border-ink/10 bg-surface-raised p-4 text-sm text-ink-muted">
+          <div className="flex flex-col items-start gap-3 rounded-lg border border-dashed border-ink/10 bg-surface-raised p-4 text-body text-ink-muted">
             <p>{copy.empty}</p>
             <button type="button" onClick={onAddInventory} className="btn-command">{copy.add}</button>
           </div>
@@ -301,14 +301,14 @@ function SemenInventory({ stock, loadState, error, onRetry, onAddInventory, onRe
           return (
             <div key={bull.id} className={`rounded-lg border p-4 ${isLowStock ? 'border-orange-500/30 bg-orange-500/5' : 'border-ink/5 bg-surface-raised'}`}>
               <div className="mb-1 flex items-start justify-between">
-                <h4 className="text-sm font-bold text-ink-strong">{bull.name}</h4>
-                <span className={`inline-block rounded px-2 py-0.5 text-[10px] font-bold ${isLowStock ? 'bg-orange-500/20 text-orange-700' : 'bg-brand/10 text-brand'}`}>
+                <h3 className="text-section-title text-ink-strong">{bull.name}</h3>
+                <span className={`inline-block rounded px-2 py-0.5 text-meta ${isLowStock ? 'bg-orange-500/20 text-orange-700' : 'bg-brand/10 text-brand'}`}>
                   {copy.left(bull.strawsLeft)} {isLowStock && copy.reorder}
                 </span>
               </div>
-              <div className="mb-3 font-mono text-[10px] text-ink-muted">{copy.code(bull.code)}</div>
+              <div className="mb-3 text-meta text-ink-muted tabular-nums">{copy.code(bull.code)}</div>
 
-              <div className="text-xs font-semibold text-ink-strong">
+              <div className="text-meta text-ink-strong">
 
   {copy.bestFor(bull.improves)}
               </div>
@@ -317,14 +317,14 @@ function SemenInventory({ stock, loadState, error, onRetry, onAddInventory, onRe
                 <button
                   type="button"
                   onClick={() => onRestockInventory(bull)}
-                  className="rounded-md border border-brand/20 bg-brand/5 px-3 py-1.5 text-[11px] font-bold text-brand transition-colors hover:bg-brand/10"
+                  className="rounded-md border border-brand/20 bg-brand/5 px-3 py-1.5 text-control text-brand transition-colors hover:bg-brand/10"
                 >
                   {copy.restock}
                 </button>
                 <button
                   type="button"
                   onClick={() => onDeleteInventory(bull)}
-                  className="inline-flex items-center gap-1 rounded-md border border-rose-200 bg-rose-50 px-2.5 py-1.5 text-[11px] font-bold text-rose-700 transition-colors hover:bg-rose-100"
+                  className="inline-flex items-center gap-1 rounded-md border border-rose-200 bg-rose-50 px-2.5 py-1.5 text-control text-rose-700 transition-colors hover:bg-rose-100"
                 >
 
   {copy.delete}
@@ -335,7 +335,7 @@ function SemenInventory({ stock, loadState, error, onRetry, onAddInventory, onRe
         })}
       </div>
 
-      <button onClick={onAddInventory} className="mt-6 flex w-full items-center justify-center rounded-lg border-2 border-dashed border-ink/10 bg-surface-raised py-3 text-xs font-bold text-ink-muted transition-colors hover:border-brand/30 hover:text-brand">
+      <button onClick={onAddInventory} className="mt-6 flex w-full items-center justify-center rounded-lg border-2 border-dashed border-ink/10 bg-surface-raised py-3 text-control text-ink-muted transition-colors hover:border-brand/30 hover:text-brand">
 
   {copy.addNew}
       </button>
@@ -626,10 +626,10 @@ export default function BreedingHub() {
 
           <div className="card-machined bg-surface p-6 border border-ink/5 ">
             <div className="mb-6 flex items-center justify-between border-b border-ink/10 pb-4">
-              <h3 className="text-base font-bold text-brand">
+              <h2 className="text-section-title text-brand">
 
   {copy.pendingTitle}
-              </h3>
+              </h2>
             </div>
 
             <div className="space-y-3">
@@ -649,24 +649,24 @@ export default function BreedingHub() {
                 />
               ))}
               {hasRowsToShow(logsLoadState) && vetQueue.length === 0 && (
-                <div className="py-8 text-center text-sm font-medium text-ink-muted">
+                <div className="py-8 text-center text-body text-ink-muted">
                   {copy.allChecked}
                 </div>
               )}
             </div>
 
             {/* Progressive Disclosure Scaffold */}
-            <button onClick={() => setIsHistoryOpen(true)} className="mt-4 flex w-full items-center justify-center gap-1 py-2 text-xs font-bold text-brand hover:underline">
+            <button onClick={() => setIsHistoryOpen(true)} className="mt-4 flex w-full items-center justify-center gap-1 py-2 text-control text-brand hover:underline">
               {copy.viewHistory} <ChevronRight size={14} aria-hidden="true" />
             </button>
           </div>
 
           {/* BOTTOM: TRENDS / ROI */}
           <div className="card-machined bg-surface-raised p-6 border border-brand/10">
-            <h3 className="mb-6 text-xs font-bold uppercase tracking-widest text-ink-muted">
+            <h2 className="mb-6 text-section-title text-ink-muted">
 
   {copy.geneticTitle}
-            </h3>
+            </h2>
 
             {geneticProgressLoadState === 'loading' ? (
               <div aria-busy="true">
@@ -679,8 +679,8 @@ export default function BreedingHub() {
               <ResponsiveContainer width="100%" height={300}>
                 <LineChart data={geneticProgressData} margin={{ top: 5, right: 20, left: -10, bottom: 5 }}>
                   <CartesianGrid strokeDasharray="3 3" strokeOpacity={0.3} />
-                  <XAxis dataKey="year" stroke="#64748b" fontSize={12} />
-                  <YAxis stroke="#64748b" fontSize={12} label={{ value: copy.yieldAxis, angle: -90, position: 'insideLeft', offset: 10, style: { textAnchor: 'middle', fill: '#64748b' } }} />
+                  <XAxis dataKey="year" stroke="#64748b" />
+                  <YAxis stroke="#64748b" label={{ value: copy.yieldAxis, angle: -90, position: 'insideLeft', offset: 10, style: { textAnchor: 'middle', fill: '#64748b' } }} />
                   <Tooltip
                     contentStyle={{
                       backgroundColor: 'rgba(255, 255, 255, 0.8)',
@@ -689,13 +689,13 @@ export default function BreedingHub() {
                       borderRadius: '0.5rem',
                     }}
                   />
-                  <Legend wrapperStyle={{ fontSize: '12px' }} />
+                  <Legend />
                   <Line type="monotone" dataKey="daughters_yield" name={copy.daughters} stroke="#10b981" strokeWidth={2} dot={{ r: 4 }} activeDot={{ r: 6 }} />
                   <Line type="monotone" dataKey="mothers_yield" name={copy.mothers} stroke="#38BDF8" strokeWidth={2} dot={{ r: 4 }} activeDot={{ r: 6 }} />
                 </LineChart>
               </ResponsiveContainer>
             ) : (
-              <div className="h-[300px] flex items-center justify-center rounded-lg border border-dashed border-ink/10 bg-surface p-6 text-sm text-ink-muted">
+              <div className="h-[300px] flex items-center justify-center rounded-lg border border-dashed border-ink/10 bg-surface p-6 text-body text-ink-muted">
                 {copy.noGeneticData}
               </div>
             )}
@@ -752,7 +752,7 @@ export default function BreedingHub() {
               setSelectedHeatObservation(null);
               setSelectedBreedingLog(null);
             }}
-            className="btn-secondary px-4 py-2 text-sm"
+            className="btn-secondary px-4 py-2 text-control"
           >
             {copy.cancel}
           </button>
@@ -772,22 +772,22 @@ export default function BreedingHub() {
           <SimpleModalSection title={copy.allChecks}>
             <div className="flex flex-col gap-3 border-b border-ink/10 pb-4 md:flex-row md:items-center md:justify-between">
               <div>
-                <div className="text-[10px] font-bold uppercase tracking-widest text-ink-muted">
+                <div className="text-label text-ink-muted">
 
   {copy.searchAndFilters}
                 </div>
-                <p className="mt-1 text-sm leading-6 text-ink-muted">{copy.historyHint}</p>
+                <p className="mt-1 text-body text-ink-muted">{copy.historyHint}</p>
               </div>
 
               <div className="flex items-center gap-2">
-                <span className="rounded-full border border-ink/10 bg-surface-warm/60 px-3 py-1 text-[10px] font-bold uppercase tracking-widest text-ink-muted">
+                <span className="rounded-full border border-ink/10 bg-surface-warm/60 px-3 py-1 text-badge text-ink-muted">
                   {copy.activeFilters(activeHistoryControlCount)}
                 </span>
                 <button
                   type="button"
                   onClick={() => setHistoryControlsOpen((current) => !current)}
                   aria-expanded={historyControlsOpen}
-                  className="inline-flex items-center gap-1.5 rounded-lg border border-ink/10 bg-surface px-3 py-1.5 text-xs font-semibold text-ink  transition-all hover:border-brand/20 hover:bg-brand/5 hover:text-brand"
+                  className="inline-flex items-center gap-1.5 rounded-lg border border-ink/10 bg-surface px-3 py-1.5 text-control text-ink transition-all hover:border-brand/20 hover:bg-brand/5 hover:text-brand"
                 >
                   {historyControlsOpen ? <ChevronUp size={12} aria-hidden="true" /> : <ChevronDown size={12} aria-hidden="true" />}
                   {historyControlsOpen ? copy.hideFilters : copy.showFilters}
@@ -805,7 +805,7 @@ export default function BreedingHub() {
                       value={historySearch}
                       onChange={(event) => setHistorySearch(event.target.value)}
                       placeholder={copy.historySearch}
-                      className="w-full bg-transparent text-sm text-ink-strong outline-none placeholder:text-ink-muted"
+                      className="w-full bg-transparent text-control text-ink-strong outline-none placeholder:text-ink-muted"
                     />
                   </div>
 
@@ -816,7 +816,7 @@ export default function BreedingHub() {
                         setHistoryFilter('All');
                         setHistorySearch('');
                       }}
-                      className={`rounded-lg border px-3 py-2 text-xs font-bold transition-colors ${
+                      className={`rounded-lg border px-3 py-2 text-control transition-colors ${
                         hasActiveHistoryFilters
                           ? 'border-brand/20 bg-brand/5 text-brand hover:bg-brand/10'
                           : 'border-ink/10 bg-surface-raised text-ink-muted'
@@ -839,7 +839,7 @@ export default function BreedingHub() {
                       key={value}
                       type="button"
                       onClick={() => setHistoryFilter(value)}
-                      className={`rounded-full border px-3 py-1.5 text-xs font-bold transition-colors ${
+                      className={`rounded-full border px-3 py-1.5 text-control transition-colors ${
                         historyFilter === value
                           ? 'border-brand bg-brand text-surface'
                           : 'border-ink/10 bg-surface-raised text-ink-muted hover:border-brand/20 hover:text-brand'
@@ -854,16 +854,16 @@ export default function BreedingHub() {
 
             <div className="max-h-[420px] overflow-y-auto pr-1">
               {filteredHistory.length === 0 && (
-                <div className="rounded-lg border border-dashed border-ink/10 bg-surface/50 p-6 text-center text-sm text-ink-muted">
+                <div className="rounded-lg border border-dashed border-ink/10 bg-surface/50 p-6 text-center text-body text-ink-muted">
                   {copy.noHistoryMatches}
                 </div>
               )}
 
               {Array.from(groupedHistory.entries()).map(([monthLabel, entries]) => (
                 <div key={monthLabel} className="mb-4 space-y-2 last:mb-0">
-                  <div className="sticky top-0 z-10 flex items-center justify-between rounded-md border border-ink/10 bg-surface px-3 py-2 text-xs font-black uppercase tracking-widest text-brand ">
+                  <div className="sticky top-0 z-10 flex items-center justify-between rounded-md border border-ink/10 bg-surface px-3 py-2 text-label text-brand ">
                     <span>{monthLabel}</span>
-                    <span className="rounded-full bg-brand/5 px-2 py-0.5 text-[10px] font-black text-brand">
+                    <span className="rounded-full bg-brand/5 px-2 py-0.5 text-badge text-brand">
                       {copy.recordCount(entries.length)}
                     </span>
                   </div>
@@ -874,19 +874,19 @@ export default function BreedingHub() {
                       <li key={entry.id} className="min-w-0 rounded-lg border border-ink/10 bg-surface-raised p-3">
                         <div className="flex min-w-0 items-start justify-between gap-3">
                           <div className="min-w-0">
-                            <p className="break-words font-bold text-ink-strong">{formatCowLabel(entry)}</p>
-                            {historyNotes(entry) && <p className="mt-1 break-words text-[11px] text-ink-muted">{historyNotes(entry)}</p>}
+                            <p className="break-words text-body-strong text-ink-strong">{formatCowLabel(entry)}</p>
+                            {historyNotes(entry) && <p className="mt-1 break-words text-meta text-ink-muted">{historyNotes(entry)}</p>}
                           </div>
                           <HistoryStatusBadge status={entry.status} />
                         </div>
-                        <dl className="mt-3 grid grid-cols-2 gap-x-3 gap-y-2 border-t border-ink/10 pt-2 text-xs">
-                          <div className="min-w-0"><dt className="text-ink-muted">{copy.columns.aiDate}</dt><dd className="font-medium text-ink">{entry.aiDate || '—'}</dd></div>
-                          <div className="min-w-0"><dt className="text-ink-muted">{copy.columns.bull}</dt><dd className="break-words font-medium text-ink">{entry.sireCode || '—'}</dd></div>
-                          <div className="min-w-0"><dt className="text-ink-muted">{copy.columns.expectedCalving}</dt><dd className="font-medium text-ink">{entry.expectedCalvingDate || '—'}</dd></div>
+                        <dl className="mt-3 grid grid-cols-2 gap-x-3 gap-y-2 border-t border-ink/10 pt-2 text-meta">
+                          <div className="min-w-0"><dt className="text-ink-muted">{copy.columns.aiDate}</dt><dd className="text-ink">{entry.aiDate || '—'}</dd></div>
+                          <div className="min-w-0"><dt className="text-ink-muted">{copy.columns.bull}</dt><dd className="break-words text-ink">{entry.sireCode || '—'}</dd></div>
+                          <div className="min-w-0"><dt className="text-ink-muted">{copy.columns.expectedCalving}</dt><dd className="text-ink">{entry.expectedCalvingDate || '—'}</dd></div>
                           <div className="col-span-2 min-w-0">
                             <dt className="sr-only">{copy.columns.source}</dt>
                             <dd>
-                              <span className={`inline-flex rounded-full border px-2 py-1 text-[10px] font-black uppercase tracking-wider ${getSemenSourceTone(entry.semenSource)}`}>
+                              <span className={`inline-flex rounded-full border px-2 py-1 text-badge ${getSemenSourceTone(entry.semenSource)}`}>
                                 {formatSemenSource(entry.semenSource)}
                               </span>
                             </dd>
@@ -900,26 +900,26 @@ export default function BreedingHub() {
                     <table className="w-full border-collapse text-left">
                       <thead className="bg-surface/70">
                         <tr>
-                          <th className="px-2 py-1.5 text-[9px] font-black uppercase tracking-wider text-ink-muted">{copy.columns.cow}</th>
-                          <th className="px-2 py-1.5 text-[9px] font-black uppercase tracking-wider text-ink-muted">{copy.columns.aiDate}</th>
-                          <th className="px-2 py-1.5 text-[9px] font-black uppercase tracking-wider text-ink-muted">{copy.columns.bull}</th>
-                          <th className="px-2 py-1.5 text-[9px] font-black uppercase tracking-wider text-ink-muted">{copy.columns.expectedCalving}</th>
-                          <th className="px-2 py-1.5 text-[9px] font-black uppercase tracking-wider text-ink-muted">{copy.columns.source}</th>
-                          <th className="px-2 py-1.5 text-[9px] font-black uppercase tracking-wider text-ink-muted">{copy.columns.status}</th>
+                          <th className="px-2 py-1.5 text-label text-ink-muted">{copy.columns.cow}</th>
+                          <th className="px-2 py-1.5 text-label text-ink-muted">{copy.columns.aiDate}</th>
+                          <th className="px-2 py-1.5 text-label text-ink-muted">{copy.columns.bull}</th>
+                          <th className="px-2 py-1.5 text-label text-ink-muted">{copy.columns.expectedCalving}</th>
+                          <th className="px-2 py-1.5 text-label text-ink-muted">{copy.columns.source}</th>
+                          <th className="px-2 py-1.5 text-label text-ink-muted">{copy.columns.status}</th>
                         </tr>
                       </thead>
                       <tbody>
                         {entries.map((entry) => (
                           <tr key={entry.id} className="border-t border-ink/5 align-top hover:bg-surface/50">
                             <td className="px-2 py-2">
-                              <div className="font-bold text-ink-strong">{formatCowLabel(entry)}</div>
-                              {historyNotes(entry) && <div className="mt-1 text-[11px] text-ink-muted">{historyNotes(entry)}</div>}
+                              <div className="text-body-strong text-ink-strong">{formatCowLabel(entry)}</div>
+                              {historyNotes(entry) && <div className="mt-1 text-meta text-ink-muted">{historyNotes(entry)}</div>}
                             </td>
-                            <td className="px-2 py-2 text-sm text-ink-muted">{entry.aiDate || '—'}</td>
-                            <td className="px-2 py-2 text-sm text-ink-muted">{entry.sireCode || '—'}</td>
-                            <td className="px-2 py-2 text-sm text-ink-muted">{entry.expectedCalvingDate || '—'}</td>
+                            <td className="px-2 py-2 text-body text-ink-muted">{entry.aiDate || '—'}</td>
+                            <td className="px-2 py-2 text-body text-ink-muted">{entry.sireCode || '—'}</td>
+                            <td className="px-2 py-2 text-body text-ink-muted">{entry.expectedCalvingDate || '—'}</td>
                             <td className="px-2 py-2">
-                              <span className={`inline-flex rounded-full border px-2 py-1 text-[10px] font-black uppercase tracking-wider ${getSemenSourceTone(entry.semenSource)}`}>
+                              <span className={`inline-flex rounded-full border px-2 py-1 text-badge ${getSemenSourceTone(entry.semenSource)}`}>
                                 {formatSemenSource(entry.semenSource)}
                               </span>
                             </td>
@@ -936,7 +936,7 @@ export default function BreedingHub() {
             </div>
           </SimpleModalSection>
           <div className="flex justify-end pt-2">
-            <button type="button" onClick={() => setIsHistoryOpen(false)} className="btn-command px-4 py-2 text-sm">{copy.close}</button>
+            <button type="button" onClick={() => setIsHistoryOpen(false)} className="btn-command px-4 py-2 text-control">{copy.close}</button>
           </div>
         </div>
       </BaseModal>
@@ -953,7 +953,7 @@ export default function BreedingHub() {
             type="button"
             disabled={isSaving}
             onClick={() => setIsInventoryOpen(false)}
-            className="btn-secondary px-4 py-2 text-sm"
+            className="btn-secondary px-4 py-2 text-control"
           >
             {copy.cancel}
           </button>
@@ -983,7 +983,7 @@ export default function BreedingHub() {
               setIsRestockOpen(false);
               setSelectedInventoryItem(null);
             }}
-            className="btn-secondary px-4 py-2 text-sm"
+            className="btn-secondary px-4 py-2 text-control"
           >
             {copy.cancel}
           </button>

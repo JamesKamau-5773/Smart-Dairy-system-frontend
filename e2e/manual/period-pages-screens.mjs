@@ -7,7 +7,8 @@
 //   node e2e/manual/period-pages-screens.mjs before   # or: after
 //
 // Output: docs/audit/screens/<label>-<page>-<width>.png (or SCREENS_OUT_DIR)
-// Pages: SCREENS_PAGES=register,home,ledger,production-log,reports,inventory,record-milk (default: ledger,production-log,reports)
+// Pages: SCREENS_PAGES=register,home,ledger,production-log,reports,inventory,record-milk,herd,breeding,medical,milk-drops,animal,milk-history
+// (default: ledger,production-log,reports)
 import { chromium } from '@playwright/test';
 import { mkdirSync } from 'node:fs';
 
@@ -16,7 +17,9 @@ const BASE_URL = process.env.SCREENS_BASE_URL ?? 'http://localhost:4173';
 const API_ORIGIN = 'http://api.e2e.test';
 const OUT_DIR = process.env.SCREENS_OUT_DIR ?? 'docs/audit/screens';
 // 'register' is shot before signing in; 'home' is wherever registering lands.
-const ROUTES = { register: '/register', home: null, ledger: '/finance/ledger', 'production-log': '/operations/yield', reports: '/operations/reports?period=custom&start_date=2026-09-01&end_date=2026-11-16', inventory: '/operations/inventory', 'record-milk': '/operations/yield' };
+const ROUTES = { register: '/register', home: null, ledger: '/finance/ledger', 'production-log': '/operations/yield', reports: '/operations/reports?period=custom&start_date=2026-09-01&end_date=2026-11-16', inventory: '/operations/inventory', 'record-milk': '/operations/yield',
+  herd: '/operations/herd', breeding: '/operations/breeding', medical: '/operations/records', 'milk-drops': '/operations/milk-drop-reports',
+  animal: '/operations/animal/1', 'milk-history': '/operations/animal/1/milk-history' };
 // Pages shot after a click on the loaded route (a form opened over it).
 const OPEN = { 'record-milk': (page) => page.getByRole('button', { name: /Record milk/i }).first().click() };
 const PAGES = (process.env.SCREENS_PAGES ?? 'ledger,production-log,reports').split(',').map((name) => name.trim()).filter(Boolean);
@@ -186,6 +189,35 @@ const YIELD = [
   { id: 2, date: '2026-11-06', session: 'evening', milker_name: 'Wanjiru', cow_tag: 'KE-0012', cow_name: 'Neema', amount: '9.0', status: 'RECORDED', bucket: bucketOf('2026-11-06') },
 ];
 
+// ── Herd fixtures (typography phase 3) ─────────────────────────────────────────
+const COWS = [
+  { id: 1, tag_number: 'KE-0012', name: 'Neema', breed_status: 'Friesian', current_status: 'Lactating', date_of_birth: '2021-03-14', last_calved: '2026-08-02', updated_at: '2026-11-15T07:30:00Z' },
+  { id: 2, tag_number: 'KE-0046', name: 'Malaika wa Kwanza', breed_status: 'Ayrshire', current_status: 'Lactating', date_of_birth: '2020-06-01', last_calved: '2026-05-19', updated_at: '2026-11-14T18:05:00Z' },
+  { id: 3, tag_number: 'KE-0101', name: 'Zawadi', breed_status: 'Friesian', current_status: 'Dry', date_of_birth: '2019-11-23', last_calved: '2025-12-30', updated_at: '2026-11-10T09:00:00Z' },
+  { id: 4, tag_number: 'KE-0150', name: 'Baraka', breed_status: 'Jersey', current_status: 'Heifer', date_of_birth: '2024-09-09', last_calved: null, updated_at: '2026-11-01T12:00:00Z' },
+];
+const HERD = { items: COWS, meta: { total: COWS.length, pages: 1 }, summary: { total_count: 4, milking_count: 2, dry_count: 1, average_age_months: 46, latest_calved: '2026-08-02' } };
+const BREEDING_LOGS = [
+  { id: 11, cow_id: 1, cow_tag: 'KE-0012', cow_name: 'Neema', ai_date: '2026-10-01', sire_code: 'FR-2231', semen_source: 'farm_stock', status: 'Pending', expected_calving_date: '2027-07-11', days_post_ai: 47 },
+  { id: 12, cow_id: 2, cow_tag: 'KE-0046', cow_name: 'Malaika wa Kwanza', ai_date: '2026-07-20', sire_code: 'AY-0907', semen_source: 'vet_provided', status: 'Pregnant', expected_calving_date: '2027-04-29', days_post_ai: 120 },
+];
+const SEMEN = [{ id: 21, bull_name: 'Kahuho Star', sire_code: 'FR-2231', breed: 'Friesian', straws_left: 6, quantity: 6, breed_improvement: 'Milk volume' }];
+const VET_VISITS = [
+  { id: 31, cow_id: 1, cow_tag: 'KE-0012', cow_name: 'Neema', visit_date: '2026-11-12', severity: 'High', status: 'Under Treatment', signs_of_sickness: 'Swollen quarter, clots in milk', diagnosis: 'Clinical mastitis', medications: 'Intramammary antibiotic, 3 days', follow_up_date: '2026-11-15' },
+  { id: 32, cow_id: 3, cow_tag: 'KE-0101', cow_name: 'Zawadi', visit_date: '2026-10-28', severity: 'Low', status: 'Closed', signs_of_sickness: 'Lame on hind leg', diagnosis: 'Hoof overgrowth', medications: 'Hoof trimming' },
+];
+const MILK_DROPS = [{ id: 41, cow_id: 2, cow_tag: 'KE-0046', cow_name: 'Malaika wa Kwanza', date: '2026-11-14', delta_liters: -4.5, missing_milk: 4.5, status: 'OPEN' }];
+const MILK_HISTORY = {
+  animal: COWS[0],
+  sessions: [
+    { id: 51, date: '2026-11-15', session: 'Morning', liters: 9.5, milker: 'Wanjiru', status: 'Verified' },
+    { id: 52, date: '2026-11-15', session: 'Evening', liters: 7.0, milker: 'Wanjiru', status: 'Pending' },
+    { id: 53, date: '2026-11-14', session: 'Morning', liters: 9.0, milker: 'Kamau', status: 'Verified' },
+  ],
+  stats: { total_logged: 1240.5, session_count: 168, average_yield: 16.4, peak_yield: 21.0 },
+  meta: { total: 3, pages: 1 },
+};
+
 function handle(method, path, params, body) {
   if (method === 'POST' && path === '/auth/register') {
     return [201, {
@@ -204,6 +236,14 @@ function handle(method, path, params, body) {
   if (path === '/production/summary') return [200, PRODUCTION_SUMMARY];
   if (path === '/production/group-totals') return [200, PRODUCTION_GROUPS];
   if (path === '/production/yield') return [200, YIELD];
+  if (path === '/herd') return [200, HERD];
+  if (path === '/herd/1' || path === '/animals/1') return [200, COWS[0]];
+  if (path === '/animals/1/milk-history') return [200, MILK_HISTORY];
+  if (path === '/animals/1/events') return [200, { items: [{ id: 61, type: 'Health', title: 'Mastitis treatment started', description: 'Intramammary antibiotic, 3 days.', date: '2026-11-12' }, { id: 62, type: 'Breeding', title: 'AI service', description: 'Sire FR-2231.', date: '2026-10-01' }], meta: { total: 2, pages: 1 } }];
+  if (path === '/operations/breeding-logs') return [200, BREEDING_LOGS];
+  if (path === '/operations/semen-inventory') return [200, SEMEN];
+  if (path === '/clinical/vet-visits' || path === '/medical/records') return [200, VET_VISITS];
+  if (path === '/production/milk-drop-alerts') return [200, MILK_DROPS];
   return [200, []];
 }
 

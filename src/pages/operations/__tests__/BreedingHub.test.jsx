@@ -92,7 +92,7 @@ describe('BreedingHub history and pending edits', () => {
 
     fireEvent.click(await screen.findByRole('button', { name: 'Edit AI service for Malaika · COWBR001' }));
 
-    expect(screen.getByRole('dialog', { name: 'Edit AI Service' })).toBeTruthy();
+    expect(screen.getByRole('dialog', { name: 'Edit AI service' })).toBeTruthy();
     expect(screen.getByTestId('log-form-data').textContent).toContain('"id":88');
     expect(screen.getByTestId('log-form-data').textContent).toContain('"cowId":"Malaika · COWBR001"');
   });
@@ -102,7 +102,7 @@ describe('BreedingHub history and pending edits', () => {
     renderHub();
 
     expect(await screen.findByText('All inseminated cows have been checked by the vet.')).toBeTruthy();
-    fireEvent.click(screen.getAllByRole('button', { name: 'View All Historical Checks' })[0]);
+    fireEvent.click(screen.getAllByRole('button', { name: 'View all historical checks' })[0]);
     fireEvent.click(screen.getByRole('button', { name: 'Show filters' }));
     fireEvent.click(screen.getByRole('button', { name: 'Unsuccessful' }));
 
@@ -130,7 +130,7 @@ describe('BreedingHub shows the backend’s data, and says when it couldn’t lo
 
     expect(await screen.findByText('Couldn’t load semen inventory.')).toBeTruthy();
     expect(screen.queryByText(/No semen inventory records yet/)).toBeNull();
-    expect(screen.getByText(/— Straws in Tank/)).toBeTruthy();
+    expect(screen.getByText(/— straws in tank/)).toBeTruthy();
   });
 
   it('breeding records: "couldn’t load" instead of "all cows have been checked"', async () => {
@@ -157,6 +157,6 @@ describe('BreedingHub shows the backend’s data, and says when it couldn’t lo
     ]);
     renderHub();
 
-    expect(await screen.findByText(/8 Straws in Tank/)).toBeTruthy();
+    expect(await screen.findByText(/8 straws in tank/)).toBeTruthy();
   });
 });

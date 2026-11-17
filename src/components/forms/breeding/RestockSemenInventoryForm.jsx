@@ -81,21 +81,21 @@ export default function RestockSemenInventoryForm({
     <form className="space-y-4" onSubmit={handleSubmit}>
       <div className="space-y-4">
         <div className="border-b border-ink/10 pb-3">
-          <h4 className="text-sm font-bold uppercase tracking-widest text-brand">{copy.section}</h4>
+          <h3 className="text-section-title text-brand">{copy.section}</h3>
         </div>
 
         {/* Selected Item Info */}
-        <div className="rounded-lg border border-brand/10 bg-brand/5 p-3 text-sm text-ink-strong">
-          <div className="font-bold">{inventoryItem?.name || copy.selected}</div>
-          <div className="text-xs text-ink-muted">{copy.code(inventoryItem?.code || copy.noCode)}</div>
-          <div className="text-xs text-ink-muted">
+        <div className="rounded-lg border border-brand/10 bg-brand/5 p-3 text-body text-ink-strong">
+          <div className="text-body-strong">{inventoryItem?.name || copy.selected}</div>
+          <div className="text-meta text-ink-muted">{copy.code(inventoryItem?.code || copy.noCode)}</div>
+          <div className="text-meta text-ink-muted">
             {copy.current(inventoryItem?.strawsLeft ?? 0)}
           </div>
         </div>
 
         {/* Add Straws */}
         <div>
-          <label className="mb-1 block text-xs font-bold uppercase tracking-wider text-ink-muted">
+          <label className="mb-1 block text-field-label text-ink-muted">
             {copy.add}
           </label>
           <input
@@ -115,7 +115,7 @@ export default function RestockSemenInventoryForm({
             aria-invalid={!!formErrors.restockAmount}
           />
           {formErrors.restockAmount && (
-            <p className="mt-1 text-xs text-rose-600">{formErrors.restockAmount}</p>
+            <p className="mt-1 text-meta text-rose-600">{formErrors.restockAmount}</p>
           )}
         </div>
       </div>
@@ -125,7 +125,7 @@ export default function RestockSemenInventoryForm({
         <button
           type="submit"
           disabled={isSaving}
-          className="btn-command px-4 py-2 text-sm"
+          className="btn-command px-4 py-2 text-control"
         >
           {isSaving ? copy.saving : copy.submit}
         </button>
