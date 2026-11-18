@@ -1,12 +1,12 @@
 import { useQuery } from '@tanstack/react-query';
+import { Suspense, lazy } from 'react';
 import { useTenant } from '../hooks/useTenant';
+import { useDailySummary } from '../hooks/useDailySummary';
+import { TREND_RANGES, useMilkTrend } from '../hooks/useMilkTrend';
+import { useSessionDismissal } from '../hooks/useSessionDismissal';
 import { QUERY_KEYS } from '../providers/QueryProvider';
 import { productionApi } from '../lib/backendApi';
-import React, { Suspense, lazy, useMemo, useState } from 'react';
-import { subDays } from 'date-fns';
-import { buildDailyTrend, metricFromSummary } from '../lib/dashboardUtils';
-import { toLocalIsoDate } from '../lib/localDate';
-import { getListLoadState, hasRowsToShow } from '../lib/listLoadState';
+import { hasRowsToShow } from '../lib/listLoadState';
 import { ListLoadNotices } from '../components/ui/ListLoadState';
 
 // Components
@@ -14,66 +14,28 @@ const MilkTrendChart = lazy(() => import('../components/dashboard/MilkTrendChart
 import ManagerInboxWidget from '../components/dashboard/ManagerInboxWidget';
 import WelcomeChecklist from '../components/dashboard/WelcomeChecklist';
 import MilestoneBanner from '../components/dashboard/MilestoneBanner';
-import Money from '../components/ui/Money';
+import StatCard from '../components/dashboard/StatCard';
+import InlineAlert from '../components/dashboard/InlineAlert';
+import { MILK_CARDS, MONEY_CARDS, statCardProps } from '../components/dashboard/dailySummaryCards';
 import { swahiliGreeting } from '../lib/welcomeProgress';
+import { todayLocalIso } from '../lib/localDate';
 import { dashboardCopy } from '../i18n/dashboard';
 import { Skeleton } from '@/components/ui';
 import { shellCopy } from '../i18n/shell';
 
-const SummaryCard = ({ title, value, unit, loading = false }) => (
-  <div className="glass-panel p-6 flex flex-col justify-between min-h-[180px] relative overflow-hidden group">
-    <div className="flex justify-between items-start z-10">
-      <div className="space-y-1">
-        <span className="text-label text-ink-muted">
-          {title}
-        </span>
-        <div className="h-1 w-8 bg-brand rounded-full"></div>
-      </div>
-    </div>
+// Where "Record milk" goes: the same milk entry page as the herdsman's "Record milk" button.
+const RECORD_MILK_PATH = '/operations/clerk';
 
-    <div className="z-10 mt-4">
-      {loading ? (
-        <Skeleton className="h-12 w-3/5" />
-      ) : (
-        <>
-          <div className="flex min-w-0 items-baseline break-words text-stat-value text-brand">
-            {value}
-            <span className="text-body-strong ml-2 text-ink-muted">{unit}</span>
-          </div>
-        </>
-      )}
-    </div>
-  </div>
-);
+// The money region and the milk grid share one column grid (2 on phones and tablets, 4 on
+// desktop) and one padding, so their columns line up.
+const REGION = 'rounded-card border border-ink/10 bg-surface-warm/30 p-3 sm:p-4';
+const GRID = 'grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4';
+
 export default function CommandCenter() {
   const copy = dashboardCopy.summary;
   const { tenantId, farmId } = useTenant();
-  const [dateRange, setDateRange] = useState({
-    from: subDays(new Date(), 29),
-    to: new Date(),
-  });
-  const [selectedRange, setSelectedRange] = useState('30');
-
-  const summaryQuery = useQuery({
-    queryKey: QUERY_KEYS.YIELD_SUMMARY(tenantId, farmId),
-    queryFn: () => productionApi.summary(),
-    enabled: !!farmId,
-  });
-
-  // The chart's daily litres come from the backend's daily totals for the chosen range (not
-  // every milk record downloaded and added up). "All" asks for every recorded day.
-  const trendRange = selectedRange === 'all'
-    ? null
-    : { from: toLocalIsoDate(dateRange.from), to: toLocalIsoDate(dateRange.to) };
-  const trendParams = trendRange
-    ? { levels: 'day', date_from: trendRange.from, date_to: trendRange.to }
-    : { levels: 'day' };
-  const trendQuery = useQuery({
-    queryKey: [...QUERY_KEYS.PRODUCTION_GROUP_TOTALS(tenantId, farmId), 'dashboard-trend', trendParams],
-    queryFn: () => productionApi.getGroupTotals(trendParams),
-    enabled: !!farmId,
-  });
-  const trendState = getListLoadState(trendQuery);
+  const daily = useDailySummary();
+  const milkTrend = useMilkTrend();
 
   // All-time totals for the welcome checklist and milk milestones, from the backend. Keyed under
   // the milk rows, so every milk save refreshes it.
@@ -83,61 +45,13 @@ export default function CommandCenter() {
     enabled: !!farmId,
   });
   const yieldTotals = yieldTotalsQuery.data;
-  const trend = useMemo(
-    () => buildDailyTrend(trendQuery.data, trendRange),
-    // trendRange is rebuilt every render; its two strings are what matter.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [trendQuery.data, trendRange?.from, trendRange?.to],
-  );
 
-  const selectTrendRange = (range) => {
-    setSelectedRange(range);
-    const today = new Date();
-    if (range === 'all') return;
-    setDateRange({ from: subDays(today, Number(range) - 1), to: today });
-  };
+  const cardProps = (card) => statCardProps(card, daily.figures, { copy });
 
-  const summary = summaryQuery.data;
-  const hasSummaryError = summaryQuery.isError;
-  const isRetryingSummary = summaryQuery.isFetching;
-
-  // Today's figures are the backend's (GET /production/summary). When it can't be reached they
-  // show "—"; they are never worked out from the rows on this phone.
-  const totalLitersToday = metricFromSummary(summary, [
-    'production_total_liters',
-    'total_liters_today',
-    'totalLitersToday',
-    'today_total_liters',
-    'todayTotalLiters',
-    'total_liters',
-    'totalLiters',
-    'total_volume',
-    'totalVolume',
-  ]);
-
-  const cowsMilked = metricFromSummary(summary, [
-    'cows_milked',
-    'cowsMilked',
-    'today_cows_milked',
-    'todayCowsMilked',
-    'milked_cows',
-    'milkedCows',
-  ]);
-
-  const averageYieldPerCow = metricFromSummary(summary, [
-    'average_yield_per_cow',
-    'averageYieldPerCow',
-    'avg_per_cow',
-    'avgPerCow',
-    'average_per_cow',
-  ]);
-
-  const profitPerLiter = metricFromSummary(summary, ['profit_per_liter', 'profitPerLiter']);
-  const kesOrDash = (value) => (value === null || value === undefined ? '—' : `KES ${Number(value).toLocaleString()}`);
-
-  const handleRetrySummary = async () => {
-    await summaryQuery.refetch();
-  };
+  // "No milking recorded yet today": only once the backend has answered that no cows were
+  // milked, and hidden for the rest of the session (per farm and day) once dismissed.
+  const [noMilkDismissed, dismissNoMilk] = useSessionDismissal(`jivu:dashboard:no-milk:${tenantId}:${farmId}:${todayLocalIso()}`);
+  const showNoMilkNotice = daily.hasRecordsToday === false && !noMilkDismissed;
 
   return (
     <div className="animate-entrance space-y-10 max-w-7xl mx-auto">
@@ -169,7 +83,7 @@ export default function CommandCenter() {
         <ManagerInboxWidget />
       </section>
 
-      {hasSummaryError && (
+      {daily.isError && (
         <section className="rounded-xl border border-brand/20 bg-brand-50 px-4 py-3 text-body text-brand-dark">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <p>
@@ -177,74 +91,71 @@ export default function CommandCenter() {
             </p>
             <button
               type="button"
-              onClick={handleRetrySummary}
-              disabled={isRetryingSummary}
+              onClick={daily.retry}
+              disabled={daily.isRetrying}
               className="inline-flex items-center justify-center rounded-lg border border-brand/30 bg-surface px-3 py-1.5 text-control text-brand-dark transition hover:bg-brand-50 disabled:cursor-not-allowed disabled:opacity-60"
             >
-              {isRetryingSummary ? copy.retrying : copy.retry}
+              {daily.isRetrying ? copy.retrying : copy.retry}
             </button>
           </div>
         </section>
       )}
 
-      <section className="grid grid-cols-2 gap-3 md:grid-cols-3 md:gap-4">
-        <div className="card-machined bg-surface p-5 border border-ink/5">
-          <p className="text-label text-ink-muted">{copy.revenue}</p>
-          <p className="mt-2 break-words text-stat-value text-brand">
-            {summaryQuery.isLoading ? copy.loading : hasSummaryError ? copy.unavailable : kesOrDash(summary?.revenue_total_kes)}
-          </p>
-          {summary?.revenue_breakdown?.report_sales_revenue_kes != null && (
-            <p className="mt-2 text-meta text-ink-muted">
-              {copy.reportReference(Number(summary.revenue_breakdown.report_sales_revenue_kes).toLocaleString())}
-            </p>
-          )}
-        </div>
-        <div className="card-machined bg-surface p-5 border border-ink/5">
-          <p className="text-label text-ink-muted">{copy.feedCost}</p>
-          <p className="mt-2 break-words text-stat-value text-ink">
-            {summaryQuery.isLoading ? copy.loading : hasSummaryError ? copy.unavailable : kesOrDash(summary?.feed_cost_total_kes)}
-          </p>
-        </div>
-        <div className="card-machined bg-brand/5 p-5 border-2 border-brand/20 ">
-          <p className="text-label text-brand">{copy.profit}</p>
-          <p className="mt-2 break-words text-stat-value text-brand">
-            {summaryQuery.isLoading ? copy.loading : hasSummaryError ? copy.unavailable : kesOrDash(summary?.net_margin_kes)}
-          </p>
+      {/* Money: Daily profit first and widest, Today's feed cost last (order in MONEY_CARDS). */}
+      <section className={REGION} aria-label={copy.moneyRegion}>
+        <div className={GRID}>
+          {MONEY_CARDS.map((card) => (
+            <StatCard
+              key={card.id}
+              {...cardProps(card)}
+              variant={card.variant}
+              loading={daily.isLoading}
+              className={card.variant === 'primary' ? 'col-span-2' : ''}
+            />
+          ))}
         </div>
       </section>
 
-      <section className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
-        <SummaryCard title={copy.totalMilk} value={totalLitersToday === null ? '—' : totalLitersToday.toFixed(1)} unit={copy.liters} loading={summaryQuery.isLoading} />
-        <SummaryCard title={copy.saleableMilk} value={summaryQuery.isLoading ? '—' : (summary?.saleable_liters ?? 0).toFixed(1)} unit={copy.liters} loading={summaryQuery.isLoading} />
-        <SummaryCard title={copy.milkSold} value={summaryQuery.isLoading ? '—' : (summary?.total_sold_liters ?? 0).toFixed(1)} unit={copy.liters} loading={summaryQuery.isLoading} />
-        <SummaryCard title={copy.milkRemaining} value={summaryQuery.isLoading ? '—' : (summary?.remaining_milk_liters ?? 0).toFixed(1)} unit={copy.liters} loading={summaryQuery.isLoading} />
-        <SummaryCard title={copy.cowsMilked} value={cowsMilked ?? '—'} unit={copy.cows} loading={summaryQuery.isLoading} />
-        <SummaryCard title={copy.averagePerCow} value={averageYieldPerCow ?? '—'} unit={copy.perCow} loading={summaryQuery.isLoading} />
-        <SummaryCard title={copy.profitPerLiter} value={summaryQuery.isLoading ? '—' : <Money amount={profitPerLiter} currency={summary?.currency ?? 'KES'} size="stat-value" />} loading={summaryQuery.isLoading} />
+      {/* Milk: one flat grid, always all seven cards in fixed places (order in MILK_CARDS). */}
+      <section className={REGION} aria-label={copy.milkRegion}>
+        {showNoMilkNotice && (
+          <InlineAlert
+            className="mb-3 sm:mb-4"
+            message={copy.noMilkToday}
+            actionLabel={copy.recordMilk}
+            actionTo={RECORD_MILK_PATH}
+            onDismiss={dismissNoMilk}
+            dismissLabel={copy.dismissNoMilk}
+          />
+        )}
+        <div className={GRID}>
+          {MILK_CARDS.map((card) => (
+            <StatCard key={card.id} {...cardProps(card)} loading={daily.isLoading} />
+          ))}
+        </div>
       </section>
 
       <div className="card-machined bg-surface p-8 border border-ink/10">
         <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-8 gap-4">
           <h2 className="text-section-title text-brand">
-
             {copy.trendTitle}
           </h2>
           <div className="inline-flex rounded-lg border border-ink/10 bg-surface p-1" role="group" aria-label={copy.trendRange}>
-            {[['30', copy.ranges[30]], ['90', copy.ranges[90]], ['all', copy.ranges.all]].map(([value, label]) => (
-              <button key={value} type="button" onClick={() => selectTrendRange(value)} aria-pressed={selectedRange === value} className={`rounded-md px-3 py-1.5 text-control transition-colors ${selectedRange === value ? 'bg-brand text-surface' : 'text-ink-muted hover:bg-surface-raised hover:text-brand'}`}>
-                {label}
+            {TREND_RANGES.map((value) => (
+              <button key={value} type="button" onClick={() => milkTrend.selectRange(value)} aria-pressed={milkTrend.selectedRange === value} className={`rounded-md px-3 py-1.5 text-control transition-colors ${milkTrend.selectedRange === value ? 'bg-brand text-surface' : 'text-ink-muted hover:bg-surface-raised hover:text-brand'}`}>
+                {copy.ranges[value]}
               </button>
             ))}
           </div>
         </div>
         <div className="h-80 w-full bg-surface-warm/30 rounded-xl">
-          {trendState !== 'ready' && (
-            <ListLoadNotices state={trendState} label={copy.trendLabel} error={trendQuery.error} onRetry={trendQuery.refetch} />
+          {milkTrend.state !== 'ready' && (
+            <ListLoadNotices state={milkTrend.state} label={copy.trendLabel} error={milkTrend.error} onRetry={milkTrend.retry} />
           )}
-          {trendState === 'loading' && <Skeleton className="h-full w-full" />}
-          {hasRowsToShow(trendState) && (
+          {milkTrend.state === 'loading' && <Skeleton className="h-full w-full" />}
+          {hasRowsToShow(milkTrend.state) && (
             <Suspense fallback={<Skeleton className="h-full w-full" />}>
-              <MilkTrendChart data={trend} />
+              <MilkTrendChart data={milkTrend.trend} />
             </Suspense>
           )}
         </div>

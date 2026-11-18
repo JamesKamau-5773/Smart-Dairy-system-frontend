@@ -33,6 +33,41 @@ export function metricFromSummary(summary, keys) {
 }
 
 /**
+ * Today's figures on the dashboard, read from the backend's GET /production/summary. Nothing is
+ * worked out here: each figure is the backend's field (under any of the names it has used), or
+ * null when the backend did not send it, so the card shows "—".
+ *
+ * `hasRecordsToday` is false only when the backend says no cows were milked today
+ * (`cows_milked` is 0), and null when it did not say (unknown: the normal grid shows).
+ * TODO(BR-028): read the backend's `records_today` instead of `cows_milked` once it is sent.
+ */
+export function readDailySummary(summary) {
+  const metric = (keys) => metricFromSummary(summary, keys);
+  const cowsMilked = metric(['cows_milked', 'cowsMilked', 'today_cows_milked', 'todayCowsMilked', 'milked_cows', 'milkedCows']);
+
+  return {
+    profit: metric(['net_margin_kes']),
+    revenue: metric(['revenue_total_kes']),
+    feedCost: metric(['feed_cost_total_kes']),
+    reportRevenue: metricFromSummary(summary?.revenue_breakdown, ['report_sales_revenue_kes']),
+    totalLiters: metric([
+      'production_total_liters', 'total_liters_today', 'totalLitersToday', 'today_total_liters',
+      'todayTotalLiters', 'total_liters', 'totalLiters', 'total_volume', 'totalVolume',
+    ]),
+    saleableLiters: metric(['saleable_liters']),
+    soldLiters: metric(['total_sold_liters']),
+    // Shown as sent, negative included (in the danger tone). TODO(BR-028): it can come back
+    // below zero (more sold or used than recorded); the backend calculation needs checking.
+    remainingLiters: metric(['remaining_milk_liters']),
+    cowsMilked,
+    averagePerCow: metric(['average_yield_per_cow', 'averageYieldPerCow', 'avg_per_cow', 'avgPerCow', 'average_per_cow']),
+    profitPerLiter: metric(['profit_per_liter', 'profitPerLiter']),
+    currency: typeof summary?.currency === 'string' && summary.currency ? summary.currency : null,
+    hasRecordsToday: cowsMilked === null ? null : cowsMilked > 0,
+  };
+}
+
+/**
  * Daily milk for the dashboard chart, from the backend's production group totals
  * (GET /production/group-totals?levels=day); nothing is added up on the phone.
  * Every day of the range is listed; a day with no milk recorded has `value: null` (a gap in

@@ -9,7 +9,7 @@ export default function OfflineIndicator({ onOpenInspector } = {}) {
     <button
       type="button"
       onClick={onOpenInspector}
-      className="flex h-10 items-center gap-2 rounded-button border border-brand/20 bg-surface px-3 text-control text-ink hover:border-brand hover:bg-brand-50"
+      className="flex h-10 items-center gap-2 rounded-button border border-brand/20 bg-surface px-3 text-body-strong text-ink hover:border-brand hover:bg-brand-50"
       title={commonCopy.ui.syncStatus}
       aria-label={commonCopy.controls.syncStatus(online, pending)}
     >

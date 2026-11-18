@@ -23,6 +23,7 @@ Everything below is open. Suggested order:
    BR-011, BR-012, BR-013, and the open questions in `docs/contracts/period-totals.md`.
    **Summary strips and the dashboard chart: BR-021, BR-022, BR-023.**
    **Production Log and breeding fields shown as "—" until sent: BR-025, BR-026, BR-027.**
+   **Dashboard: BR-028** (whether any milk is recorded today; milk remaining below zero).
 6. **Language: BR-018, BR-024** (receipt status values in the contract).
 7. **Safe saves and missing features:** BR-005, BR-006, BR-007, BR-010.
 
@@ -753,3 +754,24 @@ Today `CALF_FEED` is the only type the backend allows (the `milk_dispositions` c
 so `count` and `total_liters` are calf feedings by definition. If other uses of milk are added
 later (household, sale, discard), please add a `type` filter to this endpoint and make `count`
 and `total_liters` follow it, so the card's "N feedings · X L allocated" stays calf-only.
+
+---
+
+## BR-028 — Dashboard: milk records today, and milk remaining below zero
+
+**Status:** Open · **Raised:** 2026-11-18 · **Frontend:** `lib/dashboardUtils.js` (`readDailySummary`, `TODO(BR-028)`), `pages/CommandCenter.jsx`
+
+Before today's first milking, the Command Center shows a "No milking recorded yet today." notice
+above its milk cards. The backend doesn't say whether any milk is recorded today, so for now the
+notice shows only when `GET /api/production/summary` sends `cows_milked: 0`. Please add:
+
+```json
+{ "records_today": 0, "cows_milked": 0, "production_total_liters": "0.0" }
+```
+
+- `records_today`: the number of milk records dated today (the farm's local day), with the same
+  status rules as `production_total_liters`. The frontend then shows the notice when it is 0.
+
+**Milk remaining below zero.** `remaining_milk_liters` can come back negative (more sold or used
+than recorded). The dashboard shows it as sent, in red. Please check the calculation, and confirm
+what it should be when a sale is entered before that day's milk.

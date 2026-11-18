@@ -120,7 +120,8 @@ h6 {
     font-variant-numeric: tabular-nums;
   }
 
-  /* The browser default is bolder (700); the type system stops at 600. */
+  /* The browser default is bolder (700); body text stops at 600 (800 is only for the page
+   * title and headline figures, through their roles). */
   b,
   strong {
     font-weight: var(--type-body-strong-weight);
