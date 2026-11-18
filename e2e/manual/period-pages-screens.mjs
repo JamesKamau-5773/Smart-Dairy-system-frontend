@@ -251,8 +251,10 @@ const ROUTINE = [
   { id: 2, title: 'Feeding', start_time: '07:00', end_time: '07:45', notes: '', checklist_items: ['Dairy mix A to lactating cows'], display_order: 2 },
 ];
 const DISPOSITIONS = [
-  { id: 1, disposition_date: '2026-11-15', disposition_type: 'CALF_FEEDING', liters: 4, calf_name: 'Baraka', calf_tag: 'KE-0150', notes: '', recorded_by: 'Wanjiru' },
-  { id: 2, disposition_date: '2026-11-14', disposition_type: 'HOUSEHOLD', liters: 2, notes: 'Family use', recorded_by: 'Kamau' },
+  // As MilkDispositionService.serialize sends them. CALF_FEED is the only type the backend
+  // allows (a check constraint on milk_dispositions), and each one names its calf.
+  { id: 1, type: 'CALF_FEED', disposition_type: 'CALF_FEED', date: '2026-11-15', disposition_date: '2026-11-15', liters: 4, calf_id: 150, calf: { id: 150, name: 'Baraka', tag_number: 'KE-0150' }, notes: '', recorded_by: 'Wanjiru' },
+  { id: 2, type: 'CALF_FEED', disposition_type: 'CALF_FEED', date: '2026-11-14', disposition_date: '2026-11-14', liters: 2, calf_id: 151, calf: { id: 151, name: 'Zawadi', tag_number: 'KE-0151' }, notes: 'Bottle, evening', recorded_by: 'Kamau' },
 ];
 
 // ── Finance, supply and report fixtures (typography phase 5a) ──────────────────

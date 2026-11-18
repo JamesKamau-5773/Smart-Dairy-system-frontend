@@ -748,3 +748,8 @@ litres total is sent too:
 ```
 
 `total_liters`: the sum of `liters` for the same filters (`date`, `calf_id`), 1 dp string.
+
+Today `CALF_FEED` is the only type the backend allows (the `milk_dispositions` check constraint),
+so `count` and `total_liters` are calf feedings by definition. If other uses of milk are added
+later (household, sale, discard), please add a `type` filter to this endpoint and make `count`
+and `total_liters` follow it, so the card's "N feedings · X L allocated" stays calf-only.
