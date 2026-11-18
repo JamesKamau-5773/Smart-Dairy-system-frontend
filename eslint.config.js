@@ -229,4 +229,10 @@ export default defineConfig([
     files: TYPOGRAPHY_EXEMPT,
     rules: { 'local/no-raw-typography': 'off', 'local/no-raw-typography-css': 'off' },
   },
+  {
+    // The tokens file may set raw values, but its weight scale is checked: 800 only for the
+    // page title and headline figures (eslint-rules/type-weight-scale.js).
+    files: ['src/styles/brand.css'],
+    rules: { 'local/type-weight-scale': 'error' },
+  },
 ])

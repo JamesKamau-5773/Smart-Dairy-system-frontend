@@ -98,8 +98,8 @@ export default function Header({ onMenuClick = () => {} }) {
             {/* On phones this is the only visible content of the account button. */}
             <UserCircle size={20} className="text-brand-400" aria-hidden="true" />
             <span className="hidden min-w-0 sm:block">
-              <span className="block max-w-36 truncate text-meta">{currentUser?.name || copy.userFallback}</span>
-              <span className="block text-meta text-ink-600">{roleName(currentUser?.role) || copy.roleUnknown}</span>
+              <span className="block max-w-36 truncate text-body-strong">{currentUser?.name || copy.userFallback}</span>
+              <span className="block text-label text-ink-600">{roleName(currentUser?.role) || copy.roleUnknown}</span>
             </span>
             <ChevronDown size={14} className="text-ink-500" aria-hidden="true" />
           </button>

@@ -55,6 +55,21 @@ export function formatCount(value) {
   return /^\d+$/.test(text) ? groupDigits(text) : '—';
 }
 
+/**
+ * Money for display, e.g. "KES 12,400", "−KES 800" (a true minus before the currency);
+ * "—" when unknown. Whole shillings by default; pass `fractionDigits: 2` for per-litre
+ * figures. `currency` is the code the backend sent, when it sent one.
+ */
+export function formatKES(value, { fractionDigits = 0, currency = 'KES' } = {}) {
+  if (value === null || value === undefined || value === '') return '—';
+  const number = Number(value);
+  if (!Number.isFinite(number)) return '—';
+  const amount = formatDecimal(Math.abs(number), { fractionDigits });
+  // No minus on an amount that shows as zero ("−KES 0").
+  const negative = number < 0 && /[1-9]/.test(amount);
+  return `${negative ? '−' : ''}${currency} ${amount}`;
+}
+
 /** "-5.3" → "5.3%" (the sign is shown separately by the change indicator). */
 export function formatPercentMagnitude(value) {
   const formatted = formatDecimal(value);

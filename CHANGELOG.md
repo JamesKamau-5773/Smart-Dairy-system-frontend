@@ -4,6 +4,24 @@ What changed for farmers and staff using Maziwa Smart. Newest first.
 
 ## Unreleased
 
+### A clearer Command Center
+
+- **Daily profit comes first and stands out**: the largest figure on the page, on a highlighted
+  card across two columns, then transaction revenue, then today's feed cost. A loss shows in red
+  with its minus sign.
+- **Page titles and headline figures are bolder** across the app (page titles, money and stat
+  figures); labels, body text, forms and tables are unchanged.
+- All ten cards are always in the same places. The milk cards sit in one even grid, Total milk
+  first and Milk remaining last, without the decorative icons. A figure the server hasn't sent
+  shows a grey "—"; while loading, the cards show grey placeholders in the shape of their text.
+- Figures show exactly as the server sends them; any negative figure (a loss, or milk remaining
+  below zero) is in red with its minus sign.
+- Before the day's first milking, a slim "No milking recorded yet today." notice with a
+  **Record milk** button sits above the milk cards. Close it and it stays away until the browser
+  is closed.
+- The daily report's revenue figure has moved behind the info button on Transaction revenue.
+- The top bar's Online button and your name are bolder; your role is in capitals.
+
 ### One type scale across the whole app (typography phase 6)
 
 - **Sign-in and sign-up, the dashboards, the menus, pop-ups, banners and admin pages use the same

@@ -2,6 +2,7 @@
 import noMutationIsLoading from './no-mutation-is-loading.js';
 import noRawTypography from './no-raw-typography.js';
 import noRawTypographyCss from './no-raw-typography-css.js';
+import typeWeightScale from './type-weight-scale.js';
 
 export default {
   meta: { name: 'eslint-plugin-local' },
@@ -9,5 +10,6 @@ export default {
     'no-mutation-is-loading': noMutationIsLoading,
     'no-raw-typography': noRawTypography,
     'no-raw-typography-css': noRawTypographyCss,
+    'type-weight-scale': typeWeightScale,
   },
 };

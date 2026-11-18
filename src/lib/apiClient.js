@@ -20,9 +20,19 @@ export function resolveBackendAssetUrl(value) {
 
 const apiClient = axios.create({
   baseURL: API_BASE_URL,
-  timeout: 10000, 
+  timeout: 10000,
   ...httpClientConfig,
 });
+
+// Development only: VITE_MOCK_DASHBOARD=full|empty|negative answers the Command Center's
+// summary and trend requests from fixtures (src/dev/mockDashboard.js); everything else still
+// goes to the backend. `import.meta.env.DEV` is false in builds, so this is dropped from them.
+if (import.meta.env.DEV && import.meta.env.VITE_MOCK_DASHBOARD) {
+  apiClient.interceptors.request.use(async (config) => {
+    const { mockDashboardRequest } = await import('../dev/mockDashboard.js');
+    return mockDashboardRequest(config, import.meta.env.VITE_MOCK_DASHBOARD);
+  });
+}
 
 // A key represents one logical submission.  It must be reused only when that
 // exact submission is retried, never as a business-record identifier.

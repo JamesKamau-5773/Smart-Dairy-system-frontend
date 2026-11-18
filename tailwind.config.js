@@ -1,19 +1,19 @@
 /** @type {import('tailwindcss').Config} */
 import tailwindcssAnimate from 'tailwindcss-animate';
 import plugin from 'tailwindcss/plugin.js';
-import { TYPE_ROLES } from './src/styles/typeRoles.js';
+import { TABULAR_ROLES, TYPE_ROLES, UPPERCASE_ROLES } from './src/styles/typeRoles.js';
 
 // One `text-<role>` class per type role. Values come from the --type-<role>-* tokens in
-// src/styles/brand.css. Uppercase belongs to the label role only; stat values and numeric
-// inputs use tabular figures.
+// src/styles/brand.css; letter spacing is 0 unless the role has a --type-<role>-tracking token.
+// Uppercase and tabular figures follow the lists in typeRoles.js.
 const typeRoles = plugin(({ addUtilities }) => {
   addUtilities(Object.fromEntries(TYPE_ROLES.map((role) => [`.text-${role}`, {
     fontSize: `var(--type-${role}-size)`,
     lineHeight: `var(--type-${role}-line)`,
     fontWeight: `var(--type-${role}-weight)`,
-    letterSpacing: role === 'label' ? 'var(--type-label-tracking)' : '0',
-    textTransform: role === 'label' ? 'uppercase' : 'none',
-    ...(role === 'stat-value' || role === 'numeric-input' ? { fontVariantNumeric: 'tabular-nums' } : {}),
+    letterSpacing: `var(--type-${role}-tracking, 0)`,
+    textTransform: UPPERCASE_ROLES.includes(role) ? 'uppercase' : 'none',
+    ...(TABULAR_ROLES.includes(role) ? { fontVariantNumeric: 'tabular-nums' } : {}),
   }])));
 });
 

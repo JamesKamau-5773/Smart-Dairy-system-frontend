@@ -55,6 +55,11 @@ npm run dev
 
 The landing page opens at <http://localhost:5173>; sign in or register from there.
 
+To see the Command Center with figures when your local database has no recent milk, put
+`VITE_MOCK_DASHBOARD=full` (or `empty`, `negative`) in `.env.development.local` and restart
+`npm run dev`. Only the dashboard's summary and trend requests are mocked; `?mock=empty` in the
+address switches scenario without a restart. Builds never include it (`src/dev/mockDashboard.js`).
+
 ### Scripts
 
 | Command | What it does |
