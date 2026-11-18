@@ -28,6 +28,22 @@ export function todayLocalIso(now = new Date()) {
 }
 
 /**
+ * A moment's clock time on the farm, "06:12" (24-hour), in the farm's timezone from the
+ * backend (the device's until it is known); null when it can't be read.
+ */
+export function formatFarmTime(value) {
+  if (value === null || value === undefined || value === '') return null;
+  const date = value instanceof Date ? value : new Date(value);
+  if (Number.isNaN(date.getTime())) return null;
+  return new Intl.DateTimeFormat('en-GB', {
+    hour: '2-digit',
+    minute: '2-digit',
+    hourCycle: 'h23',
+    ...(farmTimeZone ? { timeZone: farmTimeZone } : {}),
+  }).format(date);
+}
+
+/**
  * Now as YYYY-MM-DDTHH:mm in the device's time, the value an <input type="datetime-local">
  * expects (the browser reads that input in the device's time, not the farm's).
  */

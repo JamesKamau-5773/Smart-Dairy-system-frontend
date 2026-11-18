@@ -4,7 +4,6 @@
  */
 export const productionCopy = {
   title: 'Production Log',
-  eyebrow: 'Production Interface',
   heading: { lead: 'Daily', rest: 'Milk Log' },
   description: 'Review milk entries, keep withdrawals visible, and work from a single place with filters and edit history.',
   recordMilk: 'Record Milk',
@@ -82,6 +81,36 @@ export const productionCopy = {
     cow: 'Cow',
     needsAttention: 'Needs attention',
     notSent: 'Not sent yet',
+  },
+
+  // The records list on phones (the desktop table keeps the keys above).
+  phone: {
+    searchPlaceholder: 'Search cow or tag',
+    filter: 'Filter',
+    activeFilters: (count) => `${count} active ${count === 1 ? 'filter' : 'filters'}`,
+    records: (count, formatted) => `${formatted} ${count === 1 ? 'record' : 'records'}`,
+    today: 'Today',
+    atAvg: 'at avg',
+    drop: 'drop',
+    higher: 'up',
+    lower: 'down',
+    rowLabel: ({ cow, litres, session, time, status }) => [cow, `${litres} litres`, session, time, status].filter(Boolean).join(', '),
+    noMatch: 'No records match these filters',
+    clearFilters: 'Clear filters',
+    sheetLabel: 'Milk record details',
+    close: 'Close',
+    yield: 'Yield',
+    vsAvg: (avg) => `vs 5-day avg ${avg}`,
+    status: 'Status',
+    sessionLabel: 'Session',
+    milkedBy: 'Milked by',
+    recordedBy: 'Recorded by',
+    sameAsMilker: 'Same as milker',
+    recordedAt: 'Recorded at',
+    editRecord: 'Edit record',
+    verify: 'Verify record',
+    history: 'Milk history',
+    deleteRecord: 'Delete record',
   },
 
   calves: {

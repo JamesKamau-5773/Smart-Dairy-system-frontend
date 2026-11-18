@@ -13,10 +13,12 @@
 //   meta                   13/18 400            timestamps, counts, helper text, chart text
 //   field-label            13/18 600            a form field's name, above its input (sentence case)
 //   stat-value             20/28 800  -0.02em   tabular figures
-//   stat-label             12/16 600   0.02em   uppercase: a stat card's name, above its figure
+//   stat-label             12/16 600   0.02em   uppercase: a stat card's name, or a list group heading
 //   stat-unit              14/20 500            the unit after a stat figure ("Liters")
 //   money-value-primary    28/36 800  -0.01em   tabular: the one money figure a page leads with
 //   money-value-secondary  20/28 800  -0.01em   tabular: money figures beside it
+//   record-figure          16/24 500            tabular: a record's litres in a list row
+//   record-figure-lg       36/40 500            tabular: the same figure in the record's details
 //   control                14/20 500            buttons and inputs (16px inputs at <=640px, see brand.css)
 //   badge                  13/18 500
 //   numeric-input          28/36 600            tabular; litres entry only (stays 28px on phones)
@@ -33,6 +35,8 @@ export const TYPE_ROLES = [
   'stat-unit',
   'money-value-primary',
   'money-value-secondary',
+  'record-figure',
+  'record-figure-lg',
   'control',
   'badge',
   'numeric-input',
@@ -42,7 +46,7 @@ export const TYPE_ROLES = [
 export const UPPERCASE_ROLES = ['label', 'stat-label'];
 
 /** Roles that use tabular (equal-width) figures, so columns of numbers line up. */
-export const TABULAR_ROLES = ['stat-value', 'money-value-primary', 'money-value-secondary', 'numeric-input'];
+export const TABULAR_ROLES = ['stat-value', 'money-value-primary', 'money-value-secondary', 'record-figure', 'record-figure-lg', 'numeric-input'];
 
 /**
  * The only roles allowed the 800 weight (--weight-extrabold): the page title and headline

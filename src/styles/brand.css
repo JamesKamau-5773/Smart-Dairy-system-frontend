@@ -91,6 +91,16 @@
   --type-money-value-secondary-weight:   var(--weight-extrabold);
   --type-money-value-secondary-tracking: -0.01em;
 
+  /* A record's litres in a list row, and the large figure in its details (Production Log on
+   * phones). Medium weight: the figures read clearly without shouting in a long list. */
+  --type-record-figure-size:      1rem;      /* 16 */
+  --type-record-figure-line:      1.5rem;    /* 24 */
+  --type-record-figure-weight:    var(--weight-medium);
+
+  --type-record-figure-lg-size:   2.25rem;   /* 36 */
+  --type-record-figure-lg-line:   2.5rem;    /* 40 */
+  --type-record-figure-lg-weight: var(--weight-medium);
+
   --type-control-size:         var(--type-body-size);
   --type-control-line:         var(--type-body-line);
   --type-control-weight:       var(--weight-medium);
