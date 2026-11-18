@@ -107,13 +107,14 @@ describe.each(screens)('$name list states', ({ Page, load, queryKey, label, hasL
     load.mockRejectedValueOnce(networkError()).mockResolvedValueOnce([cachedRow]);
     renderWithClient(<Page />);
 
-    expect(await screen.findByText(`Couldn’t load ${label}.`)).toBeTruthy();
-    expect(screen.getByText(/couldn’t reach the server/i)).toBeTruthy();
+    // A page with a phone list beside its desktop table says it in both (CSS shows one).
+    expect((await screen.findAllByText(`Couldn’t load ${label}.`)).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/couldn’t reach the server/i).length).toBeGreaterThan(0);
     expect(screen.queryByText(noResults)).toBeNull();
     expect(screen.queryByText('0.0 L')).toBeNull();
     if (hasListStats) expect(screen.getAllByText(`Not available until ${label} load`).length).toBeGreaterThan(0);
 
-    fireEvent.click(screen.getByRole('button', { name: /try again/i }));
+    fireEvent.click(screen.getAllByRole('button', { name: /try again/i })[0]);
     expect((await screen.findAllByText(cachedText)).length).toBeGreaterThan(0);
   });
 
@@ -124,7 +125,7 @@ describe.each(screens)('$name list states', ({ Page, load, queryKey, label, hasL
     renderWithClient(<Page />, queryClient);
 
     await waitFor(() => expect(load).toHaveBeenCalled());
-    expect(await screen.findByText(new RegExp(`Showing ${label} saved on this phone`, 'i'))).toBeTruthy();
+    expect((await screen.findAllByText(new RegExp(`Showing ${label} saved on this phone`, 'i'))).length).toBeGreaterThan(0);
     expect(screen.getAllByText(cachedText).length).toBeGreaterThan(0);
   });
 
@@ -132,7 +133,7 @@ describe.each(screens)('$name list states', ({ Page, load, queryKey, label, hasL
     onlineManager.setOnline(false);
     try {
       renderWithClient(<Page />);
-      expect(await screen.findByText(`You’re offline, and ${label} haven’t been saved on this phone yet.`)).toBeTruthy();
+      expect((await screen.findAllByText(`You’re offline, and ${label} haven’t been saved on this phone yet.`)).length).toBeGreaterThan(0);
       expect(load).not.toHaveBeenCalled();
     } finally {
       onlineManager.setOnline(true);

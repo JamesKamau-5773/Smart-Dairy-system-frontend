@@ -4,7 +4,6 @@
  */
 export const productionCopy = {
   title: 'Rekodi za Maziwa',
-  eyebrow: 'Uzalishaji', // REVIEW
   heading: { lead: 'Rekodi', rest: 'ya Maziwa ya Kila Siku' }, // REVIEW
   description: 'Kagua rekodi za maziwa, ona ng’ombe walio kwenye dawa, na fanya kazi mahali pamoja kwa vichujio na historia ya mabadiliko.', // REVIEW
   recordMilk: 'Rekodi Maziwa',
@@ -83,6 +82,36 @@ export const productionCopy = {
     cow: 'Ng’ombe',
     needsAttention: 'Inahitaji uangalizi',
     notSent: 'Bado haijatumwa',
+  },
+
+  // Orodha ya rekodi kwenye simu.
+  phone: {
+    searchPlaceholder: 'Tafuta jina au hereni', // REVIEW
+    filter: 'Chuja', // REVIEW
+    activeFilters: (count) => `Vichujio ${count} vimewekwa`, // REVIEW
+    records: (count, formatted) => `Rekodi ${formatted}`,
+    today: 'Leo',
+    atAvg: 'wastani', // REVIEW
+    drop: 'kushuka', // REVIEW
+    higher: 'juu',
+    lower: 'chini',
+    rowLabel: ({ cow, litres, session, time, status }) => [cow, `lita ${litres}`, session, time, status].filter(Boolean).join(', '),
+    noMatch: 'Hakuna rekodi zinazolingana na vichujio hivi', // REVIEW
+    clearFilters: 'Ondoa vichujio', // REVIEW
+    sheetLabel: 'Maelezo ya rekodi ya maziwa', // REVIEW
+    close: 'Funga',
+    yield: 'Mavuno', // REVIEW
+    vsAvg: (avg) => `dhidi ya wastani wa siku 5: ${avg}`, // REVIEW
+    status: 'Hali',
+    sessionLabel: 'Kipindi',
+    milkedBy: 'Amekamua', // REVIEW
+    recordedBy: 'Ameandika', // REVIEW
+    sameAsMilker: 'Aliyekamua', // REVIEW
+    recordedAt: 'Iliandikwa', // REVIEW
+    editRecord: 'Hariri rekodi',
+    verify: 'Thibitisha rekodi',
+    history: 'Historia ya maziwa',
+    deleteRecord: 'Futa rekodi',
   },
 
   calves: {

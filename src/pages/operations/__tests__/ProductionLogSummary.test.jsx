@@ -1,6 +1,6 @@
 import React from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { cleanup, render, screen, waitFor, within } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import YieldLog from '../productionLog';
@@ -67,6 +67,9 @@ beforeEach(() => {
   });
 });
 
+// The phone list (shown below md): the rows' container after the phone toolbar.
+const phoneList = () => document.querySelector('.md\\:hidden > div:nth-child(2)');
+
 const cellsOf = async (table, cow) => (await within(table).findByText(`${cow} · ${cow}`)).closest('tr').querySelectorAll('td');
 
 describe('Production Log', () => {
@@ -115,16 +118,100 @@ describe('Production Log', () => {
     expect(midday[9].textContent).toBe('WhatsApp');
   });
 
-  it('gives phones a card per record instead of a table that scrolls sideways', async () => {
+  it('keeps the desktop table from md up, and gives phones their own list instead of cards', async () => {
     renderLog();
     const table = await screen.findByRole('table');
     expect(table.parentElement.className).toBe('hidden md:block overflow-x-auto');
-    const card = (await screen.findAllByText('Sofia · Sofia')).map((node) => node.closest('article')).find(Boolean);
-    expect(card.parentElement.closest('.md\\:hidden')).toBeTruthy();
-    expect(within(card).getByText('6.5 L')).toBeTruthy();
-    expect(within(card).getByText('Flagged')).toBeTruthy();
-    expect(within(card).getByText('−2.1 L')).toBeTruthy();
-    expect(within(card).getByText('WhatsApp')).toBeTruthy();
+    expect(document.querySelector('article')).toBeNull();
+    const phone = phoneList();
+    expect(phone.closest('.md\\:hidden')).toBeTruthy();
+    expect(await within(phone).findByRole('button', { name: /^Joyce Joyce, 5\.0 litres, Evening$/ })).toBeTruthy();
+  });
+
+  it('groups the phone list by farm day and session, in the backend’s order, newest first', async () => {
+    api.listYield.mockResolvedValue([
+      row('t1', '2026-11-16', 'Neema', { session: 'Morning' }),
+      row('t2', '2026-11-16', 'Joyce', { session: 'Morning' }),
+      ...novemberRows,
+      row('old', '2025-12-30', 'Zawadi', { session: 'Morning' }),
+    ]);
+    renderLog();
+    const phone = phoneList();
+    await within(phone).findByRole('button', { name: /^Zawadi/ });
+    const headings = within(phone).getAllByRole('heading', { level: 2 }).map((heading) => heading.textContent);
+    expect(headings).toEqual(['Mon 16 Nov · MorningToday', 'Sun 15 Nov · Evening', 'Sun 15 Nov · Afternoon', 'Tue 30 Dec 2025 · Morning']);
+    expect(within(phone).getAllByRole('button', { name: /litres/ }).map((button) => button.getAttribute('aria-label').split(',')[0]))
+      .toEqual(['Neema Neema', 'Joyce Joyce', 'Joyce Joyce', 'Sofia Sofia', 'Zawadi Zawadi']);
+  });
+
+  it('badges only the exceptions on phone rows: Pending outlined, Flagged and Isolated solid, Verified none', async () => {
+    api.listYield.mockResolvedValue([
+      row('v', '2026-11-15', 'Verified'),
+      row('p', '2026-11-15', 'Pending', { status: 'RECORDED' }),
+      row('f', '2026-11-15', 'Flagged', { status: 'FLAGGED' }),
+      row('i', '2026-11-15', 'Isolated', { status: 'ISOLATED' }),
+    ]);
+    renderLog();
+    const phone = phoneList();
+    const badgeOf = async (cow) => (await within(phone).findByRole('button', { name: new RegExp(`^${cow} ${cow}`) })).querySelector('.rounded-full');
+    expect(await badgeOf('Verified')).toBeNull();
+    expect((await badgeOf('Pending')).className).toContain('border-ink-400');
+    expect((await badgeOf('Pending')).textContent).toBe('Pending');
+    expect((await badgeOf('Flagged')).className).toContain('bg-ink-900');
+    expect((await badgeOf('Isolated')).textContent).toBe('Kept apart');
+  });
+
+  it('opens a record’s details from its row, and closes them with Escape back to the row', async () => {
+    renderLog();
+    const rowButton = await within(phoneList()).findByRole('button', { name: /^Sofia Sofia, 6\.5 litres, Afternoon, Flagged$/ });
+    expect(within(rowButton).getByText('▼', { exact: false })).toBeTruthy();
+    expect(rowButton.textContent).toContain('2.1 L · drop');
+
+    rowButton.focus();
+    fireEvent.click(rowButton);
+    const sheet = await screen.findByRole('dialog', { name: 'Sofia · Sofia' });
+    expect(within(sheet).getByText('Sun 15 Nov 2026 · Afternoon')).toBeTruthy();
+    expect(within(sheet).getByText('6.5 L')).toBeTruthy();
+    const details = Object.fromEntries(within(sheet).getAllByRole('term').map((term) => [term.textContent, term.nextElementSibling.textContent]));
+    expect(details).toEqual({ Status: 'Flagged', Session: 'Afternoon', 'Milked by': '+254 722 263 584', 'Recorded by': 'WhatsApp' });
+    expect(within(sheet).getByRole('button', { name: 'Edit record' })).toBeTruthy();
+    expect(within(sheet).getByRole('link', { name: 'Milk history' }).getAttribute('href')).toBe('/operations/animal/Sofia/milk-history');
+    expect(within(sheet).getByRole('button', { name: 'Delete record' })).toBeTruthy();
+
+    fireEvent.keyDown(document, { key: 'Escape' });
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+    expect(document.activeElement).toBe(rowButton);
+  });
+
+  it('closes the details from the backdrop and from ✕', async () => {
+    renderLog();
+    const rowButton = await within(phoneList()).findByRole('button', { name: /^Joyce Joyce/ });
+    fireEvent.click(rowButton);
+    fireEvent.click(within(await screen.findByRole('dialog')).getByRole('button', { name: 'Close' }));
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+
+    fireEvent.click(rowButton);
+    const dialog = await screen.findByRole('dialog');
+    fireEvent.click(dialog.previousElementSibling);
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+  });
+
+  it('shows "Same as milker" only when the backend says the recorder is the milker', async () => {
+    api.listYield.mockResolvedValue([row('s', '2026-11-15', 'Joyce', { recorded_by_name: 'Wanjiru', recorded_by_is_milker: true })]);
+    renderLog();
+    fireEvent.click(await within(phoneList()).findByRole('button', { name: /^Joyce Joyce/ }));
+    const sheet = await screen.findByRole('dialog');
+    expect(within(sheet).getByText('Same as milker')).toBeTruthy();
+  });
+
+  it('counts the filters behind the phone’s Filter button and lists them as removable chips', async () => {
+    renderLog('/operations/yield?session=Morning&from=2026-11-01&to=2026-11-07');
+    const phone = phoneList().parentElement;
+    const filter = within(phone).getByRole('button', { name: /^Filter/ });
+    expect(filter.textContent).toContain('2');
+    expect(within(phone).getByRole('button', { name: /Remove filter 01 Nov 2026 – 07 Nov 2026/ })).toBeTruthy();
+    fireEvent.click(within(phone).getByRole('button', { name: /Remove filter Morning/ }));
+    await waitFor(() => expect(within(phone).getByRole('button', { name: /^Filter/ }).textContent).toContain('1'));
   });
 
   it('puts group totals under Total (L), with the entry count by the label', async () => {

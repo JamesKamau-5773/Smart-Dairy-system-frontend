@@ -4,6 +4,17 @@ What changed for farmers and staff using Maziwa Smart. Newest first.
 
 ## Unreleased
 
+### Production Log on phones
+
+- **Milk records read as a short list, grouped by day and milking** ("WED 18 NOV · MORNING",
+  today marked), newest first. Each row shows the cow, the time, the litres and the change
+  against the cow's average ("▼ 0.9 L"); only pending, flagged or kept-apart records carry a badge.
+- **Tap a record for its details**: yield against the average, status, who milked and who
+  recorded it, with Edit, Verify, Milk history and Delete in one place.
+- Search and one Filter button (with a count of active filters); active filters show as chips
+  you can remove, beside the number of records.
+- The "Production Interface" label above the page title is gone. The desktop table is unchanged.
+
 ### A clearer Command Center
 
 - **Daily profit comes first and stands out**: the largest figure on the page, on a highlighted

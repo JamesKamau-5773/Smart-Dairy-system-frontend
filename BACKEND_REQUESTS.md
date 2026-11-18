@@ -24,6 +24,7 @@ Everything below is open. Suggested order:
    **Summary strips and the dashboard chart: BR-021, BR-022, BR-023.**
    **Production Log and breeding fields shown as "—" until sent: BR-025, BR-026, BR-027.**
    **Dashboard: BR-028** (whether any milk is recorded today; milk remaining below zero).
+   **Production Log on phones: BR-029** (day + session totals, who recorded vs who milked, entry time).
 6. **Language: BR-018, BR-024** (receipt status values in the contract).
 7. **Safe saves and missing features:** BR-005, BR-006, BR-007, BR-010.
 
@@ -775,3 +776,35 @@ notice shows only when `GET /api/production/summary` sends `cows_milked: 0`. Ple
 **Milk remaining below zero.** `remaining_milk_liters` can come back negative (more sold or used
 than recorded). The dashboard shows it as sent, in red. Please check the calculation, and confirm
 what it should be when a sale is entered before that day's milk.
+
+---
+
+## BR-029 — Production Log on phones: day + session totals, recorder vs milker, entry time
+
+**Status:** Open · **Raised:** 2026-11-18 · **Frontend:** `lib/milkRecords.js` (`TODO(BR-029)`), `pages/operations/productionLog.jsx` (phone list and record sheet)
+
+On phones the milk records are grouped by farm day and session ("WED 18 NOV · MORNING"). Three
+things the design shows are not sent, so the frontend leaves them out rather than working them out:
+
+1. **Group totals per day and session.** The header should read "3 cows · 21.5 L".
+   `GET /api/production/group-totals` groups by year, month, week and day only, and `entries`
+   counts records, not cows. Please add a `session` level (child of `day`) with a distinct cow
+   count, for the same filters as the list:
+
+   ```json
+   { "groups": [
+     { "level": "session", "key": "2026-11-18|Morning", "parent": "2026-11-18", "session": "Morning",
+       "litres": "21.5", "entries": 3, "cow_count": 3 }
+   ] }
+   ```
+
+   `cow_count` on the `day` level too, please, so the desktop day rows can use it later.
+
+2. **Whether the person who entered a record is the milker.** The details sheet says "Same as
+   milker" in that case. `milker_id` is an employee and `recorded_by` a user, so the frontend
+   can't compare them. On each row of `GET /api/production/yield`:
+   `"recorded_by_is_milker": true | false` (null when unknown).
+
+3. **When the record was entered.** `timestamp` is the milking time; the sheet's "Recorded at"
+   needs the entry time: `"recorded_at": "2026-11-18T03:20:41+00:00"` (ISO 8601, UTC). The line
+   is hidden until it is sent.

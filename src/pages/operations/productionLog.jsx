@@ -4,7 +4,7 @@ import { useAuth } from "../../contexts/AuthContext";
 import { canViewAdminControls } from "../../lib/roles";
 import { QUERY_KEYS } from "../../providers/QueryProvider";
 import { getApiErrorMessage, productionApi, safetyApi } from "../../lib/backendApi";
-import { AlertTriangle, Filter } from "lucide-react";
+import { AlertTriangle, CheckCircle, Clock, Filter, Flag, ShieldAlert } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import FastMilkLog from "../../components/operations/FastMilkLog";
@@ -24,39 +24,23 @@ import ToolbarDateRange from "../../components/data/ToolbarDateRange";
 import { productionGroupConfig } from "../../components/periods/periodConfigs";
 import { useInvalidateProduction } from "../../hooks/usePeriodTotals";
 import { useProductionData } from "../../hooks/useProductionData";
-import { formatLitres, formatSignedLitres } from "../../lib/numberFormat";
+import { formatCount, formatLitres, formatSignedLitres } from "../../lib/numberFormat";
 import { currentYearRange } from "../../lib/periodTotals";
-import { formatDateRange } from "../../lib/dateFormat";
+import { formatDateRange, formatDayLabel } from "../../lib/dateFormat";
 import toast from "react-hot-toast";
 import { productionCopy as copy, sessionLabel } from "../../i18n/production";
 import { commonCopy } from "../../i18n/common";
 import { formatCowIdentity } from "../../lib/cowIdentity";
 import { Link } from "react-router-dom";
-import { todayLocalIso, toLocalIsoDate } from '../../lib/localDate';
+import { formatFarmTime, todayLocalIso, toLocalIsoDate } from '../../lib/localDate';
+import { groupByDaySession, normalizeYieldRow, vsAverage } from '../../lib/milkRecords';
+import { enumLabel } from '../../lib/enumLabel';
+import MilkLogPhoneToolbar from '../../components/operations/milkLog/MilkLogPhoneToolbar';
+import MilkRecordList from '../../components/operations/milkLog/MilkRecordList';
+import MilkRecordRow from '../../components/operations/milkLog/MilkRecordRow';
+import MilkRecordSheet from '../../components/operations/milkLog/MilkRecordSheet';
 import { reportError } from '../../lib/telemetry';
 import { ISO_DATE_FILTER, useUrlFilters } from '../../hooks/useUrlFilters';
-
-const AMOUNT_FIELD_CANDIDATES = [
-  'amount',
-  'volume',
-  'liters',
-  'milk_volume',
-  'milkVolume',
-  'yield_amount',
-  'yieldAmount',
-  'volume_liters',
-  'volumeLiters',
-  'quantity',
-  'qty',
-  'amount_liters',
-  'amountLiters',
-  'quantity_liters',
-  'quantityLiters',
-  'milk_amount',
-  'milkAmount',
-  'produced_liters',
-  'producedLiters',
-];
 
 function isDevEnvironment() {
   return Boolean(import.meta.env?.DEV);
@@ -72,35 +56,12 @@ function logDevError(message, details) {
   console.error(`[productionLog] ${message}`, details);
 }
 
-function extractAmountCandidate(row) {
-  if (!row || typeof row !== 'object') {
-    return { value: null, key: null, found: false };
-  }
-
-  for (const key of AMOUNT_FIELD_CANDIDATES) {
-    if (row[key] !== undefined && row[key] !== null && `${row[key]}`.trim() !== '') {
-      return { value: row[key], key, found: true };
-    }
-  }
-
-  return { value: null, key: null, found: false };
-}
-
-const BACKEND_STATUS_MAP = {
-  RECORDED: 'Pending',
-  PENDING: 'Pending',
-  VERIFIED: 'Verified',
-  FLAGGED: 'Flagged',
-  ISOLATED: 'Isolated',
-};
-
-// A record without a status shows "—": the backend decides it, the page never assumes one.
-function normalizeStatus(raw) {
-  if (!raw) return null;
-  return BACKEND_STATUS_MAP[String(raw).toUpperCase()] ?? raw;
-}
-
 const getBucket = (row) => row.bucket;
+// The desktop table's GroupedDataTable also renders cards below md; phones use MilkRecordList
+// instead, so it gets none.
+const renderNoCard = () => null;
+// The sheet's props while closed (it renders nothing then).
+const EMPTY_SHEET = { title: '', subtitle: '', litres: '', vsAvg: null, details: [], primaryAction: { label: '', onClick: () => {} } };
 
 // One column definition for the header, rows and group rows (litres totals line up).
 // Each row is one milking record, as the backend sends it: its litres sit in its own session
@@ -143,43 +104,6 @@ const chosenRangeOf = ({ from, to, date }) => {
   if (from && to && from <= to) return { from, to };
   return date ? { from: date, to: date } : null;
 };
-
-// Maps a yield record from the API to what the page shows. Display only: the amount
-// is formatted, never parsed into a total.
-function normalizeYieldRow(row) {
-  const amountCandidate = extractAmountCandidate(row);
-  const timestamp = row?.timestamp ?? row?.createdAt ?? row?.created_at;
-
-  if (!amountCandidate.found) {
-    logDevWarning('Yield row missing expected amount field.', {
-      rowId: row?.id ?? row?.yield_id ?? row?.recordId ?? null,
-      knownAmountKeys: AMOUNT_FIELD_CANDIDATES,
-      receivedKeys: row && typeof row === 'object' ? Object.keys(row) : [],
-      row,
-    });
-  }
-
-  return {
-    id: row?.id ?? row?.yield_id ?? row?.recordId,
-    bucket: row?.bucket ?? null,
-    date: row?.date ?? row?.milkingDate ?? row?.milking_date ?? row?.entry_date ?? (timestamp ? toLocalIsoDate(timestamp) : null),
-    time: timestamp ? new Date(timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : (row?.time ?? null),
-    milker: row?.milker_name ?? row?.milker ?? row?.created_by ?? null,
-    animalRefId: row?.cow_tag ?? row?.cowTag ?? row?.animal_id ?? row?.animalId ?? row?.cow_id ?? row?.cowId ?? row?.cow ?? null,
-    cowId: row?.cow_tag ?? row?.cowTag ?? row?.cowId ?? row?.cow_id ?? row?.animal_id ?? '',
-    cowName: row?.cowName ?? row?.cow_name ?? row?.animal_name ?? row?.animalName ?? row?.name ?? '',
-    amount: amountCandidate.value,
-    session: row?.session ?? row?.milking_session ?? row?.milkingSession ?? null,
-    status: normalizeStatus(row?.status),
-    // TODO(BR-026): this record's litres against the cow's 5-day average, and whether the
-    // backend counts it as a significant drop. "—" until sent.
-    vsAvgLitres: row?.vs_avg_litres ?? null,
-    significantDrop: row?.significant_drop === true,
-    // TODO(BR-019): who entered the record (a person) or how (`recorded_via`). "—" until sent.
-    recordedBy: row?.recorded_by_name ?? null,
-    recordedVia: row?.recorded_via ?? null,
-  };
-}
 
 const formatMilker = (value) => {
   if (!value) return '—';
@@ -430,40 +354,99 @@ export default function YieldLog() {
     );
   };
 
-  // Phones: one card per milking record (no sideways scrolling). The day group above it
-  // carries the date; the same fields as the table row.
-  const renderCard = (row) => (
-    <article key={row.id} className="min-w-0 space-y-3 bg-card p-4">
-      <div className="flex min-w-0 items-start gap-3">
-        <div className="min-w-0 flex-1">
-          <div className="flex min-w-0 items-center gap-2 text-body-strong text-ink-900">
-            <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-brand" aria-hidden="true" />
-            {cowLink(row)}
-          </div>
-          <p className="mt-1 text-meta text-ink-500">{sessionLabel(row.session)}</p>
-        </div>
-        <p className="shrink-0 pt-0.5 text-stat-value text-ink-900">{formatLitres(row.amount)}</p>
-        {actionsMenu(row, 'h-11 w-11')}
-      </div>
-      <dl className="m-0 grid grid-cols-2 gap-x-3 gap-y-2 border-t border-ink-100 pt-3 text-meta">
-        <div className="min-w-0">
-          <dt className="text-ink-500">{copy.columns.status}</dt>
-          <dd className="m-0 mt-1"><MilkStatusBadge status={row.status} /></dd>
-        </div>
-        <div className="min-w-0">
-          <dt className="text-ink-500">{copy.columns.vsAvg}</dt>
-          <dd className={`m-0 mt-1 tabular-nums ${vsAvgClass(row)}`}>{formatSignedLitres(row.vsAvgLitres)}</dd>
-        </div>
-        <div className="min-w-0">
-          <dt className="text-ink-500">{copy.columns.milker}</dt>
-          <dd className="m-0 mt-1 break-all tabular-nums text-ink-700">{formatMilker(row.milker)}</dd>
-        </div>
-        <div className="min-w-0">
-          <dt className="text-ink-500">{copy.columns.recordedBy}</dt>
-          <dd className="m-0 mt-1 break-words text-ink-700">{recordedByText(row)}</dd>
-        </div>
-      </dl>
-    </article>
+  // ── Phones: a list grouped by farm day and session, each row opening a details sheet ──
+  // Everything shown is the backend's: the farm day (`bucket.day`), session, status, litres and
+  // the change against the cow's average. "Today" is the farm's date (its timezone from the
+  // backend), never the browser's UTC date.
+  const phoneCopy = copy.phone;
+  const today = todayLocalIso();
+  const [sheetRecordId, setSheetRecordId] = useState(null);
+  const sheetRecord = sheetRecordId == null ? null : milkRows.find((row) => row.id === sheetRecordId) ?? null;
+  const closeSheet = () => setSheetRecordId(null);
+
+  const statusText = (status) => (status ? enumLabel(copy.statuses, status) : '—');
+  const phoneGroups = useMemo(() => groupByDaySession(milkRows).map((group) => ({
+    key: group.key,
+    label: [
+      group.day ? formatDayLabel(group.day, { withYear: group.day.slice(0, 4) !== today.slice(0, 4) }) : '—',
+      sessionLabel(group.session),
+    ].join(' · '),
+    isToday: group.day === today,
+    rows: group.records,
+  })), [milkRows, today]);
+
+  const renderPhoneRow = (row) => {
+    const litresText = formatLitres(row.amount, { unit: false });
+    const time = formatFarmTime(row.timestamp);
+    const exception = row.status && row.status !== 'Verified' ? statusText(row.status) : null;
+    return (
+      <MilkRecordRow
+        key={row.id}
+        cow={formatCowIdentity({ cowName: row.cowName, cowTag: row.cowId })}
+        time={time}
+        litres={formatLitres(row.amount)}
+        vsAvg={vsAverage(row.vsAvgLitres)}
+        significantDrop={row.significantDrop}
+        status={row.status}
+        statusLabel={statusText(row.status)}
+        ariaLabel={phoneCopy.rowLabel({
+          cow: [row.cowName, row.cowId].filter(Boolean).join(' ') || formatCowIdentity({}),
+          litres: litresText,
+          session: sessionLabel(row.session),
+          time,
+          status: exception,
+        })}
+        onOpen={() => setSheetRecordId(row.id)}
+      />
+    );
+  };
+
+  const STATUS_ICON = { Verified: CheckCircle, Pending: Clock, Flagged: Flag, Isolated: ShieldAlert };
+  const sheetProps = sheetRecord && (() => {
+    const row = sheetRecord;
+    const time = formatFarmTime(row.timestamp);
+    const recordedAtDay = row.recordedAt ? toLocalIsoDate(row.recordedAt) : null;
+    return {
+      title: formatCowIdentity({ cowName: row.cowName, cowTag: row.cowId }),
+      subtitle: [row.day ? formatDayLabel(row.day, { withYear: true }) : null, sessionLabel(row.session), time].filter(Boolean).join(' · '),
+      litres: formatLitres(row.amount),
+      vsAvg: vsAverage(row.vsAvgLitres),
+      significantDrop: row.significantDrop,
+      averageText: row.avgLitres == null ? null : phoneCopy.vsAvg(formatLitres(row.avgLitres)),
+      details: [
+        { key: 'status', label: phoneCopy.status, value: statusText(row.status), icon: STATUS_ICON[row.status] },
+        { key: 'session', label: phoneCopy.sessionLabel, value: sessionLabel(row.session) },
+        { key: 'milker', label: phoneCopy.milkedBy, value: formatMilker(row.milker) },
+        { key: 'recordedBy', label: phoneCopy.recordedBy, value: row.recordedByIsMilker === true ? phoneCopy.sameAsMilker : recordedByText(row) },
+        // TODO(BR-029): shown once the backend sends `recorded_at`.
+        row.recordedAt && { key: 'recordedAt', label: phoneCopy.recordedAt, value: [formatDayLabel(recordedAtDay, { withYear: true }), formatFarmTime(row.recordedAt)].filter(Boolean).join(' · ') },
+      ].filter(Boolean),
+      // The ⋮ menu's actions, with the same handlers and permission check.
+      primaryAction: { label: phoneCopy.editRecord, onClick: () => { closeSheet(); openEditLog(row); } },
+      secondaryActions: [
+        canVerify && row.status !== 'Verified' && { key: 'verify', label: phoneCopy.verify, onClick: () => handleVerifyEntry(row) },
+        { key: 'history', label: phoneCopy.history, to: `/operations/animal/${row.animalRefId ?? row.cowId}/milk-history` },
+      ].filter(Boolean),
+      destructiveAction: { label: phoneCopy.deleteRecord, onClick: () => { closeSheet(); handleDeleteFromTable(row); } },
+    };
+  })();
+
+  // The filters behind the phone's Filter button (the search has its own box).
+  const phoneChips = [
+    chosenRange && { key: 'range', label: formatDateRange(chosenRange.from, chosenRange.to), onRemove: () => setRange(null) },
+    filters.session !== 'all' && { key: 'session', label: sessionLabel(filters.session), onRemove: () => updateFilter('session', 'all') },
+  ].filter(Boolean).map((chip) => ({ ...chip, removeLabel: commonCopy.filters.remove(chip.label) }));
+
+  const sessionSelect = (
+    <label className="block space-y-1 text-field-label text-ink-muted">
+      {copy.session}
+      <select value={filters.session} onChange={(e) => updateFilter('session', e.target.value)} className="input-machined">
+        <option value="all">{commonCopy.filters.all}</option>
+        <option value="Morning">{copy.sessions.morning}</option>
+        <option value="Midday">{copy.sessions.afternoon}</option>
+        <option value="Evening">{copy.sessions.evening}</option>
+      </select>
+    </label>
   );
 
   const hasMilkRowsToShow = yieldRows.loadState === 'ready' || yieldRows.loadState === 'stale';
@@ -519,8 +502,50 @@ export default function YieldLog() {
 
       <QueuedMilkEntries />
 
-      <section aria-label={copy.sectionLabel} className="flex flex-col overflow-hidden rounded-xl border border-ink/10 bg-card shadow-sm">
-        <div className="border-b border-ink-200 bg-ink-50/50 p-4">
+      <section aria-label={copy.sectionLabel} className="flex flex-col overflow-clip rounded-xl border border-ink/10 bg-card shadow-sm md:overflow-hidden">
+        {/* Phones: the compact toolbar, then the grouped list (the desktop toolbar and table are below). */}
+        <div className="md:hidden">
+          <MilkLogPhoneToolbar
+            search={filters.cowId}
+            onSearch={(value) => updateFilter('cowId', value)}
+            searchLabel={copy.searchLabel}
+            searchPlaceholder={phoneCopy.searchPlaceholder}
+            filterLabel={phoneCopy.filter}
+            filterCount={phoneChips.length}
+            filterCountLabel={phoneCopy.activeFilters(phoneChips.length)}
+            filtersOpen={filtersOpen}
+            onToggleFilters={() => setFiltersOpen((prev) => !prev)}
+            panelId="production-filter-panel-phone"
+            panel={(
+              <>
+                <ToolbarDateRange range={dateRange} onChange={setRange} maxDate={todayLocalIso()} />
+                {sessionSelect}
+              </>
+            )}
+            chips={phoneChips}
+            recordCount={totalRecords == null ? null : phoneCopy.records(totalRecords, formatCount(totalRecords))}
+          />
+          <MilkRecordList
+            groups={phoneGroups}
+            renderRow={renderPhoneRow}
+            loadState={yieldRows.loadState}
+            error={yieldRowsError}
+            onRetry={yieldRows.refetch}
+            rowsLabel={copy.rowsLabel}
+            todayLabel={phoneCopy.today}
+            empty={hasActiveFilters ? (
+              <div className="flex flex-col items-center gap-2">
+                <p>{phoneCopy.noMatch}</p>
+                <button type="button" onClick={clearFilters} className="inline-flex min-h-11 items-center px-2 text-control text-brand underline underline-offset-2">
+                  {phoneCopy.clearFilters}
+                </button>
+              </div>
+            ) : milkFirstTimeEmpty}
+          />
+          <MilkRecordSheet open={Boolean(sheetProps)} onClose={closeSheet} labels={{ close: phoneCopy.close, yield: phoneCopy.yield }} {...(sheetProps ?? EMPTY_SHEET)} />
+        </div>
+
+        <div className="hidden border-b border-ink-200 bg-ink-50/50 p-4 md:block">
           <Toolbar end={hasMilkRowsToShow && <p role="status" className="m-0 whitespace-nowrap text-meta text-ink-500">{copy.showing(milkRows.length, totalRecords)}</p>}>
             <ToolbarSearch label={copy.searchLabel} value={filters.cowId} onChange={(value) => updateFilter('cowId', value)} placeholder={copy.searchPlaceholder} />
             <button
@@ -537,19 +562,12 @@ export default function YieldLog() {
           </Toolbar>
           {filtersOpen && (
             <div id="production-filter-panel" className="grid grid-cols-1 gap-3 pb-2 pt-3 sm:grid-cols-2">
-              <label className="space-y-1 text-field-label text-ink-muted">
-                {copy.session}
-                <select value={filters.session} onChange={(e) => updateFilter('session', e.target.value)} className="input-machined">
-                  <option value="all">{commonCopy.filters.all}</option>
-                  <option value="Morning">{copy.sessions.morning}</option>
-                  <option value="Midday">{copy.sessions.afternoon}</option>
-                  <option value="Evening">{copy.sessions.evening}</option>
-                </select>
-              </label>
+              {sessionSelect}
             </div>
           )}
         </div>
 
+        <div className="hidden md:block">
         <GroupedDataTable
           columns={COLUMNS}
           rows={milkRows}
@@ -559,7 +577,7 @@ export default function YieldLog() {
           onRetryGroups={groupTotals.refetch}
           config={productionGroupConfig}
           renderRow={renderRow}
-          renderCard={renderCard}
+          renderCard={renderNoCard}
           tableFrom="md"
           scroll
           headerVariant="neutral"
@@ -570,6 +588,7 @@ export default function YieldLog() {
           rowsLabel={copy.rowsLabel}
           empty={emptyMessage}
         />
+        </div>
       </section>
     </div>
   );
