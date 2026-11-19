@@ -811,7 +811,7 @@ things the design shows are not sent, so the frontend leaves them out rather tha
 
 ## BR-030 — Ledger KPI cards: profit margin
 
-**Status:** Done (backend working tree, 2026-11-19; not yet committed or deployed) · **Raised:** 2026-11-19 · **Frontend:** `lib/ledgerKpis.js`, `components/finance/ledger/ledgerKpiConfig.jsx`
+**Status:** Done (backend commit 7de97fa on `development`, 2026-11-19; not yet deployed) · **Raised:** 2026-11-19 · **Frontend:** `lib/ledgerKpis.js`, `components/finance/ledger/ledgerKpiConfig.jsx`
 
 The Ledger's KPI band shows **Profit Margin** (net profit ÷ total sales). The frontend does not
 divide the figures itself. `GET /api/finance/ledger` now sends it in `summary`, for the same filters
