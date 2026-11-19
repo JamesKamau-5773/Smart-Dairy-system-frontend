@@ -1,6 +1,7 @@
 import Money, { formatMoneyText } from '../ui/Money';
 import { formatCount, formatLitres } from '../../lib/numberFormat';
-import { formatDateRange } from '../../lib/dateFormat';
+import { formatDate, formatDateRange } from '../../lib/dateFormat';
+import { groupLabel } from '../../lib/groupTree';
 import { TABLE_GROUP_LEVELS } from '../../lib/periodTotals';
 import { productionCopy } from '../../i18n/production';
 import { commonCopy } from '../../i18n/common';
@@ -14,9 +15,12 @@ const ledgerWords = financeCopy.ledgerPeriods;
 
 const moneyOrDash = (amount, props = {}) => (amount == null ? '—' : <Money amount={amount} {...props} />);
 const signedMoneyText = (amount) => (amount == null ? '—' : formatMoneyText(amount));
-/** What the strip covers: the year ("2026") for the default range, else the chosen dates. */
-export const summaryScope = (range, { isDefault = false } = {}) => (
-  isDefault && range?.from ? range.from.slice(0, 4) : formatDateRange(range?.from, range?.to)
+/**
+ * What the figures cover: the year ("2026") for the default range, else the chosen dates
+ * (`short`: "01 Oct – 15 Oct 2026").
+ */
+export const summaryScope = (range, { isDefault = false, short = false } = {}) => (
+  isDefault && range?.from ? range.from.slice(0, 4) : formatDateRange(range?.from, range?.to, { short })
 );
 
 /** Why the strip has no figures for this range, or null when it can have them. */
@@ -25,28 +29,29 @@ export const summaryNotice = (summaryState) => (summaryState.unsupported ? commo
 /** True when the API says the result has no records (never inferred from missing figures). */
 export const summaryIsEmpty = (summary) => summary?.current?.count === 0;
 
-export const ledgerSummaryConfig = {
-  items: ({ current }) => [
-    { key: 'in', label: ledgerWords.moneyIn, value: moneyOrDash(current.income, { size: 'stat-value' }) },
-    { key: 'out', label: ledgerWords.moneyOut, value: moneyOrDash(current.expenses, { size: 'stat-value' }) },
-    { key: 'net', label: ledgerWords.net, value: moneyOrDash(current.net, { size: 'stat-value', tone: 'net' }) },
-    { key: 'unpaid', label: ledgerWords.unpaid, value: moneyOrDash(current.unpaid, { size: 'stat-value' }) },
-  ],
-};
-
 const recordsText = (count) => (count == null ? '—' : ledgerWords.records(count, formatCount(count)));
 
+// Ledger groups: Year → Month → Day, told apart by indent and weight; only the year row is
+// tinted. Day groups read "18 Nov 2026", like every other Ledger date.
 export const ledgerGroupConfig = {
   levels: TABLE_GROUP_LEVELS,
   get noun() { return financeCopy.ledger.noun; },
-  // Desktop table: the group's net (from the API) in the Amount column, signed like the rows:
-  // a negative in the negative colour, a positive plain. The header names the currency.
-  columnTotals: {
-    amount: (totals) => moneyOrDash(totals.net, { tone: 'signed', showCurrency: false, className: 'text-body-strong' }),
+  groupLabel: (node) => (node.level === 'day' ? formatDate(node.key, groupLabel(node)) : groupLabel(node)),
+  levelStyles: {
+    year: 'bg-brand-50 text-ink text-body-strong',
+    month: 'bg-card text-ink text-body-strong',
+    day: 'bg-card text-ink text-body',
   },
-  labelMeta: (totals) => <span className="shrink-0 text-meta text-ink-muted">· {recordsText(totals.count)}</span>,
-  // Phones have no column header, so the net keeps its currency.
-  renderSummary: (totals) => moneyOrDash(totals.net, { tone: 'signed', className: 'text-body-strong' }),
+  levelType: { year: 'text-body-strong', month: 'text-body-strong', day: 'text-body' },
+  levelIndent: { year: 'pl-2 sm:pl-4', month: 'pl-5 sm:pl-8', day: 'pl-8 sm:pl-12' },
+  chevronClassName: 'text-ink-muted',
+  // The group's net (from the API) under the Amount column, signed and with its currency
+  // like the rows: a negative in the negative colour, a positive plain.
+  columnTotals: {
+    amount: (totals) => moneyOrDash(totals.net, { tone: 'signed', cents: 'plain', className: 'text-body-strong' }),
+  },
+  labelMeta: (totals) => <span className="shrink-0 text-meta tabular-nums text-ink-muted">· {recordsText(totals.count)}</span>,
+  renderSummary: (totals) => moneyOrDash(totals.net, { tone: 'signed', cents: 'plain', className: 'text-body-strong' }),
   describeSummary: (totals) => ledgerWords.describeTotals(signedMoneyText(totals.net), formatMoneyText(totals.income), formatMoneyText(totals.expenses)),
 };
 

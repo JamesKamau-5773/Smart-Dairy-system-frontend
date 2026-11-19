@@ -67,8 +67,8 @@ beforeEach(() => {
   });
 });
 
-// The phone list (shown below md): the rows' container after the phone toolbar.
-const phoneList = () => document.querySelector('.md\\:hidden > div:nth-child(2)');
+// The phone list (shown below md) in the milk entries section; the filters are in the panel above.
+const phoneList = () => document.querySelector('section[aria-label="Milk entries"] > .md\\:hidden > div:first-child');
 
 const cellsOf = async (table, cow) => (await within(table).findByText(`${cow} · ${cow}`)).closest('tr').querySelectorAll('td');
 
@@ -204,14 +204,24 @@ describe('Production Log', () => {
     expect(within(sheet).getByText('Same as milker')).toBeTruthy();
   });
 
-  it('counts the filters behind the phone’s Filter button and lists them as removable chips', async () => {
+  it('keeps the filters in the shared panel: collapsed, counted, and reset together', async () => {
     renderLog('/operations/yield?session=Morning&from=2026-11-01&to=2026-11-07');
-    const phone = phoneList().parentElement;
-    const filter = within(phone).getByRole('button', { name: /^Filter/ });
-    expect(filter.textContent).toContain('2');
-    expect(within(phone).getByRole('button', { name: /Remove filter 01 Nov 2026 – 07 Nov 2026/ })).toBeTruthy();
-    fireEvent.click(within(phone).getByRole('button', { name: /Remove filter Morning/ }));
-    await waitFor(() => expect(within(phone).getByRole('button', { name: /^Filter/ }).textContent).toContain('1'));
+    const PANEL = 'Search and filter milk records';
+    // Collapsed by default, even with filters in the address; the header counts them.
+    const toggle = await screen.findByRole('button', { name: `${PANEL} · 2 filters active` });
+    expect(toggle.getAttribute('aria-expanded')).toBe('false');
+    await waitFor(() => expect(api.listYield).toHaveBeenCalledWith({ session: 'Morning', date_from: '2026-11-01', date_to: '2026-11-07' }));
+
+    fireEvent.click(toggle);
+    const panel = screen.getByRole('region', { name: PANEL });
+    expect(within(panel).getByRole('searchbox', { name: 'Search by cow name or ear tag' })).toBeTruthy();
+    expect(within(panel).getByRole('combobox', { name: 'Session' }).value).toBe('Morning');
+    expect(within(panel).getByRole('button', { name: '01 Nov 2026 – 07 Nov 2026' })).toBeTruthy();
+    expect(panel.querySelector('input[type="date"]')).toBeNull();
+
+    fireEvent.click(within(panel).getByRole('button', { name: 'Reset filters' }));
+    await waitFor(() => expect(api.listYield).toHaveBeenLastCalledWith({ date_from: '2026-01-01', date_to: '2026-11-16' }));
+    expect(within(panel).queryByRole('button', { name: 'Reset filters' })).toBeNull();
   });
 
   it('puts group totals under Total (L), with the entry count by the label', async () => {

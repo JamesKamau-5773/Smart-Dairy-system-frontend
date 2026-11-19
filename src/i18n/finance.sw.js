@@ -30,7 +30,7 @@ export const financeCopy = {
     totalOutstandingHint: 'Salio ambazo hazijalipwa kwa wanunuzi wote.',
     settledAccounts: 'Akaunti zilizolipwa',
     settledAccountsHint: 'Wanunuzi wasio na deni.',
-    filtersLabel: 'Vichujio na vitendo vya pamoja vya wanunuzi',
+    filtersTitle: 'Tafuta na uchuje wanunuzi', // REVIEW
     searchPlaceholder: 'Tafuta jina, namba au namba ya simu',
     status: 'Hali',
     allStatuses: 'Hali zote',
@@ -101,6 +101,7 @@ export const financeCopy = {
     subtitle: 'Ongeza, hariri na usimamie wanunuzi na wateja wako.',
     addNew: 'Ongeza mteja mpya',
     searchPlaceholder: 'Tafuta kwa jina, mtu wa kuwasiliana, simu au aina...',
+    filtersTitle: 'Tafuta wateja', // REVIEW
     editTitle: 'Hariri mteja',
     editSubtitle: 'Sasisha taarifa za mteja huyu.',
     addSubtitle: 'Ongeza mteja mpya kwenye orodha yako.',
@@ -336,6 +337,33 @@ export const financeCopy = {
     listLabel: 'miamala',
     periodUnavailable: 'Kipindi hakikuweza kupakia, kwa hiyo orodha hii inaonyesha tarehe zote.',
     typoMatch: (query, names) => `Hakuna kinacholingana kabisa na “${query}”. Inaonyesha matokeo ya ${names}.`,
+    heading: 'Daftari la Fedha', // REVIEW
+    subtitle: 'Miamala yote ya mapato na matumizi.', // REVIEW
+    filtersTitle: 'Tafuta na uchuje miamala', // REVIEW
+    showing: (count, shown) => `Inaonyesha rekodi ${shown} za daftari`, // REVIEW
+    resultsInfo: 'Mauzo, gharama, faida halisi na kiwango cha faida vinahusu rekodi zilezile za jedwali. Malipo ya awali ya wateja na pesa ambazo hazijalipwa ni salio la leo: utafutaji wa mteja au mnunuzi pekee ndio unaozibadilisha.', // REVIEW
+    sheet: {
+      type: 'Aina ya muamala', // REVIEW
+      category: 'Aina',
+      description: 'Maelezo',
+      reference: 'Kumbukumbu',
+      income: 'Mapato',
+      expense: 'Matumizi',
+      moreActions: 'Vitendo zaidi', // REVIEW
+      close: 'Funga',
+    },
+    kpis: {
+      label: 'Jumla za daftari', // REVIEW
+      totalSales: 'Jumla ya mauzo', // REVIEW
+      postedCosts: 'Gharama zilizorekodiwa', // REVIEW
+      netProfit: 'Faida halisi', // REVIEW
+      customerCredit: 'Malipo ya awali ya wateja', // REVIEW
+      unpaidMoney: 'Pesa ambazo hazijalipwa', // REVIEW
+      profitMargin: 'Kiwango cha faida', // REVIEW
+      totalSalesInfo: 'Pesa zilizoingia kwa rekodi zinazolingana na vichujio: mauzo na malipo ya wateja.', // REVIEW
+      customerCreditInfo: 'Pesa ambazo wateja wamelipa mapema, hadi leo. Utafutaji wa mteja au mnunuzi pekee ndio unaoibadilisha.', // REVIEW
+      unpaidMoneyInfo: 'Kiasi ambacho wateja na wanunuzi wanakudai leo, pamoja na madeni ya kabla ya kutumia daftari hili. Utafutaji wa mteja au mnunuzi pekee ndio unaoibadilisha.', // REVIEW
+    },
   },
 
   ledgerPeriods: {
@@ -610,14 +638,12 @@ export const financeCopy = {
     title: 'Dashibodi ya ripoti za shamba',
     subtitle: 'Kagua mapato, gharama, mwenendo wa maziwa na faida kwa kipindi ulichochagua.',
     filterTitle: 'Tafuta na chuja ripoti',
-    resetFilters: 'Futa vichujio',
     searchPlaceholder: 'Tafuta mteja, kumbukumbu...',
+    customersLabel: 'Wateja',
     allCustomers: 'Wateja wote',
     customerSelected: 'Mteja amechaguliwa',
     selectedCount: (count) => `${count} wamechaguliwa`,
-    startDate: 'Tarehe ya kuanza',
-    endDate: 'Tarehe ya mwisho',
-    quickSelect: 'Chagua haraka:',
+    quickSelect: 'Chagua haraka', // REVIEW
     invalidRange: 'Tarehe ulizochagua si sahihi.',
     invalidRangeHint: 'Chagua tarehe ya mwisho iliyo sawa au baada ya tarehe ya kuanza.',
     listLabel: 'ripoti',

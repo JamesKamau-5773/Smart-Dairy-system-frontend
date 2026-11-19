@@ -8,7 +8,6 @@ import { getListLoadState } from '../lib/listLoadState';
 import {
   summaryScopeParams,
   toLedgerGroupTotals,
-  toLedgerSummary,
   toProductionGroupTotals,
   toProductionSummary,
   toTotalsParams,
@@ -52,19 +51,6 @@ function useSummaryQuery({ queryKey, queryFn, select, params, enabled }) {
   return { ...totals, unsupported: params === null };
 }
 const levelParams = (filters, levels) => ({ ...toTotalsParams(filters), ...(levels ? { levels: levels.join(',') } : {}) });
-
-/** Ledger summary for the table's date range and other filters. */
-export function useLedgerSummary({ range, filters }) {
-  const { tenantId, farmId, enabled } = useScope();
-  const params = summaryParams(range, filters);
-  return useSummaryQuery({
-    queryKey: [...QUERY_KEYS.LEDGER_SUMMARY(tenantId, farmId), params],
-    queryFn: () => ledgerApi.getSummary(params),
-    select: toLedgerSummary,
-    params,
-    enabled,
-  });
-}
 
 export function useLedgerGroupTotals(filters, { levels, enabled: allowed = true } = {}) {
   const { tenantId, farmId, enabled } = useScope();

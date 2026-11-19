@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { NO_AI_DATE_GROUP, activeHistoryFilterCount, groupHistoryByMonth, historyMonthLabel } from '../breedingHistory';
+import { NO_AI_DATE_GROUP, groupHistoryByMonth, historyMonthLabel } from '../breedingHistory';
 
 describe('breedingHistory', () => {
   it('groups by AI service month in the order given, undated records together', () => {
@@ -17,10 +17,5 @@ describe('breedingHistory', () => {
   it('labels months in the app date format, and records without an AI date as an unknown month', () => {
     expect(historyMonthLabel('2026-01')).toBe('January 2026');
     expect(historyMonthLabel(NO_AI_DATE_GROUP)).toBe('Unknown month');
-  });
-
-  it('counts the filter controls in use', () => {
-    expect(activeHistoryFilterCount('All', '  ')).toBe(0);
-    expect(activeHistoryFilterCount('Failed', 'mal')).toBe(2);
   });
 });

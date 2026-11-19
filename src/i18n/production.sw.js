@@ -35,6 +35,8 @@ export const productionCopy = {
     ? `Rekodi ${shown}`
     : `Inaonyesha ${shown} kati ya ${total}`), // REVIEW
   sessions: { morning: 'Asubuhi', afternoon: 'Mchana', evening: 'Jioni', unknown: 'Haijulikani' },
+  allSessions: 'Vipindi vyote', // REVIEW
+  filtersTitle: 'Tafuta na uchuje rekodi za maziwa', // REVIEW
   statuses: { Verified: 'Imethibitishwa', Pending: 'Inasubiri', Flagged: 'Imealamishwa', Isolated: 'Yametengwa' }, // REVIEW: "Flagged", "Isolated" (milk kept apart)
 
   milker: 'Mkamuaji',
@@ -86,10 +88,6 @@ export const productionCopy = {
 
   // Orodha ya rekodi kwenye simu.
   phone: {
-    searchPlaceholder: 'Tafuta jina au hereni', // REVIEW
-    filter: 'Chuja', // REVIEW
-    activeFilters: (count) => `Vichujio ${count} vimewekwa`, // REVIEW
-    records: (count, formatted) => `Rekodi ${formatted}`,
     today: 'Leo',
     atAvg: 'wastani', // REVIEW
     drop: 'kushuka', // REVIEW

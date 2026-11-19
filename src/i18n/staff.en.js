@@ -92,6 +92,7 @@ export const staffCopy = {
     roleCount: (count, label) => `${count} ${label.toLowerCase()}${count === 1 ? '' : 's'}`,
     search: 'Search staff',
     searchPlaceholder: 'Search by name, role or phone',
+    filtersTitle: 'Search and filter staff',
     showFormer: (count) => `Show former staff (${count})`,
     emptyTitle: 'No employees yet',
     emptyHint: 'Add the people who work on the farm to pay them, track advances and give them app access.',

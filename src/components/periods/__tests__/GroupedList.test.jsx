@@ -22,7 +22,7 @@ describe('GroupedList', () => {
 
     const year = screen.getByRole('button', { name: /^2025, 1 record, net −KES 50.00/ });
     const month = screen.getByRole('button', { name: /^December, 1 record/ });
-    const day = screen.getByRole('button', { name: /^Wed 24 Dec, 1 record/ });
+    const day = screen.getByRole('button', { name: /^24 Dec 2025, 1 record/ });
     expect(day.getAttribute('data-group-keys')).toBe('2025-12-24');
     expect([year, month, day].map((header) => header.getAttribute('aria-expanded'))).toEqual(['true', 'true', 'true']);
     expect(screen.getByText('Vet visit')).toBeTruthy();
@@ -35,11 +35,11 @@ describe('GroupedList', () => {
   it('shows — when group totals are unavailable instead of adding up rows', () => {
     render(<GroupedList records={records} getBucket={(r) => r.bucket} groups={null} groupsUnavailable config={ledgerGroupConfig} renderRecord={renderRecord} />);
     expect(screen.getByText('Group totals couldn’t load, so headers show —.')).toBeTruthy();
-    expect(screen.getByRole('button', { name: /^Wed 24 Dec, count not available, totals not available/ })).toBeTruthy();
+    expect(screen.getByRole('button', { name: /^24 Dec 2025, count not available, totals not available/ })).toBeTruthy();
   });
 
-  it('puts each group\'s net in the Amount column, signed and without the currency', () => {
-    const columns = ['party', 'category', 'ref', 'description', 'amount', 'status', 'actions'].map((id) => ({ id, header: id, align: id === 'amount' ? 'right' : 'left' }));
+  it('puts each group\'s net in the Amount column, signed and with the currency; only the year row is tinted', () => {
+    const columns = ['party', 'category', 'description', 'ref', 'amount', 'status', 'receipt', 'actions'].map((id) => ({ id, header: id, align: id === 'amount' ? 'right' : 'left' }));
     const twoMonths = toLedgerGroupTotals({ groups: [
       { level: 'year', key: '2026', label: '2026', count: 3, income: '480000', expenses: '7093925', net: '-6613925' },
       { level: 'month', key: '2026-11', parent: '2026', label: 'November', count: 2, income: '0', expenses: '7093925', net: '-7093925' },
@@ -58,19 +58,22 @@ describe('GroupedList', () => {
 
     const cellsOf = (name) => screen.getByRole('button', { name }).closest('tr').querySelectorAll('td');
     const november = cellsOf(/^November, 2 records/);
-    // Label spans Customer…Description (4 columns), then Amount, Status, ⋮.
+    // Label spans Customer…Ref (4 columns), then Amount, Status, Receipt, ⋮.
     expect(november[0].getAttribute('colspan')).toBe('4');
-    expect(november).toHaveLength(4);
+    expect(november).toHaveLength(5);
     expect(november[0].textContent).toContain('November· 2 records');
-    // A negative net: true minus, negative colour, no "KES" (the header names it).
-    expect(november[1].textContent).toMatch(/^−minus 70,939\.25$/);
+    // A negative net: true minus before the currency, in the negative colour.
+    expect(november[1].textContent).toMatch(/^−minus KES\s?70,939\.25$/);
     expect(november[1].querySelector('.text-money-negative')).toBeTruthy();
-    expect(november[2].textContent).toBe('');
-    expect(november[3].textContent).toBe('');
+    expect([november[2], november[3], november[4]].map((cell) => cell.textContent)).toEqual(['', '', '']);
     // A positive net stays plain: no positive colour.
     const october = cellsOf(/^October, 1 record/);
-    expect(october[1].textContent).toBe('4,800.00');
+    expect(october[1].textContent).toMatch(/^KES\s?4,800\.00$/);
     expect(october[1].querySelector('.text-money-positive')).toBeNull();
+    // Levels differ by indent and weight; only the year row has a (brand) tint.
+    expect(cellsOf(/^2026, 3 records/)[0].className).toContain('bg-brand-50');
+    expect(november[0].className).toContain('bg-card');
+    expect(november[0].className).not.toContain('bg-brand');
     expect(container.querySelector('[data-group-keys~="2026-11"]')).toBeTruthy();
   });
 

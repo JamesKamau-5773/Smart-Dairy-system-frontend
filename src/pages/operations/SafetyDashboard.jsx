@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Search, ShieldAlert, ShieldCheck } from 'lucide-react';
+import { ShieldAlert, ShieldCheck } from 'lucide-react';
 import toast from 'react-hot-toast';
 import AlertBanner from '../../components/ui/AlertBanner';
 import Confirmation, { useConfirmation } from '../../components/ui/Confirmation';
@@ -18,6 +18,9 @@ import { hasRole } from '../../lib/roles';
 import { QUERY_KEYS } from '../../providers/QueryProvider';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTenant } from '../../hooks/useTenant';
+import { useSafetyFilters } from '../../hooks/useSafetyFilters';
+import FilterPanel from '../../components/data/FilterPanel';
+import { Toolbar, ToolbarSearch, ToolbarSelect } from '../../components/data/Toolbar';
 import { safetyCopy as copy } from '../../i18n/safety';
 import { tone } from '../../components/ui/tones';
 import { shellCopy } from '../../i18n/shell';
@@ -124,8 +127,8 @@ export default function MilkSafetyBoard() {
   const { currentUser } = useAuth();
   const queryClient = useQueryClient();
   const confirmation = useConfirmation();
-  const [query, setQuery] = useState('');
-  const [severity, setSeverity] = useState('all');
+  const filters = useSafetyFilters();
+  const { query, severity } = filters.values;
   const canRelease = hasRole(currentUser, ['FARMER']);
   // The backend lets anyone who can see the board hold milk or record a test.
   const canRecord = hasRole(currentUser, ['FARMER', 'VET', 'FARM_HAND']);
@@ -294,20 +297,17 @@ export default function MilkSafetyBoard() {
           <HoldSummary total={total} counts={counts} />
 
           {total > 0 && (
-            <div className="flex flex-col gap-2 sm:flex-row">
-              <label className="relative min-w-0 flex-1">
-                <span className="sr-only">{copy.search}</span>
-                <Search size={16} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-ink-muted" aria-hidden="true" />
-                <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder={copy.search} className="input-machined w-full pl-9 text-control" />
-              </label>
-              <label className="sm:w-48">
-                <span className="sr-only">{copy.columns.risk}</span>
-                <select value={severity} onChange={(event) => setSeverity(event.target.value)} className="input-machined w-full text-control">
-                  <option value="all">{copy.allSeverities}</option>
-                  {SEVERITIES.map((value) => <option key={value} value={value}>{copy.severity[value]}</option>)}
-                </select>
-              </label>
-            </div>
+            <FilterPanel title={copy.filtersTitle} activeCount={filters.activeCount} onReset={filters.reset}>
+              <Toolbar>
+                <ToolbarSearch label={copy.search} value={query} onChange={filters.setQuery} placeholder={copy.search} />
+                <ToolbarSelect
+                  label={copy.columns.risk}
+                  value={severity}
+                  onChange={filters.setSeverity}
+                  options={[['all', copy.allSeverities], ...SEVERITIES.map((value) => [value, copy.severity[value]])]}
+                />
+              </Toolbar>
+            </FilterPanel>
           )}
 
           {total > locks.length && <p className="text-meta text-ink-muted">{copy.showing(locks.length, total)}</p>}
@@ -330,7 +330,7 @@ export default function MilkSafetyBoard() {
           {total > 0 && visible.length === 0 && (
             <p className="text-body text-ink-muted">
               {copy.noMatches}{' '}
-              <button type="button" onClick={() => { setQuery(''); setSeverity('all'); }} className="text-control text-brand hover:underline">{copy.clearFilters}</button>
+              <button type="button" onClick={filters.reset} className="text-control text-brand hover:underline">{copy.clearFilters}</button>
             </p>
           )}
         </>

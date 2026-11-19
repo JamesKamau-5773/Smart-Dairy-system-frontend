@@ -36,6 +36,8 @@ export const productionCopy = {
     ? `${shown} ${shown === 1 ? 'record' : 'records'}`
     : shown === total ? `Showing all ${total} of ${total} records` : `Showing ${shown} of ${total} records`),
   sessions: { morning: 'Morning', afternoon: 'Afternoon', evening: 'Evening', unknown: 'Unknown' },
+  allSessions: 'All sessions',
+  filtersTitle: 'Search and filter milk records',
   statuses: { Verified: 'Verified', Pending: 'Pending', Flagged: 'Flagged', Isolated: 'Kept apart' },
 
   milker: 'Milker',
@@ -85,10 +87,6 @@ export const productionCopy = {
 
   // The records list on phones (the desktop table keeps the keys above).
   phone: {
-    searchPlaceholder: 'Search cow or tag',
-    filter: 'Filter',
-    activeFilters: (count) => `${count} active ${count === 1 ? 'filter' : 'filters'}`,
-    records: (count, formatted) => `${formatted} ${count === 1 ? 'record' : 'records'}`,
     today: 'Today',
     atAvg: 'at avg',
     drop: 'drop',

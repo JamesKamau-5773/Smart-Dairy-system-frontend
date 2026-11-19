@@ -68,10 +68,15 @@ export function formatMonth(key, { withYear = true } = {}) {
   return withYear ? `${month} ${match[1]}` : month;
 }
 
-/** "03 Nov 2026 – 15 Nov 2026" for a chosen range. */
-export function formatDateRange(from, to) {
+/**
+ * "03 Nov 2026 – 15 Nov 2026" for a chosen range. With `short`, a range within one year
+ * names the year once: "03 Nov – 15 Nov 2026".
+ */
+export function formatDateRange(from, to, { short = false } = {}) {
   if (!from || !to) return null;
-  return from === to ? formatDate(from) : `${formatDate(from)} – ${formatDate(to)}`;
+  if (from === to) return formatDate(from);
+  const sameYear = toDate(from)?.getFullYear() === toDate(to)?.getFullYear();
+  return short && sameYear ? `${formatShortDate(from)} – ${formatDate(to)}` : `${formatDate(from)} – ${formatDate(to)}`;
 }
 
 /** YYYY-MM-DD → "03/11/2026" for a dd/mm/yyyy input; '' when empty. */

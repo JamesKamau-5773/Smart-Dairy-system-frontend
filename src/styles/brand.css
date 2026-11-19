@@ -270,6 +270,23 @@
     color: var(--brand-dark);
   }
 
+  .btn-outline-brand {
+    @apply inline-flex items-center justify-center text-control;
+    min-height: 40px;
+    padding: 0.62rem 1rem;
+    border-radius: 10px;
+    background: transparent;
+    color: var(--brand);
+    border: 1px solid var(--brand);
+    box-shadow: none;
+  }
+
+  .btn-outline-brand:hover {
+    @apply bg-brand-50;
+    color: var(--brand-dark);
+    border-color: var(--brand-dark);
+  }
+
   .btn-danger {
     @apply inline-flex items-center justify-center text-control;
     min-height: 40px;

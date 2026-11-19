@@ -323,6 +323,7 @@ export const feedCopy = {
     subtitle: 'Manage stock levels, new receipts, and resource definitions.',
     add: 'Add to feedstore',
     searchPlaceholder: 'Search items by name or SKU...',
+    filtersTitle: 'Search and filter stock items',
     allCategories: 'All categories',
     listLabel: 'stock items',
     empty: 'No inventory items yet. Register your feed, medicines and supplies to track stock.',

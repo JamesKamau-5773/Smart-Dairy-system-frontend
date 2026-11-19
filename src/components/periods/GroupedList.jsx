@@ -15,6 +15,7 @@ import { commonCopy } from '../../i18n/common';
  *   noun: [singular, plural], describeSummary(totals) → string,
  *   columnTotals: { [columnId]: (totals) → node }, labelMeta?(totals) → node   (table)
  *   renderSummary(totals) → node                                              (cards)
+ *   groupLabel?(node) → string   a group's name (default: groupLabel in lib/groupTree)
  * }
  * variant: 'cards' (div list) or 'table' (rows inside a <tbody>; pass `columns`).
  * focus: { key, nonce } opens that group and scrolls to it.
@@ -34,7 +35,8 @@ export default function GroupedList({
   const containerRef = useRef(null);
   const levels = config.levels ?? GROUP_LEVELS;
   const tree = useMemo(() => buildGroupTree(records, getBucket, groups, levels), [records, getBucket, groups, levels]);
-  const display = useMemo(() => expandAll(tree.roots), [tree]);
+  const labelOf = config.groupLabel;
+  const display = useMemo(() => expandAll(tree.roots, labelOf), [tree, labelOf]);
   // Every key a display node stands for → that node's key.
   const displayKeyOf = useMemo(() => {
     const map = new Map();

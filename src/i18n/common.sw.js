@@ -101,9 +101,8 @@ export const commonCopy = {
   },
 
   filters: {
-    remove: (label) => `Ondoa kichujio ${label}`,
-    reset: 'Futa vichujio',
-    filters: 'Vichujio',
+    resetFilters: 'Futa vichujio',
+    active: (count) => (count === 1 ? 'Kichujio 1 kimewekwa' : `Vichujio ${count} vimewekwa`), // REVIEW
     all: 'Zote',
     searchShort: 'Tafuta',
   },
@@ -115,6 +114,7 @@ export const commonCopy = {
     checkConnection: 'Angalia mtandao wako.',
     asOf: (time) => `Hadi saa ${time}`,
     scope: (label) => `Jumla za ${label}`,
+    caption: (label) => `Muhtasari · ${label}`, // REVIEW
     acrossYears: 'Jumla huonyeshwa kwa mwaka mmoja kwa wakati. Chagua tarehe ndani ya mwaka mmoja ili kuziona.', // REVIEW
     fullReport: 'Ona ripoti kamili',
     dates: 'Tarehe',
@@ -155,5 +155,10 @@ export const commonCopy = {
     reversed: 'Tarehe ya Kuanzia lazima iwe sawa au kabla ya tarehe ya Hadi.',
     cancel: 'Ghairi',
     apply: 'Tumia',
+    rangeLabel: 'Kipindi cha tarehe', // REVIEW
+    dayLabel: 'Chagua siku', // REVIEW
+    day: 'Siku',
+    anyDay: 'Siku yoyote', // REVIEW
+    clear: 'Futa', // REVIEW
   },
 };

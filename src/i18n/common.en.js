@@ -102,9 +102,8 @@ export const commonCopy = {
   },
 
   filters: {
-    remove: (label) => `Remove filter ${label}`,
-    reset: 'Reset',
-    filters: 'Filters',
+    resetFilters: 'Reset filters',
+    active: (count) => `${count} ${count === 1 ? 'filter' : 'filters'} active`,
     all: 'All',
     // A search box's placeholder on a phone, where the page's longer one is cut off.
     searchShort: 'Search',
@@ -117,6 +116,8 @@ export const commonCopy = {
     checkConnection: 'Check your connection.',
     asOf: (time) => `As of ${time}`,
     scope: (label) => `Totals for ${label}`,
+    // The phone layout's caption over the figures: "Summary · 2026".
+    caption: (label) => `Summary · ${label}`,
     acrossYears: 'Totals cover one calendar year at a time. Choose dates within one year to see them.',
     fullReport: 'View full report',
     dates: 'Dates',
@@ -159,5 +160,11 @@ export const commonCopy = {
     reversed: 'The From date must be on or before the To date.',
     cancel: 'Cancel',
     apply: 'Apply',
+    rangeLabel: 'Date range',
+    // The one-day filter (ToolbarDate).
+    dayLabel: 'Choose a day',
+    day: 'Day',
+    anyDay: 'Any day',
+    clear: 'Clear',
   },
 };

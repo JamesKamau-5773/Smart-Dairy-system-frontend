@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { MoreVertical, Plus, Search } from 'lucide-react';
+import { MoreVertical, Plus } from 'lucide-react';
 import toast from 'react-hot-toast';
 import AddEmployeeModal from '../../components/forms/AddEmployeeModal';
 import EmployeeAccountInviteModal from '../../components/forms/EmployeeAccountInviteModal';
@@ -14,15 +14,15 @@ import Confirmation, { useConfirmation } from '../../components/ui/Confirmation'
 import { Popover, PopoverContent, PopoverTrigger } from '../../components/ui/popover';
 import { useStaff } from '../../providers/StaffProvider';
 import { useTenant } from '../../hooks/useTenant';
-import { useUrlFilters } from '../../hooks/useUrlFilters';
+import { useStaffFilters } from '../../hooks/useStaffFilters';
+import FilterPanel from '../../components/data/FilterPanel';
+import { Toolbar, ToolbarSearch, ToolbarToggle } from '../../components/data/Toolbar';
 import { getApiErrorMessage, hrApi } from '../../lib/backendApi';
 import { accountLabel, hasAppAccount, roleLabel, staffStatus } from '../../lib/staffLabels';
 import { tone } from '../../components/ui/tones';
 import { staffCopy } from '../../i18n/staff';
 import { shellCopy } from '../../i18n/shell';
 import { enumLabel } from '../../lib/enumLabel';
-import { PHONE_QUERY, useMediaQuery } from '../../hooks/useMediaQuery';
-import { commonCopy } from '../../i18n/common';
 const money = (value) => `KES ${Number(value || 0).toLocaleString()}`;
 
 function StatusChip({ status }) {
@@ -30,23 +30,17 @@ function StatusChip({ status }) {
   return <span className={`inline-flex rounded-badge px-2 py-0.5 text-meta ${tone(toneName).chip}`}>{label}</span>;
 }
 
-const STAFF_FILTERS = { former: 'no' };
-const STAFF_FILTER_VALUES = { former: ['no', 'yes'] };
-
 export default function StaffRegistry() {
-  // Inputs are 16px on phones, so the long search hint would be cut off there.
-  const isPhone = useMediaQuery(PHONE_QUERY);
   const copy = staffCopy.registry;
   const { tenantId } = useTenant();
   const {
     staff, isHydrating, addEmployee, inviteEmployeeAccount, provisionEmployeeAccount, updateEmployeePageAccess,
     issueAdvance, recordRepayment, offboardEmployee, deleteEmployee, editEmployee, verifyReturn,
   } = useStaff();
-  const [searchTerm, setSearchTerm] = useState('');
-  // "Show former staff" lives in the address; the search stays here (it holds people's names).
-  const { filters: staffFilters, setFilter: setStaffFilter } = useUrlFilters(STAFF_FILTERS, { allowed: STAFF_FILTER_VALUES });
-  const showFormer = staffFilters.former === 'yes';
-  const setShowFormer = (value) => setStaffFilter('former', value ? 'yes' : 'no');
+  // "Show former staff" lives in the address; the search stays here (see useStaffFilters).
+  const filters = useStaffFilters();
+  const searchTerm = filters.values.search;
+  const { showFormer } = filters;
   const [isAddEmployeeModalOpen, setIsAddEmployeeModalOpen] = useState(false);
   // { kind: 'access' | 'edit' | 'verify' | 'offboard', id } for the open dialog.
   const [dialog, setDialog] = useState(null);
@@ -261,25 +255,13 @@ export default function StaffRegistry() {
         </div>
       </section>
 
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-        <label className="relative min-w-0 flex-1">
-          <span className="sr-only">{copy.search}</span>
-          <Search size={16} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-ink-muted" aria-hidden="true" />
-          <input
-            type="search"
-            placeholder={isPhone ? commonCopy.filters.searchShort : copy.searchPlaceholder}
-            value={searchTerm}
-            onChange={(event) => setSearchTerm(event.target.value)}
-            className="input-machined w-full pl-9 text-control"
-          />
-        </label>
-        {formerCount > 0 && (
-          <label className="flex min-h-11 items-center gap-2 text-field-label text-ink">
-            <input type="checkbox" checked={showFormer} onChange={(event) => setShowFormer(event.target.checked)} className="h-4 w-4 accent-brand" />
-            {copy.showFormer(formerCount)}
-          </label>
-        )}
-      </div>
+      <FilterPanel title={copy.filtersTitle} activeCount={filters.activeCount} onReset={filters.reset}>
+        <Toolbar>
+          <ToolbarSearch label={copy.search} value={searchTerm} onChange={filters.setSearch} placeholder={copy.searchPlaceholder} />
+          {/* Only when there are former staff to show, as before. */}
+          {formerCount > 0 && <ToolbarToggle label={copy.showFormer(formerCount)} checked={showFormer} onChange={filters.setShowFormer} />}
+        </Toolbar>
+      </FilterPanel>
 
       {isHydrating ? (
         <div className="space-y-3" aria-busy="true">{[0, 1, 2].map((key) => <Skeleton key={key} className="h-20 w-full" />)}</div>
@@ -293,7 +275,7 @@ export default function StaffRegistry() {
       ) : filteredStaff.length === 0 ? (
         <p className="text-body text-ink-muted">
           {copy.noMatches}{' '}
-          <button type="button" onClick={() => { setSearchTerm(''); setShowFormer(true); }} className="text-control text-brand hover:underline">{copy.clearSearch}</button>
+          <button type="button" onClick={filters.showEveryone} className="text-control text-brand hover:underline">{copy.clearSearch}</button>
         </p>
       ) : (
         <>

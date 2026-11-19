@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import toast from 'react-hot-toast';
-import { AlertCircle, ChevronDown, ChevronUp, Plus, Search } from 'lucide-react';
+import { AlertCircle, Plus } from 'lucide-react';
 import LABELS from '../../lib/labels';
 import AlertBanner from '../../components/ui/AlertBanner';
 import BaseModal from '../../components/ui/BaseModal';
@@ -11,6 +11,9 @@ import { herdApi, medicalApi } from '../../lib/backendApi';
 import { findCowIdentityMatch, formatCowIdentity, resolveCowIdentityFromHerd } from '../../lib/cowIdentity';
 import { normalizeHerdCow } from '../../lib/herdUtils';
 import { useTenant } from '../../hooks/useTenant';
+import { MEDICAL_SEVERITIES, MEDICAL_STATUSES, useMedicalFilters } from '../../hooks/useMedicalFilters';
+import FilterPanel from '../../components/data/FilterPanel';
+import { Toolbar, ToolbarSearch, ToolbarSelect } from '../../components/data/Toolbar';
 import GroupedDateRows from '../../components/ui/GroupedDateRows';
 import { CardSkeletons, ListLoadMessage, SlowLoadingHint, StaleDataNotice, StatValue, TableSkeletonRows } from '../../components/ui/ListLoadState';
 import { getListLoadState } from '../../lib/listLoadState';
@@ -76,11 +79,10 @@ export default function VetRecords() {
   const queryClient = useQueryClient();
   const { tenantId, farmId } = useTenant();
   const [showForm, setShowForm] = useState(false);
-  const [filtersOpen, setFiltersOpen] = useState(false);
   const [selectedRecord, setSelectedRecord] = useState(null);
-  const [query, setQuery] = useState('');
-  const [statusFilter, setStatusFilter] = useState('All');
-  const [severityFilter, setSeverityFilter] = useState('All');
+  const filters = useMedicalFilters();
+  const { query, status: statusFilter, severity: severityFilter } = filters.values;
+  const setQuery = filters.setQuery;
   const [form, setForm] = useState(EMPTY_FORM);
   const [formErrors, setFormErrors] = useState({});
   const [isSaving, setIsSaving] = useState(false);
@@ -213,7 +215,6 @@ export default function VetRecords() {
     });
   }, [records, query, statusFilter, severityFilter]);
 
-  const activeFilterCount = [query.trim(), statusFilter !== 'All', severityFilter !== 'All'].filter(Boolean).length;
 
   // Typo-tolerant "Did you mean…" for cows and diagnoses when a search finds nothing.
   const recordSuggestions = query.trim() && filteredRecords.length === 0
@@ -330,11 +331,7 @@ export default function VetRecords() {
     requestAnimationFrame(() => document.getElementById('medical-visit-form')?.scrollIntoView({ behavior: 'smooth', block: 'start' }));
   };
 
-  const clearFilters = () => {
-    setQuery('');
-    setStatusFilter('All');
-    setSeverityFilter('All');
-  };
+  const clearFilters = filters.reset;
 
   return (
     <div className="animate-reveal space-y-6">
@@ -423,82 +420,23 @@ export default function VetRecords() {
         </div>
       </div>
 
-      <div className="rounded-[28px] border border-ink/10 bg-surface/90 p-4 sm:p-5 ">
-        <div className="flex flex-col gap-3 border-b border-ink/10 pb-4 sm:flex-row sm:items-center sm:justify-between">
-          <div className="space-y-1">
-            <div className="text-label text-ink-muted">
-
-    {copy.searchAndFilters}
-            </div>
-            <p className="text-body text-ink-muted">{copy.filtersHint}</p>
-          </div>
-
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="rounded-full border border-ink/10 bg-surface-warm/60 px-3 py-1 text-badge text-ink-muted">
-              {copy.activeFilters(activeFilterCount)}
-            </span>
-            <button
-              type="button"
-              onClick={() => setFiltersOpen((current) => !current)}
-              aria-expanded={filtersOpen}
-                className="inline-flex items-center gap-1.5 rounded-lg border border-ink/10 bg-surface px-3 py-1.5 text-control text-ink transition-all hover:border-brand/20 hover:bg-brand/5 hover:text-brand"
-            >
-              {filtersOpen ? <ChevronUp size={12} aria-hidden="true" /> : <ChevronDown size={12} aria-hidden="true" />}
-              {filtersOpen ? copy.hideFilters : copy.showFilters}
-            </button>
-          </div>
-        </div>
-
-        {filtersOpen && (
-          <div className="mt-4 grid gap-4 lg:grid-cols-[1.3fr_0.7fr_0.7fr_auto] lg:items-end">
-            <label className="space-y-2">
-              <span className="block text-field-label text-ink-muted">
-
-    {copy.searchRecords}
-              </span>
-              <div className="relative">
-                <input
-                  value={query}
-                  onChange={(event) => setQuery(event.target.value)}
-                  className="input-machined w-full pl-10"
-                  placeholder={copy.searchPlaceholder}
-                />
-                <Search size={14} className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-brand" aria-hidden="true" />
-              </div>
-            </label>
-
-            <label className="space-y-2">
-              <span className="block text-field-label text-ink-muted">
-
-    {copy.status}
-              </span>
-              <select className="input-machined w-full" value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)}>
-                <option value="All">{copy.allStatuses}</option>
-                <option value="Under Treatment">{treatmentStatusLabel('Under Treatment')}</option>
-                <option value="Follow-up Due">{treatmentStatusLabel('Follow-up Due')}</option>
-                <option value="Closed">{treatmentStatusLabel('Closed')}</option>
-              </select>
-            </label>
-
-            <label className="space-y-2">
-              <span className="block text-field-label text-ink-muted">
-
-    {copy.severity}
-              </span>
-              <select className="input-machined w-full" value={severityFilter} onChange={(event) => setSeverityFilter(event.target.value)}>
-                <option value="All">{copy.allSeverities}</option>
-                <option value="High">{severityLabel('High')}</option>
-                <option value="Medium">{severityLabel('Medium')}</option>
-                <option value="Low">{severityLabel('Low')}</option>
-              </select>
-            </label>
-
-            <button type="button" onClick={clearFilters} className="btn-command bg-surface-raised text-ink h-[46px] self-end">
-              {copy.clearFilters}
-            </button>
-          </div>
-        )}
-      </div>
+      <FilterPanel title={copy.filtersTitle} activeCount={filters.activeCount} onReset={filters.reset}>
+        <Toolbar>
+          <ToolbarSearch label={copy.searchRecords} value={query} onChange={setQuery} placeholder={copy.searchPlaceholder} />
+          <ToolbarSelect
+            label={copy.status}
+            value={statusFilter}
+            onChange={filters.setStatus}
+            options={MEDICAL_STATUSES.map((status) => [status, status === 'All' ? copy.allStatuses : treatmentStatusLabel(status)])}
+          />
+          <ToolbarSelect
+            label={copy.severity}
+            value={severityFilter}
+            onChange={filters.setSeverity}
+            options={MEDICAL_SEVERITIES.map((severity) => [severity, severity === 'All' ? copy.allSeverities : severityLabel(severity)])}
+          />
+        </Toolbar>
+      </FilterPanel>
 
       {showForm && (
         <div id="medical-visit-form" className="card-machined border-brand/20 bg-surface/90 p-6 ">

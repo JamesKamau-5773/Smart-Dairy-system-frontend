@@ -27,3 +27,9 @@ export const DESKTOP_QUERY = '(min-width: 768px)';
 
 /** Phones: inputs are 16px here (src/index.css), so long placeholders get a short form. */
 export const PHONE_QUERY = '(max-width: 640px)';
+
+/**
+ * Tailwind's `xl`: wide enough for a full records table (the Ledger's columns don't fit
+ * below it). Narrower screens get the list layout.
+ */
+export const TABLE_QUERY = '(min-width: 1280px)';

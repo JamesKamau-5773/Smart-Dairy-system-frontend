@@ -62,6 +62,8 @@ export function formatMoneyText(amount, currency = 'KES') {
  *  animate       boolean                    — bounce animation on value change
  *  compact       boolean                    — abbreviate large numbers (1.2M, 45K)
  *  blurred       boolean                    — privacy mask (toggle with click)
+ *  cents         'muted' | 'plain'          — 'muted' (default) fades the decimals; 'plain'
+ *                                              shows them like the whole number (same colour)
  *  size          'body'|'stat-value'        — type role (default 'body'); the symbol and
  *                                              decimals share it. Pass text-body-strong in
  *                                              className for a bold body figure.
@@ -78,6 +80,7 @@ export default function Money({
   compact   = false,
   blurred   = false,
   size      = 'body',
+  cents     = 'muted',
   className = '',
 }) {
   const [hidden, setHidden] = useState(blurred);
@@ -161,9 +164,9 @@ export default function Money({
         {/* Integer part */}
         <span>{integer}</span>
 
-        {/* Decimal part: same size, de-emphasised by colour only */}
+        {/* Decimal part: same size; faded unless `cents="plain"` */}
         {decimal && (
-          <span className="opacity-60">{decimal}</span>
+          <span className={cents === 'plain' ? undefined : 'opacity-60'}>{decimal}</span>
         )}
       </span>
 

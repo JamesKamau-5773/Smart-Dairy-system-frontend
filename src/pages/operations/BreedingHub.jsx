@@ -27,9 +27,11 @@ import { formatCowIdentity, resolveCowIdentityFromHerd } from '../../lib/cowIden
 import { useTenant } from '../../hooks/useTenant';
 import { ChevronRight } from 'lucide-react';
 import { toLocalIsoDate } from '../../lib/localDate';
-import { groupHistoryByMonth, outcomeLabel } from '../../lib/breedingHistory';
+import { groupHistoryByMonth, historyFilters as breedingHistoryStatuses, outcomeLabel } from '../../lib/breedingHistory';
 import { SemenSourceBadge } from '../../components/breeding/BreedingBadges';
-import BreedingHistoryFilters from '../../components/breeding/BreedingHistoryFilters';
+import FilterPanel from '../../components/data/FilterPanel';
+import { Toolbar, ToolbarPills, ToolbarSearch } from '../../components/data/Toolbar';
+import { useBreedingHistoryFilters } from '../../hooks/useBreedingHistoryFilters';
 import BreedingHistoryList from '../../components/breeding/BreedingHistoryList';
 import { reportError } from '../../lib/telemetry';
 import { breedingCopy } from '../../i18n/breeding';
@@ -303,10 +305,9 @@ export default function BreedingHub() {
   const [isRestockOpen, setIsRestockOpen] = useState(false);
   const [selectedInventoryItem, setSelectedInventoryItem] = useState(null);
 
-  // Breeding history filter states
-  const [historyFilter, setHistoryFilter] = useState('All');
-  const [historySearch, setHistorySearch] = useState('');
-  const [historyControlsOpen, setHistoryControlsOpen] = useState(false);
+  // Breeding history filters (the shared useFilterState, kept in the page).
+  const historyFilters = useBreedingHistoryFilters();
+  const { status: historyFilter, search: historySearch } = historyFilters.values;
 
   // Form saving state
   const [isSaving, setIsSaving] = useState(false);
@@ -706,14 +707,17 @@ export default function BreedingHub() {
         footerActions={<button type="button" onClick={() => setIsHistoryOpen(false)} className="btn-command px-4 py-2 text-control">{copy.close}</button>}
       >
         <SimpleModalSection title={copy.allChecks}>
-          <BreedingHistoryFilters
-            filter={historyFilter}
-            search={historySearch}
-            open={historyControlsOpen}
-            onFilterChange={setHistoryFilter}
-            onSearchChange={setHistorySearch}
-            onToggle={() => setHistoryControlsOpen((current) => !current)}
-          />
+          <FilterPanel title={copy.historyFiltersTitle} activeCount={historyFilters.activeCount} onReset={historyFilters.reset}>
+            <Toolbar>
+              <ToolbarSearch label={copy.historySearch} value={historySearch} onChange={historyFilters.setSearch} placeholder={copy.historySearch} />
+              <ToolbarPills
+                label={copy.historyStatusLabel}
+                value={historyFilter}
+                onChange={historyFilters.setStatus}
+                options={breedingHistoryStatuses()}
+              />
+            </Toolbar>
+          </FilterPanel>
 
           <BreedingHistoryList groups={groupedHistory} />
         </SimpleModalSection>

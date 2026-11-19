@@ -70,6 +70,12 @@ export function formatKES(value, { fractionDigits = 0, currency = 'KES' } = {}) 
   return `${negative ? '−' : ''}${currency} ${amount}`;
 }
 
+/** "-12.5" → "−12.5%", "68.7" → "68.7%" (a true minus); "—" when there is no value. */
+export function formatPercent(value) {
+  const formatted = formatDecimal(value);
+  return formatted === null ? '—' : `${formatted}%`;
+}
+
 /** "-5.3" → "5.3%" (the sign is shown separately by the change indicator). */
 export function formatPercentMagnitude(value) {
   const formatted = formatDecimal(value);

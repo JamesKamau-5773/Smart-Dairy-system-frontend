@@ -1,442 +1,161 @@
-import { useEffect, useState } from 'react';
-import { useMutation } from '@tanstack/react-query';
-import { ChevronDown } from 'lucide-react';
-import toast from 'react-hot-toast';
+import { useState } from 'react';
 import { useTenant } from '../../hooks/useTenant';
-import { useAuth } from '../../contexts/AuthContext';
-import { hasRole } from '../../lib/roles';
-import { financeApi, getApiErrorMessage } from '../../lib/backendApi';
-import { offlineFailureMessage } from '../../lib/offlinePolicy';
 import { useLedgerCategories } from '../../hooks/useLedgerCategories';
+import { useLedgerData } from '../../hooks/useLedgerData';
+import { useLedgerFilters } from '../../hooks/useLedgerFilters';
+import { useLedgerRecordActions } from '../../hooks/useLedgerRecordActions';
 import { todayLocalIso } from '../../lib/localDate';
-import { formatDate } from '../../lib/dateFormat';
-import Money from '../../components/ui/Money';
-import OverflowMenu from '../../components/ui/OverflowMenu';
+import { formatCount } from '../../lib/numberFormat';
+import DataSection from '../../components/data/DataSection';
+import FilterPanel from '../../components/data/FilterPanel';
+import KpiGroup from '../../components/data/KpiGroup';
+import InfoTip from '../../components/ui/InfoTip';
 import ReceiptPreview from '../../components/finance/ReceiptPreview';
 import LedgerEntryFormModal from '../../components/finance/LedgerEntryFormModal';
 import LedgerCorrectionModal from '../../components/finance/LedgerCorrectionModal';
 import ReceiptPhotosModal from '../../components/finance/ReceiptPhotosModal';
-import { downloadReceiptPdf, shareReceiptText } from '../../lib/receipt';
-import PageHeader from '../../components/layout/PageHeader';
-import DataSection from '../../components/data/DataSection';
-import { cellClass } from '../../components/data/DataTable';
-import GroupedDataTable from '../../components/data/GroupedDataTable';
-import SummaryStrip from '../../components/data/SummaryStrip';
-import ToolbarDateRange from '../../components/data/ToolbarDateRange';
-import { FilterChips, ResultCount, Toolbar, ToolbarSearch, ToolbarSelect } from '../../components/data/Toolbar';
-import { ledgerGroupConfig, ledgerSummaryConfig, summaryIsEmpty, summaryNotice, summaryScope } from '../../components/periods/periodConfigs';
-import { useInvalidateLedger } from '../../hooks/usePeriodTotals';
-import { useLedgerData } from '../../hooks/useLedgerData';
-import { formatDateRange } from '../../lib/dateFormat';
-import { currentYearRange } from '../../lib/periodTotals';
-import { ledgerCopy } from '../../i18n/ledger';
+import LedgerHeader from '../../components/finance/ledger/LedgerHeader';
+import LedgerFilters from '../../components/finance/ledger/LedgerFilters';
+import LedgerTable from '../../components/finance/ledger/LedgerTable';
+import LedgerList from '../../components/finance/ledger/LedgerList';
+import TransactionSheet from '../../components/finance/ledger/TransactionSheet';
+import { TABLE_QUERY, useMediaQuery } from '../../hooks/useMediaQuery';
+import { LEDGER_KPI_ROWS, ledgerReportRoute } from '../../components/finance/ledger/ledgerKpiConfig';
+import { summaryScope } from '../../components/periods/periodConfigs';
 import { financeCopy } from '../../i18n/finance';
-import { correctionKind } from '../../lib/ledgerCorrection';
-import { readAttachments } from '../../lib/receiptAttachments';
-import { ISO_DATE_FILTER, useUrlFilters } from '../../hooks/useUrlFilters';
-import { enumLabel } from '../../lib/enumLabel';
 
-const copy = financeCopy.ledger;
-
-// Type, category and the date range live in the address, so other pages can link to a
-// filtered view (e.g. /finance/ledger?from=2026-11-01&to=2026-11-30). Search stays in the
-// page: it can hold a customer's name or phone number, which never go in a URL.
-const URL_FILTERS = { type: 'all', category: 'all', from: '', to: '' };
-const URL_FILTER_VALUES = { type: ['all', 'revenue', 'expense'], from: ISO_DATE_FILTER, to: ISO_DATE_FILTER };
-
-/** The address's range when it is complete and in order (ISO dates compare as text); else null. */
-const rangeFrom = ({ from, to }) => (from && to && from <= to ? { from, to } : null);
-// Labels are read when shown, so they follow the chosen language.
-const typeOptions = () => ['all', 'revenue', 'expense'].map((type) => [type, copy.types[type]]);
-
-// Fixed widths for every column but Description, which takes what's left, so nothing moves
-// when groups open and close. At 1280px Customer / Supplier and Ref fit without truncating.
-// The day group row carries the date, so rows don't repeat it. Headers are read at render
-// so they follow the language.
-const COLUMN_LAYOUT = [
-  { id: 'party', width: 'w-[13rem]' },
-  { id: 'category', width: 'w-[8rem]' },
-  { id: 'ref', width: 'w-[9.5rem]' }, // wide enough for a 16-character reference at the meta size
-  { id: 'description' },
-  { id: 'amount', align: 'right', width: 'w-[8rem]' },
-  { id: 'status', width: 'w-[5.5rem]' },
-  { id: 'actions', align: 'right', width: 'w-[3.5rem]', srOnly: true },
-];
-const column = Object.fromEntries(COLUMN_LAYOUT.map((entry) => [entry.id, entry]));
-
-/** 'in' or 'out' from the record's own type; null when the API sent neither. */
-const directionOf = (tx) => {
-  const type = String(tx.transaction_type ?? tx.type ?? '').toLowerCase();
-  if (type === 'revenue' || type === 'income') return 'in';
-  if (type === 'expense') return 'out';
-  return null;
-};
-const partyOf = (tx) => tx.counterparty_name || tx.customer_name || tx.buyer_name || '—';
-const descriptionOf = (tx) => [tx.item_name, tx.description].filter(Boolean).join(' · ');
-const getBucket = (tx) => tx.bucket;
-
-/** The amount signed by the entry's own type: income as is, an expense negative; null if unknown. */
-const signedAmount = (tx) => {
-  const amount = Number(tx.amount);
-  const direction = directionOf(tx);
-  if (!direction || tx.amount === null || tx.amount === undefined || !Number.isFinite(amount)) return null;
-  return direction === 'out' ? -Math.abs(amount) : amount;
-};
-
-// Posted is the normal state, so only other statuses get a badge.
-const StatusBadge = ({ status }) => {
-  if (!status) return <span className="text-meta text-ink-muted">—</span>;
-  const text = String(status).toLowerCase().replace(/_/g, ' ');
-  if (text === 'posted') return null;
-  const voided = ['voided', 'void', 'cancelled'].includes(text);
-  return (
-    <span className={`inline-flex max-w-full items-center rounded-badge border border-ink/10 bg-ink-50 px-1.5 py-0.5 text-badge ${voided ? 'text-ink-muted line-through' : 'text-ink'}`}>
-      <span className="truncate">{enumLabel(copy.statuses, text)}</span>
-    </span>
-  );
-};
-
+/**
+ * /finance/ledger. Composition only: the hooks supply filters, data and record actions, and
+ * the components lay them out (header, KPI cards, filter panel, grouped table, dialogs).
+ */
 const FinancialLedger = () => {
+  const copy = financeCopy.ledger;
   const { tenantId, farmId } = useTenant();
-  const { currentUser } = useAuth();
-  const invalidateLedger = useInvalidateLedger();
+  const today = todayLocalIso();
   const categories = useLedgerCategories(tenantId, farmId);
-  const { filters: urlFilters, setFilters: setUrlFilters, resetFilters: resetUrlFilters } = useUrlFilters(URL_FILTERS, { allowed: URL_FILTER_VALUES });
-  const [search, setSearch] = useState('');
-  const ledgerFilters = { ...urlFilters, search };
-  // The table and the strip open on the current year (1 Jan to today); a range in the
-  // address replaces it, and removing that range goes back to the year.
-  const chosenRange = rangeFrom(urlFilters);
-  const range = chosenRange ?? currentYearRange(todayLocalIso());
-  const COLUMNS = COLUMN_LAYOUT.map((entry) => ({
-    ...entry,
-    header: entry.srOnly ? <span className="sr-only">{ledgerCopy.columns[entry.id]}</span> : ledgerCopy.columns[entry.id],
-  }));
-  const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('');
-  const [expandedIds, setExpandedIds] = useState(() => new Set());
-  const [modalTransactionType, setModalTransactionType] = useState(null);
-  const [selectedReceipt, setSelectedReceipt] = useState(null);
-  const [isReceiptDownloading, setIsReceiptDownloading] = useState(false);
-  const [transactionToCorrect, setTransactionToCorrect] = useState(null);
-  const [photosFor, setPhotosFor] = useState(null);
-  // The backend lets the owner correct entries, and the owner or farm hands keep receipts.
-  const canCorrect = hasRole(currentUser, ['FARMER']);
-  const canUploadReceipts = hasRole(currentUser, ['FARMER', 'FARM_HAND']);
-  const correctableAs = (tx) => (canCorrect ? correctionKind(tx) : null);
-  const searchQuery = ledgerFilters.search.trim();
+  const filters = useLedgerFilters({ today });
+  const { rows, kpis, groupTotals } = useLedgerData({ filters: filters.query, range: filters.range });
+  const actions = useLedgerRecordActions();
+  const [entryFormType, setEntryFormType] = useState(null);
+  // The table from xl up; below it the list, whose rows open a record's sheet.
+  const isTable = useMediaQuery(TABLE_QUERY);
+  const [selected, setSelected] = useState(null);
+  const empty = filters.activeCount > 0 ? copy.noMatches : copy.empty;
 
-  useEffect(() => {
-    const timeoutId = window.setTimeout(() => setDebouncedSearchQuery(searchQuery), 300);
-    return () => window.clearTimeout(timeoutId);
-  }, [searchQuery]);
-
-  // One hook requests the rows, the group totals and the summary strip with the same
-  // filters and date range, so the strip always sums up exactly what the table shows.
-  const { rows, groupTotals, summary: ledgerSummary } = useLedgerData({
-    filters: { type: ledgerFilters.type, category: ledgerFilters.category, search: debouncedSearchQuery },
-    range,
-  });
-  const summary = ledgerSummary.data;
-  const transactions = rows.items;
-  const groupsUnavailable = groupTotals.loadState === 'error' || groupTotals.loadState === 'offline';
-
-  const categoryOptions = (() => {
-    const options = ledgerFilters.type === 'revenue' ? categories.income
-      : ledgerFilters.type === 'expense' ? categories.expense
-        : [...categories.income, ...categories.expense];
-    return [['all', copy.allCategories], ...new Map(options).entries()];
-  })();
-  const categoryLabel = Object.fromEntries(categoryOptions)[ledgerFilters.category] ?? ledgerFilters.category;
-  const categoryLabels = Object.fromEntries([...categories.income, ...categories.expense]);
-  // A saved category code in the chosen language; one the list doesn't know is shown as saved.
-  const categoryText = (code) => (code ? categoryLabels[code] ?? code : '—');
-
-  const setFilter = (name, value) => {
-    if (name === 'search') setSearch(value);
-    else setUrlFilters({ [name]: value, ...(name === 'type' ? { category: 'all' } : {}) });
-  };
-  const setRange = (next) => setUrlFilters({ from: next?.from ?? '', to: next?.to ?? '' });
-  const chips = [
-    searchQuery && { key: 'search', label: `“${searchQuery}”`, onRemove: () => setFilter('search', '') },
-    chosenRange && { key: 'range', label: formatDateRange(chosenRange.from, chosenRange.to), onRemove: () => setRange(null) },
-    ledgerFilters.type !== 'all' && { key: 'type', label: copy.types[ledgerFilters.type], onRemove: () => setFilter('type', 'all') },
-    ledgerFilters.category !== 'all' && { key: 'category', label: categoryLabel, onRemove: () => setFilter('category', 'all') },
-  ].filter(Boolean);
-  const hasActiveFilters = chips.length > 0;
-
-  const correctionMutation = useMutation({
-    mutationFn: ({ transactionId, payload }) => financeApi.correctTransaction(transactionId, payload),
-    onSuccess: (result, { kind }) => {
-      invalidateLedger();
-      setTransactionToCorrect(null);
-      toast.success(kind === 'income'
-        ? copy.incomeCorrected
-        : copy.expenseCorrected);
-    },
-    // Shown inside the form, which stays open so the owner can adjust and retry.
-  });
-  const correctionError = correctionMutation.isError
-    ? (offlineFailureMessage(correctionMutation.error, copy.nothingChanged) || getApiErrorMessage(correctionMutation.error, copy.nothingChangedRetry))
-    : null;
-  const openCorrection = (tx) => {
-    correctionMutation.reset();
-    setTransactionToCorrect(tx);
-  };
-
-  const openReceipt = async (transaction) => {
-    if (!transaction.receipt_available || !transaction.receipt?.id) return;
-    try {
-      setSelectedReceipt(await financeApi.getReceipt(transaction.receipt.id));
-    } catch (receiptError) {
-      toast.error(getApiErrorMessage(receiptError));
-    }
-  };
-  const handleDownloadReceipt = async () => {
-    setIsReceiptDownloading(true);
-    try {
-      downloadReceiptPdf(selectedReceipt, await financeApi.downloadReceiptPdf(selectedReceipt.id));
-    } catch (receiptError) {
-      toast.error(getApiErrorMessage(receiptError));
-    } finally {
-      setIsReceiptDownloading(false);
-    }
-  };
-  const handleShareReceipt = async () => {
-    try {
-      await shareReceiptText(selectedReceipt);
-      toast.success(navigator.share ? copy.receiptShared : copy.receiptCopied);
-    } catch (receiptError) {
-      if (receiptError?.name !== 'AbortError') toast.error(copy.shareFailed);
-    }
-  };
-
-  const toggleExpanded = (id) => setExpandedIds((current) => {
-    const next = new Set(current);
-    if (next.has(id)) next.delete(id); else next.add(id);
-    return next;
-  });
-
-  const menuFor = (tx, size) => {
-    const photoCount = readAttachments(tx).length;
-    return (
-      <OverflowMenu
-        label={copy.actionsFor(partyOf(tx), formatDate(tx.date, copy.noDate))}
-        size={size}
-        items={[
-          tx.receipt_available && tx.receipt?.id && { key: 'receipt', label: copy.viewReceipt, onSelect: () => openReceipt(tx) },
-          (photoCount || canUploadReceipts) && { key: 'photos', label: photoCount ? copy.photos(photoCount) : copy.addPhoto, onSelect: () => setPhotosFor(tx) },
-          correctableAs(tx) && { key: 'correct', label: copy.correct, onSelect: () => openCorrection(tx) },
-        ]}
-      />
-    );
-  };
-
-  // Income plain, expenses negative in the negative colour; the header names the currency.
-  const amountCell = (tx) => {
-    const amount = signedAmount(tx);
-    return amount === null
-      ? <span className="text-meta text-ink-muted">—</span>
-      : <Money amount={amount} tone="signed" showCurrency={false} className="text-body-strong" />;
-  };
-
-  // Desktop row, 44px. The full description and reference open in the row detail.
-  const renderRow = (tx) => {
-    const description = descriptionOf(tx);
-    const expanded = expandedIds.has(tx.id);
-    const detailId = `ledger-detail-${tx.id}`;
-    return [
-      <tr key={tx.id} className="h-11 border-b border-ink/5 hover:bg-ink-50/60">
-        <td className={cellClass(column.party, '!py-0')}><span className="block truncate text-body-strong text-ink" title={partyOf(tx)}>{partyOf(tx)}</span></td>
-        <td className={cellClass(column.category, '!py-0')}><span className="block truncate text-meta text-ink-muted" title={tx.category ? categoryText(tx.category) : undefined}>{categoryText(tx.category)}</span></td>
-        <td className={cellClass(column.ref, '!py-0')}><span className="block truncate text-meta text-ink-muted" title={tx.reference_code || undefined}>{tx.reference_code || '—'}</span></td>
-        <td className={cellClass(column.description, '!py-0')}>
-          <button
-            type="button"
-            onClick={() => toggleExpanded(tx.id)}
-            aria-expanded={expanded}
-            aria-controls={detailId}
-            title={description || undefined}
-            className="flex w-full min-w-0 items-center gap-1 !rounded-none text-left text-body"
-          >
-            <span className="min-w-0 truncate">
-              {tx.item_name && <span className="text-body-strong text-ink">{tx.item_name}</span>}
-              {tx.item_name && tx.description && <span className="text-ink-muted"> · </span>}
-              <span className="text-ink-muted">{tx.description || (tx.item_name ? '' : '—')}</span>
-            </span>
-            <ChevronDown size={13} aria-hidden="true" className={`ml-auto shrink-0 text-ink-muted transition-transform motion-reduce:transition-none ${expanded ? 'rotate-180' : ''}`} />
-          </button>
-        </td>
-        <td className={cellClass(column.amount, '!py-0 whitespace-nowrap')}>{amountCell(tx)}</td>
-        <td className={cellClass(column.status, '!py-0')}><StatusBadge status={tx.status} /></td>
-        <td className={cellClass(column.actions, '!py-0')}>{menuFor(tx, 'h-8 w-8')}</td>
-      </tr>,
-      expanded && (
-        <tr key={`${tx.id}-detail`} id={detailId} className="border-b border-ink/5 bg-ink-50/60">
-          <td colSpan={COLUMNS.length} className="px-4 !py-3">
-            <dl className="grid gap-x-6 gap-y-2 text-body sm:grid-cols-[minmax(0,2fr)_minmax(0,1fr)_minmax(0,1fr)]">
-              <div className="min-w-0"><dt className="text-meta text-ink-muted">{copy.description}</dt><dd className="mt-0.5 whitespace-pre-wrap break-words text-ink">{description || '—'}</dd></div>
-              <div className="min-w-0"><dt className="text-meta text-ink-muted">{copy.reference}</dt><dd className="mt-0.5 break-all text-ink">{tx.reference_code || '—'}</dd></div>
-              <div className="min-w-0"><dt className="text-meta text-ink-muted">{copy.category}</dt><dd className="mt-0.5 break-words text-ink">{categoryText(tx.category)}</dd></div>
-            </dl>
-          </td>
-        </tr>
-      ),
-    ];
-  };
-
-  // Phone card inside a day group: no repeated date; actions in ⋮.
-  const renderCard = (tx) => {
-    const direction = directionOf(tx);
-    const description = descriptionOf(tx);
-    const expanded = expandedIds.has(tx.id);
-    return (
-      <article key={tx.id} className="min-w-0 space-y-1 bg-card py-2 pl-3 pr-1">
-        <div className="flex min-w-0 items-start gap-2">
-          <div className="min-w-0 flex-1 pt-1">
-            <p className="truncate text-body-strong text-ink">{partyOf(tx)}</p>
-            <p className="truncate text-meta text-ink-muted">
-              {categoryText(tx.category)}{tx.reference_code ? <> · <span>{tx.reference_code}</span></> : null}
-            </p>
-          </div>
-          <div className="shrink-0 pt-1 text-right">
-            <p className="text-label text-ink-muted">{direction === 'in' ? copy.columns.moneyIn : direction === 'out' ? copy.columns.moneyOut : copy.amount}</p>
-            {signedAmount(tx) === null
-              ? <Money amount={tx.amount} className="text-body-strong" />
-              : <Money amount={signedAmount(tx)} tone="signed" className="text-body-strong" />}
-          </div>
-          <div className="flex shrink-0 items-center">{menuFor(tx, 'h-11 w-11')}</div>
-        </div>
-        <div className="flex min-w-0 items-start gap-2 pr-2">
-          {description ? (
-            <button type="button" onClick={() => toggleExpanded(tx.id)} aria-expanded={expanded} className={`min-h-6 min-w-0 flex-1 !rounded-none text-left text-meta text-ink-muted ${expanded ? 'whitespace-pre-wrap break-words' : 'truncate'}`}>
-              {description}
-            </button>
-          ) : <span className="flex-1" />}
-          <StatusBadge status={tx.status} />
-        </div>
-      </article>
-    );
-  };
-
-  const openForm = (type) => setModalTransactionType(type);
-  const addActions = (
-    <div className="flex flex-wrap gap-2">
-      <button type="button" onClick={() => openForm('income')} className="btn-command min-h-11 gap-2 px-4">{copy.logIncome}</button>
-      <button type="button" onClick={() => openForm('expense')} className="btn-secondary min-h-11 gap-2 px-4">{copy.logExpense}</button>
-    </div>
+  const resultsSummary = rows.total != null && (
+    <p role="status" className="flex flex-wrap items-center gap-1">
+      <span>{copy.showing(rows.total, formatCount(rows.total))}</span>
+      <InfoTip topic={copy.kpis.label}>{copy.resultsInfo}</InfoTip>
+    </p>
   );
-  const emptyMessage = hasActiveFilters
-    ? copy.noMatches
-    : (
-      <div className="flex flex-col items-center gap-3">
-        <p>{copy.empty}</p>
-        {addActions}
-      </div>
-    );
-
-  // The dashboard opens on the same dates as the ledger.
-  const reportLink = `/operations/reports?period=custom&start_date=${range.from}&end_date=${range.to}`;
-  // "No records" only when the table is empty too (the strip and table share filters and dates).
-  const tableIsEmpty = (rows.loadState === 'ready' || rows.loadState === 'stale') && transactions.length === 0;
 
   return (
     <div className="mx-auto max-w-7xl animate-reveal space-y-4">
-      <PageHeader
-        title={copy.title}
-        primaryAction={{ label: copy.logIncome, create: true, onClick: () => openForm('income') }}
-        secondaryActions={[{ key: 'expense', label: copy.logExpense, onClick: () => openForm('expense') }]}
+      <LedgerHeader
+        title={copy.heading}
+        subtitle={copy.subtitle}
+        incomeLabel={copy.logIncome}
+        expenseLabel={copy.logExpense}
+        onLogIncome={() => setEntryFormType('income')}
+        onLogExpense={() => setEntryFormType('expense')}
       />
 
-      <SummaryStrip
-        label={copy.summaryTitle}
-        items={summary ? ledgerSummaryConfig.items(summary) : []}
-        scope={summaryScope(range, { isDefault: !chosenRange })}
-        empty={summaryIsEmpty(summary) && tableIsEmpty && copy.noRecords}
-        notice={summaryNotice(ledgerSummary)}
-        link={{ to: reportLink }}
-        loadState={ledgerSummary.loadState}
-        hasData={Boolean(summary)}
-        error={ledgerSummary.error}
-        asOf={ledgerSummary.asOf}
-        onRetry={ledgerSummary.refetch}
+      <KpiGroup
+        label={copy.kpis.label}
+        rows={LEDGER_KPI_ROWS}
+        values={kpis.data}
+        scope={summaryScope(filters.range, { isDefault: filters.isDefaultRange, short: !isTable })}
+        reportTo={ledgerReportRoute(filters.range)}
+        loadState={kpis.loadState}
+        error={kpis.error}
+        onRetry={kpis.refetch}
+        layout={isTable ? 'tiles' : 'list'}
       />
+
+      <FilterPanel title={copy.filtersTitle} activeCount={filters.activeCount} onReset={filters.reset} resultsSummary={resultsSummary}>
+        <LedgerFilters filters={filters} categories={categories} maxDate={today} layout={isTable ? 'row' : 'stacked'} />
+      </FilterPanel>
 
       <DataSection
         label={copy.recordsLabel}
-        toolbar={(
-          <Toolbar end={<ResultCount count={rows.total} noun={copy.noun} />}>
-            <ToolbarSearch label={copy.search} value={ledgerFilters.search} onChange={(value) => setFilter('search', value)} placeholder={copy.searchPlaceholder} />
-            <ToolbarSelect label={copy.type} value={ledgerFilters.type} onChange={(value) => setFilter('type', value)} options={typeOptions()} />
-            <ToolbarSelect label={copy.category} value={ledgerFilters.category} onChange={(value) => setFilter('category', value)} options={categoryOptions} />
-            <ToolbarDateRange range={range} onChange={setRange} maxDate={todayLocalIso()} />
-            <FilterChips chips={chips} onReset={() => { setSearch(''); resetUrlFilters(); }} />
-          </Toolbar>
-        )}
         notices={rows.searchScope?.typo_matched && (
           <p role="status" className="border-b border-ink/10 bg-ink-50 px-4 py-2 text-body text-ink">
             {copy.typoMatch(rows.searchScope.search_query, rows.searchScope.matched_names?.join(', '))}
           </p>
         )}
       >
-        <GroupedDataTable
-          columns={COLUMNS}
-          rows={transactions}
-          getBucket={getBucket}
-          groups={groupTotals.data}
-          groupsUnavailable={groupsUnavailable}
-          onRetryGroups={groupTotals.refetch}
-          config={ledgerGroupConfig}
-          renderRow={renderRow}
-          renderCard={renderCard}
-          loadState={rows.loadState}
-          error={rows.error}
-          onRetry={rows.refetch}
-          rowsLabel={copy.listLabel}
-          empty={emptyMessage}
-        />
+        {isTable ? (
+          <LedgerTable
+            rows={rows}
+            groupTotals={groupTotals}
+            categories={categories}
+            menuItemsFor={actions.menuItemsFor}
+            onOpenReceipt={actions.openReceipt}
+            empty={empty}
+          />
+        ) : (
+          <LedgerList
+            rows={rows}
+            groupTotals={groupTotals}
+            categories={categories}
+            onRowSelect={setSelected}
+            showYear={filters.range.from.slice(0, 4) !== filters.range.to.slice(0, 4)}
+            empty={empty}
+          />
+        )}
       </DataSection>
 
-      {modalTransactionType && (
+      {!isTable && (
+        <TransactionSheet
+          tx={selected}
+          categories={categories}
+          menuItems={selected ? actions.menuItemsFor(selected) : []}
+          onViewReceipt={actions.openReceipt}
+          onClose={() => setSelected(null)}
+        />
+      )}
+
+      {entryFormType && (
         <LedgerEntryFormModal
-          key={modalTransactionType}
-          onClose={() => setModalTransactionType(null)}
-          transactionType={modalTransactionType}
+          key={entryFormType}
+          onClose={() => setEntryFormType(null)}
+          transactionType={entryFormType}
           farmId={farmId}
           tenantId={tenantId}
         />
       )}
 
-      {transactionToCorrect && correctableAs(transactionToCorrect) && (
+      {actions.correction.transaction && (
         <LedgerCorrectionModal
-          kind={correctableAs(transactionToCorrect)}
-          transaction={transactionToCorrect}
-          onClose={() => setTransactionToCorrect(null)}
-          onSubmit={(payload) => correctionMutation.mutate({ transactionId: transactionToCorrect.id, payload, kind: correctableAs(transactionToCorrect) })}
-          isPending={correctionMutation.isPending}
-          error={correctionError}
+          kind={actions.correction.kind}
+          transaction={actions.correction.transaction}
+          onClose={actions.correction.close}
+          onSubmit={actions.correction.submit}
+          isPending={actions.correction.isPending}
+          error={actions.correction.error}
           tenantId={tenantId}
           farmId={farmId}
         />
       )}
 
-      {photosFor && (
+      {actions.photos.transaction && (
         <ReceiptPhotosModal
-          transaction={transactions.find((tx) => tx.id === photosFor.id) ?? photosFor}
-          title={[photosFor.item_name || photosFor.description || photosFor.category, photosFor.reference_code].filter(Boolean).join(' · ')}
-          canUpload={canUploadReceipts}
-          onClose={() => setPhotosFor(null)}
-          onUploaded={invalidateLedger}
+          transaction={rows.items.find((tx) => tx.id === actions.photos.transaction.id) ?? actions.photos.transaction}
+          title={actions.photos.title}
+          canUpload={actions.photos.canUpload}
+          onClose={actions.photos.close}
+          onUploaded={actions.photos.onUploaded}
         />
       )}
 
-      {selectedReceipt && (
+      {actions.receipt.value && (
         <ReceiptPreview
-          receipt={selectedReceipt}
-          isOpen={Boolean(selectedReceipt)}
-          onClose={() => setSelectedReceipt(null)}
-          onDownload={handleDownloadReceipt}
-          onShare={handleShareReceipt}
-          isDownloading={isReceiptDownloading}
+          receipt={actions.receipt.value}
+          isOpen
+          onClose={actions.receipt.close}
+          onDownload={actions.receipt.download}
+          onShare={actions.receipt.share}
+          isDownloading={actions.receipt.isDownloading}
         />
       )}
     </div>

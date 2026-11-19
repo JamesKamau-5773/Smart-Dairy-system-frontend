@@ -1,5 +1,10 @@
 # Ledger re-layout and shared page components
 
+> **Superseded again (2026-11-19): Ledger restyle.** The page now has a header panel, six KPI
+> cards read from the `summary` block of `GET /api/finance/ledger` (no `/api/ledger/summary`
+> request; profit margin from the backend, BR-030), the shared collapsible `FilterPanel` +
+> `useFilterState`, a Receipt column, a badge for every status, and day groups as "03 Nov 2026".
+>
 > **Partly superseded (2026-11-16).** Both pages dropped the Week / Month / Year control, the
 > period chart moved to the Farm Reporting Dashboard (`components/finance/MoneyFlowChart.jsx`), and
 > `PeriodSummary` / `PeriodControl` became one `SummaryStrip` per page. The table header is

@@ -40,7 +40,12 @@ beforeEach(() => {
 });
 
 describe('useLedgerData', () => {
-  it('requests rows, group totals and the strip with the same filters and range', async () => {
+  it('requests rows and group totals with the same filters and range, and reads the KPIs from the rows response', async () => {
+    api.listLedgerEntries.mockResolvedValue({
+      items: [{ id: 1 }],
+      meta: { total: 563 },
+      summary: { recognized_sales: 2200, posted_costs: 500, net_profit: 1700, customer_credit: 636, outstanding_receivables: 1600, profit_margin_pct: '77.3' },
+    });
     const { result } = renderHook(() => useLedgerData({
       filters: { type: 'revenue', category: 'all', search: 'Auntie' },
       range: { from: '2026-10-01', to: '2026-10-15' },
@@ -50,9 +55,12 @@ describe('useLedgerData', () => {
     const shared = { type: 'revenue', search: 'Auntie', date_from: '2026-10-01', date_to: '2026-10-15' };
     expect(api.listLedgerEntries).toHaveBeenCalledWith({ per_page: 100, farm_id: 'farm-1', tenant_id: 'tenant-1', ...shared, search_query: 'Auntie' });
     expect(api.ledgerGroupTotals).toHaveBeenCalledWith({ ...shared, levels: 'year,month,day' });
-    expect(api.ledgerSummary).toHaveBeenCalledWith({ ...shared, period: 'year', anchor: '2026-10-01' });
+    // The KPI cards come with the rows: no separate summary request.
+    expect(api.ledgerSummary).not.toHaveBeenCalled();
     expect(result.current.rows.total).toBe(563);
-    await waitFor(() => expect(result.current.summary.data.current.income).toBe(17400));
+    expect(result.current.kpis.data).toEqual({
+      totalSales: 2200, postedCosts: 500, netProfit: 1700, customerCredit: 636, unpaidMoney: 1600, profitMarginPct: '77.3',
+    });
   });
 
   it('drops "all" filters and sends only the range when nothing else is chosen', async () => {
@@ -62,7 +70,6 @@ describe('useLedgerData', () => {
     const dates = { date_from: '2026-11-01', date_to: '2026-11-16' };
     expect(api.listLedgerEntries).toHaveBeenCalledWith({ per_page: 100, farm_id: 'farm-1', tenant_id: 'tenant-1', ...dates });
     expect(api.ledgerGroupTotals).toHaveBeenCalledWith({ ...dates, levels: 'year,month,day' });
-    expect(api.ledgerSummary).toHaveBeenCalledWith({ ...dates, period: 'year', anchor: '2026-11-01' });
   });
 });
 

@@ -40,8 +40,3 @@ export function historyMonthLabel(key) {
   const unknown = breedingCopy.hub.unknownMonth;
   return key === NO_AI_DATE_GROUP ? unknown : formatMonthYear(`${key}-01`, unknown);
 }
-
-/** How many filter controls are in use (search text, a status other than All). */
-export function activeHistoryFilterCount(filter, search) {
-  return [search.trim() !== '', filter !== 'All'].filter(Boolean).length;
-}
