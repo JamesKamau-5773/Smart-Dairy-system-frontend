@@ -60,13 +60,9 @@ export const breedingCopy = {
     heatTitle: 'Rekodi joto lililoonekana',
     historyTitle: 'Vipimo vya zamani',
     allChecks: 'Vipimo vyote',
-    searchAndFilters: 'Tafuta na vichujio',
-    historyHint: 'Chuja historia ya uzalishaji kwa hali ya rekodi, jina la ng’ombe au namba ya sikio.',
-    activeFilters: (count) => `${count} vinatumika`,
-    hideFilters: 'Ficha vichujio',
-    showFilters: 'Onyesha vichujio',
+    historyFiltersTitle: 'Tafuta na uchuje vipimo', // REVIEW
+    historyStatusLabel: 'Matokeo ya kipimo', // REVIEW
     historySearch: 'Tafuta jina au namba ya sikio...',
-    clearFilters: 'Futa vichujio',
     all: 'Zote',
     noHistoryMatches: 'Hakuna rekodi inayolingana na kichujio ulichochagua.',
     recordCount: (count) => (count === 1 ? 'rekodi 1' : `rekodi ${count}`),

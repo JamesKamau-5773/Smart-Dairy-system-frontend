@@ -169,21 +169,26 @@ describe('ledger grouping', () => {
     expect(year.children[0].totals.count).toBe(2);
   });
 
-  it('shows money in, money out, net and unpaid, and names the period the table shows', async () => {
-    const { ledgerSummaryConfig, summaryScope } = await import('../../components/periods/periodConfigs');
-    const summary = toLedgerSummary({ label: 'Nov 2026', current: { income: '100', expenses: '0', net: '100', unpaid: '0', count: 1 } });
-    expect(ledgerSummaryConfig.items(summary).map((item) => item.label)).toEqual(['Money in', 'Money out', 'Net', 'Unpaid']);
+  it('names the KPI cards, the period they cover and day groups as "18 Nov 2026"', async () => {
+    const { ledgerGroupConfig, summaryScope } = await import('../../components/periods/periodConfigs');
+    const { LEDGER_KPI_ROWS } = await import('../../components/finance/ledger/ledgerKpiConfig');
+    expect(LEDGER_KPI_ROWS.map((row) => row.items.map((item) => item.label))).toEqual([
+      ['Total sales', 'Posted costs', 'Net profit'],
+      ['Customer credit', 'Unpaid money', 'Profit margin'],
+    ]);
     expect(summaryScope({ from: '2026-01-01', to: '2026-11-16' }, { isDefault: true })).toBe('2026');
     expect(summaryScope({ from: '2026-10-01', to: '2026-10-15' })).toBe('01 Oct 2026 – 15 Oct 2026');
+    expect(ledgerGroupConfig.groupLabel({ level: 'day', key: '2026-11-18', label: 'Nov 18, 2026' })).toBe('18 Nov 2026');
+    expect(ledgerGroupConfig.groupLabel({ level: 'month', key: '2026-11', label: 'November' })).toBe('November');
   });
 
-  it('names the strip and group figures in Kiswahili when that is the chosen language', async () => {
-    const { ledgerGroupConfig, ledgerSummaryConfig } = await import('../../components/periods/periodConfigs');
+  it('names the KPI cards and group figures in Kiswahili when that is the chosen language', async () => {
+    const { ledgerGroupConfig } = await import('../../components/periods/periodConfigs');
+    const { LEDGER_KPI_ROWS } = await import('../../components/finance/ledger/ledgerKpiConfig');
     const { setLocale } = await import('../../i18n/locale');
-    const summary = toLedgerSummary({ label: 'Nov 2026', current: { income: '100', expenses: '0', net: '100', unpaid: '0', count: 1 } });
     setLocale('sw');
     try {
-      expect(ledgerSummaryConfig.items(summary).map((item) => item.label)).toEqual(['Pesa zilizoingia', 'Pesa zilizotoka', 'Salio', 'Isiyolipwa']);
+      expect(LEDGER_KPI_ROWS[0].items.map((item) => item.label)).toEqual(['Jumla ya mauzo', 'Gharama zilizorekodiwa', 'Faida halisi']);
       expect(ledgerGroupConfig.noun).toEqual(['rekodi', 'rekodi']);
     } finally {
       setLocale('en');

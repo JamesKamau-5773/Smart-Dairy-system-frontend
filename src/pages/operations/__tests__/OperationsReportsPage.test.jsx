@@ -1,5 +1,5 @@
 import React from 'react';
-import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -41,8 +41,16 @@ const RANGE_PARAMS = { start_date: '2026-09-01', end_date: '2026-09-30' };
 const withRange = (extra = {}) => ({ params: { ...RANGE_PARAMS, ...extra } });
 const CUSTOMERS = [{ id: 7, name: 'Kisii Dairy' }, { id: 9, name: 'Nakuru Fresh' }];
 
+// The filters sit in the shared panel, collapsed until opened.
+const PANEL = /^Search and filter reports/;
+const openFilters = async () => {
+  const toggle = await screen.findByRole('button', { name: PANEL });
+  if (toggle.getAttribute('aria-expanded') !== 'true') fireEvent.click(toggle);
+};
+
 // The menu trigger is labelled with the current selection and the menu closes after each pick.
 const pickCustomer = async (triggerName, customerName) => {
+  await openFilters();
   fireEvent.click(await screen.findByRole('button', { name: triggerName }));
   fireEvent.click(await screen.findByRole('option', { name: customerName }));
 };
@@ -97,8 +105,13 @@ describe('OperationsReportsPage', () => {
       expect(apiClientMock.get).toHaveBeenCalledWith('/reports/dairy-unit-economics', withRange());
     });
     expect(apiClientMock.get).toHaveBeenCalledTimes(4);
-    expect(screen.getByLabelText('Start date').value).toBe('2026-09-01');
-    expect(screen.getByLabelText('End date').value).toBe('2026-09-30');
+    // One date-range control (no native date inputs), showing the address's range.
+    await openFilters();
+    expect(screen.getByRole('button', { name: '01 Sep 2026 – 30 Sep 2026' })).toBeTruthy();
+    expect(document.querySelector('input[type="date"]')).toBeNull();
+    // A range in the address counts as a filter.
+    fireEvent.click(screen.getByRole('button', { name: PANEL }));
+    expect(screen.getByRole('button', { name: 'Search and filter reports · 1 filter active' })).toBeTruthy();
     expect(await screen.findByText('Amount paid')).toBeTruthy();
   });
 
@@ -127,14 +140,27 @@ describe('OperationsReportsPage', () => {
     });
   });
 
-  it('refetches with a custom range when a date input changes', async () => {
+  it('refetches with a custom range chosen in the date-range control', async () => {
     renderPage();
+    await openFilters();
 
-    fireEvent.change(screen.getByLabelText('Start date'), { target: { value: '2026-09-15' } });
+    fireEvent.click(screen.getByRole('button', { name: '01 Sep 2026 – 30 Sep 2026' }));
+    const form = await screen.findByRole('form', { name: 'Custom date range' });
+    fireEvent.change(within(form).getByLabelText('From'), { target: { value: '15/09/2026' } });
+    fireEvent.click(within(form).getByRole('button', { name: 'Apply' }));
 
     await waitFor(() => expect(apiClientMock.get).toHaveBeenCalledWith(
       '/finance/ledger', { params: { start_date: '2026-09-15', end_date: '2026-09-30' } },
     ));
+  });
+
+  it('sets a quick period from the panel, and Reset goes back to the default', async () => {
+    renderPage();
+    await openFilters();
+    const periods = screen.getByRole('group', { name: 'Quick select' });
+    expect(periods).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'Reset filters' }));
+    await waitFor(() => expect(screen.queryByRole('button', { name: 'Reset filters' })).toBeNull());
   });
 
   it('rejects invalid date ranges and shows an error state', async () => {

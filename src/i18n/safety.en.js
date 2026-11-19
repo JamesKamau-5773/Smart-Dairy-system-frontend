@@ -9,6 +9,7 @@ export const safetyCopy = {
   severity: { high: 'High risk', medium: 'Medium risk', low: 'Low risk' },
   severityHint: { high: 'Withdrawal of 14 days or more', medium: '7–13 days', low: 'Under 7 days' },
   allSeverities: 'All risk levels',
+  filtersTitle: 'Search and filter milk holds',
   search: 'Search by cow, tag, reason or medicine',
   showing: (shown, total) => `Showing ${shown} of ${total}. Narrow the search to find others.`,
   columns: { cow: 'Cow', risk: 'Risk', treatment: 'Treatment', clears: 'Milk can be sold' },

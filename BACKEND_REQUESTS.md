@@ -808,3 +808,22 @@ things the design shows are not sent, so the frontend leaves them out rather tha
 3. **When the record was entered.** `timestamp` is the milking time; the sheet's "Recorded at"
    needs the entry time: `"recorded_at": "2026-11-18T03:20:41+00:00"` (ISO 8601, UTC). The line
    is hidden until it is sent.
+
+## BR-030 — Ledger KPI cards: profit margin
+
+**Status:** Done (backend working tree, 2026-11-19; not yet committed or deployed) · **Raised:** 2026-11-19 · **Frontend:** `lib/ledgerKpis.js`, `components/finance/ledger/ledgerKpiConfig.jsx`
+
+The Ledger's KPI band shows **Profit Margin** (net profit ÷ total sales). The frontend does not
+divide the figures itself. `GET /api/finance/ledger` now sends it in `summary`, for the same filters
+as `recognized_sales` and `net_profit`:
+
+```json
+"summary": { "recognized_sales": 1595.0, "net_profit": 1095.0, "profit_margin_pct": "68.7" }
+```
+
+- 1-decimal-place string, like the other percentages (`change.net_pct`). Negative for a loss.
+- `null` when `recognized_sales` is 0. The card then shows "—".
+- Backend: `LedgerAmounts.margin_pct` (`app/services/period_amounts.py`), serialised with
+  `one_dp` in `app/api/finance.py`; test `test_kpi_cards_send_profit_margin_as_one_dp_string`.
+
+Until a backend with this field is deployed, the card shows "—" (the field is absent).

@@ -1,22 +1,23 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { useSearchParams } from 'react-router-dom';
-import { ChevronDown, Check, Search } from 'lucide-react';
+import { ChevronDown, Check } from 'lucide-react';
 import { format } from 'date-fns';
-import { Button } from '@/components/ui/button';
 import { useQuery } from '@tanstack/react-query';
+import FilterPanel from '@/components/data/FilterPanel';
+import ToolbarDateRange from '@/components/data/ToolbarDateRange';
+import { Toolbar, ToolbarPills, ToolbarSearch } from '@/components/data/Toolbar';
+import { CONTROL } from '@/components/data/surface';
+import { toolbarSlot, useToolbarLayout } from '@/components/data/toolbarLayout';
+import { useReportFilters } from '@/hooks/useReportFilters';
 import { financeApi, reportsApi } from '@/lib/backendApi';
 import { useTenant } from '@/hooks/useTenant';
 import { QUERY_KEYS } from '@/providers/QueryProvider';
 import { getListLoadState, hasRowsToShow } from '@/lib/listLoadState';
 import { ListLoadMessage, SlowLoadingHint, StaleDataNotice } from '@/components/ui/ListLoadState';
-import { cn } from '@/lib/utils';
 import { formatMoneyText } from '@/components/ui/Money';
 import MoneyFlowChart from '@/components/finance/MoneyFlowChart';
 import { REPORT_PERIODS, getRangeForPeriod, isValidRange } from './reports/dashboardRange';
 import { formatDate } from '@/lib/dateFormat';
 import { financeCopy } from '@/i18n/finance';
-import { commonCopy } from '@/i18n/common';
-import { PHONE_QUERY, useMediaQuery } from '@/hooks/useMediaQuery';
 
 const copy = financeCopy.reports;
 
@@ -121,24 +122,70 @@ function SummaryCard({ label, value }) {
   );
 }
 
+/**
+ * The buyers filter: a multi-select (none of the shared controls is one), at the shared control
+ * size and following the Toolbar's layout. Presentational: the page keeps the chosen buyers.
+ */
+function BuyerFilter({ customers, selectedIds, open, onOpenChange, onSelectAll, onToggle, menuRef }) {
+  const slot = toolbarSlot(useToolbarLayout());
+  const allChosen = selectedIds.length === 0 || selectedIds.length === customers.length;
+  const optionClass = 'flex h-10 w-full items-center justify-between gap-3 px-3 text-left text-control text-ink transition-colors hover:bg-ink-50 focus:bg-ink-50 focus:outline-none';
+  return (
+    <div className={slot.wrapper || 'w-full sm:w-[220px]'} ref={menuRef}>
+      <span id="report-buyers-label" className={slot.label}>{copy.customersLabel}</span>
+      <div className="relative">
+        <button
+          type="button"
+          className={`${CONTROL} flex w-full items-center justify-between gap-3 px-3 text-left hover:bg-ink-50`}
+          onClick={() => onOpenChange(!open)}
+          aria-haspopup="listbox"
+          aria-expanded={open}
+          aria-describedby="report-buyers-label"
+        >
+          <span className="truncate">
+            {selectedIds.length === 0
+              ? copy.allCustomers
+              : selectedIds.length === 1
+                ? customers.find((cust) => String(cust.id) === selectedIds[0])?.name ?? copy.customerSelected
+                : copy.selectedCount(selectedIds.length)}
+          </span>
+          <ChevronDown className="h-4 w-4 shrink-0 text-ink-muted" aria-hidden="true" />
+        </button>
+
+        {open && (
+          <div role="listbox" aria-multiselectable="true" className="absolute right-0 z-50 mt-2 w-full overflow-hidden rounded-input border border-ink/10 bg-card sm:w-[min(22rem,calc(100vw-2rem))]">
+            <button type="button" role="option" aria-selected={allChosen} className={`${optionClass} border-b border-ink/10`} onClick={onSelectAll}>
+              <span>{copy.allCustomers}</span>
+              {allChosen && <Check className="h-4 w-4 text-brand" aria-hidden="true" />}
+            </button>
+            <div className="max-h-72 overflow-y-auto">
+              {customers.map((cust) => {
+                const isSelected = selectedIds.includes(String(cust.id));
+                return (
+                  <button key={cust.id} type="button" role="option" aria-selected={isSelected} className={optionClass} onClick={() => onToggle(String(cust.id))}>
+                    <span className="truncate">{cust.name}</span>
+                    {isSelected && <Check className="h-4 w-4 text-brand" aria-hidden="true" />}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 export default function OperationsReportsPage() {
   const { tenantId, farmId } = useTenant();
-  const [searchParams, setSearchParams] = useSearchParams();
-  const period = searchParams.get('period') || 'daily';
-  const startDateValue = searchParams.get('start_date');
-  const endDateValue = searchParams.get('end_date');
-  const buyerId = searchParams.get('buyer_id');
-  const searchQuery = searchParams.get('q') || '';
-  
-  const [searchValue, setSearchValue] = useState(searchQuery);
-  // Inputs are 16px on phones, so the long placeholder would be cut off there.
-  const isPhone = useMediaQuery(PHONE_QUERY);
+  // Search, buyers and dates live in the address (useReportFilters, on the shared useFilterState).
+  const filters = useReportFilters();
+  const { period, start_date: startDateFilter, end_date: endDateFilter } = filters.values;
+  const startDateValue = startDateFilter || null;
+  const endDateValue = endDateFilter || null;
+  const searchQuery = filters.search;
+  const selectedBuyerIds = filters.buyerIds;
 
-  const selectedBuyerIds = useMemo(() => {
-    if (!buyerId) return [];
-    return buyerId.split(',').map((value) => value.trim()).filter(Boolean);
-  }, [buyerId]);
-  
   const range = useMemo(
     () => getRangeForPeriod(period, startDateValue, endDateValue),
     [endDateValue, period, startDateValue],
@@ -170,26 +217,6 @@ export default function OperationsReportsPage() {
     return () => document.removeEventListener('mousedown', handlePointerDown);
   }, []);
 
-  // Corrected Debounce logic to prevent infinite rendering loops
-  useEffect(() => {
-    const delayDebounceFn = setTimeout(() => {
-      setSearchParams((prevParams) => {
-        const currentQ = prevParams.get('q') || '';
-        if (currentQ === searchValue) return prevParams;
-
-        const newParams = new URLSearchParams(prevParams);
-        if (searchValue) {
-          newParams.set('q', searchValue);
-        } else {
-          newParams.delete('q');
-        }
-        return newParams;
-      }, { replace: true });
-    }, 500);
-
-    return () => clearTimeout(delayDebounceFn);
-  }, [searchValue, setSearchParams]);
-
   const rangeIsValid = isValidRange(range.startDate, range.endDate);
   const dashboardQuery = useQuery({
     queryKey: ['operations-reports', tenantId, farmId, resolvedRange.start, resolvedRange.end, selectedBuyerIds.join(','), searchQuery],
@@ -204,37 +231,16 @@ export default function OperationsReportsPage() {
   const reportState = getListLoadState(dashboardQuery);
   const dashboardData = hasRowsToShow(reportState) ? dashboardQuery.data : null;
 
+  // A quick period sets its own dates (from dashboardRange), as before.
   const setPeriod = (nextPeriod) => {
     const nextRange = getRangeForPeriod(nextPeriod, startDateValue, endDateValue);
-    const start = format(nextRange.startDate, 'yyyy-MM-dd');
-    const end = format(nextRange.endDate, 'yyyy-MM-dd');
-    const params = new URLSearchParams(searchParams);
-    params.set('period', nextPeriod);
-    params.set('start_date', start);
-    params.set('end_date', end);
-    setSearchParams(params, { replace: true });
+    filters.setDates({ period: nextPeriod, from: format(nextRange.startDate, 'yyyy-MM-dd'), to: format(nextRange.endDate, 'yyyy-MM-dd') });
   };
-
-  const handleNativeDateChange = (field, value) => {
-    const params = new URLSearchParams(searchParams);
-    if (value) {
-      params.set(field, value);
-      params.set('period', 'custom'); 
-    } else {
-      params.delete(field);
-    }
-    setSearchParams(params, { replace: true });
-  };
+  // A chosen range is a custom period.
+  const setCustomRange = (next) => filters.setDates({ period: 'custom', from: next?.from, to: next?.to });
 
   const handleCustomerSelect = (nextBuyerIds) => {
-    const params = new URLSearchParams(searchParams);
-    const normalizedBuyerIds = nextBuyerIds.filter(Boolean);
-    if (normalizedBuyerIds.length) {
-      params.set('buyer_id', normalizedBuyerIds.join(','));
-    } else {
-      params.delete('buyer_id');
-    }
-    setSearchParams(params, { replace: true });
+    filters.setBuyerIds(nextBuyerIds);
     setIsBuyerMenuOpen(false);
   };
 
@@ -247,8 +253,7 @@ export default function OperationsReportsPage() {
   };
 
   const handleResetFilters = () => {
-    setSearchValue('');
-    setSearchParams(new URLSearchParams(), { replace: true });
+    filters.reset();
     setIsBuyerMenuOpen(false);
   };
 
@@ -282,135 +287,30 @@ export default function OperationsReportsPage() {
         </p>
       </div>
 
-      {/* FILTER BAR */}
-      <div className="rounded-xl border border-sky-200 bg-white shadow-sm">
-        <div className="flex items-center justify-between border-b border-sky-100 px-4 py-3">
-          <div className="flex items-center gap-2 text-body-strong text-sky-800">
-            {copy.filterTitle}
-          </div>
-          <button
-            type="button"
-            onClick={handleResetFilters}
-            className="flex items-center gap-1.5 text-control text-slate-500 transition-colors hover:text-slate-900"
-          >
-            {copy.resetFilters}
-          </button>
-        </div>
+      <FilterPanel title={copy.filterTitle} activeCount={filters.activeCount} onReset={handleResetFilters}>
+        <Toolbar>
+          <ToolbarSearch label={copy.searchPlaceholder} value={filters.values.q} onChange={filters.setSearch} placeholder={copy.searchPlaceholder} />
 
-        <div className="flex flex-col gap-4 p-4 lg:flex-row lg:items-center">
-          
-          <div className="relative w-full lg:max-w-md">
-            <Search className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-brand" />
-            <input
-              type="text"
-              aria-label={copy.searchPlaceholder}
-              placeholder={isPhone ? commonCopy.filters.searchShort : copy.searchPlaceholder}
-              className="h-10 w-full rounded-lg border border-ink/20 bg-surface pl-10 pr-4 text-control text-ink placeholder:text-ink-muted transition-colors focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand"
-              value={searchValue}
-              onChange={(e) => setSearchValue(e.target.value)}
-            />
-          </div>
+          <BuyerFilter
+            customers={customers}
+            selectedIds={selectedBuyerIds}
+            open={isBuyerMenuOpen}
+            onOpenChange={setIsBuyerMenuOpen}
+            onSelectAll={() => handleCustomerSelect([])}
+            onToggle={handleCustomerToggle}
+            menuRef={buyerMenuRef}
+          />
 
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-center lg:ml-auto">
-            <div className="relative w-full sm:w-[220px]" ref={buyerMenuRef}>
-              <Button
-                type="button"
-                variant="outline"
-                className="h-10 w-full justify-between gap-3 rounded-lg border-slate-200 bg-white px-3 text-left text-slate-700 shadow-none hover:bg-slate-50"
-                onClick={() => setIsBuyerMenuOpen((open) => !open)}
-                aria-haspopup="listbox"
-                aria-expanded={isBuyerMenuOpen}
-              >
-                <span className="truncate">
-                  {selectedBuyerIds.length === 0
-                    ? copy.allCustomers
-                    : selectedBuyerIds.length === 1
-                      ? customers.find((cust) => String(cust.id) === selectedBuyerIds[0])?.name ?? copy.customerSelected
-                      : copy.selectedCount(selectedBuyerIds.length)}
-                </span>
-                <ChevronDown className="h-4 w-4 shrink-0 text-slate-400" aria-hidden="true" />
-              </Button>
+          <ToolbarDateRange range={{ from: resolvedRange.start, to: resolvedRange.end }} onChange={setCustomRange} />
 
-              {isBuyerMenuOpen && (
-                <div
-                  role="listbox"
-                  aria-multiselectable="true"
-                  className="absolute right-0 z-50 mt-2 w-full sm:w-[min(22rem,calc(100vw-2rem))] overflow-hidden rounded-xl border border-slate-200 bg-white shadow-lg"
-                >
-                  <button
-                    type="button"
-                    role="option"
-                    aria-selected={selectedBuyerIds.length === 0 || selectedBuyerIds.length === customers.length}
-                    className="flex h-10 w-full items-center justify-between gap-3 border-b border-slate-100 px-3 text-left text-control text-slate-700 transition-colors hover:bg-slate-50 focus:bg-slate-50 focus:outline-none"
-                    onClick={() => handleCustomerSelect([])}
-                  >
-                    <span>{copy.allCustomers}</span>
-                    {(selectedBuyerIds.length === 0 || selectedBuyerIds.length === customers.length) && <Check className="h-4 w-4 text-brand" aria-hidden="true" />}
-                  </button>
-                  <div className="max-h-72 overflow-y-auto">
-                    {customers.map((cust) => {
-                      const isSelected = selectedBuyerIds.includes(String(cust.id));
-                      return (
-                        <button
-                          key={cust.id}
-                          type="button"
-                          role="option"
-                          aria-selected={isSelected}
-                          className="flex h-10 w-full items-center justify-between gap-3 px-3 text-left text-control text-slate-700 transition-colors hover:bg-slate-50 focus:bg-slate-50 focus:outline-none"
-                          onClick={() => handleCustomerToggle(String(cust.id))}
-                        >
-                          <span className="truncate">{cust.name}</span>
-                          {isSelected && <Check className="h-4 w-4 text-brand" aria-hidden="true" />}
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-              )}
-            </div>
-
-            <div className="flex h-10 w-full items-center overflow-hidden rounded-lg border border-slate-200 bg-white transition-colors focus-within:border-brand focus-within:ring-1 focus-within:ring-brand sm:w-auto">
-              <input
-                type="date"
-                aria-label={copy.startDate}
-                className="h-full w-full border-none bg-transparent px-3 text-control text-slate-700 focus:outline-none focus:ring-0 sm:w-[135px]"
-                value={resolvedRange.start}
-                onChange={(e) => handleNativeDateChange('start_date', e.target.value)}
-              />
-              <div className="flex h-full items-center border-x border-slate-200 bg-slate-50 px-3 text-slate-400">
-                -
-              </div>
-              <input
-                type="date"
-                aria-label={copy.endDate}
-                className="h-full w-full border-none bg-transparent px-3 text-control text-slate-700 focus:outline-none focus:ring-0 sm:w-[135px]"
-                value={resolvedRange.end}
-                onChange={(e) => handleNativeDateChange('end_date', e.target.value)}
-              />
-            </div>
-          </div>
-        </div>
-
-        <div className="flex flex-wrap items-center gap-2 rounded-b-xl border-t border-slate-100 bg-slate-50/50 px-4 py-3">
-          <span className="mr-2 text-label text-slate-400">{copy.quickSelect}</span>
-          {REPORT_PERIODS.map((item) => (
-            <Button
-              key={item.key}
-              type="button"
-              variant="ghost"
-              className={cn(
-                "h-8 rounded-full px-4 text-control shadow-none transition-colors",
-                period === item.key 
-                  ? "bg-slate-800 text-white hover:bg-slate-900 hover:text-white" 
-                  : "border border-slate-200 bg-white text-slate-600 hover:bg-slate-100 hover:text-slate-900"
-              )}
-              onClick={() => setPeriod(item.key)}
-            >
-              {item.label}
-            </Button>
-          ))}
-        </div>
-      </div>
+          <ToolbarPills
+            label={copy.quickSelect}
+            value={period}
+            onChange={setPeriod}
+            options={REPORT_PERIODS.map((item) => ({ value: item.key, label: item.label }))}
+          />
+        </Toolbar>
+      </FilterPanel>
 
       {/* DASHBOARD CONTENT */}
       {!rangeIsValid && (

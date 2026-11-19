@@ -4,7 +4,7 @@ import { useAuth } from "../../contexts/AuthContext";
 import { canViewAdminControls } from "../../lib/roles";
 import { QUERY_KEYS } from "../../providers/QueryProvider";
 import { getApiErrorMessage, productionApi, safetyApi } from "../../lib/backendApi";
-import { AlertTriangle, CheckCircle, Clock, Filter, Flag, ShieldAlert } from "lucide-react";
+import { AlertTriangle, CheckCircle, Clock, Flag, ShieldAlert } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import FastMilkLog from "../../components/operations/FastMilkLog";
@@ -18,29 +18,27 @@ import MilkStatusBadge from "../../components/operations/MilkStatusBadge";
 import { SURFACE } from "../../components/data/surface";
 import { cellClass } from "../../components/data/DataTable";
 import GroupedDataTable from "../../components/data/GroupedDataTable";
-import { FilterChips, Toolbar, ToolbarSearch } from "../../components/data/Toolbar";
+import { Toolbar, ToolbarSearch, ToolbarSelect } from "../../components/data/Toolbar";
+import FilterPanel from "../../components/data/FilterPanel";
 import OverflowMenu from "../../components/ui/OverflowMenu";
 import ToolbarDateRange from "../../components/data/ToolbarDateRange";
 import { productionGroupConfig } from "../../components/periods/periodConfigs";
 import { useInvalidateProduction } from "../../hooks/usePeriodTotals";
 import { useProductionData } from "../../hooks/useProductionData";
-import { formatCount, formatLitres, formatSignedLitres } from "../../lib/numberFormat";
-import { currentYearRange } from "../../lib/periodTotals";
-import { formatDateRange, formatDayLabel } from "../../lib/dateFormat";
+import { formatLitres, formatSignedLitres } from "../../lib/numberFormat";
+import { formatDayLabel } from "../../lib/dateFormat";
 import toast from "react-hot-toast";
 import { productionCopy as copy, sessionLabel } from "../../i18n/production";
-import { commonCopy } from "../../i18n/common";
 import { formatCowIdentity } from "../../lib/cowIdentity";
 import { Link } from "react-router-dom";
 import { formatFarmTime, todayLocalIso, toLocalIsoDate } from '../../lib/localDate';
 import { groupByDaySession, normalizeYieldRow, vsAverage } from '../../lib/milkRecords';
 import { enumLabel } from '../../lib/enumLabel';
-import MilkLogPhoneToolbar from '../../components/operations/milkLog/MilkLogPhoneToolbar';
 import MilkRecordList from '../../components/operations/milkLog/MilkRecordList';
 import MilkRecordRow from '../../components/operations/milkLog/MilkRecordRow';
 import MilkRecordSheet from '../../components/operations/milkLog/MilkRecordSheet';
 import { reportError } from '../../lib/telemetry';
-import { ISO_DATE_FILTER, useUrlFilters } from '../../hooks/useUrlFilters';
+import { PRODUCTION_SESSIONS, useProductionFilters } from '../../hooks/useProductionFilters';
 
 function isDevEnvironment() {
   return Boolean(import.meta.env?.DEV);
@@ -86,24 +84,9 @@ const TABLE_MIN_WIDTH = 'min-w-[1140px]';
 const SESSION_COLUMN = { morning: 'morning', midday: 'midday', afternoon: 'midday', evening: 'evening' };
 const sessionColumnOf = (session) => SESSION_COLUMN[String(session ?? '').trim().toLowerCase()] ?? null;
 const column = Object.fromEntries(COLUMN_LAYOUT.map((entry) => [entry.id, entry]));
-// Kept in the address (Back, reload and shared links keep them). The search is a cow's
-// name or tag, which is safe in a URL.
-// No status filter: the backend ignores status (except "anomaly") on this list, so it would
-// look like it filtered while showing everything (BACKEND_REQUESTS.md, BR-019).
-// `date` is the older one-day filter, still read so saved links keep working.
-const EMPTY_FILTERS = { from: "", to: "", date: "", cowId: "", session: "all" };
-const FILTER_VALUES = {
-  from: ISO_DATE_FILTER,
-  to: ISO_DATE_FILTER,
-  date: ISO_DATE_FILTER,
-  session: ["all", "Morning", "Midday", "Evening"],
-};
-
-/** The range chosen in the address (ISO dates compare as text), or null for the default month. */
-const chosenRangeOf = ({ from, to, date }) => {
-  if (from && to && from <= to) return { from, to };
-  return date ? { from: date, to: date } : null;
-};
+// Session filter options; labels are read when shown, so they follow the chosen language.
+const SESSION_LABEL = { all: () => copy.allSessions, Morning: () => copy.sessions.morning, Midday: () => copy.sessions.afternoon, Evening: () => copy.sessions.evening };
+const sessionOptions = () => PRODUCTION_SESSIONS.map((session) => [session, SESSION_LABEL[session]()]);
 
 const formatMilker = (value) => {
   if (!value) return '—';
@@ -129,21 +112,18 @@ export default function YieldLog() {
   const [fastLogInitialDate, setFastLogInitialDate] = useState('');
   const [fastLogMode, setFastLogMode] = useState('create');
   const confirmation = useConfirmation();
-  const { filters, setFilter: updateFilter, setFilters: updateFilters, resetFilters: clearFilters, hasActiveFilters: hasUrlFilters } = useUrlFilters(EMPTY_FILTERS, { allowed: FILTER_VALUES });
-  const [filtersOpen, setFiltersOpen] = useState(hasUrlFilters);
+  // The filters live in the address (useProductionFilters, on the shared useFilterState).
+  const filters = useProductionFilters({ today: todayLocalIso() });
   const COLUMNS = COLUMN_LAYOUT.map((entry) => ({ ...entry, header: copy.columns[entry.id], headerClassName: `!px-4 !py-3 ${entry.headerClassName ?? ''}` }));
 
   // Every filter runs on the server, and one hook requests the rows, the group totals and
   // the summary strip with the same params, so all three agree.
   // The table and the strip open on the current year, 1 Jan to today (as on the Ledger); a
   // range in the address replaces it, and removing that range goes back to the year.
-  const chosenRange = chosenRangeOf(filters);
-  const dateRange = chosenRange ?? currentYearRange(todayLocalIso());
-  const chosenDay = chosenRange && chosenRange.from === chosenRange.to ? chosenRange.from : '';
-  const setRange = (next) => updateFilters({ from: next?.from ?? '', to: next?.to ?? '', date: '' });
+  const chosenDay = filters.chosenDay;
   const { rows: yieldRows, totals: yieldTotals, groupTotals, summary: productionSummary } = useProductionData({
-    filters: { search: filters.cowId.trim(), session: filters.session },
-    range: dateRange,
+    filters: filters.query,
+    range: filters.range,
   });
   const summary = productionSummary.data;
   const yieldRowsRaw = yieldRows.data;
@@ -187,14 +167,8 @@ export default function YieldLog() {
     });
   }, [hasYieldRowsError, yieldRowsError, tenantId, farmId]);
 
-  const hasActiveFilters = Boolean(chosenRange || filters.cowId.trim() || filters.session !== 'all');
+  const hasActiveFilters = filters.activeCount > 0;
   const groupsUnavailable = groupTotals.loadState === 'error' || groupTotals.loadState === 'offline';
-
-  const activeChips = [
-    filters.cowId.trim() && { key: 'cowId', label: `“${filters.cowId.trim()}”`, clear: '' },
-    filters.session !== 'all' && { key: 'session', label: sessionLabel(filters.session), clear: 'all' },
-  ].filter(Boolean).map((chip) => ({ ...chip, onRemove: () => updateFilter(chip.key, chip.clear) }));
-  if (chosenRange) activeChips.push({ key: 'range', label: formatDateRange(chosenRange.from, chosenRange.to), onRemove: () => setRange(null) });
 
 
   // Integrated Safety Check: Fetching active medical withdrawals
@@ -431,24 +405,6 @@ export default function YieldLog() {
     };
   })();
 
-  // The filters behind the phone's Filter button (the search has its own box).
-  const phoneChips = [
-    chosenRange && { key: 'range', label: formatDateRange(chosenRange.from, chosenRange.to), onRemove: () => setRange(null) },
-    filters.session !== 'all' && { key: 'session', label: sessionLabel(filters.session), onRemove: () => updateFilter('session', 'all') },
-  ].filter(Boolean).map((chip) => ({ ...chip, removeLabel: commonCopy.filters.remove(chip.label) }));
-
-  const sessionSelect = (
-    <label className="block space-y-1 text-field-label text-ink-muted">
-      {copy.session}
-      <select value={filters.session} onChange={(e) => updateFilter('session', e.target.value)} className="input-machined">
-        <option value="all">{commonCopy.filters.all}</option>
-        <option value="Morning">{copy.sessions.morning}</option>
-        <option value="Midday">{copy.sessions.afternoon}</option>
-        <option value="Evening">{copy.sessions.evening}</option>
-      </select>
-    </label>
-  );
-
   const hasMilkRowsToShow = yieldRows.loadState === 'ready' || yieldRows.loadState === 'stale';
   const totalRecords = yieldTotals.data?.totalRecords ?? null;
 
@@ -502,29 +458,22 @@ export default function YieldLog() {
 
       <QueuedMilkEntries />
 
+      <FilterPanel
+        title={copy.filtersTitle}
+        activeCount={filters.activeCount}
+        onReset={filters.reset}
+        resultsSummary={hasMilkRowsToShow && <p role="status" className="m-0">{copy.showing(milkRows.length, totalRecords)}</p>}
+      >
+        <Toolbar>
+          <ToolbarSearch label={copy.searchLabel} value={filters.values.cowId} onChange={filters.setSearch} placeholder={copy.searchPlaceholder} />
+          <ToolbarSelect label={copy.session} value={filters.values.session} onChange={filters.setSession} options={sessionOptions()} />
+          <ToolbarDateRange range={filters.range} onChange={filters.setRange} maxDate={todayLocalIso()} />
+        </Toolbar>
+      </FilterPanel>
+
       <section aria-label={copy.sectionLabel} className="flex flex-col overflow-clip rounded-xl border border-ink/10 bg-card shadow-sm md:overflow-hidden">
-        {/* Phones: the compact toolbar, then the grouped list (the desktop toolbar and table are below). */}
+        {/* Phones: the grouped list (the desktop table is below). */}
         <div className="md:hidden">
-          <MilkLogPhoneToolbar
-            search={filters.cowId}
-            onSearch={(value) => updateFilter('cowId', value)}
-            searchLabel={copy.searchLabel}
-            searchPlaceholder={phoneCopy.searchPlaceholder}
-            filterLabel={phoneCopy.filter}
-            filterCount={phoneChips.length}
-            filterCountLabel={phoneCopy.activeFilters(phoneChips.length)}
-            filtersOpen={filtersOpen}
-            onToggleFilters={() => setFiltersOpen((prev) => !prev)}
-            panelId="production-filter-panel-phone"
-            panel={(
-              <>
-                <ToolbarDateRange range={dateRange} onChange={setRange} maxDate={todayLocalIso()} />
-                {sessionSelect}
-              </>
-            )}
-            chips={phoneChips}
-            recordCount={totalRecords == null ? null : phoneCopy.records(totalRecords, formatCount(totalRecords))}
-          />
           <MilkRecordList
             groups={phoneGroups}
             renderRow={renderPhoneRow}
@@ -536,35 +485,13 @@ export default function YieldLog() {
             empty={hasActiveFilters ? (
               <div className="flex flex-col items-center gap-2">
                 <p>{phoneCopy.noMatch}</p>
-                <button type="button" onClick={clearFilters} className="inline-flex min-h-11 items-center px-2 text-control text-brand underline underline-offset-2">
+                <button type="button" onClick={filters.reset} className="inline-flex min-h-11 items-center px-2 text-control text-brand underline underline-offset-2">
                   {phoneCopy.clearFilters}
                 </button>
               </div>
             ) : milkFirstTimeEmpty}
           />
           <MilkRecordSheet open={Boolean(sheetProps)} onClose={closeSheet} labels={{ close: phoneCopy.close, yield: phoneCopy.yield }} {...(sheetProps ?? EMPTY_SHEET)} />
-        </div>
-
-        <div className="hidden border-b border-ink-200 bg-ink-50/50 p-4 md:block">
-          <Toolbar end={hasMilkRowsToShow && <p role="status" className="m-0 whitespace-nowrap text-meta text-ink-500">{copy.showing(milkRows.length, totalRecords)}</p>}>
-            <ToolbarSearch label={copy.searchLabel} value={filters.cowId} onChange={(value) => updateFilter('cowId', value)} placeholder={copy.searchPlaceholder} />
-            <button
-              type="button"
-              onClick={() => setFiltersOpen((prev) => !prev)}
-              aria-expanded={filtersOpen}
-              aria-controls="production-filter-panel"
-              className="inline-flex min-h-11 items-center gap-2 whitespace-nowrap rounded-md border border-ink-300 bg-card px-3 text-control text-ink-700 shadow-sm transition-colors hover:bg-ink-50 sm:min-h-9"
-            >
-              <Filter size={16} className="text-ink-400" aria-hidden="true" /> {commonCopy.filters.filters}
-            </button>
-            <ToolbarDateRange range={dateRange} onChange={setRange} maxDate={todayLocalIso()} />
-            <FilterChips chips={activeChips} onReset={clearFilters} />
-          </Toolbar>
-          {filtersOpen && (
-            <div id="production-filter-panel" className="grid grid-cols-1 gap-3 pb-2 pt-3 sm:grid-cols-2">
-              {sessionSelect}
-            </div>
-          )}
         </div>
 
         <div className="hidden md:block">

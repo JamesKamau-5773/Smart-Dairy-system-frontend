@@ -1,8 +1,5 @@
-import { useRef } from 'react';
-import { createPortal } from 'react-dom';
 import { Link } from 'react-router-dom';
-import { X } from 'lucide-react';
-import { useFocusTrap } from '../../../hooks/useFocusTrap';
+import BottomSheet from '../../ui/BottomSheet';
 import VsAverageText from './VsAverageText';
 
 /**
@@ -31,38 +28,15 @@ export default function MilkRecordSheet({
   secondaryActions = [],
   destructiveAction = null,
 }) {
-  const panelRef = useRef(null);
-  useFocusTrap(panelRef, open, { onEscape: onClose });
-  if (!open) return null;
-
-  return createPortal(
-    <div className="fixed inset-0 z-50 flex items-end">
-      <div className="absolute inset-0 bg-ink-900/40" onClick={onClose} aria-hidden="true" />
-      <div
-        ref={panelRef}
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="milk-record-sheet-title"
-        tabIndex={-1}
-        className="relative max-h-[88dvh] w-full overflow-y-auto rounded-t-2xl bg-white pb-[max(1rem,env(safe-area-inset-bottom))] animate-in slide-in-from-bottom duration-200 motion-reduce:animate-none"
-      >
-        <div className="mx-auto mt-2 h-1 w-10 rounded-full bg-ink-300" aria-hidden="true" />
-
-        <div className="flex items-start gap-3 px-4 pt-3">
-          <div className="min-w-0 flex-1">
-            <h2 id="milk-record-sheet-title" className="m-0 truncate text-section-title text-brand">{title}</h2>
-            <p className="m-0 mt-0.5 text-meta text-ink-500">{subtitle}</p>
-          </div>
-          <button
-            type="button"
-            onClick={onClose}
-            aria-label={labels.close}
-            className="-mr-1 inline-flex h-11 w-11 shrink-0 items-center justify-center text-ink-500 hover:bg-ink-50 hover:text-ink-900"
-          >
-            <X size={20} aria-hidden="true" />
-          </button>
-        </div>
-
+  return (
+    <BottomSheet
+      open={open}
+      onClose={onClose}
+      title={title}
+      titleClassName="text-section-title text-brand"
+      header={<p className="m-0 mt-0.5 text-meta text-ink-500">{subtitle}</p>}
+      closeLabel={labels.close}
+    >
         <div className="mx-4 mt-4 flex items-end justify-between gap-3 rounded-card border border-ink-200 bg-ink-50 p-4">
           <div className="min-w-0">
             <p className="m-0 text-stat-label text-ink-500">{labels.yield}</p>
@@ -105,8 +79,6 @@ export default function MilkRecordSheet({
             </div>
           )}
         </div>
-      </div>
-    </div>,
-    document.body,
+    </BottomSheet>
   );
 }

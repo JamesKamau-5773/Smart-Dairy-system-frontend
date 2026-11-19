@@ -74,9 +74,12 @@ export function groupLabel(node) {
   return node.label ?? node.key;
 }
 
-/** Display nodes: every level keeps its own header (Year → Month → Day, always). */
-export function expandAll(roots) {
-  const toDisplay = (node) => ({ ...node, keys: [node.key], label: groupLabel(node), children: node.children.map(toDisplay) });
+/**
+ * Display nodes: every level keeps its own header (Year → Month → Day, always).
+ * `labelOf` names a group (default `groupLabel`); a page's config may pass its own.
+ */
+export function expandAll(roots, labelOf = groupLabel) {
+  const toDisplay = (node) => ({ ...node, keys: [node.key], label: labelOf(node), children: node.children.map(toDisplay) });
   return roots.map(toDisplay);
 }
 

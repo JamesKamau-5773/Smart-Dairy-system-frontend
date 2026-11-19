@@ -3,6 +3,8 @@ import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-li
 import { MemoryRouter } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { stubMatchMedia, unstubMatchMedia } from '../../../test/matchMedia';
+import { TABLE_QUERY } from '../../../hooks/useMediaQuery';
 
 void React;
 
@@ -56,7 +58,10 @@ const openRowMenu = async (text) => {
 };
 
 afterEach(cleanup);
+afterEach(unstubMatchMedia);
 beforeEach(() => {
+  // The desktop table, where row actions are in the ⋮ menu.
+  stubMatchMedia([TABLE_QUERY]);
   vi.clearAllMocks();
   auth.currentUser = { role: 'FARMER' };
   api.categories.mockResolvedValue(categories);

@@ -177,19 +177,16 @@ export const herdCopy = {
     averageAge: 'Wastani wa umri',
     milkingDry: 'Wanaokamuliwa / waliokaushwa',
     latestCalved: 'Aliyezaa karibuni',
-    organize: 'Panga orodha',
-    activeFilters: (count) => `${count} vinatumika`,
-    hideFilters: 'Ficha vichujio',
-    showFilters: 'Onyesha vichujio',
+    filtersTitle: 'Tafuta na uchuje ng’ombe', // REVIEW
     searchPlaceholder: 'Tafuta mifugo... (Cmd+K)',
     searchLabel: 'Tafuta mifugo kwa namba, jina, aina au hali',
-    sortBy: 'Panga kwa',
     sortLabel: 'Panga mifugo kwa',
     sort: { age: 'Umri', breed: 'Aina', status: 'Hali ya sasa' },
+    sortOption: (label) => `Panga kwa ${label.toLowerCase()}`, // REVIEW
+    statusFilterLabel: 'Hali ya kukamuliwa', // REVIEW
     filters: { All: 'Wote', Milking: 'Wanaokamuliwa', Dry: 'Waliokaushwa' },
     filterBy: (label) => `Chuja kwa hali: ${label}`,
     clearFilters: 'Futa vichujio',
-    clearFiltersLabel: 'Futa vichujio vyote',
     columns: {
       earTag: 'Namba ya sikio',
       name: 'Jina',

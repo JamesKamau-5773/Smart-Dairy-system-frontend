@@ -2,17 +2,18 @@ import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import { financeApi } from '../lib/backendApi';
 import { QUERY_KEYS } from '../providers/QueryProvider';
 import { getListLoadState } from '../lib/listLoadState';
+import { toLedgerKpis } from '../lib/ledgerKpis';
 import { TABLE_GROUP_LEVELS, toTotalsParams } from '../lib/periodTotals';
 import { useTenant } from './useTenant';
-import { useLedgerGroupTotals, useLedgerSummary } from './usePeriodTotals';
+import { useLedgerGroupTotals } from './usePeriodTotals';
 
 /**
- * Everything the Ledger shows, from one set of filters: the rows, the group totals and the
- * summary strip. All three are requested with the same params, so the strip and the group
- * headers always describe exactly the rows below them. No figure is worked out here.
+ * Everything the Ledger shows, from one set of filters: the rows with their KPI figures (the
+ * list response's `summary`), and the group totals. Both are requested with the same params,
+ * so the cards and the group headers describe the rows below them. No figure is worked out here.
  *
  * filters: { type, category, search }  ('all' and '' mean no filter)
- * range:   { from, to } as YYYY-MM-DD (the page's default is the current month)
+ * range:   { from, to } as YYYY-MM-DD (the page's default is the current year)
  */
 export function useLedgerData({ filters, range }) {
   const { tenantId, farmId } = useTenant();
@@ -34,7 +35,7 @@ export function useLedgerData({ filters, range }) {
   });
 
   const groupTotals = useLedgerGroupTotals(tableParams, { levels: TABLE_GROUP_LEVELS });
-  const summary = useLedgerSummary({ range, filters });
+  const loadState = getListLoadState({ status: rowsQuery.status, fetchStatus: rowsQuery.fetchStatus, data: rowsQuery.data });
 
   return {
     rows: {
@@ -43,11 +44,17 @@ export function useLedgerData({ filters, range }) {
       total: rowsQuery.data?.meta?.total ?? null,
       // Search notes from the API (e.g. a misspelt name matched to a customer).
       searchScope: rowsQuery.data?.summary_scope ?? null,
-      loadState: getListLoadState({ status: rowsQuery.status, fetchStatus: rowsQuery.fetchStatus, data: rowsQuery.data }),
+      loadState,
+      error: rowsQuery.error,
+      refetch: rowsQuery.refetch,
+    },
+    // The KPI cards come with the rows, so they share their load state.
+    kpis: {
+      data: toLedgerKpis(rowsQuery.data?.summary),
+      loadState,
       error: rowsQuery.error,
       refetch: rowsQuery.refetch,
     },
     groupTotals,
-    summary,
   };
 }

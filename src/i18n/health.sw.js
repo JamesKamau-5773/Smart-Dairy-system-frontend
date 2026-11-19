@@ -22,11 +22,7 @@ export const healthCopy = {
     followUpsDue: 'Ufuatiliaji unaohitajika',
     resolved: 'Zimetatuliwa',
     listLabel: 'rekodi za matibabu',
-    searchAndFilters: 'Tafuta na vichujio',
-    filtersHint: 'Punguza orodha kwa ng’ombe, hali au ukali wa ugonjwa.',
-    activeFilters: (count) => `${count} vinatumika`,
-    hideFilters: 'Ficha vichujio',
-    showFilters: 'Onyesha vichujio',
+    filtersTitle: 'Tafuta na uchuje rekodi za matibabu', // REVIEW
     searchRecords: 'Tafuta rekodi',
     searchPlaceholder: 'Ng’ombe, utambuzi, daktari, hali',
     status: 'Hali',

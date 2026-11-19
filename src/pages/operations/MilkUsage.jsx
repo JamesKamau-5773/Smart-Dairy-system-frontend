@@ -9,7 +9,11 @@ import {
   todayLocalIso,
 } from '../../lib/milkDisposition';
 import { useTenant } from '../../hooks/useTenant';
+import { useMilkUsageFilters } from '../../hooks/useMilkUsageFilters';
 import { QUERY_KEYS } from '../../providers/QueryProvider';
+import FilterPanel from '../../components/data/FilterPanel';
+import ToolbarDateRange from '../../components/data/ToolbarDateRange';
+import { Toolbar, ToolbarSelect } from '../../components/data/Toolbar';
 import CalfMilkFeedModal from '../../components/operations/CalfMilkFeedModal';
 import MilkDispositionHistory from '../../components/operations/MilkDispositionHistory';
 import { milkCopy } from '../../i18n/milk';
@@ -18,14 +22,14 @@ import { shellCopy } from '../../i18n/shell';
 void React;
 
 const PAGE_SIZE = 12;
-const EMPTY_FILTERS = { calfId: '', from: '', to: '' };
 const EMPTY_RECORDS = [];
 
 export default function MilkUsage() {
   const copy = milkCopy.usage;
   const { tenantId, farmId } = useTenant();
   const [showFeedModal, setShowFeedModal] = useState(false);
-  const [filters, setFilters] = useState(EMPTY_FILTERS);
+  const filterState = useMilkUsageFilters();
+  const filters = filterState.values;
   const [page, setPage] = useState(1);
 
   const dispositionsQuery = useQuery({
@@ -52,10 +56,15 @@ export default function MilkUsage() {
       .localeCompare(formatCowIdentity({ cowName: b.calfName, cowTag: b.calfTag })));
   }, [records]);
 
-  const updateFilter = (name, value) => {
-    setFilters((current) => ({ ...current, [name]: value }));
+  // A filter change starts the list again from page 1.
+  const fromFirstPage = (change) => (value) => {
+    change(value);
     setPage(1);
   };
+  const calfFilterOptions = [
+    ['', copy.allCalves],
+    ...calfOptions.map((record) => [String(record.calfId), formatCowIdentity({ cowName: record.calfName, cowTag: record.calfTag })]),
+  ];
 
   return (
     <div className="animate-reveal space-y-6">
@@ -90,33 +99,12 @@ export default function MilkUsage() {
         </div>
       </section>
 
-      <section className="rounded-lg border border-slate-200 bg-white/90 px-5 py-4 backdrop-blur" aria-label={copy.filtersLabel}>
-        <div className="grid gap-3 md:grid-cols-4">
-          <label className="form-control">
-            <span className="label-text">{copy.calf}</span>
-            <select value={filters.calfId} onChange={(event) => updateFilter('calfId', event.target.value)} className="input-machined w-full">
-              <option value="">{copy.allCalves}</option>
-              {calfOptions.map((record) => (
-                <option key={record.calfId} value={record.calfId}>{formatCowIdentity({ cowName: record.calfName, cowTag: record.calfTag })}</option>
-              ))}
-            </select>
-          </label>
-          <label className="form-control">
-            <span className="label-text">{copy.from}</span>
-            <input type="date" value={filters.from} max={filters.to || todayLocalIso()} onChange={(event) => updateFilter('from', event.target.value)} className="input-machined w-full" />
-          </label>
-          <label className="form-control">
-            <span className="label-text">{copy.to}</span>
-            <input type="date" value={filters.to} min={filters.from || undefined} max={todayLocalIso()} onChange={(event) => updateFilter('to', event.target.value)} className="input-machined w-full" />
-          </label>
-          <div className="flex items-end">
-            <button type="button" onClick={() => { setFilters(EMPTY_FILTERS); setPage(1); }} className="btn-ghost w-full justify-center py-3">
-
-              {copy.resetFilters}
-            </button>
-          </div>
-        </div>
-      </section>
+      <FilterPanel title={copy.filtersTitle} activeCount={filterState.activeCount} onReset={fromFirstPage(filterState.reset)}>
+        <Toolbar>
+          <ToolbarSelect label={copy.calf} value={filters.calfId} onChange={fromFirstPage(filterState.setCalf)} options={calfFilterOptions} />
+          <ToolbarDateRange range={filterState.range} onChange={fromFirstPage(filterState.setRange)} maxDate={todayLocalIso()} />
+        </Toolbar>
+      </FilterPanel>
 
       {calfTotals.length > 0 && (
         <section className="overflow-hidden rounded-lg border border-slate-200 bg-white/90 backdrop-blur" aria-labelledby="calf-summary-heading">

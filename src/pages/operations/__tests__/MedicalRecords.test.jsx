@@ -1,5 +1,6 @@
 import React from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { MemoryRouter } from 'react-router-dom';
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { findCowIdentityMatch } from '../../../lib/cowIdentity';
@@ -52,10 +53,13 @@ function renderPage() {
     tag_number: '005',
     name: 'Mrembo',
   }]);
+  // Pages always render inside the app's router (the shared filter state reads the address).
   return render(
-    <QueryClientProvider client={queryClient}>
-      <MedicalRecords />
-    </QueryClientProvider>,
+    <MemoryRouter>
+      <QueryClientProvider client={queryClient}>
+        <MedicalRecords />
+      </QueryClientProvider>
+    </MemoryRouter>,
   );
 }
 

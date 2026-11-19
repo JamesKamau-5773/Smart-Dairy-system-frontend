@@ -4,7 +4,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { financeApi, getApiErrorMessage } from '../../lib/backendApi';
 import { queuedOfflineMessage, isQueuedOffline, offlineFailureMessage } from '../../lib/offlinePolicy';
 import { reportError } from '../../lib/telemetry';
-import { Plus, Search, MoreVertical } from 'lucide-react';
+import { Plus, MoreVertical } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 
 import CustomerForm from '../../components/finance/CustomerForm.jsx';
@@ -19,8 +19,9 @@ import { getListLoadState, hasRowsToShow } from '../../lib/listLoadState';
 import { isFeatureEnabled } from '../../lib/featureFlags';
 import { customerTypeLabel, financeCopy } from '../../i18n/finance';
 import { shellCopy } from '../../i18n/shell';
-import { PHONE_QUERY, useMediaQuery } from '../../hooks/useMediaQuery';
-import { commonCopy } from '../../i18n/common';
+import { useCustomerFilters } from '../../hooks/useCustomerFilters';
+import FilterPanel from '../../components/data/FilterPanel';
+import { Toolbar, ToolbarSearch } from '../../components/data/Toolbar';
 const TABLE_COLUMNS = 4;
 
 // The first balance/rate field the backend sent; null (shown as "—") when none, never 0.
@@ -38,8 +39,6 @@ function describeBalanceForDelete(name, rawBalance) {
 }
 
 export default function CustomersPage() {
-  // Inputs are 16px on phones, so the long search hint would be cut off there.
-  const isPhone = useMediaQuery(PHONE_QUERY);
   const copy = financeCopy.customers;
   // The backend has no customer DELETE route yet (BR-007), so offering Delete would always fail.
   const canDeleteCustomers = isFeatureEnabled('customerDelete');
@@ -49,7 +48,8 @@ export default function CustomersPage() {
   // "Edit" from a customer's profile opens this page with that customer in the panel.
   const [isPanelOpen, setIsPanelOpen] = useState(!!location.state?.editCustomer);
   const [selectedCustomer, setSelectedCustomer] = useState(() => location.state?.editCustomer ?? null);
-  const [searchTerm, setSearchTerm] = useState('');
+  const filters = useCustomerFilters();
+  const searchTerm = filters.values.search;
   const confirmation = useConfirmation();
   const customersKey = QUERY_KEYS.CUSTOMERS(tenantId, farmId);
 
@@ -159,19 +159,11 @@ export default function CustomersPage() {
         </button>
       </div>
 
-      <div className="card-machined p-4">
-        <div className="relative">
-          <Search size={16} className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-brand" aria-hidden="true" />
-          <input
-            type="text"
-            aria-label={copy.searchPlaceholder}
-            placeholder={isPhone ? commonCopy.filters.searchShort : copy.searchPlaceholder}
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="input-machined pl-10"
-          />
-        </div>
-      </div>
+      <FilterPanel title={copy.filtersTitle} activeCount={filters.activeCount} onReset={filters.reset}>
+        <Toolbar>
+          <ToolbarSearch label={copy.searchPlaceholder} value={searchTerm} onChange={filters.setSearch} placeholder={copy.searchPlaceholder} />
+        </Toolbar>
+      </FilterPanel>
 
       <SlidePanel
         isOpen={isPanelOpen}
@@ -197,7 +189,7 @@ export default function CustomersPage() {
             {searchTerm ? (
               <>
                 <p>{copy.noMatches(searchTerm)}</p>
-                <button type="button" onClick={() => setSearchTerm('')} className="text-control text-brand hover:underline">{copy.clearSearch}</button>
+                <button type="button" onClick={filters.reset} className="text-control text-brand hover:underline">{copy.clearSearch}</button>
               </>
             ) : (
               <>

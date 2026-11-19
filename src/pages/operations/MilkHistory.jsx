@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Link, useParams } from 'react-router-dom';
-import { ArrowLeft, Search, ChevronDown } from 'lucide-react';
+import { ArrowLeft } from 'lucide-react';
 import { animalsApi, herdApi } from '../../lib/backendApi';
 import { normalizeAnimal } from '../../lib/animalUtils';
 import {
@@ -11,15 +11,17 @@ import {
 import { useTenant } from '../../hooks/useTenant';
 import { milkCopy } from '../../i18n/milk';
 import { productionCopy, sessionLabel } from '../../i18n/production';
-import { ISO_DATE_FILTER, useUrlFilters } from '../../hooks/useUrlFilters';
+import { MILK_HISTORY_SESSIONS, MILK_HISTORY_STATUSES, useMilkHistoryFilters } from '../../hooks/useMilkHistoryFilters';
+import FilterPanel from '../../components/data/FilterPanel';
+import ToolbarDate from '../../components/data/ToolbarDate';
+import { Toolbar, ToolbarSearch, ToolbarSelect } from '../../components/data/Toolbar';
+import { todayLocalIso } from '../../lib/localDate';
 import GroupedDateRows from '../../components/ui/GroupedDateRows';
 import Skeleton from '../../components/ui/Skeleton';
 import { CardSkeletons, ListLoadMessage, SlowLoadingHint, TableSkeletonRows } from '../../components/ui/ListLoadState';
 import { getListLoadState } from '../../lib/listLoadState';
 import { CartesianGrid, Legend, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import { enumLabel } from '../../lib/enumLabel';
-import { PHONE_QUERY, useMediaQuery } from '../../hooks/useMediaQuery';
-import { commonCopy } from '../../i18n/common';
 
 // TODO(BR-013): the daily totals for the chart are added up here from the cow's sessions; the
 // backend should return the daily series with the history.
@@ -55,24 +57,16 @@ function MetricCard({ label, value, loading = false }) {
   );
 }
 
-const HISTORY_FILTERS = { date: '', status: 'all', session: 'all' };
-const HISTORY_FILTER_VALUES = {
-  date: ISO_DATE_FILTER,
-  status: ['all', 'verified', 'pending', 'flagged'],
-  session: ['all', 'morning', 'afternoon', 'evening'],
-};
+// Labels are read when shown, so they follow the chosen language.
+const STATUS_LABEL = { verified: () => productionCopy.statuses.Verified, pending: () => productionCopy.statuses.Pending, flagged: () => productionCopy.statuses.Flagged };
 
 export default function MilkHistory() {
-  // Inputs are 16px on phones, so the long search hint would be cut off there.
-  const isPhone = useMediaQuery(PHONE_QUERY);
   const { id } = useParams();
   const { tenantId, farmId } = useTenant();
-  // Date, status and session live in the address. The search stays here: it matches the
-  // milker, which can be a phone number, and those never go in a URL.
-  const { filters: urlFilters, setFilters: setUrlFilters, resetFilters: resetUrlFilters, hasActiveFilters } = useUrlFilters(HISTORY_FILTERS, { allowed: HISTORY_FILTER_VALUES });
-  const [search, setSearch] = useState('');
-  const filters = useMemo(() => ({ ...urlFilters, search }), [urlFilters, search]);
-  const [filtersOpen, setFiltersOpen] = useState(hasActiveFilters);
+  // Day, status and session live in the address; the search (it can match a milker's phone
+  // number) stays in the page. See useMilkHistoryFilters.
+  const filterState = useMilkHistoryFilters();
+  const filters = filterState.values;
 
   const { data: history, isLoading, error, refetch, status, fetchStatus } = useQuery({
     queryKey: ['milk-history', tenantId, farmId, id],
@@ -125,7 +119,7 @@ export default function MilkHistory() {
   const averageYield = litresText(backendStats.average_yield, copy.perDay);
   const peakYield = litresText(backendStats.peak_yield, copy.perDay);
 
-  const clearFilters = () => { setSearch(''); resetUrlFilters(); };
+  const clearFilters = filterState.reset;
 
   const loadState = getListLoadState({ status, fetchStatus, data: history });
 
@@ -222,93 +216,29 @@ export default function MilkHistory() {
         </div>
       </section>
 
-      <div className="card-machined p-5 space-y-4">
-        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-          <button
-            type="button"
-            onClick={() => setFiltersOpen((prev) => !prev)}
-            className="inline-flex items-center gap-1.5 rounded-lg border border-ink/10 bg-surface px-3 py-1.5 text-control text-ink transition-all hover:border-brand/20 hover:bg-brand/5 hover:text-brand"
-            aria-expanded={filtersOpen}
-            aria-controls="history-filter-panel"
-          >
-
-  {copy.searchAndFilter}
-            <ChevronDown
-              size={12}
-              aria-hidden="true"
-              className={`text-ink-muted transition-transform duration-300 ease-out motion-reduce:transition-none ${filtersOpen ? 'rotate-180' : ''}`}
-            />
-          </button>
-          <button
-            type="button"
-            onClick={clearFilters}
-            className="inline-flex items-center text-control text-ink-muted hover:text-brand"
-          >
-
-  {copy.resetFilters}
-          </button>
-        </div>
-
-        {filtersOpen && (
-          <div id="history-filter-panel" className="space-y-4">
-            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3">
-              <label className="space-y-1 text-field-label text-ink-muted xl:col-span-2">
-                {copy.search}
-                <div className="relative">
-                  <Search size={14} className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-brand" aria-hidden="true" />
-                  <input
-                    type="text"
-                    value={filters.search}
-                    onChange={(e) => setSearch(e.target.value)}
-                    aria-label={copy.searchPlaceholder}
-                    placeholder={isPhone ? commonCopy.filters.searchShort : copy.searchPlaceholder}
-                    className="input-machined pl-10"
-                  />
-                </div>
-              </label>
-              <label className="space-y-1 text-field-label text-ink-muted">
-                {copy.date}
-                <input
-                  type="date"
-                  value={filters.date}
-                  onChange={(e) => setUrlFilters({ date: e.target.value })}
-                  className="input-machined"
-                />
-              </label>
-              <label className="space-y-1 text-field-label text-ink-muted">
-                {copy.status}
-                <select
-                  value={filters.status}
-                  onChange={(e) => setUrlFilters({ status: e.target.value })}
-                  className="input-machined"
-                >
-                  <option value="all">{copy.all}</option>
-                  <option value="verified">{productionCopy.statuses.Verified}</option>
-                  <option value="pending">{productionCopy.statuses.Pending}</option>
-                  <option value="flagged">{productionCopy.statuses.Flagged}</option>
-                </select>
-              </label>
-              <label className="space-y-1 text-field-label text-ink-muted">
-                {copy.session}
-                <select
-                  value={filters.session}
-                  onChange={(e) => setUrlFilters({ session: e.target.value })}
-                  className="input-machined"
-                >
-                  <option value="all">{copy.all}</option>
-                  <option value="morning">{productionCopy.sessions.morning}</option>
-                  <option value="afternoon">{productionCopy.sessions.afternoon}</option>
-                  <option value="evening">{productionCopy.sessions.evening}</option>
-                </select>
-              </label>
-            </div>
-
-            <div className="text-meta text-ink-muted">
-              {copy.showing(filteredSessions.length, totalSessions)}
-            </div>
-          </div>
-        )}
-      </div>
+      <FilterPanel
+        title={copy.filtersTitle}
+        activeCount={filterState.activeCount}
+        onReset={filterState.reset}
+        resultsSummary={<p role="status" className="m-0">{copy.showing(filteredSessions.length, totalSessions)}</p>}
+      >
+        <Toolbar>
+          <ToolbarSearch label={copy.search} value={filters.search} onChange={filterState.setSearch} placeholder={copy.searchPlaceholder} />
+          <ToolbarSelect
+            label={copy.status}
+            value={filters.status}
+            onChange={filterState.setStatus}
+            options={MILK_HISTORY_STATUSES.map((status) => [status, status === 'all' ? copy.allStatuses : STATUS_LABEL[status]()])}
+          />
+          <ToolbarSelect
+            label={copy.session}
+            value={filters.session}
+            onChange={filterState.setSession}
+            options={MILK_HISTORY_SESSIONS.map((session) => [session, session === 'all' ? productionCopy.allSessions : productionCopy.sessions[session]])}
+          />
+          <ToolbarDate value={filters.date} onChange={filterState.setDate} maxDate={todayLocalIso()} />
+        </Toolbar>
+      </FilterPanel>
 
       <div className="card-machined overflow-hidden !p-0">
         <div className="flex flex-col items-start justify-between gap-2 border-b border-ink/10 bg-surface-raised p-5 sm:flex-row sm:items-center sm:gap-4">

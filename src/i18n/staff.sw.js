@@ -93,6 +93,7 @@ export const staffCopy = {
     roleCount: (count, label) => `${label} ${count}`,
     search: 'Tafuta wafanyakazi',
     searchPlaceholder: 'Tafuta kwa jina, jukumu au simu',
+    filtersTitle: 'Tafuta na uchuje wafanyakazi', // REVIEW
     showFormer: (count) => `Onyesha wafanyakazi wa zamani (${count})`,
     emptyTitle: 'Bado hakuna wafanyakazi',
     emptyHint: 'Ongeza watu wanaofanya kazi shambani ili uwalipe, ufuatilie mikopo na uwape ruhusa ya programu.',

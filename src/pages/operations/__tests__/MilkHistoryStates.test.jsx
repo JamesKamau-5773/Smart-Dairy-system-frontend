@@ -1,6 +1,6 @@
 import React from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { cleanup, render, screen, waitFor } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import MilkHistory from '../MilkHistory';
@@ -72,5 +72,34 @@ describe('milk history load states', () => {
 
     await waitFor(() => expect(screen.getAllByText('—').length).toBeGreaterThanOrEqual(3));
     expect(screen.queryByText('8.0 L/day')).toBeNull();
+  });
+});
+
+describe('milk history filters', () => {
+  it('uses the shared panel: collapsed, one day picker instead of a native date input, and Reset', async () => {
+    herdApi.list.mockResolvedValue([{ id: 57, tag_number: 'KE-012', name: 'Neema' }]);
+    animalsApi.get.mockResolvedValue({ id: 57, tag_number: 'KE-012', name: 'Neema' });
+    animalsApi.milkHistory.mockResolvedValue({
+      sessions: [
+        { date: '2026-11-07', session: 'morning', liters: 8 },
+        { date: '2026-11-06', session: 'evening', liters: 6 },
+      ],
+      stats: { average_yield: 7, peak_yield: 8, total_logged: 14, session_count: 2 },
+      animal: { id: 57, tag_number: 'KE-012', name: 'Neema' },
+    });
+    renderPage();
+    const PANEL = 'Search and filter milk sessions';
+    const toggle = await screen.findByRole('button', { name: PANEL });
+    expect(toggle.getAttribute('aria-expanded')).toBe('false');
+    expect(document.querySelector('input[type="date"]')).toBeNull();
+
+    fireEvent.click(toggle);
+    const panel = screen.getByRole('region', { name: PANEL });
+    fireEvent.change(within(panel).getByRole('combobox', { name: 'Session' }), { target: { value: 'evening' } });
+    expect(await within(panel).findByText('Showing 1 of 2 sessions')).toBeTruthy();
+    expect(within(panel).getByRole('button', { name: 'Any day' })).toBeTruthy();
+
+    fireEvent.click(within(panel).getByRole('button', { name: 'Reset filters' }));
+    expect(await within(panel).findByText('Showing 2 of 2 sessions')).toBeTruthy();
   });
 });

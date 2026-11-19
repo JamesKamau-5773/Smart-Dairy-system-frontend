@@ -19,6 +19,7 @@ export const safetyCopy = {
   severity: { high: 'Hatari kubwa', medium: 'Hatari ya wastani', low: 'Hatari ndogo' },
   severityHint: { high: 'Kusubiri siku 14 au zaidi', medium: 'Siku 7–13', low: 'Chini ya siku 7' },
   allSeverities: 'Viwango vyote vya hatari',
+  filtersTitle: 'Tafuta na uchuje maziwa yaliyozuiliwa', // REVIEW
   search: 'Tafuta kwa ng’ombe, namba, sababu au dawa',
   showing: (shown, total) => `Inaonyesha ${shown} kati ya ${total}. Punguza utafutaji ili kupata wengine.`,
   columns: { cow: 'Ng’ombe', risk: 'Hatari', treatment: 'Matibabu', clears: 'Maziwa yanaweza kuuzwa' },

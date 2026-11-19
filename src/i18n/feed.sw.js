@@ -321,6 +321,7 @@ export const feedCopy = {
     subtitle: 'Simamia viwango vya akiba, mizigo mipya na taarifa za bidhaa.',
     add: 'Ongeza stoo',
     searchPlaceholder: 'Tafuta bidhaa kwa jina au namba...',
+    filtersTitle: 'Tafuta na uchuje bidhaa za stoo', // REVIEW
     allCategories: 'Aina zote',
     listLabel: 'bidhaa za stoo',
     empty: 'Bado hakuna bidhaa stoo. Sajili chakula, dawa na vifaa vyako ili kufuatilia akiba.',

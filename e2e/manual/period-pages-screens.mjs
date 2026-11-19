@@ -10,7 +10,9 @@
 // Pages: SCREENS_PAGES=register,home,ledger,production-log,reports,inventory,record-milk,herd,breeding,medical,milk-drops,animal,milk-history
 //   milk-usage,routine,tasks,feeding,feed-planner,feed-mixes,milk-lab,units,
 //   buyers,customers,customer-profile,customer-value,cow-profit,milk-inventory,safety,staff,payroll,
-//   login,not-found,ledger-entry
+//   login,not-found,ledger-entry,ledger-filters,production-log-filters,milk-usage-filters,
+//   herd-filters,breeding-history,medical-filters,milk-history-filters,safety-filters,ledger-sheet,
+//   inventory-filters,buyers-filters,customers-filters,reports-filters,staff-filters
 //   (default: ledger,production-log,reports)
 import { chromium } from '@playwright/test';
 import { mkdirSync } from 'node:fs';
@@ -28,11 +30,46 @@ const ROUTES = { register: '/register', home: null, ledger: '/finance/ledger', '
   buyers: '/finance/buyers', customers: '/operations/customers', 'customer-profile': '/finance/customers/4',
   'customer-value': '/finance/reports/dairy-unit-economics', 'cow-profit': '/finance/reports/animal-economics', 'milk-inventory': '/operations/reports/milk-inventory',
   safety: '/operations/safety', staff: '/hr/staff', payroll: '/hr/payroll',
-  login: '/login', 'not-found': '/no-such-page', 'ledger-entry': '/finance/ledger' };
+  login: '/login', 'not-found': '/no-such-page', 'ledger-entry': '/finance/ledger', 'ledger-filters': '/finance/ledger',
+  'production-log-filters': '/operations/yield?session=Morning', 'milk-usage-filters': '/operations/milk-usage',
+  'herd-filters': '/operations/herd?status=Milking', 'breeding-history': '/operations/breeding', 'medical-filters': '/operations/records',
+  'milk-history-filters': '/operations/animal/1/milk-history', 'safety-filters': '/operations/safety',
+  'ledger-sheet': '/finance/ledger',
+  'inventory-filters': '/operations/inventory', 'buyers-filters': '/finance/buyers', 'customers-filters': '/operations/customers',
+  'reports-filters': '/operations/reports?period=custom&start_date=2026-09-01&end_date=2026-11-16', 'staff-filters': '/hr/staff' };
+// Opens a page's shared filter panel ("Search and filter …" / "Filter …").
+const openFilterPanel = (page) => page.getByRole('button', { name: /^(Search and filter|Search|Filter) / }).first().click();
 // Pages shot after a click on the loaded route (a form opened over it).
 const OPEN = {
   'record-milk': (page) => page.getByRole('button', { name: /Record milk/i }).first().click(),
   'ledger-entry': (page) => page.getByRole('button', { name: /Log income/i }).first().click(),
+  // The filter panel open, with a search typed (so Reset filters and the results line show).
+  'ledger-filters': async (page) => {
+    await openFilterPanel(page);
+    await page.getByRole('searchbox').fill('Unga');
+    await page.waitForTimeout(600);
+  },
+  'production-log-filters': openFilterPanel,
+  'milk-usage-filters': openFilterPanel,
+  'herd-filters': openFilterPanel,
+  'medical-filters': openFilterPanel,
+  'milk-history-filters': openFilterPanel,
+  'safety-filters': openFilterPanel,
+  'inventory-filters': openFilterPanel,
+  'buyers-filters': openFilterPanel,
+  'customers-filters': openFilterPanel,
+  'reports-filters': openFilterPanel,
+  'staff-filters': openFilterPanel,
+  // Below xl the Ledger is a list whose rows open a sheet (the table has no sheet: nothing to tap).
+  'ledger-sheet': async (page) => {
+    const row = page.locator('[data-record-id]').first();
+    if (await row.count()) await row.click();
+  },
+  // Historical Checks opens in a dialog; its filter panel is inside.
+  'breeding-history': async (page) => {
+    await page.getByRole('button', { name: 'View all historical checks' }).first().click();
+    await openFilterPanel(page);
+  },
 };
 const PAGES = (process.env.SCREENS_PAGES ?? 'ledger,production-log,reports').split(',').map((name) => name.trim()).filter(Boolean);
 const unknownPage = PAGES.find((name) => !(name in ROUTES));
@@ -162,10 +199,21 @@ function ledgerGroups(params) {
 
 function ledgerList(params) {
   const rows = applyFilters(LEDGER, params);
+  // KPI figures as GET /api/finance/ledger sends them: amounts in KES, margin as a 1-dp string.
+  const totals = totalsOf(rows);
+  const [income, expenses] = [Number(totals.income) / 100, Number(totals.expenses) / 100];
   return {
     items: rows,
     meta: { total: rows.length, pages: 1 },
-    summary: { outstanding_receivables: 37030, customer_credit: 636, ledger_records: rows.length },
+    summary: {
+      recognized_sales: income,
+      posted_costs: expenses,
+      net_profit: income - expenses,
+      profit_margin_pct: income ? (((income - expenses) / income) * 100).toFixed(1) : null,
+      outstanding_receivables: 37030,
+      customer_credit: 636,
+      ledger_records: rows.length,
+    },
     summary_scope: { mode: params.get('search') ? 'search' : 'all', search_query: params.get('search') || null },
   };
 }

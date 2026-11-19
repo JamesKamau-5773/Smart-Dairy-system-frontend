@@ -2,7 +2,7 @@ import { useMemo, useState, useRef, useEffect } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import toast from 'react-hot-toast';
-import { ChevronDown, ChevronUp, Search, AlertCircle, MoreVertical } from 'lucide-react';
+import { AlertCircle, MoreVertical } from 'lucide-react';
 import { Skeleton } from '../../components/ui';
 import BaseModal from '../../components/ui/BaseModal';
 import AlertBanner from '../../components/ui/AlertBanner';
@@ -20,11 +20,11 @@ import { ANIMAL_PHOTO_ACCEPT, compressAnimalPhoto, formatPhotoSize, getAnimalPho
 import { formatCowIdentity } from '../../lib/cowIdentity';
 import { useTenant } from '../../hooks/useTenant';
 import { herdCopy, herdStatusLabel } from '../../i18n/herd';
-import { useUrlFilters } from '../../hooks/useUrlFilters';
+import { HERD_SORTS, useHerdFilters } from '../../hooks/useHerdFilters';
+import FilterPanel from '../../components/data/FilterPanel';
+import { Toolbar, ToolbarPills, ToolbarSearch, ToolbarSelect } from '../../components/data/Toolbar';
 import AnimalAge from '../../components/operations/AnimalAge';
 import { shellCopy } from '../../i18n/shell';
-import { PHONE_QUERY, useMediaQuery } from '../../hooks/useMediaQuery';
-import { commonCopy } from '../../i18n/common';
 import {
   formatDate,
   statusTone,
@@ -37,29 +37,21 @@ import {
 } from '../../lib/herdUtils';
 
 const statusOptions = ['Calf', 'Heifer', 'Lactating', 'Dry'];
-const HERD_FILTERS = { q: '', status: 'All', sort: 'age' };
-const HERD_FILTER_VALUES = { status: ['All', 'Milking', 'Dry'], sort: ['age', 'breed', 'status', 'name'] };
 
 // ─────────────────────────────────────────────────────────────────────────
 // MAIN COMPONENT
 // ─────────────────────────────────────────────────────────────────────────
 
 export default function HerdRegistry() {
-  // Inputs are 16px on phones, so the long search hint would be cut off there.
-  const isPhone = useMediaQuery(PHONE_QUERY);
   const copy = herdCopy.registry;
   const form = copy.form;
   const { tenantId, farmId } = useTenant();
   const queryClient = useQueryClient();
   // State
   // Table filters live in the address (Back, reload and shared links keep them).
-  const { filters: herdFilters, setFilter: setHerdFilter, setFilters: setHerdFilters, hasActiveFilters: hasUrlFilters } = useUrlFilters(HERD_FILTERS, { allowed: HERD_FILTER_VALUES });
-  const { sort: sortBy, status: statusFilter, q: herdSearch } = herdFilters;
-  const setSortBy = (value) => setHerdFilter('sort', value);
-  const setStatusFilter = (value) => setHerdFilter('status', value);
-  const setHerdSearch = (value) => setHerdFilter('q', value);
-  // Opened when the page loads with filters, so the farmer sees why the list is short.
-  const [controlsOpen, setControlsOpen] = useState(hasUrlFilters);
+  const filters = useHerdFilters();
+  const { sort: sortBy, status: statusFilter, q: herdSearch } = filters.values;
+  const setHerdSearch = filters.setSearch;
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [successMessage, setSuccessMessage] = useState('');
@@ -145,8 +137,7 @@ export default function HerdRegistry() {
     return a.ageMonths - b.ageMonths;
   });
 
-  const hasActiveFilters = statusFilter !== 'All' || herdSearch.trim() !== '';
-  const activeFilterCount = [herdSearch.trim(), statusFilter !== 'All'].filter(Boolean).length;
+  const hasActiveFilters = filters.activeCount > 0;
   const herdSummary = {
     totalAnimals: backendSummary?.totalCount ?? null,
     milkingCount: backendSummary?.milkingCount ?? null,
@@ -492,10 +483,6 @@ export default function HerdRegistry() {
     return String(routeId ?? '').trim();
   };
 
-  const handleClearFilters = () => {
-    setHerdFilters({ status: 'All', q: '' });
-  };
-
   // Typo-tolerant "Did you mean…" when a search finds nothing (e.g. "Nema" → Neema, "KE12" → KE-012).
   const herdSuggestions = herdSearch.trim() && visibleHerd.length === 0 ? getHerdSearchSuggestions(herdState, herdSearch) : [];
   const emptyHerdContent = (
@@ -519,7 +506,7 @@ export default function HerdRegistry() {
         </div>
       )}
       {hasActiveFilters ? (
-        <button type="button" onClick={handleClearFilters} className="mt-1 text-control text-brand hover:underline">
+        <button type="button" onClick={filters.reset} className="mt-1 text-control text-brand hover:underline">
           {copy.clearFilters}
         </button>
       ) : (
@@ -638,100 +625,23 @@ export default function HerdRegistry() {
           </div>
         </div>
 
-        {/* Controls */}
-        <div className="mb-6 rounded-2xl border border-ink/10 bg-surface/90 p-4 ">
-          <div className="flex flex-col gap-3 border-b border-ink/10 pb-4 lg:flex-row lg:items-center lg:justify-between">
-            <div className="text-ink-strong text-body-strong">
-              <span>{copy.organize}</span>
-            </div>
-
-            <div className="flex flex-wrap items-center gap-2">
-              <span className="rounded-full border border-ink/10 bg-surface-warm/60 px-3 py-1 text-badge text-ink-muted">
-                {copy.activeFilters(activeFilterCount)}
-              </span>
-              <button
-                type="button"
-                onClick={() => setControlsOpen((current) => !current)}
-                aria-expanded={controlsOpen}
-                className="inline-flex items-center gap-1.5 rounded-lg border border-ink/10 bg-surface px-3 py-1.5 text-control text-ink transition-all hover:border-brand/20 hover:bg-brand/5 hover:text-brand"
-              >
-                {controlsOpen ? <ChevronUp size={12} aria-hidden="true" /> : <ChevronDown size={12} aria-hidden="true" />}
-                {controlsOpen ? copy.hideFilters : copy.showFilters}
-              </button>
-            </div>
-          </div>
-
-          {controlsOpen && (
-            <div className="flex flex-col gap-3 pt-4 lg:flex-row lg:items-center">
-              <div className="flex items-center gap-2 rounded-lg border border-ink/20 bg-surface/95 px-3 py-2 lg:min-w-[280px]">
-                <Search size={16} className="text-ink-muted" aria-hidden="true" />
-                <input
-                  ref={searchInputRef}
-                  type="search"
-                  value={herdSearch}
-                  onChange={(event) => setHerdSearch(event.target.value)}
-                  aria-label={copy.searchPlaceholder}
-                  placeholder={isPhone ? commonCopy.filters.searchShort : copy.searchPlaceholder}
-                  className="w-full bg-transparent text-control text-ink-strong outline-none placeholder:text-ink-muted"
-                  aria-label={copy.searchLabel}
-                />
-              </div>
-
-              <div className="flex items-center gap-2 rounded-lg border border-ink/20 bg-surface/95 px-3 py-2">
-                <label className="text-field-label text-ink-strong" htmlFor="herd-sort">
-                  {copy.sortBy}
-                </label>
-                <select
-                  id="herd-sort"
-                  value={sortBy}
-                  onChange={(event) => setSortBy(event.target.value)}
-                  className="bg-transparent text-control text-ink-strong outline-none"
-                  aria-label={copy.sortLabel}
-                >
-                  <option value="age">{copy.sort.age}</option>
-                  <option value="breed">{copy.sort.breed}</option>
-                  <option value="status">{copy.sort.status}</option>
-                </select>
-                <ChevronDown size={14} className="text-ink-strong" aria-hidden="true" />
-              </div>
-
-              <div className="flex flex-wrap items-center gap-2">
-                {[
+        <div className="mb-6">
+          <FilterPanel title={copy.filtersTitle} activeCount={filters.activeCount} onReset={filters.reset}>
+            <Toolbar>
+              <ToolbarSearch label={copy.searchLabel} value={herdSearch} onChange={setHerdSearch} placeholder={copy.searchPlaceholder} inputRef={searchInputRef} />
+              <ToolbarSelect label={copy.sortLabel} value={sortBy} onChange={filters.setSort} options={HERD_SORTS.map((sort) => [sort, copy.sortOption(copy.sort[sort])])} />
+              <ToolbarPills
+                label={copy.statusFilterLabel}
+                value={statusFilter}
+                onChange={filters.setStatus}
+                options={[
                   { value: 'All', count: countText(herdSummary.totalAnimals) },
                   { value: 'Milking', count: countText(herdSummary.milkingCount) },
                   { value: 'Dry', count: countText(herdSummary.dryCount) },
-                ].map((option) => (
-                  <button
-                    key={option.value}
-                    type="button"
-                    onClick={() => setStatusFilter(option.value)}
-                    className={`rounded-lg border px-3 py-2 text-control transition-colors ${
-                      statusFilter === option.value
-                        ? 'border-brand bg-brand text-surface'
-                        : 'border-ink/10 bg-surface-raised text-ink-muted hover:border-brand/20 hover:text-brand'
-                    }`}
-                    aria-pressed={statusFilter === option.value}
-                    aria-label={copy.filterBy(copy.filters[option.value])}
-                  >
-                    {copy.filters[option.value]} <span className="ml-1 opacity-80">({option.count})</span>
-                  </button>
-                ))}
-
-                <button
-                  type="button"
-                  onClick={handleClearFilters}
-                  className={`rounded-lg border px-3 py-2 text-control transition-colors ${
-                    hasActiveFilters
-                      ? 'border-brand/20 bg-brand/5 text-brand hover:bg-brand/10'
-                      : 'border-ink/10 bg-surface-raised text-ink-muted'
-                  }`}
-                  aria-label={copy.clearFiltersLabel}
-                >
-                  {copy.clearFilters}
-                </button>
-              </div>
-            </div>
-          )}
+                ].map((option) => ({ ...option, label: copy.filters[option.value], ariaLabel: copy.filterBy(copy.filters[option.value]) }))}
+              />
+            </Toolbar>
+          </FilterPanel>
         </div>
 
         <ListLoadNotices state={herdLoadState} label={copy.listLabel} error={herdQuery.error} onRetry={herdQuery.refetch} />

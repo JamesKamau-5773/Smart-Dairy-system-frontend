@@ -1,10 +1,12 @@
 import { useMemo, useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
-import { Search, Plus, MoreVertical } from 'lucide-react';
+import { Plus, MoreVertical } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { useTenant } from '../../hooks/useTenant';
-import { useUrlFilters } from '../../hooks/useUrlFilters';
+import { BUYER_STATUSES, useBuyerFilters } from '../../hooks/useBuyerFilters';
+import FilterPanel from '../../components/data/FilterPanel';
+import { Toolbar, ToolbarSearch, ToolbarSelect } from '../../components/data/Toolbar';
 import { financeApi, getApiErrorMessage } from '../../lib/backendApi';
 import { queuedOfflineMessage, isQueuedOffline } from '../../lib/offlinePolicy';
 import { getSearchSuggestions, matchesSearch } from '../../lib/fuzzySearch';
@@ -21,8 +23,6 @@ import { SITE } from '../../landing/content';
 import { normalizeKenyanPhone } from '../../lib/phone';
 import { customerTypeLabel, financeCopy } from '../../i18n/finance';
 import { shellCopy } from '../../i18n/shell';
-import { PHONE_QUERY, useMediaQuery } from '../../hooks/useMediaQuery';
-import { commonCopy } from '../../i18n/common';
 // "KES 1,250.00"; "—" when the backend sent no figure (unknown is never shown as zero).
 const formatKes = formatMoneyText;
 
@@ -56,22 +56,15 @@ const KPIWidget = ({ title, value, subtitle, valueColor = "text-brand", state = 
 /**
  * Main Page Component
  */
-const BUYER_FILTERS = { status: 'all' };
-const BUYER_FILTER_VALUES = { status: ['all', 'outstanding', 'settled'] };
-
 export default function BuyersList() {
-  // Inputs are 16px on phones, so the long search hint would be cut off there.
-  const isPhone = useMediaQuery(PHONE_QUERY);
   const copy = financeCopy.buyers;
   const statementCopy = financeCopy.statement;
   const queryClient = useQueryClient();
   const { tenantId, farmId } = useTenant();
-  const [searchTerm, setSearchTerm] = useState('');
-  // The status filter lives in the address; the search stays here (names and phone numbers
-  // never go in a URL).
-  const { filters: buyerFilters, setFilter: setBuyerFilter } = useUrlFilters(BUYER_FILTERS, { allowed: BUYER_FILTER_VALUES });
-  const statusFilter = buyerFilters.status;
-  const setStatusFilter = (value) => setBuyerFilter('status', value);
+  // The status lives in the address; the search stays here (see useBuyerFilters).
+  const filters = useBuyerFilters();
+  const { search: searchTerm, status: statusFilter } = filters.values;
+  const setSearchTerm = filters.setSearch;
   const [selectedCustomerIds, setSelectedCustomerIds] = useState([]);
   const [isAddPanelOpen, setIsAddPanelOpen] = useState(false);
 
@@ -250,46 +243,34 @@ export default function BuyersList() {
       <div>
         {safeCustomers.length > 0 && (
           <div className="space-y-4">
-            <section className="rounded-card border border-slate-200 bg-white/90 p-5 backdrop-blur md:p-6" aria-label={copy.filtersLabel}>
-              <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
-                <div className="relative min-w-0 flex-1 lg:max-w-lg">
-                  <Search className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-brand" size={17} aria-hidden="true" />
-                  <input
-                    type="search"
-                    aria-label={copy.searchPlaceholder}
-                    placeholder={isPhone ? commonCopy.filters.searchShort : copy.searchPlaceholder}
-                    className="h-10 w-full rounded-input border border-ink/20 bg-surface pl-10 pr-3 text-control text-ink placeholder:text-ink-muted focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/30"
-                    value={searchTerm}
-                    onChange={(event) => setSearchTerm(event.target.value)}
-                  />
-                </div>
-                <label className="relative flex min-w-[190px] items-center">
-                  <span className="sr-only">{copy.status}</span>
-                  <select
-                    value={statusFilter}
-                    onChange={(event) => setStatusFilter(event.target.value)}
-                    className="h-10 w-full appearance-none rounded-input border border-ink/20 bg-surface pl-3 pr-9 text-control text-ink focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/30"
-                    aria-label={copy.status}
-                  >
-                    <option value="all">{copy.allStatuses}</option>
-                    <option value="outstanding">{financeCopy.balanceStatus.outstanding}</option>
-                    <option value="settled">{financeCopy.balanceStatus.settled}</option>
-                  </select>
-                </label>
-                {selectedCustomerIds.length > 0 && (
-                  <button
-                    type="button"
-                    onClick={shareSelectedStatements}
-                    className="inline-flex h-10 items-center justify-center rounded-button bg-brand-700 px-4 text-control tabular-nums text-white hover:bg-brand-900 lg:ml-auto"
-                  >
-                    {copy.shareSelected(selectedCustomerIds.length)}
-                  </button>
-                )}
-                <p className={`text-meta tabular-nums text-slate-600 ${selectedCustomerIds.length === 0 ? 'lg:ml-auto' : ''}`}>
-                  {copy.showing(filteredCustomers.length, safeCustomers.length)}
-                </p>
+            <FilterPanel
+              title={copy.filtersTitle}
+              activeCount={filters.activeCount}
+              onReset={filters.reset}
+              resultsSummary={<p role="status" className="m-0 tabular-nums">{copy.showing(filteredCustomers.length, safeCustomers.length)}</p>}
+            >
+              <Toolbar>
+                <ToolbarSearch label={copy.searchPlaceholder} value={searchTerm} onChange={setSearchTerm} placeholder={copy.searchPlaceholder} />
+                <ToolbarSelect
+                  label={copy.status}
+                  value={statusFilter}
+                  onChange={filters.setStatus}
+                  options={BUYER_STATUSES.map((status) => [status, status === 'all' ? copy.allStatuses : financeCopy.balanceStatus[status]])}
+                />
+              </Toolbar>
+            </FilterPanel>
+            {/* An action on the chosen buyers, not a filter: above the table. */}
+            {selectedCustomerIds.length > 0 && (
+              <div className="flex justify-end">
+                <button
+                  type="button"
+                  onClick={shareSelectedStatements}
+                  className="inline-flex h-10 items-center justify-center rounded-button bg-brand-700 px-4 text-control tabular-nums text-white hover:bg-brand-900"
+                >
+                  {copy.shareSelected(selectedCustomerIds.length)}
+                </button>
               </div>
-            </section>
+            )}
 
             <section className="overflow-hidden rounded-card border border-slate-200 bg-white/90 backdrop-blur" aria-label={copy.tableLabel}>
               <div className="hidden overflow-x-auto md:block">

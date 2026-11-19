@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import toast from 'react-hot-toast';
-import { Search, Plus, ChevronDown, MoreVertical } from 'lucide-react';
+import { Plus, MoreVertical } from 'lucide-react';
 import AlertBanner from '../../components/ui/AlertBanner';
 import Confirmation, { useConfirmation } from '../../components/ui/Confirmation';
 import RegisterResourceModal from '../../components/inventory/RegisterResourceModal';
@@ -21,7 +21,9 @@ import { isQueuedOffline, offlineFailureMessage, queuedOfflineMessage } from '..
 import { reportError } from '../../lib/telemetry';
 import { canManageInventoryItems } from '../../lib/permissions';
 import { useAuth } from '../../contexts/AuthContext';
-import { useUrlFilters } from '../../hooks/useUrlFilters';
+import { useInventoryFilters } from '../../hooks/useInventoryFilters';
+import FilterPanel from '../../components/data/FilterPanel';
+import { Toolbar, ToolbarSearch, ToolbarSelect, ToolbarToggle } from '../../components/data/Toolbar';
 import { useTenant } from '../../hooks/useTenant';
 import { useInventoryItemActions } from '../../hooks/useInventoryItemActions';
 import { feedCopy } from '../../i18n/feed';
@@ -29,8 +31,6 @@ import { tone } from '../../components/ui/tones';
 import { CardSkeletons, ListLoadNotices, TableSkeletonRows } from '../../components/ui/ListLoadState';
 import { getListLoadState, hasRowsToShow } from '../../lib/listLoadState';
 import { shellCopy } from '../../i18n/shell';
-import { PHONE_QUERY, useMediaQuery } from '../../hooks/useMediaQuery';
-import { commonCopy } from '../../i18n/common';
 
 const { item: itemCopy, restock: restockCopy, stockOut: stockOutCopy, stockCount: stockCountCopy } = feedCopy;
 
@@ -62,26 +62,19 @@ function StockStatusChip({ status }) {
   return <span className={`inline-flex shrink-0 rounded-badge px-2 py-0.5 text-meta ${tone(toneName).chip}`}>{label}</span>;
 }
 
-const STOCK_FILTERS = { q: '', category: 'All' };
-
 export default function InventoryRegistry() {
-  // Inputs are 16px on phones, so the long search hint would be cut off there.
-  const isPhone = useMediaQuery(PHONE_QUERY);
   const queryClient = useQueryClient();
   const { tenantId, farmId } = useTenant();
   const [isRegisterModalOpen, setIsRegisterModalOpen] = useState(false);
   const [isRestockModalOpen, setIsRestockModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [selectedItem, setSelectedItem] = useState(null);
-  // Search and category live in the address, so Feeding → Ingredients can open the list
-  // pre-filtered and the back button, reloads and shared links keep them.
-  const { filters: stockFilters, setFilter: setStockFilter } = useUrlFilters(STOCK_FILTERS);
-  const { q: searchTerm, category: categoryFilter } = stockFilters;
-  const setSearchTerm = (value) => setStockFilter('q', value);
-  const setCategoryFilter = (category) => setStockFilter('category', category);
+  // Search and category live in the address; "Show archived" in the page (useInventoryFilters).
+  const filters = useInventoryFilters();
+  const { q: searchTerm, category: categoryFilter } = filters.values;
+  const { showArchived } = filters;
   const [showError, setShowError] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
-  const [showArchived, setShowArchived] = useState(false);
   // { kind: 'out' | 'count', item } while a stock change dialog is open.
   const [stockDialog, setStockDialog] = useState(null);
   const confirmation = useConfirmation();
@@ -358,34 +351,19 @@ export default function InventoryRegistry() {
         </div>
       )}
 
-      {/* SEARCH AND FILTER */}
-      <div className="mb-6 flex min-w-0 flex-col gap-3 sm:flex-row sm:gap-4">
-        <div className="relative min-w-0 flex-1">
-            <Search size={16} className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-brand" aria-hidden="true" />
-            <input
-                aria-label={feedCopy.inventory.searchPlaceholder}
-                placeholder={isPhone ? commonCopy.filters.searchShort : feedCopy.inventory.searchPlaceholder}
-                className="w-full rounded-lg border border-ink/20 py-3 pl-10 pr-4 text-control outline-none focus:border-brand/50"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
+      <div className="mb-6">
+        <FilterPanel title={feedCopy.inventory.filtersTitle} activeCount={filters.activeCount} onReset={filters.reset}>
+          <Toolbar>
+            <ToolbarSearch label={feedCopy.inventory.searchPlaceholder} value={searchTerm} onChange={filters.setSearch} placeholder={feedCopy.inventory.searchPlaceholder} />
+            <ToolbarSelect
+              label={feedCopy.inventory.category}
+              value={categoryFilter}
+              onChange={filters.setCategory}
+              options={categories.map((cat) => [cat, cat === 'All' ? feedCopy.inventory.allCategories : feedCopy.inventory.categories[cat] ?? cat])}
             />
-        </div>
-        <div className="relative w-full sm:w-auto sm:min-w-48">
-            <select
-                className="w-full appearance-none rounded-lg border border-ink/20 bg-surface py-3 pl-4 pr-10 text-control text-ink hover:bg-brand-50 focus:border-brand/50 focus:outline-none cursor-pointer"
-                value={categoryFilter}
-                onChange={(e) => setCategoryFilter(e.target.value)}
-            >
-                {categories.map(cat => (
-                    <option key={cat} value={cat}>{cat === 'All' ? feedCopy.inventory.allCategories : feedCopy.inventory.categories[cat] ?? cat}</option>
-                ))}
-            </select>
-            <ChevronDown size={16} className="absolute right-4 top-1/2 -translate-y-1/2 text-ink-muted pointer-events-none" aria-hidden="true" />
-        </div>
-        <label className="flex min-h-11 items-center gap-2 text-field-label text-ink">
-          <input type="checkbox" checked={showArchived} onChange={(event) => setShowArchived(event.target.checked)} className="h-4 w-4 accent-brand" />
-          {itemCopy.showArchived}
-        </label>
+            <ToolbarToggle label={itemCopy.showArchived} checked={showArchived} onChange={filters.setShowArchived} />
+          </Toolbar>
+        </FilterPanel>
       </div>
 
       {/* STOCK TABLE */}
@@ -407,7 +385,7 @@ export default function InventoryRegistry() {
             ) : (
               <>
                 <p>{feedCopy.inventory.noMatches}</p>
-                <button type="button" onClick={() => { setSearchTerm(''); setCategoryFilter('All'); }} className="text-control text-brand hover:underline">{feedCopy.inventory.clearFilters}</button>
+                <button type="button" onClick={filters.reset} className="text-control text-brand hover:underline">{feedCopy.inventory.clearFilters}</button>
               </>
             )}
           </div>

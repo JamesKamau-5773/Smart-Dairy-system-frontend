@@ -6,10 +6,11 @@ export const ledgerCopy = {
   columns: {
     party: 'Customer / Supplier',
     category: 'Category',
-    ref: 'Ref',
     description: 'Description',
-    amount: 'Amount (KES)',
+    ref: 'Ref Code',
+    amount: 'Amount',
     status: 'Status',
+    receipt: 'Receipt',
     actions: 'Actions',
   },
 };

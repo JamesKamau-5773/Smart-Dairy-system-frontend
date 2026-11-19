@@ -1,5 +1,6 @@
 import React from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { MemoryRouter } from 'react-router-dom';
 import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import BreedingHub from '../BreedingHub';
@@ -60,10 +61,13 @@ vi.mock('recharts', () => ({
 
 function renderHub() {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  // Pages always render inside the app's router (the shared filter state reads the address).
   return render(
-    <QueryClientProvider client={queryClient}>
-      <BreedingHub />
-    </QueryClientProvider>,
+    <MemoryRouter>
+      <QueryClientProvider client={queryClient}>
+        <BreedingHub />
+      </QueryClientProvider>
+    </MemoryRouter>,
   );
 }
 
@@ -110,12 +114,20 @@ describe('BreedingHub history and pending edits', () => {
 
     expect(await screen.findByText('All inseminated cows have been checked by the vet.')).toBeTruthy();
     fireEvent.click(screen.getAllByRole('button', { name: 'View all historical checks' })[0]);
-    fireEvent.click(screen.getByRole('button', { name: 'Show filters' }));
-    fireEvent.click(screen.getByRole('button', { name: 'Unsuccessful' }));
+    // The shared filter panel, collapsed until opened.
+    fireEvent.click(screen.getByRole('button', { name: 'Search and filter checks' }));
+    const results = screen.getByRole('group', { name: 'Check result' });
+    fireEvent.click(within(results).getByRole('button', { name: 'Unsuccessful' }));
+    expect(within(results).getByRole('button', { name: 'Unsuccessful' }).getAttribute('aria-pressed')).toBe('true');
 
-    // The filter chip plus the failed record's own status: the record is listed under it.
+    // The filter pill plus the failed record's own status: the record is listed under it.
     expect(screen.getAllByText('Unsuccessful').length).toBeGreaterThan(1);
     expect(screen.getAllByText(/Malaika/).length).toBeGreaterThan(0);
+    // Collapsed, the header counts the filter; Reset clears it.
+    fireEvent.click(screen.getByRole('button', { name: 'Search and filter checks' }));
+    expect(screen.getByRole('button', { name: 'Search and filter checks · 1 filter active' })).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'Reset filters' }));
+    expect(screen.getByRole('button', { name: 'Search and filter checks' })).toBeTruthy();
   });
 
   it('groups history by the AI service month, with only the backend’s dates and notes', async () => {
