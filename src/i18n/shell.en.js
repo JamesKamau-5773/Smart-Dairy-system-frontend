@@ -135,6 +135,13 @@ export const shellCopy = {
     back: 'Go back',
   },
 
+  // Alt text for the logo artwork (components/brand/BrandLogo) and the link it sits in.
+  brand: {
+    name: 'Maziwa Smart',
+    endorsed: 'Maziwa Smart, powered by Jivu Systems',
+    home: 'Maziwa Smart home',
+  },
+
   // The public demo: banner, the sign-up prompt after a refused change, and the ended-session sheet.
   demo: {
     banner: 'You are exploring a demo farm with sample data. Changes are not saved.',

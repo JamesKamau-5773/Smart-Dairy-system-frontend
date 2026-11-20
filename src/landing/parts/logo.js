@@ -1,10 +1,20 @@
-import { escapeHtml } from '../html.js';
+import { cx, escapeHtml } from '../html.js';
+import { brandLogoImage } from '../../components/brand/brandLogo.js';
 
-// The calf mark from the design: white head and ears on a brand-blue tile, brand-blue patches.
-const CALF = `<svg aria-hidden="true" focusable="false" width="28" height="28" viewBox="0 0 32 32" class="text-brand"><ellipse cx="5.5" cy="11.5" rx="5" ry="3" transform="rotate(-18 5.5 11.5)" fill="#FFFFFF"/><ellipse cx="26.5" cy="11.5" rx="5" ry="3" transform="rotate(18 26.5 11.5)" fill="#FFFFFF"/><path d="M9 10C9 5 23 5 23 10L22 20C22 27 10 27 10 20Z" fill="#FFFFFF"/><path d="M9.3 10.5C11.5 8.5 14.5 9.5 14 14.5C13.7 18 10.8 18.5 10 16.5Z" fill="currentColor"/><path d="M22.7 10.5C20.5 8.5 17.5 9.5 18 14.5C18.3 18 21.2 18.5 22 16.5Z" fill="currentColor"/><circle cx="14" cy="22.3" r="1" fill="currentColor"/><circle cx="18" cy="22.3" r="1" fill="currentColor"/></svg>`;
-
-/** The calf mark on its tile. */
-export const logoMark = () => `<span class="flex size-[34px] shrink-0 items-center justify-center rounded-button bg-brand">${CALF}</span>`;
-
-/** Mark plus the product name. */
-export const logo = (name, { className }) => `<span class="${className}">${logoMark()}${escapeHtml(name)}</span>`;
+/**
+ * The brand logo for the static landing page: the same files, minimum sizes and box as the app's
+ * BrandLogo component (components/brand/brandLogo.js), as an HTML string. The artwork is used
+ * exactly as supplied, never redrawn.
+ *
+ * @param {object} options
+ * @param {'horizontal'|'stacked'|'stacked-endorsed'|'wordmark'|'mascot'} options.variant
+ * @param {'light'|'dark'} [options.tone] `dark` on navy or brand-blue backgrounds.
+ * @param {number} options.size px: the height for horizontal and mascot, the width for the rest.
+ * @param {string} [options.alt] Empty for a logo inside a labelled link.
+ * @param {'eager'|'lazy'} [options.loading]
+ * @param {string} [options.className] Placement only.
+ */
+export const brandLogo = ({ variant, tone = 'light', size, alt = '', loading = 'lazy', className }) => {
+  const { src, srcSet, width, height } = brandLogoImage({ variant, tone, size });
+  return `<img src="${src}"${srcSet ? ` srcset="${srcSet}"` : ''} width="${width}" height="${height}" alt="${escapeHtml(alt)}" loading="${loading}" decoding="async" draggable="false" class="${cx('shrink-0 select-none object-contain', className)}">`;
+};

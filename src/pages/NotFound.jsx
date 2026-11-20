@@ -1,5 +1,6 @@
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { shellCopy } from '../i18n/shell';
+import BrandLogo from '../components/brand/BrandLogo';
 
 const { notFound: copy } = shellCopy;
 
@@ -20,6 +21,7 @@ export default function NotFound({ variant = 'app', homePath = '/app' }) {
 
   const content = (
     <section aria-labelledby="not-found-title" className="mx-auto w-full max-w-md rounded-card border border-ink/10 bg-surface p-6 text-center sm:p-8">
+      <BrandLogo variant="mascot" size={96} decorative className="mx-auto mb-4" />
       <h1 id="not-found-title" className="text-page-title text-ink">{copy.title}</h1>
       <p className="mt-2 text-body text-ink-muted">
         {copy.message}

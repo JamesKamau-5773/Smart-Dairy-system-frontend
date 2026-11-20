@@ -3,6 +3,7 @@ import { AlertTriangle } from 'lucide-react';
 import { SITE } from '../../landing/content';
 import { reportError } from '../../lib/telemetry';
 import { shellCopy } from '../../i18n/shell';
+import BrandLogo from '../brand/BrandLogo';
 
 const { errorBoundary: copy } = shellCopy;
 
@@ -55,6 +56,7 @@ export default class ErrorBoundary extends React.Component {
       return (
         <div role="alert" className={`flex items-center justify-center p-4 ${isPage ? 'min-h-[60vh]' : 'min-h-screen bg-background'}`}>
           <div className="w-full max-w-md rounded-modal border border-ink/10 bg-white p-8">
+            <BrandLogo variant="mascot" size={96} decorative className="mx-auto mb-4" />
             <div className="mb-4 flex justify-center">
               <div className="rounded-full bg-danger-50 p-4">
                 <AlertTriangle size={32} className="text-danger-900" aria-hidden="true" />

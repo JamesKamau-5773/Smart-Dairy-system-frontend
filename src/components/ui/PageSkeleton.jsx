@@ -1,14 +1,19 @@
 import Skeleton from './Skeleton';
+import BrandLogo from '../brand/BrandLogo';
 
 const SUMMARY_CARDS = 3;
 const LIST_ROWS = 5;
 const FORM_FIELDS = 3;
 
-/** A centred card with a few fields: the shape of the sign-in and verification screens. */
+/**
+ * A centred card with a few fields: the shape of the sign-in and verification screens. As the
+ * full-page loading screen it carries the mascot above it (static; only the skeleton pulses).
+ */
 function CardSkeleton({ label }) {
   return (
-    <div role="status" aria-live="polite" aria-busy="true" className="flex min-h-screen items-center justify-center bg-surface-warm p-4">
+    <div role="status" aria-live="polite" aria-busy="true" className="flex min-h-screen flex-col items-center justify-center gap-6 bg-surface-warm p-4">
       <span className="sr-only">{label}</span>
+      <BrandLogo variant="mascot" size={88} decorative />
       <div className="w-full max-w-md space-y-5 rounded-card border border-ink/10 bg-surface p-6 sm:p-8" aria-hidden="true">
         <Skeleton className="mx-auto h-7 w-40" />
         {Array.from({ length: FORM_FIELDS }, (_, index) => (

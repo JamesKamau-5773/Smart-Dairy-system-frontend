@@ -15,6 +15,7 @@ import { roleLabel } from '../lib/staffLabels';
 import { pageOwnsHeading } from '../lib/pageHeadings';
 import { activeNavRoute } from '../lib/navRoutes';
 import { humanizeEnum } from '../lib/enumLabel';
+import { documentTitle } from '../lib/documentTitle';
 
 const { header: copy } = shellCopy;
 
@@ -71,6 +72,11 @@ export default function Header({ onMenuClick = () => {} }) {
   const pageTitle = navItem ? shellCopy.nav.items[navItem.id]
     : pathname === '/member/dashboard' ? copy.titles.dashboard
       : humanizeEnum(pathname.split('/').filter(Boolean).pop() ?? '') || copy.farmFallback;
+
+  // The browser tab and history read "<Page> · Maziwa Smart".
+  useEffect(() => {
+    document.title = documentTitle(pageTitle);
+  }, [pageTitle]);
 
   // The page's one h1 is its own heading where it has one; the top bar's title is then plain text.
   const TitleTag = pageOwnsHeading(pathname) ? 'p' : 'h1';
