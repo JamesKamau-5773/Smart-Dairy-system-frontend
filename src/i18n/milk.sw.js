@@ -19,6 +19,9 @@ export const milkCopy = {
   session: 'Kipindi',
   sessions: { morning: 'Asubuhi', midday: 'Mchana', evening: 'Jioni' },
   onMedication: 'Ng’ombe yuko kwenye dawa! Usichanganye maziwa haya.',
+  milkedBy: 'Aliyekamua', // REVIEW
+  milkedByMe: 'Mimi (ninayerekodi)', // REVIEW
+  milkedByHint: 'Chagua mfanyakazi aliyekamua, kama si wewe.', // REVIEW
   volume: 'Kiasi (lita)',
   cancel: 'Ghairi',
   deleteRecord: 'Futa rekodi',

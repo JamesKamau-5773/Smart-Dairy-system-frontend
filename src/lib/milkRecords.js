@@ -64,14 +64,16 @@ export function normalizeYieldRow(row) {
     time: timestamp ? new Date(timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : (row?.time ?? null),
     timestamp,
     milker: row?.milker_name ?? row?.milker ?? row?.created_by ?? null,
+    // The employee chosen as milker, or null when the person who entered it milked.
+    milkerId: row?.milker_id ?? null,
     animalRefId: row?.cow_tag ?? row?.cowTag ?? row?.animal_id ?? row?.animalId ?? row?.cow_id ?? row?.cowId ?? row?.cow ?? null,
     cowId: row?.cow_tag ?? row?.cowTag ?? row?.cowId ?? row?.cow_id ?? row?.animal_id ?? '',
     cowName: row?.cowName ?? row?.cow_name ?? row?.animal_name ?? row?.animalName ?? row?.name ?? '',
     amount: amountCandidate.value,
     session: row?.session ?? row?.milking_session ?? row?.milkingSession ?? null,
     status: normalizeStatus(row?.status),
-    // This record's litres against the cow's average, the average itself, and whether the
-    // backend counts it as a significant drop (BR-025/026). "—" when not sent.
+    // This record's litres against the cow's 7-day average for the same session, the average
+    // itself, and whether the backend counts it as a significant drop (BR-026). "—" when not sent.
     vsAvgLitres: row?.vs_avg_litres ?? null,
     avgLitres: row?.avg_litres ?? null,
     significantDrop: row?.significant_drop === true,

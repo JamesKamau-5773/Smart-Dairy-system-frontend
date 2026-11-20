@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useTenant } from '../hooks/useTenant';
 import { useAuth } from '../contexts/AuthContext';
 import { ChevronDown, UserCircle, Menu } from 'lucide-react';
@@ -11,19 +11,14 @@ import { useDataSaver } from '../hooks/useDataSaver';
 import LanguageSwitch from '../components/ui/LanguageSwitch';
 import { canSwitchLocale } from '../i18n/locale';
 import { shellCopy } from '../i18n/shell';
-import { roleLabel } from '../lib/staffLabels';
+import { roleName } from '../lib/roleName';
+import { accountCopy } from '../i18n/account';
 import { pageOwnsHeading } from '../lib/pageHeadings';
 import { activeNavRoute } from '../lib/navRoutes';
 import { humanizeEnum } from '../lib/enumLabel';
 import { documentTitle } from '../lib/documentTitle';
 
 const { header: copy } = shellCopy;
-
-/** The user's role in words ("Farm administrator"), never the backend's code. */
-const roleName = (role) => {
-  const code = String(role ?? '').trim().toUpperCase();
-  return copy.roles[code] ?? roleLabel(code);
-};
 
 export default function Header({ onMenuClick = () => {} }) {
   const { activeFarm } = useTenant();
@@ -71,6 +66,7 @@ export default function Header({ onMenuClick = () => {} }) {
   const navItem = activeNavRoute(location);
   const pageTitle = navItem ? shellCopy.nav.items[navItem.id]
     : pathname === '/member/dashboard' ? copy.titles.dashboard
+      : pathname === '/profile' ? accountCopy.title
       : humanizeEnum(pathname.split('/').filter(Boolean).pop() ?? '') || copy.farmFallback;
 
   // The browser tab and history read "<Page> · Maziwa Smart".
@@ -115,6 +111,15 @@ export default function Header({ onMenuClick = () => {} }) {
                 <p className="truncate text-body-strong text-ink-900">{currentUser?.name || copy.userFallback}</p>
                 <p className="mt-0.5 text-meta text-ink-muted">{roleName(currentUser?.role) || copy.noRole}</p>
               </div>
+              <Link
+                to="/profile"
+                role="menuitem"
+                onClick={() => setProfileOpen(false)}
+                className="mt-1 flex w-full items-center gap-2 rounded-button px-3 py-2 text-control text-ink hover:bg-brand-50"
+              >
+                <UserCircle size={16} className="text-brand" aria-hidden="true" />
+                {accountCopy.menuLink}
+              </Link>
               {canSwitchLocale() && (
                 <div className="border-b border-ink/10 px-3 py-3">
                   <p className="mb-2 text-label text-ink-muted">{copy.language}</p>

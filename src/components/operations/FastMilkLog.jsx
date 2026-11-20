@@ -6,7 +6,7 @@ import toast from 'react-hot-toast';
 import { useTenant } from '../../hooks/useTenant';
 import { useSubmissionKey } from '../../hooks/useSubmissionKey';
 import { QUERY_KEYS } from '../../providers/QueryProvider';
-import { getApiErrorMessage, herdApi, productionApi, safetyApi } from '../../lib/backendApi';
+import { getApiErrorMessage, herdApi, hrApi, productionApi, safetyApi } from '../../lib/backendApi';
 import { getApiErrorCode } from '../../lib/apiErrors';
 import { reportError } from '../../lib/telemetry';
 import AlertBanner from '../../components/ui/AlertBanner';
@@ -31,7 +31,7 @@ const SESSION_OPTIONS = ['morning', 'midday', 'evening'];
 const OUTCOME_SCREEN_MS = 1400;
 
 // The backend's milk-record fields, by the form's names, for showing its errors per input.
-const SERVER_FIELDS = Object.freeze({ fieldMap: { cow_id: 'cowId', amount: 'volume', milking_date: 'date' } });
+const SERVER_FIELDS = Object.freeze({ fieldMap: { cow_id: 'cowId', amount: 'volume', milking_date: 'date', milker_id: 'milkerId' } });
 
 /** "Neema · KE-012 · morning · 2026-11-08 · 12.5 L" for the delete dialog; parts the row lacks are left out. */
 const describeMilkRecord = (record) => [
@@ -58,6 +58,8 @@ const normalizeFormData = (record, fallbackDate = todayIso()) => ({
   volume: record?.volume ?? record?.amount ?? '',
   date: record?.date || record?.milkingDate || record?.milking_date || fallbackDate,
   session: formSession(record),
+  // '' = the person entering the record milked (the backend then shows them as milker).
+  milkerId: record?.milkerId != null ? String(record.milkerId) : '',
 });
 
 /* =========================================================================
@@ -68,6 +70,7 @@ const normalizeFormData = (record, fallbackDate = todayIso()) => ({
 
 const FastMilkUI = ({
   displayHerd,
+  milkers = [],
   isLocked,
   formData,
   setFormData,
@@ -224,6 +227,28 @@ const FastMilkUI = ({
           </div>
         </div>
 
+        {/* Only when the farm's staff list could be read (it is not shown to every role). */}
+        {milkers.length > 0 && (
+          <div className="space-y-2">
+            <label htmlFor="fast-milk-milker" className="block text-field-label text-ink-muted">{copy.milkedBy}</label>
+            <select
+              id="fast-milk-milker"
+              value={formData.milkerId}
+              onChange={(e) => setFormData({ ...formData, milkerId: e.target.value })}
+              {...fieldErrorProps('fast-milk-milker', errorFor('milkerId'))}
+              aria-describedby={errorFor('milkerId') ? 'fast-milk-milker-error fast-milk-milker-hint' : 'fast-milk-milker-hint'}
+              className="input-machined w-full text-control cursor-pointer"
+            >
+              <option value="">{copy.milkedByMe}</option>
+              {milkers.map((employee) => (
+                <option key={employee.id} value={String(employee.id)}>{employee.name}</option>
+              ))}
+            </select>
+            <p id="fast-milk-milker-hint" className="text-meta text-ink-muted">{copy.milkedByHint}</p>
+            <FieldError id="fast-milk-milker" message={errorFor('milkerId')} />
+          </div>
+        )}
+
         {isLocked && (
           <div className="p-3 rounded-lg bg-danger/10 border border-danger flex items-center gap-3 text-danger">
             <AlertOctagon size={20} aria-hidden="true" />
@@ -318,6 +343,18 @@ export default function FastMilkLog({ onClose, onSaveSuccess, onDeleteSuccess, m
         : [];
 
   const displayHerd = herd;
+
+  // Who can be named as milker: the farm's active staff. Roles that can't read the staff list
+  // get an error here, and the picker simply isn't shown (the recorder stays the milker).
+  const { data: staff } = useQuery({
+    queryKey: ['milk-log-milkers', tenantId, farmId],
+    queryFn: () => hrApi.listStaff(),
+    enabled: !!farmId,
+    retry: false,
+    staleTime: 5 * 60 * 1000,
+  });
+  const milkers = (Array.isArray(staff) ? staff : [])
+    .filter((employee) => employee.id != null && employee.name && String(employee.status).toUpperCase() === 'ACTIVE');
 
   // Hardlocks
   const { data: hardlocksRaw } = useQuery({
@@ -458,6 +495,13 @@ export default function FastMilkLog({ onClose, onSaveSuccess, onDeleteSuccess, m
       session: formData.session,
       milking_date: formData.date,
     };
+    const originalMilker = record?.milkerId != null ? String(record.milkerId) : '';
+    if (isEditMode) {
+      // Sent only when changed; null clears it, so the record shows who entered it again.
+      if (formData.milkerId !== originalMilker) entry.milker_id = formData.milkerId ? Number(formData.milkerId) : null;
+    } else if (formData.milkerId) {
+      entry.milker_id = Number(formData.milkerId);
+    }
     submitInFlight.current = true;
     mutation.mutate({
       entry,
@@ -507,6 +551,7 @@ export default function FastMilkLog({ onClose, onSaveSuccess, onDeleteSuccess, m
     <div className="fixed inset-0 z-[100] flex items-start justify-center overflow-y-auto overscroll-contain bg-slate-900/50 p-3 touch-pan-y sm:items-center sm:p-4">
       <FastMilkUI
         displayHerd={displayHerd}
+        milkers={milkers}
         isLocked={isLocked}
         formData={formData}
         setFormData={editForm}

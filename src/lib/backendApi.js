@@ -755,12 +755,17 @@ export const buildProductionYieldPayload = (payload = {}) => {
     ?? payload.dateOfMilking
     ?? todayLocalIso();
 
+  // Who milked, when it wasn't the person entering the record (an employee id). Left out
+  // otherwise: the backend then shows the person who entered it.
+  const milkerId = payload.milker_id ?? payload.milkerId;
+
   return {
     cow_id: cowId,
     amount,
     session,
     milking_date: milkingDate,
     milkingDate,
+    ...(milkerId != null && milkerId !== '' ? { milker_id: milkerId } : {}),
   };
 };
 
@@ -908,6 +913,31 @@ export const authApi = {
       .then((response) => response.data);
   },
 
+  // The profile page (backend: PATCH /auth/me, POST /auth/password, POST /auth/email/verification).
+  /**
+   * Saves the signed-in person's own details. Send only what changed, from `name`,
+   * `farm_location`, `phone_number` and `email`; an empty phone or email clears it. A new phone
+   * or email comes back unverified (`account_flags`), and a new email gets a verification link.
+   */
+  updateProfile(changes) {
+    return authClient.patch('/auth/me', changes).then((response) => response.data);
+  },
+  /**
+   * Changes (or, for a Google-only account, sets) the password. Every other session is signed
+   * out; the answer is a fresh session for this one, in the login shape.
+   */
+  changePassword({ current_password: currentPassword, new_password: newPassword, confirm_password: confirmPassword }) {
+    return authClient.post('/auth/password', {
+      ...(currentPassword ? { current_password: currentPassword } : {}),
+      new_password: newPassword,
+      confirm_password: confirmPassword,
+    }).then((response) => normalizeSessionUser(response.data, { allowCookieSession: true }));
+  },
+  /** Sends a verification link to the account's email (rate-limited by the backend). */
+  sendEmailVerification() {
+    return authClient.post('/auth/email/verification').then((response) => response.data);
+  },
+
   confirmEmailVerification(token) {
     return authClient.post('/auth/email/verification/confirm', { token }).then((response) => response.data);
   },
@@ -982,8 +1012,8 @@ export const productionApi = {
     return productionApi.listMilkDispositionsWithTotals(params).then((result) => result.items);
   },
   /**
-   * Calf feedings plus the backend's totals for them: `{ items, count, totalLitres }`.
-   * TODO(BR-027): `total_liters` is requested; null until the backend sends it.
+   * Calf feedings plus the backend's totals for them: `{ items, count, totalLitres }`
+   * (BR-027: `count` and `total_liters` cover exactly the filters sent).
    */
   listMilkDispositionsWithTotals(params = {}) {
     return apiClient.get('/production/milk-dispositions', { params }).then((response) => ({
@@ -1000,14 +1030,16 @@ export const productionApi = {
     return apiClient.get(`/production/yield/${yieldId}`).then((response) => toObject(response.data));
   },
   // Edits one milk record in place (PATCH). Only the fields the backend applies are sent:
-  // amount, session and milking date. The cow can't be changed by this endpoint
-  // (BACKEND_REQUESTS.md, BR-001).
+  // amount, session, milking date and, when given, the milker (null clears it, so the record
+  // shows who entered it). The cow can't be changed by this endpoint (BACKEND_REQUESTS.md,
+  // BR-001). The answer carries the record's `status` and `significant_drop` as re-checked.
   updateYield(yieldId, payload = {}, config = {}) {
     const milkingDate = payload.milking_date ?? payload.milkingDate;
     const body = {
       amount: Number(payload.amount ?? payload.volume),
       session: payload.session,
       ...(milkingDate ? { milking_date: milkingDate } : {}),
+      ...('milker_id' in payload ? { milker_id: payload.milker_id === '' ? null : payload.milker_id } : {}),
     };
     return apiClient.patch(`/production/yield/${yieldId}`, body, config).then((response) => toObject(response.data));
   },

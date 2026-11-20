@@ -63,6 +63,7 @@ const FinancialLedger = lazy(() => import('./pages/finance/FinancialLedger.jsx')
 const InventoryRegistry = lazy(() => import('./pages/inventory/InventoryRegistry.jsx'));
 const BuyersList = lazy(() => import('./pages/finance/BuyersList.jsx'));
 const CustomerProfile = lazy(() => import('./pages/finance/CustomerProfile.jsx'));
+const ProfilePage = lazy(() => import('./pages/account/ProfilePage.jsx'));
 const StaffRegistry = lazy(() => import('./pages/hr/StaffRegistry.jsx'));
 const Payroll = lazy(() => import('./pages/hr/Payroll.jsx'));
 
@@ -258,6 +259,8 @@ export default function App() {
             <Route index element={<RoleLandingRedirect />} />
             {/* Public "/" is the static landing page (index.html); /app is the SPA's entry point. */}
             <Route path="app" element={<RoleLandingRedirect />} />
+            {/* Everyone's own profile: details, staff record and password (no page access needed). */}
+            <Route path="profile" element={renderLazyPage(ProfilePage, 'Loading your profile…')} />
 
             {/* Role-based landing areas */}
             <Route

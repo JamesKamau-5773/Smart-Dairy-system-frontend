@@ -26,7 +26,7 @@ export const productionCopy = {
     litres: 'Lita',
     total: 'Jumla (L)',
     status: 'Hali',
-    vsAvg: 'Dhidi ya wastani wa siku 5', // REVIEW
+    vsAvg: 'Dhidi ya wastani wa siku 7', // REVIEW
     recordedBy: 'Imerekodiwa na',
     actions: 'Vitendo',
   },
@@ -99,7 +99,7 @@ export const productionCopy = {
     sheetLabel: 'Maelezo ya rekodi ya maziwa', // REVIEW
     close: 'Funga',
     yield: 'Mavuno', // REVIEW
-    vsAvg: (avg) => `dhidi ya wastani wa siku 5: ${avg}`, // REVIEW
+    vsAvg: (avg) => `dhidi ya wastani wa siku 7: ${avg}`, // REVIEW
     status: 'Hali',
     sessionLabel: 'Kipindi',
     milkedBy: 'Amekamua', // REVIEW

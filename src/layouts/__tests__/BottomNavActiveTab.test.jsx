@@ -21,7 +21,7 @@ const OWNER_LANDING = '/dashboard';
 const EXPECTED_TAB = {
   '/register': null, '/login': null, '/demo': null, '/claim-account': null, '/forgot-password': null,
   '/reset-password': null, '/verify-email': null, '/auth/google/complete': null, '/verify-phone': null,
-  '/reset-required-password': null, '/shared/statement/:token': null, 'app': null,
+  '/reset-required-password': null, '/shared/statement/:token': null, 'app': null, profile: null,
   'system-admin/dashboard': null, 'system-admin/cooperatives': null, 'system-admin': null,
   'cooperative-admin/members': null, 'cooperative-admin': null, 'member/dashboard': null,
   dashboard: 'dashboard',
