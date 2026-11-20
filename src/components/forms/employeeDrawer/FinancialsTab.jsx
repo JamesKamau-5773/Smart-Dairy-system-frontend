@@ -13,7 +13,7 @@ export default function FinancialsTab({ financialData, setFinancialData, onSubmi
             min="0"
             value={financialData.baseSalary}
             onChange={(event) => setFinancialData((current) => ({ ...current, baseSalary: event.target.value }))}
-            className="w-full rounded-md border border-ink/15 bg-card px-3 py-3 text-control text-ink outline-none transition-colors focus:border-brand focus:ring-2 focus:ring-brand/15"
+            className="input-machined w-full text-control"
           />
         </label>
 
@@ -24,7 +24,7 @@ export default function FinancialsTab({ financialData, setFinancialData, onSubmi
             min="0"
             value={financialData.advanceAmount}
             onChange={(event) => setFinancialData((current) => ({ ...current, advanceAmount: event.target.value }))}
-            className="w-full rounded-md border border-ink/15 bg-card px-3 py-3 text-control text-ink outline-none transition-colors focus:border-brand focus:ring-2 focus:ring-brand/15"
+            className="input-machined w-full text-control"
           />
           <span className="block text-meta text-ink-muted">{copy.advanceHint}</span>
         </label>
@@ -36,7 +36,7 @@ export default function FinancialsTab({ financialData, setFinancialData, onSubmi
             min="0"
             value={financialData.monthlyDeduction}
             onChange={(event) => setFinancialData((current) => ({ ...current, monthlyDeduction: event.target.value }))}
-            className="w-full rounded-md border border-ink/15 bg-card px-3 py-3 text-control text-ink outline-none transition-colors focus:border-brand focus:ring-2 focus:ring-brand/15"
+            className="input-machined w-full text-control"
           />
         </label>
 

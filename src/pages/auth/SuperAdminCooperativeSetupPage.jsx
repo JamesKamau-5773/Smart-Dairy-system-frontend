@@ -8,11 +8,12 @@ import { authCopy } from '../../i18n/auth';
 import FieldError from '../../components/ui/FieldError';
 import { fieldErrorProps } from '../../components/ui/fieldErrorProps';
 import { adminCopy } from '../../i18n/admin';
+import { FIELD_CONTROL } from '../../components/ui/formFieldStyles';
 
 const copy = adminCopy.coopSetup;
 
 const panelClassName = 'rounded-2xl border border-ink/10 bg-white/90  backdrop-blur';
-const inputClassName = 'mt-2 w-full rounded-lg border border-ink/10 bg-[#fbfcfa] px-4 py-3 text-control text-ink-strong outline-none transition focus:border-brand focus:ring-2 focus:ring-brand/15';
+const inputClassName = `${FIELD_CONTROL} mt-2`;
 
 const extractCooperativeId = (response) => (
   response?.cooperative_id

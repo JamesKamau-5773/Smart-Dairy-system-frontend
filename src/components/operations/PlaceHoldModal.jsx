@@ -29,16 +29,16 @@ export default function PlaceHoldModal({ cows, initialCowId = '', onClose, onSub
         {error && <AlertBanner type="danger" message={error} compact />}
         <CowSelect id="hold-cow" cows={cows} value={cowId} onChange={setCowId} disabled={Boolean(initialCowId)} />
         <div>
-          <label htmlFor="hold-reason" className="mb-1.5 block text-field-label text-ink">{copy.holdReason}</label>
+          <label htmlFor="hold-reason" className="mb-1.5 block text-field-label text-ink-muted">{copy.holdReason}</label>
           <input id="hold-reason" value={reason} maxLength={MAX_REASON_LENGTH} onChange={(event) => setReason(event.target.value)} placeholder={copy.holdReasonPlaceholder} className="input-machined w-full text-control" required />
         </div>
         <div>
-          <label htmlFor="hold-until" className="mb-1.5 block text-field-label text-ink">{copy.holdUntil}</label>
+          <label htmlFor="hold-until" className="mb-1.5 block text-field-label text-ink-muted">{copy.holdUntil}</label>
           <input id="hold-until" type="datetime-local" value={until} min={nowLocalDateTimeInput()} onChange={(event) => setUntil(event.target.value)} aria-describedby="hold-until-hint" className="input-machined w-full text-control" />
           <p id="hold-until-hint" className="mt-1 text-meta text-ink-muted">{copy.holdUntilHint}</p>
         </div>
         <div>
-          <label htmlFor="hold-notes" className="mb-1.5 block text-field-label text-ink">{copy.holdNotes}</label>
+          <label htmlFor="hold-notes" className="mb-1.5 block text-field-label text-ink-muted">{copy.holdNotes}</label>
           <textarea id="hold-notes" rows={2} value={notes} onChange={(event) => setNotes(event.target.value)} placeholder={copy.holdNotesPlaceholder} className="input-machined w-full text-control" />
         </div>
         <SubmitButton pending={isPending} pendingLabel={copy.holding} disabled={!canSave}>{copy.holdSubmit}</SubmitButton>

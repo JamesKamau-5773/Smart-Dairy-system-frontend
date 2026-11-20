@@ -2,36 +2,11 @@ import { forwardRef, useState } from 'react';
 import { Eye, EyeOff } from 'lucide-react';
 import { authCopy } from '../../i18n/auth';
 import { formatKenyanPhoneInput } from '../../lib/phone';
+import { FormField, TextField } from '../ui/FormField';
+import { FIELD_CONTROL, fieldDescriptionProps } from '../ui/formFieldStyles';
 
-const describedBy = (id, hint, error) => [error && `${id}-error`, hint && `${id}-hint`].filter(Boolean).join(' ') || undefined;
-
-function FieldShell({ id, label, hint, error, footer, children }) {
-  return (
-    <div className="space-y-1.5">
-      <label htmlFor={id} className="block text-field-label text-ink-900">{label}</label>
-      {children}
-      {error && <p id={`${id}-error`} className="text-body text-danger">{error}</p>}
-      {hint && <p id={`${id}-hint`} className="text-meta text-ink-muted">{hint}</p>}
-      {footer}
-    </div>
-  );
-}
-
-/** Labelled input with an inline error that screen readers announce with the field. */
-export const TextField = forwardRef(function TextField({ id, label, hint, error, className = '', ...inputProps }, ref) {
-  return (
-    <FieldShell id={id} label={label} hint={hint} error={error}>
-      <input
-        ref={ref}
-        id={id}
-        aria-invalid={error ? true : undefined}
-        aria-describedby={describedBy(id, hint, error)}
-        className={`input-machined text-control ${error ? 'border-danger' : ''} ${className}`}
-        {...inputProps}
-      />
-    </FieldShell>
-  );
-});
+// The app-wide field (components/ui/FormField), used by the sign-in screens too.
+export { TextField };
 
 /** Kenyan mobile number input: phone keypad, formats as typed, accepts 07… and +254…. */
 export const PhoneField = forwardRef(function PhoneField({
@@ -64,15 +39,14 @@ export const PasswordField = forwardRef(function PasswordField({ id, label = aut
   const [visible, setVisible] = useState(false);
 
   return (
-    <FieldShell id={id} label={label} hint={hint} error={error} footer={children}>
+    <FormField id={id} label={label} hint={hint} error={error} footer={children}>
       <div className="relative">
         <input
           ref={ref}
           id={id}
           type={visible ? 'text' : 'password'}
-          aria-invalid={error ? true : undefined}
-          aria-describedby={describedBy(id, hint, error)}
-          className={`input-machined pr-14 text-control ${error ? 'border-danger' : ''}`}
+          {...fieldDescriptionProps(id, { hint, error })}
+          className={`${FIELD_CONTROL} pr-14 ${error ? 'border-danger' : ''}`}
           {...inputProps}
         />
         <button
@@ -85,6 +59,6 @@ export const PasswordField = forwardRef(function PasswordField({ id, label = aut
           {visible ? <EyeOff size={18} aria-hidden="true" /> : <Eye size={18} aria-hidden="true" />}
         </button>
       </div>
-    </FieldShell>
+    </FormField>
   );
 });

@@ -134,7 +134,7 @@ export default function EmployeeAccountInviteModal({ isOpen, staff, onClose, onI
           </div>
           <div className="grid gap-2 sm:grid-cols-2">
             {STAFF_PAGE_ACCESS_OPTIONS.map(({ key, label }) => (
-              <label key={key} className="flex items-center gap-2 text-field-label text-slate-700">
+              <label key={key} className="flex items-center gap-2 text-field-label text-ink-muted">
                 <input type="checkbox" checked={pageAccess.includes(key)} onChange={(event) => setPageAccess((current) => event.target.checked ? [...current, key] : current.filter((entry) => entry !== key))} />
                 {label}
               </label>

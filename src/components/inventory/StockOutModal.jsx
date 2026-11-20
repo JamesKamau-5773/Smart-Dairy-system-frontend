@@ -4,9 +4,10 @@ import SubmitButton from '../auth/SubmitButton';
 import { feedCopy } from '../../i18n/feed';
 import { getFeedErrorMessage } from '../../lib/feedErrors';
 import { EMPTY_STOCK_OUT, STOCK_OUT_REASONS, isWriteOff, validateStockOut } from '../../lib/stockChangeForm';
+import { FIELD_CONTROL } from '../ui/formFieldStyles';
 
 const { stockOut: copy } = feedCopy;
-const fieldClass = 'w-full rounded-lg border border-ink/15 bg-card p-3 text-control text-ink outline-none focus:ring-2 focus:ring-brand/20';
+const fieldClass = FIELD_CONTROL;
 const labelClass = 'mb-1.5 block text-field-label text-ink-muted';
 
 /** Use or write off stock. The parent mounts it per opening, so state starts clean. */

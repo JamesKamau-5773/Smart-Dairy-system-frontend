@@ -7,9 +7,10 @@ import { EMPTY_RESTOCK, validateRestock } from '../../lib/restockForm';
 import { feedCopy } from '../../i18n/feed';
 import BaseModal from '../ui/BaseModal';
 import { commonCopy } from '../../i18n/common';
+import { FIELD_CONTROL } from '../ui/formFieldStyles';
 
 const { restock: copy } = feedCopy;
-const fieldClass = 'w-full rounded-lg border border-slate-200 bg-white p-3 text-control text-slate-800 outline-none focus:ring-2 focus:ring-brand/20';
+const fieldClass = FIELD_CONTROL;
 
 export default function StandardDeliveryModal({ isOpen, onClose, item, onRestock, tenantId, farmId }) {
   const [form, setForm] = useState(EMPTY_RESTOCK);
@@ -93,7 +94,7 @@ export default function StandardDeliveryModal({ isOpen, onClose, item, onRestock
     >
       {/* SECTION 1: WHAT ARRIVED */}
       <div className="mb-8">
-        <label className="block text-field-label text-slate-500 mb-4">
+        <label className="block text-field-label text-ink-muted mb-4">
           {feedCopy.inventory.delivery.whatArrived}
         </label>
 
@@ -155,7 +156,7 @@ export default function StandardDeliveryModal({ isOpen, onClose, item, onRestock
 
       {/* SECTION 2: HOW MUCH WAS DELIVERED */}
       <div className="border border-slate-100 rounded-2xl p-8 flex flex-col items-center bg-slate-50/50">
-        <label className="block text-field-label text-slate-500 mb-6">
+        <label className="block text-field-label text-ink-muted mb-6">
           {feedCopy.inventory.delivery.howMuch}
         </label>
 
@@ -218,7 +219,7 @@ export default function StandardDeliveryModal({ isOpen, onClose, item, onRestock
       <div className="mt-6 space-y-4">
         <div className="grid gap-4 sm:grid-cols-2">
           <label className="block">
-            <span className="mb-1.5 block text-field-label text-slate-500">{copy.unitCost}</span>
+            <span className="mb-1.5 block text-field-label text-ink-muted">{copy.unitCost}</span>
             <input
               type="number"
               inputMode="decimal"
@@ -233,7 +234,7 @@ export default function StandardDeliveryModal({ isOpen, onClose, item, onRestock
             {errors.unitCost && <span className="mt-1 block text-meta text-danger">{errors.unitCost}</span>}
           </label>
           <label className="block">
-            <span className="mb-1.5 block text-field-label text-slate-500">{copy.supplier}</span>
+            <span className="mb-1.5 block text-field-label text-ink-muted">{copy.supplier}</span>
             <input
               value={form.supplierName}
               onChange={(event) => setField('supplierName', event.target.value)}
@@ -242,7 +243,7 @@ export default function StandardDeliveryModal({ isOpen, onClose, item, onRestock
             />
           </label>
         </div>
-        <label className="flex items-start gap-3 rounded-lg border border-slate-200 p-3 text-field-label text-slate-700">
+        <label className="flex items-start gap-3 rounded-lg border border-slate-200 p-3 text-field-label text-ink-muted">
           <input
             type="checkbox"
             checked={form.recordExpense}

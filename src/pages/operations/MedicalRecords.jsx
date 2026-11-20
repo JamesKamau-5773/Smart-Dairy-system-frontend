@@ -464,7 +464,7 @@ export default function VetRecords() {
 
           <form className="grid grid-cols-1 gap-6 md:grid-cols-2" onSubmit={handleSaveRecord}>
             <div className="space-y-2">
-              <label className="text-field-label text-ink-strong">{copy.cow}</label>
+              <label className="text-field-label text-ink-muted">{copy.cow}</label>
               <input
                 className={`input-machined w-full ${formErrors.cowTag ? 'border-brand bg-brand-50' : ''}`}
                 placeholder={copy.cowPlaceholder}
@@ -486,7 +486,7 @@ export default function VetRecords() {
             </div>
 
             <div className="space-y-2">
-              <label className="text-field-label text-ink-strong">{copy.date}</label>
+              <label className="text-field-label text-ink-muted">{copy.date}</label>
               <input
                 type="date"
                 className="input-machined w-full"
@@ -496,7 +496,7 @@ export default function VetRecords() {
             </div>
 
             <div className="md:col-span-2 space-y-2">
-              <label className="text-field-label text-ink-strong">{copy.signs}</label>
+              <label className="text-field-label text-ink-muted">{copy.signs}</label>
               <textarea
                 className={`input-machined min-h-[110px] w-full ${formErrors.symptoms ? 'border-brand bg-brand-50' : ''}`}
                 placeholder={copy.signsPlaceholder}
@@ -509,7 +509,7 @@ export default function VetRecords() {
             </div>
 
             <div className="space-y-2">
-              <label className="text-field-label text-ink-strong">{LABELS.DIAGNOSIS} *</label>
+              <label className="text-field-label text-ink-muted">{LABELS.DIAGNOSIS} *</label>
               <input
                 className={`input-machined w-full ${formErrors.diagnosis ? 'border-brand bg-brand-50' : ''}`}
                 placeholder={copy.diagnosisPlaceholder}
@@ -522,7 +522,7 @@ export default function VetRecords() {
             </div>
 
             <div className="space-y-2">
-              <label className="text-field-label text-ink-strong">{LABELS.MEDICATIONS_PRESCRIBED} *</label>
+              <label className="text-field-label text-ink-muted">{LABELS.MEDICATIONS_PRESCRIBED} *</label>
               <input
                 className={`input-machined w-full ${formErrors.medications ? 'border-brand bg-brand-50' : ''}`}
                 placeholder={copy.medicationsPlaceholder}
@@ -535,7 +535,7 @@ export default function VetRecords() {
             </div>
 
             <div className="md:col-span-2 space-y-2">
-              <label className="text-field-label text-ink-strong">{LABELS.RECOMMENDATIONS_REMARKS} *</label>
+              <label className="text-field-label text-ink-muted">{LABELS.RECOMMENDATIONS_REMARKS} *</label>
               <textarea
                 className={`input-machined min-h-[100px] w-full ${formErrors.recommendations ? 'border-brand bg-brand-50' : ''}`}
                 placeholder={copy.recommendationsPlaceholder}
@@ -548,7 +548,7 @@ export default function VetRecords() {
             </div>
 
             <div className="space-y-2">
-              <label className="text-field-label text-ink-strong">{copy.vet}</label>
+              <label className="text-field-label text-ink-muted">{copy.vet}</label>
               <input
                 className={`input-machined w-full ${formErrors.vet ? 'border-brand bg-brand-50' : ''}`}
                 placeholder={copy.vetPlaceholder}
@@ -561,7 +561,7 @@ export default function VetRecords() {
             </div>
 
             <div className="space-y-2">
-              <label className="text-field-label text-ink-strong">{copy.followUp(form.status === 'Follow-up Due')}</label>
+              <label className="text-field-label text-ink-muted">{copy.followUp(form.status === 'Follow-up Due')}</label>
               <input
                 type="date"
                 className={`input-machined w-full ${formErrors.followUp ? 'border-brand bg-brand-50' : ''}`}
@@ -575,7 +575,7 @@ export default function VetRecords() {
             </div>
 
             <div className="space-y-2">
-              <label className="text-field-label text-ink-strong">{copy.severity}</label>
+              <label className="text-field-label text-ink-muted">{copy.severity}</label>
               <select className="input-machined w-full" value={form.severity} onChange={(event) => handleFieldChange('severity', event.target.value)}>
                 <option value="Low">{severityLabel('Low')}</option>
                 <option value="Medium">{severityLabel('Medium')}</option>
@@ -584,7 +584,7 @@ export default function VetRecords() {
             </div>
 
             <div className="space-y-2">
-              <label className="text-field-label text-ink-strong">{copy.status}</label>
+              <label className="text-field-label text-ink-muted">{copy.status}</label>
               <select className="input-machined w-full" value={form.status} onChange={(event) => handleFieldChange('status', event.target.value)}>
                 <option value="Under Treatment">{treatmentStatusLabel('Under Treatment')}</option>
                 <option value="Follow-up Due">{treatmentStatusLabel('Follow-up Due')}</option>

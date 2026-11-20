@@ -164,14 +164,14 @@ export default function CreateBatchModal({
     >
       <div className="space-y-6">
           <div>
-            <label htmlFor="batch-total-size" className="block text-field-label text-slate-700 mb-2">{copy.totalSize}</label>
+            <label htmlFor="batch-total-size" className="block text-field-label text-ink-muted mb-2">{copy.totalSize}</label>
             <input
               id="batch-total-size"
               type="number"
               value={mixSize}
               onChange={(e) => setMixSize(e.target.value)}
               max={hasKnownBatchLimit ? maximumFeasibleBatchWeight : undefined}
-              className="w-full p-3 border border-slate-300 rounded-lg text-control focus:ring-2 focus:ring-brand/50 outline-none"
+              className="input-machined w-full text-control"
             />
             {hasKnownBatchLimit && (
               <div className="mt-2 flex items-center justify-between gap-3 text-meta text-slate-600">
@@ -195,7 +195,7 @@ export default function CreateBatchModal({
                 <select
                   value={suggestionDays}
                   onChange={(event) => setSuggestionDays(Number(event.target.value))}
-                  className="rounded border border-slate-300 bg-white px-2 py-1 text-control"
+                  className="input-machined w-auto px-2 py-1.5 text-control"
                 >
                   {SUGGESTION_DAYS.map((days) => <option key={days} value={days}>{batchCopy.days(days)}</option>)}
                 </select>

@@ -111,7 +111,7 @@ export default function AnimalEconomicsReport() {
 
       <div className="card-machined border border-slate-300 bg-white p-5 ">
         <label className="block max-w-md">
-          <span className="mb-1 block text-field-label text-slate-700">{copy.selectAnimal}</span>
+          <span className="mb-1 block text-field-label text-ink-muted">{copy.selectAnimal}</span>
           <select value={animalId} onChange={(event) => setAnimalId(event.target.value)} className="input-machined w-full" disabled={animalsState === 'loading'}>
             <option value="">{animalsState === 'loading' ? copy.loadingAnimals : copy.choose}</option>
             {animals.map((animal) => <option key={animal.id} value={animal.id}>{formatCowIdentity(animal)}</option>)}

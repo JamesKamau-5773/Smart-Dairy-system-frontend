@@ -95,7 +95,7 @@ export default function DeliveryModal({ isOpen, onClose, onSave, delivery, custo
               onChange={handleChange}
               type="date"
               disabled={isSaving}
-              className="w-full px-3 py-2 border border-slate-300 rounded-lg text-control"
+              className="input-machined w-full text-control"
             />
           </div>
           <div>
@@ -111,7 +111,7 @@ export default function DeliveryModal({ isOpen, onClose, onSave, delivery, custo
               step="0.1"
               placeholder="0.0"
               disabled={isSaving}
-              className="w-full px-3 py-2 border border-slate-300 rounded-lg text-control"
+              className="input-machined w-full text-control"
             />
           </div>
         </div>
@@ -130,7 +130,7 @@ export default function DeliveryModal({ isOpen, onClose, onSave, delivery, custo
             step="0.1"
             placeholder="0.0"
             disabled={isSaving}
-            className="w-full px-3 py-2 border border-slate-300 rounded-lg text-control"
+            className="input-machined w-full text-control"
           />
           <p className="mt-1 text-meta text-ink-muted">
             {copy.personalHint}
@@ -162,7 +162,7 @@ export default function DeliveryModal({ isOpen, onClose, onSave, delivery, custo
             value={formData.notes}
             onChange={handleChange}
             disabled={isSaving}
-            className="w-full px-3 py-2 border border-slate-300 rounded-lg text-control h-16"
+            className="input-machined w-full text-control h-16"
           />
         </div>
       </div>

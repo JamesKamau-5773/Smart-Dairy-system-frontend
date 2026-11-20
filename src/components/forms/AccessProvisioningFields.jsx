@@ -53,7 +53,7 @@ export default function AccessProvisioningFields({
         <p className="rounded-md border border-ink-200 bg-ink-50 px-4 py-3 text-body text-ink-600">{copy.noneHint}</p>
       ) : (
         <>
-          <label className="block text-field-label text-ink-700">
+          <label className="block text-field-label text-ink-muted">
             {copy.role}
             <select value={role} onChange={(event) => onRoleChange(event.target.value)} className="input-machined mt-2 w-full">
               {FARM_STAFF_ROLE_OPTIONS.map((option) => (
@@ -71,13 +71,13 @@ export default function AccessProvisioningFields({
 
           {mode === ACCESS_MODES.PROVISION && (
             <div className="space-y-4">
-              <label className="block text-field-label text-ink-700">
+              <label className="block text-field-label text-ink-muted">
                 {copy.loginPhone}
                 <input value={phoneNumber || copy.noPhone} readOnly className="input-machined mt-2 w-full bg-ink-100 text-ink-600" />
                 {!phoneNumber && <span className="mt-1.5 block text-danger">{copy.addPhone}</span>}
               </label>
 
-              <label className="block text-field-label text-ink-700">
+              <label className="block text-field-label text-ink-muted">
                 {copy.password}
                 <div className="relative mt-2">
                   <input
@@ -100,7 +100,7 @@ export default function AccessProvisioningFields({
                 {copy.generate}
               </button>
 
-              <label className="flex items-start gap-3 rounded-md border border-ink-200 bg-ink-50 px-4 py-3 text-field-label text-ink-700">
+              <label className="flex items-start gap-3 rounded-md border border-ink-200 bg-ink-50 px-4 py-3 text-field-label text-ink-muted">
                 <input type="checkbox" checked readOnly className="mt-0.5 h-4 w-4 accent-brand" />
                 <span><strong className="block text-ink-800">{copy.requireChange}</strong>{copy.requireChangeHint}</span>
               </label>

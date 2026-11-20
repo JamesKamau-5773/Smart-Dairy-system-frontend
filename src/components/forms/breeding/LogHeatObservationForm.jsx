@@ -82,7 +82,7 @@ export default function LogHeatObservationForm({ herdOptions = [], onSuccess, on
         <legend className="mb-2 text-field-label text-ink-muted">{copy.signs}</legend>
         <div className="grid gap-2 sm:grid-cols-2">
           {HEAT_SIGNS.map((value) => (
-            <label key={value} className="flex items-center gap-2 rounded-md border border-ink/10 p-3 text-field-label text-ink-strong">
+            <label key={value} className="flex items-center gap-2 rounded-md border border-ink/10 p-3 text-field-label text-ink-muted">
               <input type="checkbox" checked={signs.includes(value)} onChange={() => toggleSign(value)} />
               {breedingCopy.heatSigns[value]}
             </label>

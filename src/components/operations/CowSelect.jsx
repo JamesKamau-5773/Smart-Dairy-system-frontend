@@ -5,7 +5,7 @@ import { safetyCopy as copy } from '../../i18n/safety';
 export default function CowSelect({ id, cows, value, onChange, disabled = false }) {
   return (
     <div>
-      <label htmlFor={id} className="mb-1.5 block text-field-label text-ink">{copy.cow}</label>
+      <label htmlFor={id} className="mb-1.5 block text-field-label text-ink-muted">{copy.cow}</label>
       <select id={id} value={value} onChange={(event) => onChange(event.target.value)} disabled={disabled} className="input-machined w-full text-control" required>
         <option value="">{copy.chooseCow}</option>
         {cows.map((cow) => <option key={cow.id} value={cow.id}>{formatCowIdentity(cow)}</option>)}

@@ -9,10 +9,11 @@ import { CardSkeletons, ListLoadNotices } from '../../components/ui/ListLoadStat
 import { useTenant } from '../../hooks/useTenant';
 import { unitConversionsKey, useUnitConversions } from '../../hooks/useUnitConversions';
 import { feedCopy } from '../../i18n/feed';
+import { FIELD_CONTROL } from '../../components/ui/formFieldStyles';
 
 const copy = feedCopy.unitHelpers;
 
-const FIELD = 'w-full bg-surface-raised border border-ink/20 text-ink text-control rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-brand/50 focus:border-brand transition-all placeholder:text-ink-muted/50';
+const FIELD = FIELD_CONTROL;
 const LABEL = 'block text-field-label text-ink-muted mb-2';
 
 const EmptyConversionsState = () => (

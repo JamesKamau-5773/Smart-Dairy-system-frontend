@@ -90,7 +90,7 @@ function ConfirmationDialog({
 
         {needsTyping && (
           <div className="mb-6 space-y-2">
-            <label htmlFor={inputId} className="block text-field-label text-ink">
+            <label htmlFor={inputId} className="block text-field-label text-ink-muted">
               {commonCopy.confirm.typeBefore} <span className="text-body-strong tabular-nums">{requireText}</span> {commonCopy.confirm.typeAfter}
             </label>
             <input

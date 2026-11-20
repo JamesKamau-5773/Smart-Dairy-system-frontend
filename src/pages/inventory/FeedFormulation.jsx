@@ -784,7 +784,7 @@ export default function FeedFormulation() {
                 step="0.1"
                 value={targetProtein}
                 onChange={(event) => setTargetProtein(event.target.value)}
-                className="w-full rounded-lg border border-ink/20 bg-surface-raised px-3 py-2 text-control text-ink focus:outline-none focus:ring-2 focus:ring-brand/40"
+                className="input-machined w-full text-control"
               />
             </div>
 
@@ -864,7 +864,7 @@ export default function FeedFormulation() {
                 id="mix-feeding-group"
                 value={feedingGroup}
                 onChange={(event) => setFeedingGroup(event.target.value)}
-                className="w-full rounded-lg border border-ink/20 bg-surface-raised px-3 py-2 text-control text-ink focus:outline-none focus:ring-2 focus:ring-brand/40"
+                className="input-machined w-full text-control"
               >
                 <option value="">{feedCopy.planner.feedingGroupNone}</option>
                 {FEEDING_GROUPS.map((group) => <option key={group.value} value={group.value}>{group.label}</option>)}

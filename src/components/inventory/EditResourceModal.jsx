@@ -98,7 +98,7 @@ export default function EditResourceModal({ isOpen, onClose, item, onSave }) {
               required
               value={formData.name}
               onChange={(e) => handleFieldChange('name', e.target.value)}
-              className="w-full p-3 border border-slate-200 rounded-lg text-control focus:ring-2 focus:ring-brand/20 focus:border-brand outline-none transition-all"
+              className="input-machined w-full text-control"
             />
           </div>
           <div>
@@ -106,7 +106,7 @@ export default function EditResourceModal({ isOpen, onClose, item, onSave }) {
             <input
               value={formData.sku}
               onChange={(e) => setFormData({...formData, sku: e.target.value})}
-              className="w-full p-3 border border-slate-200 rounded-lg text-control focus:ring-2 focus:ring-brand/20 focus:border-brand outline-none transition-all tabular-nums"
+              className="input-machined w-full text-control tabular-nums"
             />
           </div>
         </div>
@@ -117,7 +117,7 @@ export default function EditResourceModal({ isOpen, onClose, item, onSave }) {
             <select
               value={formData.category}
               onChange={(e) => handleFieldChange('category', e.target.value)}
-              className="w-full p-3 border border-slate-200 rounded-lg text-control focus:ring-2 focus:ring-brand/20 focus:border-brand outline-none transition-all bg-white"
+              className="input-machined w-full text-control"
             >
               {Object.entries(feedCopy.inventory.categories).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
             </select>
@@ -130,7 +130,7 @@ export default function EditResourceModal({ isOpen, onClose, item, onSave }) {
               min="0"
               value={formData.reorderLevel}
               onChange={(e) => setFormData({...formData, reorderLevel: parseInt(e.target.value, 10) || 0})}
-              className="w-full p-3 border border-slate-200 rounded-lg text-control focus:ring-2 focus:ring-brand/20 focus:border-brand outline-none transition-all"
+              className="input-machined w-full text-control"
             />
           </div>
         </div>
@@ -139,7 +139,7 @@ export default function EditResourceModal({ isOpen, onClose, item, onSave }) {
           <div>
             <div className="mb-2 flex items-center justify-between gap-2">
               <label className="block text-field-label text-ink-muted">{feedCopy.inventory.form.protein}</label>
-              <select value={proteinUnit} onChange={(e) => setProteinUnit(e.target.value)} className="rounded border border-slate-200 bg-white px-2 py-1 text-control">
+              <select value={proteinUnit} onChange={(e) => setProteinUnit(e.target.value)} className="input-machined w-auto px-2 py-1.5 text-control">
                 <option value="percent">%</option>
                 <option value="g_per_kg">g/kg</option>
               </select>
@@ -151,7 +151,7 @@ export default function EditResourceModal({ isOpen, onClose, item, onSave }) {
               step="any"
               value={proteinInputValue}
               onChange={(e) => setFormData({ ...formData, proteinGramsPerKg: proteinInputToGramsPerKg(e.target.value, proteinUnit) })}
-              className="w-full p-3 border border-slate-200 rounded-lg text-control focus:ring-2 focus:ring-brand/20 focus:border-brand outline-none transition-all"
+              className="input-machined w-full text-control"
             />
             <p className="mt-1 text-meta text-slate-500">
               {proteinUnit === 'percent'
@@ -168,7 +168,7 @@ export default function EditResourceModal({ isOpen, onClose, item, onSave }) {
               max="30"
               value={formData.energyMjPerKg}
               onChange={(e) => setFormData({ ...formData, energyMjPerKg: Number(e.target.value) || 0 })}
-              className="w-full p-3 border border-slate-200 rounded-lg text-control focus:ring-2 focus:ring-brand/20 focus:border-brand outline-none transition-all"
+              className="input-machined w-full text-control"
             />
           </div>
         </div>
@@ -183,7 +183,7 @@ export default function EditResourceModal({ isOpen, onClose, item, onSave }) {
               max="999.99"
               value={formData.fiberGramsPerKg}
               onChange={(e) => setFormData({ ...formData, fiberGramsPerKg: Number(e.target.value) || 0 })}
-              className="w-full p-3 border border-slate-200 rounded-lg text-control focus:ring-2 focus:ring-brand/20 focus:border-brand outline-none transition-all"
+              className="input-machined w-full text-control"
             />
           </div>
           <div>
@@ -194,7 +194,7 @@ export default function EditResourceModal({ isOpen, onClose, item, onSave }) {
               step="any"
               value={formData.costPerKg}
               onChange={(e) => setFormData({ ...formData, costPerKg: Number(e.target.value) || 0 })}
-              className="w-full p-3 border border-slate-200 rounded-lg text-control focus:ring-2 focus:ring-brand/20 focus:border-brand outline-none transition-all"
+              className="input-machined w-full text-control"
             />
           </div>
         </div>

@@ -153,7 +153,7 @@ const FastMilkUI = ({
               value={editCowLabel}
               aria-describedby={errorFor('cowId') ? 'fast-milk-cow-error fast-milk-cow-hint' : 'fast-milk-cow-hint'}
               aria-invalid={errorFor('cowId') ? true : undefined}
-              className="w-full rounded-xl border-2 border-ink/10 bg-ink/5 p-4 text-control text-ink-strong focus:outline-none focus:border-brand focus:ring-4 focus:ring-brand/10"
+              className="input-machined w-full text-control"
             />
           ) : (
             <div className="relative">
@@ -162,7 +162,7 @@ const FastMilkUI = ({
                 value={formData.cowId}
                 onChange={(e) => setFormData({ ...formData, cowId: e.target.value })}
                 {...fieldErrorProps('fast-milk-cow', errorFor('cowId'))}
-                className="w-full appearance-none bg-white border-2 border-ink/10 rounded-xl p-4 pr-10 text-control text-ink-strong focus:outline-none focus:border-brand focus:ring-4 focus:ring-brand/10 transition-all cursor-pointer "
+                className="input-machined w-full text-control appearance-none pr-10 cursor-pointer"
                 required
               >
                 <option value="" disabled>{copy.chooseCow}</option>
@@ -198,7 +198,7 @@ const FastMilkUI = ({
               max={todayIso()}
               onChange={(e) => setFormData({ ...formData, date: e.target.value })}
               {...fieldErrorProps('fast-milk-date', errorFor('date'))}
-              className="w-full bg-white border-2 border-ink/10 rounded-xl p-4 text-control text-ink-strong focus:outline-none focus:border-brand focus:ring-4 focus:ring-brand/10 transition-all "
+              className="input-machined w-full text-control"
               required
             />
             <FieldError id="fast-milk-date" message={errorFor('date')} />

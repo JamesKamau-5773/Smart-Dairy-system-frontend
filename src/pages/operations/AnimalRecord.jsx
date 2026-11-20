@@ -598,7 +598,7 @@ export default function AnimalPassport() {
                   <input type="number" min="0" step="0.01" className="input-machined w-full" value={newEvent.serviceFee} onChange={(event) => setNewEvent((current) => ({ ...current, serviceFee: event.target.value }))} placeholder="2500" />
                 </div>
               </div>
-              <label className="flex cursor-pointer items-center gap-2 rounded-lg border border-ink/10 bg-surface-raised p-3 text-field-label text-ink-strong">
+              <label className="flex cursor-pointer items-center gap-2 rounded-lg border border-ink/10 bg-surface-raised p-3 text-field-label text-ink-muted">
                 <input type="checkbox" checked={newEvent.isRepeatService} onChange={(event) => setNewEvent((current) => ({ ...current, isRepeatService: event.target.checked }))} />
                 {service.repeatService}
               </label>
@@ -609,11 +609,11 @@ export default function AnimalPassport() {
               <div>
                 <label className="mb-2 block text-field-label text-ink-muted">{service.semenSource}</label>
                 <div className="grid grid-cols-1 gap-2 rounded-lg border border-ink/10 bg-surface-raised p-2 md:grid-cols-2">
-                  <label className="flex cursor-pointer items-center gap-2 rounded-md border border-ink/10 bg-white px-3 py-2 text-field-label text-ink-strong hover:border-brand/30">
+                  <label className="flex cursor-pointer items-center gap-2 rounded-md border border-ink/10 bg-white px-3 py-2 text-field-label text-ink-muted hover:border-brand/30">
                     <input type="radio" name="animal-breeding-semen-source" value="farm_stock" checked={newEvent.semenSource === 'farm_stock'} onChange={(event) => setNewEvent((current) => ({ ...current, semenSource: event.target.value }))} />
                     {breedingCopy.sources.farm_stock}
                   </label>
-                  <label className="flex cursor-pointer items-center gap-2 rounded-md border border-ink/10 bg-white px-3 py-2 text-field-label text-ink-strong hover:border-brand/30">
+                  <label className="flex cursor-pointer items-center gap-2 rounded-md border border-ink/10 bg-white px-3 py-2 text-field-label text-ink-muted hover:border-brand/30">
                     <input type="radio" name="animal-breeding-semen-source" value="vet_provided" checked={newEvent.semenSource === 'vet_provided'} onChange={(event) => setNewEvent((current) => ({ ...current, semenSource: event.target.value }))} />
                     {breedingCopy.sources.vet_provided}
                   </label>

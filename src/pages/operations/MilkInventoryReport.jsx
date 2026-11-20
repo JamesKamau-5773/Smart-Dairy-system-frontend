@@ -118,7 +118,7 @@ export default function MilkInventoryReport() {
         </div>
         <div className="flex items-center justify-end gap-6 mb-4">
           {Object.keys(visibleLines).map((lineKey) => (
-            <label key={lineKey} className="flex items-center gap-2 cursor-pointer text-field-label">
+            <label key={lineKey} className="flex items-center gap-2 cursor-pointer text-field-label text-ink-muted">
               <input
                 type="checkbox"
                 checked={visibleLines[lineKey]}

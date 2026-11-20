@@ -320,7 +320,7 @@ export default function MilkLab() {
                 step="0.1"
                 min="0.1"
                 placeholder={copy.targetPlaceholder}
-                className="w-full bg-surface-raised border border-ink/20 text-ink text-control rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-brand/50 focus:border-brand transition-all"
+                className="input-machined w-full text-control"
                 value={targetLiters}
                 onChange={(event) => setTargetLiters(event.target.value)}
                 disabled={calcMutation.isPending}
