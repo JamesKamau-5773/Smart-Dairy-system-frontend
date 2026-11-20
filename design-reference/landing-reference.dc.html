@@ -1,0 +1,417 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Maziwa Smart landing page</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;600&display=swap">
+<style>
+body{margin:0;font-family:Manrope,system-ui,sans-serif;color:#0F172A;background:#FFFFFF}
+a{color:#0A5F96;text-decoration:none}a:hover{color:#084B77}
+@keyframes ms-rise{from{opacity:0;transform:translateY(28px)}to{opacity:1;transform:none}}
+@keyframes ms-zoom{from{transform:scale(1)}to{transform:scale(1.08)}}
+@keyframes ms-float{0%,100%{transform:translateY(0)}50%{transform:translateY(-12px)}}
+@keyframes ms-tilt{from{transform:rotateX(22deg) scale(0.9);opacity:0.6}to{transform:none;opacity:1}}
+@media (prefers-reduced-motion: reduce){*{animation:none!important}}
+</style>
+</helmet>
+<div style="font-family: Manrope, system-ui, sans-serif; color: #0F172A; background: #FFFFFF">
+
+<!-- NAV -->
+<div style="background: #0B2A40; color: #E2ECF3; font-size: 14px; font-weight: 600">
+<div style="max-width: 1200px; margin: 0 auto; padding: 0 24px; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 4px 24px">
+<span style="padding: 11px 0">Smart records for Kenyan dairy farms</span>
+<span style="display: flex; flex-wrap: wrap; align-items: center; gap: 4px 24px">
+<span style="padding: 11px 0">Nairobi, Kenya</span>
+<a href="tel:+254758763260" style="color: #FFFFFF; padding: 11px 0; font-family: 'JetBrains Mono', monospace">0758 763 260</a>
+<a href="https://wa.me/254758763260" style="color: #FFFFFF; padding: 11px 0">WhatsApp</a>
+</span>
+</div>
+</div>
+<header style="border-bottom: 1px solid #E5E7EB; background: #FFFFFF">
+<div style="max-width: 1200px; margin: 0 auto; padding: 14px 24px; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 16px">
+<a href="#top" style="display: flex; align-items: center; gap: 10px; color: #0A5F96; font-weight: 800; font-size: 19px; letter-spacing: -0.02em; min-height: 44px">
+<span style="width: 34px; height: 34px; border-radius: 8px; background: {{accent}}; display: flex; align-items: center; justify-content: center">
+<svg aria-hidden="true" width="28" height="28" viewBox="0 0 32 32"><ellipse cx="5.500" cy="11.500" rx="5" ry="3" transform="rotate(-18 5.500 11.500)" fill="#FFFFFF"/><ellipse cx="26.500" cy="11.500" rx="5" ry="3" transform="rotate(18 26.500 11.500)" fill="#FFFFFF"/><path d="M9 10C9 5 23 5 23 10L22 20C22 27 10 27 10 20Z" fill="#FFFFFF"/><path d="M9.300 10.500C11.500 8.500 14.500 9.500 14 14.500C13.700 18 10.800 18.500 10 16.500Z" fill="{{accent}}"/><path d="M22.700 10.500C20.500 8.500 17.500 9.500 18 14.500C18.300 18 21.200 18.500 22 16.500Z" fill="{{accent}}"/><circle cx="14" cy="22.300" r="1" fill="{{accent}}"/><circle cx="18" cy="22.300" r="1" fill="{{accent}}"/></svg>
+</span>
+Maziwa Smart
+</a>
+<nav style="display: flex; flex-wrap: wrap; gap: 28px; font-size: 15px; font-weight: 600">
+<a href="#features" style="color: #334155; padding: 12px 0">Features</a>
+<a href="#stories" style="color: #334155; padding: 12px 0">Farmers</a>
+<a href="#pricing" style="color: #334155; padding: 12px 0">Pricing</a>
+<a href="#faq" style="color: #334155; padding: 12px 0">FAQ</a>
+</nav>
+<div style="display: flex; align-items: center; gap: 20px">
+<a href="#login" style="color: #334155; font-size: 15px; font-weight: 600; padding: 12px 0">Log in</a>
+<a href="#start" style="background: {{accent}}; color: #FFFFFF; font-weight: 700; font-size: 15px; padding: 12px 20px; border-radius: 8px; min-height: 20px">Start free</a>
+</div>
+</div>
+</header>
+
+<!-- HERO -->
+<section id="top" style="position: relative; background: #0B1E2D; overflow: hidden">
+<img src="/_blob/2830a053b75ef294c6d75f082ee069cc" alt="A black and white dairy calf standing on straw in a farm shed" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: center 58%; animation: ms-zoom 18s ease-out both">
+<div aria-hidden="true" style="position: absolute; inset: 0; background: linear-gradient(90deg, rgba(7,20,31,0.92) 0%, rgba(7,20,31,0.78) 38%, rgba(7,20,31,0.30) 70%, rgba(7,20,31,0.15) 100%)"></div>
+<div style="position: relative; box-sizing: border-box; max-width: 1200px; min-height: 820px; margin: 0 auto; padding: 160px 24px 104px; display: flex; flex-wrap: wrap; align-items: flex-end; gap: 56px">
+
+<div style="flex: 0 1 660px; min-width: 0; display: flex; flex-direction: column; gap: 24px; animation: ms-rise 0.9s ease-out both">
+<div style="font-size: 13px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: #9FD3F2">Dairy farm management for Kenya</div>
+<h1 style="margin: 0; font-size: 68px; line-height: 1.04; font-weight: 800; letter-spacing: -0.035em; color: #FFFFFF">Every litre. Every cow. <span style="color: #8CCBF0">Every shilling.</span></h1>
+<p style="margin: 0; font-size: 19px; line-height: 1.6; color: #E8EEF3; max-width: 560px">Maziwa Smart replaces the milk notebook. Record milk per cow, catch every heat, plan feed and know which buyer owes you, from one account your whole farm shares.</p>
+<div style="display: flex; flex-wrap: wrap; gap: 12px; margin-top: 4px">
+<a href="#start" style="background: {{accent}}; color: #FFFFFF; font-weight: 700; font-size: 16px; padding: 15px 26px; border-radius: 8px">Start free</a>
+<a href="#demo" style="background: #FFFFFF; color: #0F172A; font-weight: 700; font-size: 16px; padding: 14px 24px; border-radius: 8px; border: 1px solid #CBD5E1; display: flex; align-items: center; gap: 8px">
+<svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M10 8.500l5.500 3.500-5.500 3.500z"/></svg>
+Try the live demo
+</a>
+</div>
+<ul style="list-style: none; margin: 8px 0 0; padding: 20px 0 0; border-top: 1px solid rgba(255,255,255,0.28); display: flex; flex-wrap: wrap; gap: 12px 28px; font-size: 15px; font-weight: 600; color: #F1F5F9">
+<li style="display: flex; align-items: center; gap: 8px">
+<svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#9FD3F2" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="14" height="10" rx="1.500"/><path d="M1 18h16"/><rect x="18" y="8" width="5" height="10" rx="1"/></svg>
+Phone, tablet or computer
+</li>
+<li style="display: flex; align-items: center; gap: 8px">
+<svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#9FD3F2" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 8.500a15 15 0 0 1 20 0M5.500 12.500a10 10 0 0 1 13 0M9 16.500a5 5 0 0 1 6 0M3 3l18 18"/></svg>
+Keeps working without network
+</li>
+<li style="display: flex; align-items: center; gap: 8px">
+<svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#9FD3F2" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3.500"/><path d="M2.500 20a6.500 6.500 0 0 1 13 0M16 4.800a3.500 3.500 0 0 1 0 6.400M18 14.500a6.500 6.500 0 0 1 3.500 5.500"/></svg>
+One account for the whole team
+</li>
+</ul>
+</div>
+
+</div>
+</section>
+
+<!-- DASHBOARD -->
+<section id="product" style="background: #FFFFFF; border-bottom: 1px solid #E5E7EB; overflow: hidden">
+<div style="max-width: 1200px; margin: 0 auto; padding: 96px 24px">
+<div style="max-width: 720px; margin: 0 auto 48px; text-align: center">
+<div style="font-size: 13px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: #0A5F96; margin-bottom: 14px">The dashboard</div>
+<h2 style="margin: 0; font-size: 38px; line-height: 1.12; font-weight: 800; letter-spacing: -0.03em">Your whole farm on one screen</h2>
+<p style="margin: 16px 0 0; font-size: 17px; line-height: 1.6; color: #475569">Open Maziwa Smart on a computer in the office or a phone in the shed. Everyone on the farm sees the same records.</p>
+</div>
+<div role="img" aria-label="Maziwa Smart dashboard on a computer and the milk recording screen on a phone, shown with sample data" style="position: relative; max-width: 1120px; margin: 0 auto; box-sizing: border-box; padding: 0 44px 64px 0; perspective: 1800px">
+
+<div aria-hidden="true" style="position: relative; background: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 16px; box-shadow: 0 40px 90px rgba(15,23,42,0.14), 0 4px 14px rgba(15,23,42,0.05); overflow: hidden; transform-origin: center top; animation: ms-tilt linear both; animation-timeline: view(); animation-range: entry 0% cover 40%">
+<div style="display: flex; align-items: center; gap: 6px; padding: 12px 16px; background: #FFFFFF; border-bottom: 1px solid #EDF0F3">
+<span style="width: 9px; height: 9px; border-radius: 50%; background: #CBD5E1"></span>
+<span style="width: 9px; height: 9px; border-radius: 50%; background: #CBD5E1"></span>
+<span style="width: 9px; height: 9px; border-radius: 50%; background: #CBD5E1"></span>
+<span style="margin-left: 12px; flex: 1; background: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 6px; padding: 4px 10px; font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #475569">maziwasmart.co.ke/dashboard</span>
+</div>
+<div style="display: flex">
+<div style="flex: 0 0 184px; background: #FFFFFF; border-right: 1px solid #E5E7EB; display: flex; flex-direction: column; font-size: 12px; font-weight: 600; color: #334155">
+<div style="background: #0F1B2D; color: #FFFFFF; font-size: 14px; font-weight: 800; padding: 16px 16px">Smart Dairy</div>
+<div style="padding: 12px 12px 10px; border-bottom: 1px solid #EDF0F3">
+<div style="font-size: 10px; color: #334155; margin-bottom: 6px">Active Workspace</div>
+<div style="border: 1px solid #CBD5E1; border-radius: 8px; padding: 8px 10px; color: #0A5F96; display: flex; justify-content: space-between"><span>Silato Farm</span><span>⌄</span></div>
+</div>
+<div style="padding: 10px 12px; display: flex; flex-direction: column; gap: 2px">
+<div style="background: #0F1B2D; color: #FFFFFF; border-radius: 8px; padding: 10px 12px; font-weight: 700">Command Center</div>
+<div style="font-size: 10px; font-weight: 700; letter-spacing: 0.06em; color: #64748B; padding: 12px 12px 4px">OPERATIONS</div>
+<div style="padding: 7px 12px">Production Log</div>
+<div style="padding: 7px 12px">Milk Usage</div>
+<div style="padding: 7px 12px">Daily Routine</div>
+<div style="padding: 7px 12px">Farm Task View</div>
+<div style="font-size: 10px; font-weight: 700; letter-spacing: 0.06em; color: #64748B; padding: 12px 12px 4px">HERD MANAGEMENT</div>
+<div style="padding: 7px 12px">Cow Register</div>
+<div style="padding: 7px 12px">Breeding &amp; Genetics</div>
+<div style="padding: 7px 12px">Medical Records</div>
+<div style="padding: 7px 12px">Milk Drop Alerts</div>
+<div style="font-size: 10px; font-weight: 700; letter-spacing: 0.06em; color: #64748B; padding: 12px 12px 4px">FEED PLANNING</div>
+<div style="padding: 7px 12px">Feed Planner</div>
+<div style="padding: 7px 12px">Feed Mixing Planner</div>
+<div style="font-size: 10px; font-weight: 700; letter-spacing: 0.06em; color: #64748B; padding: 12px 12px 4px">FINANCE &amp; SUPPLY</div>
+<div style="padding: 7px 12px">Buyers List</div>
+</div>
+</div>
+<div style="flex: 1; min-width: 0; display: flex; flex-direction: column; background: #F8F7F5">
+<div style="background: #FFFFFF; border-bottom: 1px solid #E5E7EB; padding: 10px 20px; display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 8px; font-size: 12px; font-weight: 700">
+<span style="font-size: 13px">Dashboard</span>
+<span style="display: flex; align-items: center; gap: 8px">
+<span style="background: #EAF3F9; color: #0A5F96; border: 1px solid #BFDCEE; border-radius: 999px; padding: 4px 10px; font-size: 11px">Silato Farm</span>
+<span style="border: 1px solid #E2E8F0; border-radius: 8px; padding: 6px 10px">Online</span>
+<span style="border: 1px solid #E2E8F0; border-radius: 8px; padding: 6px 10px">Silato · <span style="color: #475569; font-size: 10px">FARMER</span></span>
+</span>
+</div>
+<div style="padding: 22px 28px 26px; display: flex; flex-direction: column; gap: 14px">
+<div style="padding-bottom: 12px; border-bottom: 1px solid #E5E7EB">
+<div style="font-size: 22px; font-weight: 800; letter-spacing: -0.03em; color: #0A5F96">Daily Summary</div>
+<div style="font-size: 11px; color: #475569; margin-top: 3px">Habari ya mchana · Sample data</div>
+</div>
+<div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px">
+<div style="background: #FFFFFF; border: 1px solid #7CC4EE; border-radius: 10px; padding: 14px 16px">
+<div style="font-size: 10px; font-weight: 700; letter-spacing: 0.06em; color: #475569">TRANSACTION REVENUE</div>
+<div style="font-size: 20px; font-weight: 800; color: #0A5F96; margin-top: 6px">KES 2,160</div>
+</div>
+<div style="background: #FFFFFF; border: 1px solid #EDF0F3; border-radius: 10px; padding: 14px 16px">
+<div style="font-size: 10px; font-weight: 700; letter-spacing: 0.06em; color: #475569">TODAY'S FEED COST</div>
+<div style="font-size: 20px; font-weight: 800; margin-top: 6px">KES 980</div>
+</div>
+<div style="background: #EAF0F4; border: 1px solid #A9CFE6; border-radius: 10px; padding: 14px 16px">
+<div style="font-size: 10px; font-weight: 700; letter-spacing: 0.06em; color: #0A5F96">DAILY PROFIT</div>
+<div style="font-size: 20px; font-weight: 800; color: #0A5F96; margin-top: 6px">KES 1,180</div>
+</div>
+</div>
+<div style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px">
+<div style="background: #FFFFFF; border: 1px solid #E5E7EB; border-top: 2px solid #38BDF8; border-radius: 10px; padding: 14px 16px">
+<div style="font-size: 10px; font-weight: 700; letter-spacing: 0.06em; color: #475569">TOTAL MILK (TODAY)</div>
+<div style="width: 22px; height: 2px; background: #0A5F96; margin-top: 6px"></div>
+<div style="font-size: 24px; font-weight: 800; color: #0A5F96; margin-top: 22px">44.5 <span style="font-size: 11px; font-weight: 600; color: #475569">Litres</span></div>
+</div>
+<div style="background: #FFFFFF; border: 1px solid #E5E7EB; border-top: 2px solid #38BDF8; border-radius: 10px; padding: 14px 16px">
+<div style="font-size: 10px; font-weight: 700; letter-spacing: 0.06em; color: #475569">SALEABLE MILK (TODAY)</div>
+<div style="width: 22px; height: 2px; background: #0A5F96; margin-top: 6px"></div>
+<div style="font-size: 24px; font-weight: 800; color: #0A5F96; margin-top: 22px">42.0 <span style="font-size: 11px; font-weight: 600; color: #475569">Litres</span></div>
+</div>
+<div style="background: #FFFFFF; border: 1px solid #E5E7EB; border-top: 2px solid #38BDF8; border-radius: 10px; padding: 14px 16px">
+<div style="font-size: 10px; font-weight: 700; letter-spacing: 0.06em; color: #475569">MILK SOLD (TODAY)</div>
+<div style="width: 22px; height: 2px; background: #0A5F96; margin-top: 6px"></div>
+<div style="font-size: 24px; font-weight: 800; color: #0A5F96; margin-top: 22px">36.0 <span style="font-size: 11px; font-weight: 600; color: #475569">Litres</span></div>
+</div>
+<div style="background: #FFFFFF; border: 1px solid #E5E7EB; border-top: 2px solid #38BDF8; border-radius: 10px; padding: 14px 16px">
+<div style="font-size: 10px; font-weight: 700; letter-spacing: 0.06em; color: #475569">MILK REMAINING</div>
+<div style="width: 22px; height: 2px; background: #0A5F96; margin-top: 6px"></div>
+<div style="font-size: 24px; font-weight: 800; color: #0A5F96; margin-top: 22px">6.0 <span style="font-size: 11px; font-weight: 600; color: #475569">Litres</span></div>
+</div>
+<div style="background: #FFFFFF; border: 1px solid #E5E7EB; border-top: 2px solid #38BDF8; border-radius: 10px; padding: 14px 16px">
+<div style="font-size: 10px; font-weight: 700; letter-spacing: 0.06em; color: #475569">COWS MILKED</div>
+<div style="width: 22px; height: 2px; background: #0A5F96; margin-top: 6px"></div>
+<div style="font-size: 24px; font-weight: 800; color: #0A5F96; margin-top: 22px">4 <span style="font-size: 11px; font-weight: 600; color: #475569">Cows</span></div>
+</div>
+<div style="background: #FFFFFF; border: 1px solid #E5E7EB; border-top: 2px solid #38BDF8; border-radius: 10px; padding: 14px 16px">
+<div style="font-size: 10px; font-weight: 700; letter-spacing: 0.06em; color: #475569">AVG. PER COW</div>
+<div style="width: 22px; height: 2px; background: #0A5F96; margin-top: 6px"></div>
+<div style="font-size: 24px; font-weight: 800; color: #0A5F96; margin-top: 22px">11.1 <span style="font-size: 11px; font-weight: 600; color: #475569">L/cow</span></div>
+</div>
+<div style="background: #FFFFFF; border: 1px solid #E5E7EB; border-top: 2px solid #38BDF8; border-radius: 10px; padding: 14px 16px">
+<div style="font-size: 10px; font-weight: 700; letter-spacing: 0.06em; color: #475569">PROFIT PER LITRE</div>
+<div style="width: 22px; height: 2px; background: #0A5F96; margin-top: 6px"></div>
+<div style="font-size: 24px; font-weight: 800; color: #0A5F96; margin-top: 22px"><span style="font-size: 11px; font-weight: 600; color: #475569">KES</span> 32.78</div>
+</div>
+</div>
+<div style="background: #FFFFFF; border: 1px solid #A9CFE6; border-radius: 12px; padding: 16px 18px">
+<div style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 8px; margin-bottom: 12px">
+<div style="font-size: 14px; font-weight: 800; color: #0A5F96">Milk Production Trend</div>
+<div style="display: flex; align-items: center; gap: 2px; border: 1px solid #E2E8F0; border-radius: 999px; padding: 3px; font-size: 10px; font-weight: 700; color: #475569"><span style="background: #0A5F96; color: #FFFFFF; border-radius: 999px; padding: 4px 10px">30 days</span><span style="padding: 4px 8px">90 days</span><span style="padding: 4px 8px">All time</span></div>
+</div>
+<div style="display: flex; gap: 8px">
+<div style="display: flex; flex-direction: column; justify-content: space-between; height: 170px; font-size: 10px; font-weight: 600; color: #475569; text-align: right"><span>60 L</span><span>45 L</span><span>30 L</span><span>15 L</span><span>0 L</span></div>
+<div style="flex: 1; min-width: 0">
+<svg viewBox="0 0 600 170" preserveAspectRatio="none" style="display: block; width: 100%; height: 170px">
+<path d="M0 10H600M0 47.500H600M0 85H600M0 122.500H600M0 160H600" stroke="#EDF0F3" stroke-width="1" fill="none" vector-effect="non-scaling-stroke"/>
+<path d="M10 52.500L30 77.500L50 107.500L70 92.500L90 82.500L110 60L130 45L150 45L170 48.800L190 47.500L210 46.300L230 45L250 52.500L270 55L290 40L310 42.500L330 42.500L350 37.500L370 95L390 40L410 50L430 67.500L450 65L470 60L490 60L510 67.500L530 70L550 65L570 55L590 48.800V160H10Z" fill="#0A5F96" fill-opacity="0.07"/>
+<path d="M10 52.500L30 77.500L50 107.500L70 92.500L90 82.500L110 60L130 45L150 45L170 48.800L190 47.500L210 46.300L230 45L250 52.500L270 55L290 40L310 42.500L330 42.500L350 37.500L370 95L390 40L410 50L430 67.500L450 65L470 60L490 60L510 67.500L530 70L550 65L570 55L590 48.800" fill="none" stroke="#0A5F96" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" vector-effect="non-scaling-stroke"/>
+</svg>
+<div style="display: flex; justify-content: space-between; padding-top: 6px; font-size: 10px; font-weight: 600; color: #475569"><span>13 Oct</span><span>20 Oct</span><span>27 Oct</span><span>3 Nov</span><span>Today</span></div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+
+<div aria-hidden="true" style="position: absolute; right: 0; bottom: 0; width: 196px; background: #0F172A; border-radius: 30px; padding: 7px; box-shadow: 0 30px 60px rgba(15,23,42,0.30); animation: ms-float 5s ease-in-out infinite">
+<div style="background: #FFFFFF; border-radius: 24px; padding: 22px 14px 16px; display: flex; flex-direction: column; gap: 10px">
+<div style="font-size: 10px; font-weight: 700; color: #0A5F96; letter-spacing: 0.08em; text-transform: uppercase">Morning milking</div>
+<div style="font-size: 15px; font-weight: 800; letter-spacing: -0.01em">Record milk</div>
+<div style="display: flex; justify-content: space-between; align-items: center; border: 1px solid #E2E8F0; border-radius: 7px; padding: 8px 9px; font-size: 12px; font-weight: 700"><span>Sofia</span><span style="font-family: 'JetBrains Mono', monospace">13.0 L</span></div>
+<div style="display: flex; justify-content: space-between; align-items: center; border: 1px solid #E2E8F0; border-radius: 7px; padding: 8px 9px; font-size: 12px; font-weight: 700"><span>Princess</span><span style="font-family: 'JetBrains Mono', monospace">15.0 L</span></div>
+<div style="display: flex; justify-content: space-between; align-items: center; border: 2px solid #0A5F96; border-radius: 7px; padding: 7px 8px; font-size: 12px; font-weight: 700"><span>Malkia</span><span style="font-family: 'JetBrains Mono', monospace; color: #0A5F96">11.5 L</span></div>
+<div style="background: #0A5F96; color: #FFFFFF; text-align: center; font-size: 12px; font-weight: 700; border-radius: 7px; padding: 9px">Save milking</div>
+<div style="font-size: 10px; color: #475569; text-align: center">Offline · will send later</div>
+</div>
+</div>
+</div>
+
+</div>
+</section>
+
+<!-- TESTIMONIAL -->
+<section id="stories" style="position: relative; background: #0B1E2D; overflow: hidden">
+<img src="/_blob/9f8d1cd9f91879b3795495d158972268" alt="Dairy cows looking out through the feed rail of a farm shed" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: center 40%">
+<div aria-hidden="true" style="position: absolute; inset: 0; background: rgba(7,20,31,0.76)"></div>
+<div style="position: relative; max-width: 1200px; margin: 0 auto; padding: 120px 24px; display: flex; flex-wrap: wrap; gap: 48px; align-items: center">
+<div style="flex: 1 1 100%; min-width: 0">
+<div style="font-size: 13px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: #9FD3F2; margin-bottom: 14px">Farmer stories</div>
+<h2 style="margin: 0; font-size: 44px; line-height: 1.1; font-weight: 800; letter-spacing: -0.03em; color: #FFFFFF">From farmers using Maziwa Smart</h2>
+<p style="margin: 16px 0 0; font-size: 17px; line-height: 1.6; color: #E8EEF3">More farmer stories are on the way.</p>
+</div>
+<figure style="flex: 1 1 420px; align-self: stretch; box-sizing: border-box; min-width: 0; margin: 0; background: #FFFFFF; border-radius: 16px; padding: 40px; box-shadow: 0 24px 60px rgba(0,0,0,0.35); display: flex; flex-direction: column; gap: 28px">
+<svg aria-hidden="true" width="36" height="28" viewBox="0 0 36 28" fill="{{accent}}"><path d="M0 28V16C0 7 5 1.500 14 0v5.500C9.500 6.500 8 9.500 8 13h6v15zm20 0V16C20 7 25 1.500 34 0v5.500C29.500 6.500 28 9.500 28 13h6v15z"/></svg>
+<blockquote style="margin: 0; flex: 1; font-size: 21px; line-height: 1.5; font-weight: 600; letter-spacing: -0.01em; color: #0F172A">Before Maziwa Smart, our production averaged 11 litres. Three months later, we average 18. Heat cycles are much clearer, and running the farm is no longer stressful. It is more efficient and saves us time.</blockquote>
+<figcaption style="display: flex; align-items: center; gap: 14px; padding-top: 24px; border-top: 1px solid #E2E8F0">
+<span aria-hidden="true" style="width: 48px; height: 48px; border-radius: 50%; background: {{accent}}; color: #FFFFFF; font-weight: 800; font-size: 18px; display: flex; align-items: center; justify-content: center">K</span>
+<span style="display: flex; flex-direction: column; gap: 2px">
+<span style="font-size: 16px; font-weight: 800">Kamau's Farm</span>
+<span style="font-size: 14px; color: #475569">Nakuru County · 15 cows</span>
+</span>
+</figcaption>
+</figure>
+<figure style="flex: 1 1 420px; align-self: stretch; box-sizing: border-box; min-width: 0; margin: 0; background: #FFFFFF; border-radius: 16px; padding: 40px; box-shadow: 0 24px 60px rgba(0,0,0,0.35); display: flex; flex-direction: column; gap: 28px">
+<svg aria-hidden="true" width="36" height="28" viewBox="0 0 36 28" fill="{{accent}}"><path d="M0 28V16C0 7 5 1.500 14 0v5.500C9.500 6.500 8 9.500 8 13h6v15zm20 0V16C20 7 25 1.500 34 0v5.500C29.500 6.500 28 9.500 28 13h6v15z"/></svg>
+<blockquote style="margin: 0; flex: 1; font-size: 21px; line-height: 1.5; font-weight: 600; letter-spacing: -0.01em; color: #0F172A">Before Maziwa Smart, we were guessing at our feed ratios and hoping for a good milk yield at the end of the month. Now we track our finances alongside the breeding records, so we know where every shilling goes and how it affects our output. It is the control centre our farm was missing.</blockquote>
+<figcaption style="display: flex; align-items: center; gap: 14px; padding-top: 24px; border-top: 1px solid #E2E8F0">
+<span aria-hidden="true" style="width: 48px; height: 48px; border-radius: 50%; background: {{accent}}; color: #FFFFFF; font-weight: 800; font-size: 18px; display: flex; align-items: center; justify-content: center">U</span>
+<span style="display: flex; flex-direction: column; gap: 2px">
+<span style="font-size: 16px; font-weight: 800">Unaitas Farm</span>
+<span style="font-size: 14px; color: #475569">Kiambu County · 25 cows</span>
+</span>
+</figcaption>
+</figure>
+</div>
+</section>
+
+<!-- PRICING -->
+<section id="pricing" style="background: #F6F8FA; border-bottom: 1px solid #E5E7EB">
+<div style="max-width: 1200px; margin: 0 auto; padding: 96px 24px">
+<div style="font-size: 13px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: #0A5F96; margin-bottom: 14px">Pricing</div>
+<h2 style="margin: 0; font-size: 38px; line-height: 1.12; font-weight: 800; letter-spacing: -0.03em">Simple pricing in Kenya shillings</h2>
+<p style="margin: 16px 0 40px; font-size: 17px; line-height: 1.6; color: #475569; max-width: 640px">We are finalising our plans. Start free today, and we will tell you before any paid plan begins.</p>
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 24px">
+
+<div style="background: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 14px; padding: 28px; display: flex; flex-direction: column; gap: 16px">
+<div>
+<div style="font-size: 19px; font-weight: 800">Starter</div>
+<div style="font-size: 14px; color: #475569; margin-top: 4px">Small family farms getting off the notebook</div>
+</div>
+<div style="align-self: flex-start; font-size: 12px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: #0A5F96; background: #E6F1F8; border-radius: 6px; padding: 6px 10px">Price coming soon</div>
+<ul style="list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; font-size: 15px; color: #334155; line-height: 1.45">
+<li>Milk records for every cow, morning, midday and evening</li>
+<li>Herd register and cow history</li>
+<li>Heat, service and calving dates</li>
+<li>Works offline</li>
+</ul>
+</div>
+
+<div style="background: #FFFFFF; border: 2px solid {{accent}}; border-radius: 14px; padding: 27px; display: flex; flex-direction: column; gap: 16px">
+<div>
+<div style="font-size: 19px; font-weight: 800">Farm</div>
+<div style="font-size: 14px; color: #475569; margin-top: 4px">Commercial farms with workers and buyers</div>
+</div>
+<div style="align-self: flex-start; font-size: 12px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: #0A5F96; background: #E6F1F8; border-radius: 6px; padding: 6px 10px">Price coming soon</div>
+<ul style="list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; font-size: 15px; color: #334155; line-height: 1.45">
+<li>Everything in Starter</li>
+<li>Feed rations and feed stock</li>
+<li>Buyer accounts and statements you can share</li>
+<li>Income, expenses and cost per litre</li>
+<li>Staff records and payroll</li>
+</ul>
+</div>
+
+<div style="background: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 14px; padding: 28px; display: flex; flex-direction: column; gap: 16px">
+<div>
+<div style="font-size: 19px; font-weight: 800">Cooperative</div>
+<div style="font-size: 14px; color: #475569; margin-top: 4px">Dairy cooperatives and groups of farms</div>
+</div>
+<div style="align-self: flex-start; font-size: 12px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: #0A5F96; background: #E6F1F8; border-radius: 6px; padding: 6px 10px">Price coming soon</div>
+<ul style="list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; font-size: 15px; color: #334155; line-height: 1.45">
+<li>Everything in Farm</li>
+<li>Onboard member farmers</li>
+<li>Separate, private records per farm</li>
+<li>Member dashboards</li>
+</ul>
+</div>
+
+</div>
+<div style="display: flex; flex-wrap: wrap; gap: 12px; margin-top: 36px">
+<a href="#start" style="background: {{accent}}; color: #FFFFFF; font-weight: 700; font-size: 16px; padding: 15px 26px; border-radius: 8px">Start free</a>
+<a href="https://wa.me/254758763260" style="background: #FFFFFF; color: #0F172A; font-weight: 700; font-size: 16px; padding: 14px 24px; border-radius: 8px; border: 1px solid #CBD5E1">Ask about pricing on WhatsApp</a>
+</div>
+</div>
+</section>
+
+<!-- CLOSING CTA -->
+<section style="position: relative; background: #0B1E2D; color: #FFFFFF; overflow: hidden">
+<img src="/_blob/296617d41dd75c8450adb4f8b5b78713" alt="Dairy cows feeding side by side at a trough" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: center 45%">
+<div aria-hidden="true" style="position: absolute; inset: 0; background: rgba(7,20,31,0.72)"></div>
+<div style="position: relative; max-width: 1200px; margin: 0 auto; padding: 136px 24px; display: flex; flex-direction: column; align-items: center; text-align: center; gap: 36px">
+<div style="max-width: 820px">
+<h2 style="margin: 0; font-size: 56px; line-height: 1.08; font-weight: 800; letter-spacing: -0.03em">Put away the notebook</h2>
+<p style="margin: 18px auto 0; font-size: 19px; line-height: 1.6; color: #E8EEF3; max-width: 620px">Record tomorrow morning's milking in Maziwa Smart and see every litre, cow and shilling in one place.</p>
+</div>
+<div style="display: flex; flex-wrap: wrap; justify-content: center; gap: 12px">
+<a href="#start" style="background: {{accent}}; color: #FFFFFF; font-weight: 700; font-size: 17px; padding: 18px 34px; border-radius: 8px">Start free</a>
+<a href="https://wa.me/254758763260" style="color: #FFFFFF; font-weight: 700; font-size: 17px; padding: 17px 30px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.65)">Chat on WhatsApp</a>
+</div>
+</div>
+</section>
+
+<!-- FOOTER -->
+<footer style="background: #071826; color: #FFFFFF; border-top: 1px solid rgba(255,255,255,0.14)">
+<div style="max-width: 1200px; margin: 0 auto; padding: 80px 24px 28px">
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 48px">
+<div style="grid-column: span 2; min-width: 0">
+<div style="display: flex; align-items: center; gap: 12px; color: #FFFFFF; font-weight: 800; font-size: 22px; letter-spacing: -0.02em">
+<span style="width: 34px; height: 34px; border-radius: 8px; background: {{accent}}; display: flex; align-items: center; justify-content: center">
+<svg aria-hidden="true" width="28" height="28" viewBox="0 0 32 32"><ellipse cx="5.500" cy="11.500" rx="5" ry="3" transform="rotate(-18 5.500 11.500)" fill="#FFFFFF"/><ellipse cx="26.500" cy="11.500" rx="5" ry="3" transform="rotate(18 26.500 11.500)" fill="#FFFFFF"/><path d="M9 10C9 5 23 5 23 10L22 20C22 27 10 27 10 20Z" fill="#FFFFFF"/><path d="M9.300 10.500C11.500 8.500 14.500 9.500 14 14.500C13.700 18 10.800 18.500 10 16.500Z" fill="{{accent}}"/><path d="M22.700 10.500C20.500 8.500 17.500 9.500 18 14.500C18.300 18 21.200 18.500 22 16.500Z" fill="{{accent}}"/><circle cx="14" cy="22.300" r="1" fill="{{accent}}"/><circle cx="18" cy="22.300" r="1" fill="{{accent}}"/></svg>
+</span>
+Maziwa Smart
+</div>
+<p style="margin: 16px 0 0; font-size: 16px; line-height: 1.6; color: #C7D7E5; max-width: 380px">Dairy farm management software for Kenya. Milk, herd, feed and money in one place, on any device.</p>
+<div style="display: flex; flex-wrap: wrap; gap: 8px; margin-top: 22px; font-size: 13px; font-weight: 700; color: #E2ECF3">
+<span style="border: 1px solid rgba(255,255,255,0.22); border-radius: 999px; padding: 7px 12px">Works offline</span>
+<span style="border: 1px solid rgba(255,255,255,0.22); border-radius: 999px; padding: 7px 12px">Phone, tablet, computer</span>
+<span style="border: 1px solid rgba(255,255,255,0.22); border-radius: 999px; padding: 7px 12px">Nairobi, Kenya</span>
+</div>
+</div>
+<div>
+<div style="font-size: 12px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: #9FD3F2; margin-bottom: 10px">Product</div>
+<div style="display: flex; flex-direction: column; font-size: 15px; font-weight: 600">
+<a href="#features" style="color: #E2ECF3; padding: 11px 0">Features</a>
+<a href="#product" style="color: #E2ECF3; padding: 11px 0">Dashboard</a>
+<a href="#stories" style="color: #E2ECF3; padding: 11px 0">Farmer stories</a>
+<a href="#pricing" style="color: #E2ECF3; padding: 11px 0">Pricing</a>
+<a href="#faq" style="color: #E2ECF3; padding: 11px 0">FAQ</a>
+</div>
+</div>
+<div>
+<div style="font-size: 12px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: #9FD3F2; margin-bottom: 10px">Get started</div>
+<div style="display: flex; flex-direction: column; font-size: 15px; font-weight: 600">
+<a href="#start" style="color: #E2ECF3; padding: 11px 0">Start free</a>
+<a href="#demo" style="color: #E2ECF3; padding: 11px 0">Try the live demo</a>
+<a href="#login" style="color: #E2ECF3; padding: 11px 0">Log in</a>
+</div>
+</div>
+</div>
+<div style="margin-top: 48px; display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px">
+<a href="tel:+254758763260" style="display: flex; align-items: center; gap: 14px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.14); border-radius: 12px; padding: 18px 20px; color: #FFFFFF">
+<span style="flex: none; width: 42px; height: 42px; border-radius: 10px; background: {{accent}}; display: flex; align-items: center; justify-content: center"><svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 4h4l2 5-2.500 1.500a11 11 0 0 0 5 5L15 13l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2z"/></svg></span>
+<span style="display: flex; flex-direction: column; gap: 3px; min-width: 0"><span style="font-size: 12px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: #9FD3F2">Call us</span><span style="font-size: 16px; font-weight: 700; font-family: 'JetBrains Mono', monospace">0758 763 260</span></span>
+</a>
+<a href="https://wa.me/254758763260" style="display: flex; align-items: center; gap: 14px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.14); border-radius: 12px; padding: 18px 20px; color: #FFFFFF">
+<span style="flex: none; width: 42px; height: 42px; border-radius: 10px; background: {{accent}}; display: flex; align-items: center; justify-content: center"><svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.500a8.500 8.500 0 0 1-12.600 7.400L3 21l2.100-5.400A8.500 8.500 0 1 1 21 11.500z"/></svg></span>
+<span style="display: flex; flex-direction: column; gap: 3px; min-width: 0"><span style="font-size: 12px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: #9FD3F2">WhatsApp</span><span style="font-size: 16px; font-weight: 700; font-family: 'JetBrains Mono', monospace">0758 763 260</span></span>
+</a>
+<a href="mailto:jamesnk5773@gmail.com" style="display: flex; align-items: center; gap: 14px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.14); border-radius: 12px; padding: 18px 20px; color: #FFFFFF">
+<span style="flex: none; width: 42px; height: 42px; border-radius: 10px; background: {{accent}}; display: flex; align-items: center; justify-content: center"><svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/></svg></span>
+<span style="display: flex; flex-direction: column; gap: 3px; min-width: 0"><span style="font-size: 12px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: #9FD3F2">Email</span><span style="font-size: 15px; font-weight: 700; overflow-wrap: anywhere">jamesnk5773@gmail.com</span></span>
+</a>
+</div>
+<div aria-hidden="true" style="margin-top: 56px; font-size: clamp(56px, 13vw, 190px); line-height: 0.9; font-weight: 800; letter-spacing: -0.05em; color: rgba(255,255,255,0.06); white-space: nowrap; overflow: hidden">Maziwa Smart</div>
+<div style="padding-top: 22px; border-top: 1px solid rgba(255,255,255,0.14); display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px 24px; font-size: 14px; color: #C7D7E5">
+<span>© 2026 Maziwa Smart. All rights reserved.</span>
+<span style="display: flex; gap: 24px"><a href="#privacy" style="color: #C7D7E5; padding: 11px 0; margin: -11px 0">Privacy</a><a href="#terms" style="color: #C7D7E5; padding: 11px 0; margin: -11px 0">Terms</a></span>
+</div>
+</div>
+</footer>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"accent":{"editor":"color","default":"#0A5F96","options":["#0A5F96","#0B2A40","#0F766E"]},"$preview":{"width":1440,"height":4760}}'>
+class Component extends DCLogic {
+renderVals() {
+return { accent: this.props.accent ?? '#0A5F96' };
+}
+}
+</script>
+</body>
+</html>

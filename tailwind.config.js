@@ -1,5 +1,21 @@
 /** @type {import('tailwindcss').Config} */
 import tailwindcssAnimate from 'tailwindcss-animate';
+import plugin from 'tailwindcss/plugin.js';
+import { TABULAR_ROLES, TYPE_ROLES, UPPERCASE_ROLES } from './src/styles/typeRoles.js';
+
+// One `text-<role>` class per type role. Values come from the --type-<role>-* tokens in
+// src/styles/brand.css; letter spacing is 0 unless the role has a --type-<role>-tracking token.
+// Uppercase and tabular figures follow the lists in typeRoles.js.
+const typeRoles = plugin(({ addUtilities }) => {
+  addUtilities(Object.fromEntries(TYPE_ROLES.map((role) => [`.text-${role}`, {
+    fontSize: `var(--type-${role}-size)`,
+    lineHeight: `var(--type-${role}-line)`,
+    fontWeight: `var(--type-${role}-weight)`,
+    letterSpacing: `var(--type-${role}-tracking, 0)`,
+    textTransform: UPPERCASE_ROLES.includes(role) ? 'uppercase' : 'none',
+    ...(TABULAR_ROLES.includes(role) ? { fontVariantNumeric: 'tabular-nums' } : {}),
+  }])));
+});
 
 export default {
   darkMode: ['attr', 'data-theme'],
@@ -25,7 +41,8 @@ export default {
       '2xl': '1536px', 
     },
     extend: {
-      // 1. ENTERPRISE TYPOGRAPHY (Tighter line heights, smaller base sizes for dense data)
+      // 1. TYPOGRAPHY: use the `text-<role>` classes (src/styles/typeRoles.js). This older
+      // scale is kept only until every page has moved to the roles, then deleted.
       fontSize: {
         'xs': ['0.75rem', { lineHeight: '1rem' }],        // 12px
         'sm': ['0.875rem', { lineHeight: '1.25rem' }],    // 14px enterprise base
@@ -104,12 +121,12 @@ export default {
           400: '#38bdf8', // accent
           500: '#0ea5e9',
           600: '#0284c7',
-          700: '#0369a1', // DEFAULT
+          700: '#0a5f96', // DEFAULT
           800: '#075985',
           900: '#0c4a6e', // dark
           950: '#082f49',
           // Backwards compatibility aliases
-          DEFAULT: '#0369A1', 
+          DEFAULT: '#0A5F96',
           dark: '#0C4A6E',
           accent: '#38BDF8',
         },
@@ -158,6 +175,12 @@ export default {
           DEFAULT: '#7F1D1D',
           surface: '#FEF2F2',
           'on-surface': '#450A0A'
+        },
+        // Signed money (net, change). Always paired with a sign or arrow, never colour alone.
+        // positive: green-800, 7.1:1 on white (approved 2026-11-06). negative: danger-900.
+        money: {
+          positive: '#166534',
+          negative: '#7F1D1D',
         }
       },
       keyframes: {
@@ -179,10 +202,12 @@ export default {
         "accordion-down": "accordion-down 0.2s ease-out",
         "accordion-up": "accordion-up 0.2s ease-out",
       },
+      // One family: Inter (src/styles/brand.css). display and mono are old names for it, kept
+      // until the cleanup phase; mono keeps its tabular figures.
       fontFamily: {
-        sans: ['Inter Tight', 'Inter', 'system-ui', 'sans-serif'],
-        display: ['Inter Tight', 'Inter', 'system-ui', 'sans-serif'],
-        mono: ['"JetBrains Mono"', 'SFMono-Regular', 'Menlo', 'Monaco', 'Consolas', 'monospace'], // Enterprise standard mono
+        sans: 'var(--font-sans)',
+        display: 'var(--font-sans)',
+        mono: ['var(--font-sans)', { fontFeatureSettings: '"tnum"' }],
       },
       borderWidth: {
         '3': '3px',
@@ -193,5 +218,5 @@ export default {
       }
     },
   },
-  plugins: [tailwindcssAnimate],
+  plugins: [tailwindcssAnimate, typeRoles],
 }

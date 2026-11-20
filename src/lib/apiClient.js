@@ -4,6 +4,8 @@ import { isReplayableMutation } from './offlinePolicy';
 import { tenantRef } from './tenantRef';
 import { httpClientConfig } from './httpClientConfig';
 import { API_BASE_URL } from './apiBaseUrl';
+import { SESSION_EXPIRED_EVENT } from './sessionEvents';
+import { notifyDemoRefusal } from './demoRefusal';
 
 export function resolveBackendAssetUrl(value) {
   if (!value || typeof value !== 'string') return null;
@@ -18,9 +20,19 @@ export function resolveBackendAssetUrl(value) {
 
 const apiClient = axios.create({
   baseURL: API_BASE_URL,
-  timeout: 10000, 
+  timeout: 10000,
   ...httpClientConfig,
 });
+
+// Development only: VITE_MOCK_DASHBOARD=full|empty|negative answers the Command Center's
+// summary and trend requests from fixtures (src/dev/mockDashboard.js); everything else still
+// goes to the backend. `import.meta.env.DEV` is false in builds, so this is dropped from them.
+if (import.meta.env.DEV && import.meta.env.VITE_MOCK_DASHBOARD) {
+  apiClient.interceptors.request.use(async (config) => {
+    const { mockDashboardRequest } = await import('../dev/mockDashboard.js');
+    return mockDashboardRequest(config, import.meta.env.VITE_MOCK_DASHBOARD);
+  });
+}
 
 // A key represents one logical submission.  It must be reused only when that
 // exact submission is retried, never as a business-record identifier.
@@ -55,7 +67,10 @@ apiClient.interceptors.request.use((config) => {
   
   if (sessionStr) {
     const session = JSON.parse(sessionStr);
-    config.headers['Authorization'] = `Bearer ${session.token}`;
+    // Cookie-only sessions (Google sign-in) have no token; the HttpOnly cookie authenticates them.
+    if (session.token) {
+      config.headers['Authorization'] = `Bearer ${session.token}`;
+    }
 
     const sessionTenantId = session.tenant_id ?? session.cooperative_id;
 
@@ -85,10 +100,37 @@ apiClient.interceptors.request.use((config) => {
   return Promise.reject(error);
 });
 
+/**
+ * A file request (`responseType: 'blob'`) gets its error body as a Blob too. When that body is
+ * the backend's JSON error, read it back into an object so its `code` (a demo refusal, a plan
+ * limit) and message reach the farmer like any other error.
+ */
+export async function readBlobErrorBody(error) {
+  const data = error?.response?.data;
+  if (typeof Blob === 'undefined' || !(data instanceof Blob) || !/json/i.test(data.type)) return;
+  try {
+    const text = await new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result);
+      reader.onerror = () => reject(reader.error);
+      reader.readAsText(data);
+    });
+    error.response.data = JSON.parse(text);
+  } catch {
+    // Not readable JSON after all: leave the body as it came.
+  }
+}
+
 apiClient.interceptors.response.use(
   (response) => response,
   async (error) => {
     const config = error.config;
+    await readBlobErrorBody(error);
+    if (error.response?.status === 401 && sessionStorage.getItem('jivu_user')) {
+      // The page stays mounted (keeping anything typed) while AuthProvider asks the farmer to sign in again.
+      window.dispatchEvent(new CustomEvent(SESSION_EXPIRED_EVENT));
+    }
+    notifyDemoRefusal(error);
     if (!config || !isNetworkFailure(error) || !isReplayableMutation(config)) {
       return Promise.reject(error);
     }

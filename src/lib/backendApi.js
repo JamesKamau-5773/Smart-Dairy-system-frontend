@@ -6,8 +6,14 @@ import { API_CONTRACTS, validateResponse } from './apiContracts';
 import { buildCalfMilkFeedPayload, normalizeMilkDisposition } from './milkDisposition';
 import { API_BASE_URL, BACKEND_BASE_URL } from './apiBaseUrl';
 import { readActiveSession } from './sessionStore';
+import { toLoginPayload } from './identifier';
 
 import { normalizeNutritionRequestPayload } from './feedUtils';
+import { todayLocalIso } from './localDate';
+import { getApiErrorCode, getPlanErrorMessage } from './apiErrors';
+import { notifyDemoRefusal } from './demoRefusal';
+import { errorsCopy } from '../i18n/errors';
+import { getLocale } from '../i18n/locale';
 const HEALTH_BASE_URL = BACKEND_BASE_URL;
 
 const authClient = axios.create({
@@ -38,6 +44,13 @@ authClient.interceptors.request.use((config) => {
 
   return config;
 }, (error) => Promise.reject(error));
+
+// Demo refusals on auth routes (switching farm, phone verification, profile edits) get the same
+// prompt as everywhere else.
+authClient.interceptors.response.use((response) => response, (error) => {
+  notifyDemoRefusal(error);
+  return Promise.reject(error);
+});
 
 const healthClient = axios.create({
   baseURL: HEALTH_BASE_URL,
@@ -132,7 +145,12 @@ export function withCurrentToken(data, currentToken) {
   return { ...data, token: currentToken };
 }
 
-export function normalizeSessionUser(payload) {
+/**
+ * `allowCookieSession` accepts a response without a token as long as it names a
+ * user: the browser is then authenticated by the HttpOnly cookie alone (Google
+ * sign-in). Without it, a missing token is still an error.
+ */
+export function normalizeSessionUser(payload, { allowCookieSession = false } = {}) {
   const session = toObject(payload);
 
   if (!session) {
@@ -140,8 +158,13 @@ export function normalizeSessionUser(payload) {
   }
 
   const token = session.token ?? session.access_token ?? session.accessToken ?? payload?.token ?? payload?.access_token ?? payload?.accessToken ?? null;
+  const hasToken = Boolean(token && String(token).trim());
+  const isCookieSession = !hasToken
+    && typeof session === 'object'
+    && session.id != null
+    && (allowCookieSession || session.cookie_session === true);
 
-  if (typeof session !== 'object' || !token || !String(token).trim()) {
+  if (typeof session !== 'object' || (!hasToken && !isCookieSession)) {
     throw new Error('Authentication response is missing an access token.');
   }
 
@@ -185,6 +208,7 @@ export function normalizeSessionUser(payload) {
     farm_name: session.farm_name ?? session.farmName ?? null,
     available_farms: session.available_farms ?? session.availableFarms ?? [],
     requires_password_reset: Boolean(session.requires_password_reset ?? session.requiresPasswordReset),
+    cookie_session: isCookieSession,
   };
 }
 
@@ -241,6 +265,8 @@ export function normalizeStaffRecord(record = {}) {
     returnVerifiedAt: record.returnVerifiedAt ?? record.return_verified_at ?? null,
     returnVerificationDecision: record.returnVerificationDecision ?? record.return_verification_decision ?? null,
     returnVerificationNote: record.returnVerificationNote ?? record.return_verification_note ?? '',
+    // null when the backend didn't say (the switch is then hidden rather than guessed).
+    statutoryDeductionsEnabled: booleanOrNull(record.statutoryDeductionsEnabled ?? record.statutory_deductions_enabled),
   };
 }
 
@@ -265,7 +291,34 @@ export function normalizePayrollRow(row = {}) {
     deductions: Number(row.deductions ?? leaveDeduction + advanceDeduction),
     net: Number(row.net ?? row.netPay ?? row.net_pay ?? Math.max(0, grossPay - advanceDeduction)),
     status: row.status ?? 'PENDING',
+    // Statutory deductions (KRA PAYE, NSSF, SHIF, Housing Levy), as the backend calculated them.
+    daysPaid: numberOrNull(row.daysPaid ?? row.days_paid),
+    taxablePay: numberOrNull(row.taxablePay ?? row.taxable_pay),
+    paye: numberOrNull(row.paye),
+    nssfEmployee: numberOrNull(row.nssfEmployee ?? row.nssf_employee),
+    nssfEmployer: numberOrNull(row.nssfEmployer ?? row.nssf_employer),
+    shif: numberOrNull(row.shif),
+    housingLevyEmployee: numberOrNull(row.housingLevyEmployee ?? row.housing_levy_employee),
+    housingLevyEmployer: numberOrNull(row.housingLevyEmployer ?? row.housing_levy_employer),
+    totalStatutory: numberOrNull(row.totalStatutoryDeductions ?? row.total_statutory_deductions),
+    statutoryRatesVersion: row.statutoryRatesVersion ?? row.statutory_rates_version ?? null,
   };
+}
+
+// The backend gives file URLs from its root (`/api/...`); the client's base already ends in /api.
+function toApiPath(url) {
+  const path = String(url || '');
+  return path.startsWith('/api/') ? path.slice(4) : path;
+}
+
+function booleanOrNull(value) {
+  return typeof value === 'boolean' ? value : null;
+}
+
+function numberOrNull(value) {
+  if (value === null || value === undefined || value === '') return null;
+  const number = Number(value);
+  return Number.isFinite(number) ? number : null;
 }
 
 export function normalizePayrollRun(payload = {}) {
@@ -315,6 +368,13 @@ export function normalizePayrollRun(payload = {}) {
     status: String(run.status ?? 'DRAFT').toUpperCase(),
     employees,
     totalDisbursed,
+    statutoryTotals: {
+      paye: numberOrNull(run.totalPaye ?? run.total_paye),
+      nssf: numberOrNull(run.totalNssfEmployee ?? run.total_nssf_employee),
+      shif: numberOrNull(run.totalShif ?? run.total_shif),
+      housingLevy: numberOrNull(run.totalHousingLevyEmployee ?? run.total_housing_levy_employee),
+      employerContributions: numberOrNull(run.totalEmployerContributions ?? run.total_employer_contributions),
+    },
     summary,
     lineItems,
     details: lineItems,
@@ -342,10 +402,29 @@ export function normalizeInventoryItem(item = {}) {
     },
     reorderLevel,
     minimum_threshold: item.minimum_threshold ?? reorderLevel,
+    // Archived items keep their history but are hidden from lists and mixers.
+    is_active: item.is_active ?? item.isActive ?? true,
+    data_warnings: Array.isArray(item.data_warnings) ? item.data_warnings : [],
   };
 }
 
-export function getApiErrorMessage(error, fallback = 'Could not complete this request. Please try again shortly.') {
+/**
+ * A message for a failed request, chosen by the backend's error `code` first, then the HTTP
+ * status. The backend's own `error` text is English, so it is shown only to English readers and
+ * only where the code alone says little (validation, conflicts); Kiswahili readers get the
+ * translated message for the code or status instead.
+ *
+ * @param {unknown} error The failed request.
+ * @param {string} [fallback] What to say when nothing more specific is known.
+ * @returns {string}
+ */
+export function getApiErrorMessage(error, fallback = errorsCopy.fallback) {
+  // Plan, subscription and demo refusals read the same on every page.
+  const planMessage = getPlanErrorMessage(error);
+  if (planMessage) return planMessage;
+  const code = getApiErrorCode(error);
+  if (code && errorsCopy.codes[code]) return errorsCopy.codes[code];
+
   const status = error?.response?.status;
   const responseData = error?.response?.data;
   const explicitMessage = typeof responseData === 'string'
@@ -357,45 +436,45 @@ export function getApiErrorMessage(error, fallback = 'Could not complete this re
       ? explicitMessage.message
       : null;
   const technicalMessage = /sql|database|constraint|integrity|traceback|exception|stack trace|foreign key|not null|unique key|relation .* does not exist|column .* does not exist|sqlalchemy|sqlite|psycopg|request failed with status code|network error/i;
-  const isSafeMessage = (message) => typeof message === 'string'
+  // English free text from the server or the app: only for English readers, and only when safe.
+  const usableText = (message) => getLocale() === 'en'
+    && typeof message === 'string'
     && message.trim().length > 0
     && message.trim().length <= 240
     && !technicalMessage.test(message);
 
   if (!error?.response) {
     if (error?.isAxiosError || error?.code === 'ERR_NETWORK' || error?.code === 'ECONNABORTED') {
-      return 'We couldn’t reach the server. Check your connection and try again.';
+      return errorsCopy.network;
     }
-    if (isSafeMessage(error?.message)) return error.message;
-    return fallback || 'Something went wrong. Please try again.';
+    if (usableText(error?.message)) return error.message;
+    return fallback || errorsCopy.generic;
   }
 
   if (status >= 500) {
-    return fallback || 'The service is temporarily unavailable. Please try again shortly.';
+    return fallback || errorsCopy.server;
   }
 
   if ([400, 422].includes(status)) {
-    if (isSafeMessage(displayMessage)) return displayMessage.trim();
+    if (usableText(displayMessage)) return displayMessage.trim();
     const fieldDetail = explicitMessage && typeof explicitMessage === 'object'
       ? explicitMessage.message
       : null;
-    if (isSafeMessage(fieldDetail)) return fieldDetail.trim();
-    return 'Some information is missing or needs correction. Review the form fields and try again.';
+    if (usableText(fieldDetail)) return fieldDetail.trim();
+    return errorsCopy.validation;
   }
 
   if (status === 409) {
-    return isSafeMessage(displayMessage)
-      ? displayMessage.trim()
-      : 'A record with these details already exists. Check the existing records and try again.';
+    return usableText(displayMessage) ? displayMessage.trim() : errorsCopy.conflict;
   }
 
-  if (status === 401) return 'Your session may have expired. Sign in again, then retry.';
-  if (status === 403) return 'You don’t have access to do that. Check that you’re in the right farm or ask your farm administrator.';
-  if (status === 404) return 'This item may no longer be available. Refresh the page and try again.';
-  if (status === 429) return 'Too many attempts were made. Wait a moment, then try again.';
+  if (status === 401) return errorsCopy.unauthenticated;
+  if (status === 403) return errorsCopy.forbidden;
+  if (status === 404) return errorsCopy.notFound;
+  if (status === 429) return errorsCopy.rateLimited;
 
-  if (isSafeMessage(displayMessage)) return displayMessage.trim();
-  return fallback || 'Something went wrong. Please try again.';
+  if (usableText(displayMessage)) return displayMessage.trim();
+  return fallback || errorsCopy.generic;
 }
 
 export function normalizeMedicalRecord(record = {}) {
@@ -444,7 +523,7 @@ export function normalizeMedicalRecord(record = {}) {
   return {
     ...source,
     id: source.id ?? source.record_id ?? source.visit_id ?? null,
-    date: source.date ?? source.visit_date ?? source.createdAt ?? source.created_at ?? new Date().toISOString().split('T')[0],
+    date: source.date ?? source.visit_date ?? source.createdAt ?? source.created_at ?? todayLocalIso(),
     cow: String(normalizedCow).trim(),
     reason: String(normalizedReason ?? '').trim(),
     diagnosis: source.diagnosis ?? source.diagnosis_text ?? '',
@@ -610,20 +689,29 @@ const buildHerdPayload = (payload = {}) => {
   return request;
 };
 
-const buildInventoryItemPayload = (payload = {}) => {
+// `includeStock` is for creating an item with its opening stock. Updates leave
+// stock out: the backend only changes stock through movements (Restock, Use,
+// Stock Count) and rejects a PATCH whose stock differs from what it has stored,
+// which a form opened before someone else restocked would otherwise send.
+const buildInventoryItemPayload = (payload = {}, { includeStock = true } = {}) => {
   const unit = payload.unit ?? payload.stock?.unit ?? payload.stockUnit ?? '';
-  const currentStock = Number(payload.currentStock ?? payload.current_qty ?? payload.stock?.value ?? payload.stock?.quantity ?? payload.stock?.qty ?? payload.stock ?? payload.quantity ?? 0);
   const reorderLevel = Number(payload.reorderLevel ?? payload.minimum_threshold ?? payload.reorder_level ?? payload.threshold ?? 0);
+  const sku = String(payload.sku ?? '').trim();
   const request = {
     name: payload.name ?? '',
     category: payload.category ?? '',
     unit,
-    sku: payload.sku ?? '',
-    currentStock,
-    current_qty: payload.current_qty ?? currentStock,
     reorderLevel,
     minimum_threshold: payload.minimum_threshold ?? reorderLevel,
   };
+  // SKU is optional; a blank one is left out rather than stored as "".
+  if (sku) request.sku = sku;
+
+  if (includeStock) {
+    const currentStock = Number(payload.currentStock ?? payload.current_qty ?? payload.stock?.value ?? payload.stock?.quantity ?? payload.stock?.qty ?? payload.stock ?? payload.quantity ?? 0);
+    request.currentStock = currentStock;
+    request.current_qty = payload.current_qty ?? currentStock;
+  }
 
   const nutritionFieldNames = {
     energy_mj_per_kg: 'energyMjPerKg',
@@ -665,7 +753,11 @@ export const buildProductionYieldPayload = (payload = {}) => {
     ?? payload.milkingDate
     ?? payload.date
     ?? payload.dateOfMilking
-    ?? new Date().toISOString().slice(0, 10);
+    ?? todayLocalIso();
+
+  // Who milked, when it wasn't the person entering the record (an employee id). Left out
+  // otherwise: the backend then shows the person who entered it.
+  const milkerId = payload.milker_id ?? payload.milkerId;
 
   return {
     cow_id: cowId,
@@ -673,6 +765,7 @@ export const buildProductionYieldPayload = (payload = {}) => {
     session,
     milking_date: milkingDate,
     milkingDate,
+    ...(milkerId != null && milkerId !== '' ? { milker_id: milkerId } : {}),
   };
 };
 
@@ -683,25 +776,13 @@ const normalizeRecipePayload = (payload = {}) => ({
   ingredients: Array.isArray(payload.ingredients) ? payload.ingredients : [],
 });
 
-const normalizeConversionPayload = (payload = {}) => {
-  const context = payload.context ?? payload.material ?? '';
-  const unitName = payload.unitName ?? payload.localUnit ?? payload.unit_name ?? '';
-  const factor = Number(payload.factor ?? payload.ratio ?? 0);
-  const baseUnit = payload.baseUnit ?? payload.base_unit ?? 'kg';
-
-  return {
-    ...payload,
-    context,
-    material: payload.material ?? context,
-    unitName,
-    unit_name: payload.unit_name ?? unitName,
-    localUnit: payload.localUnit ?? unitName,
-    factor,
-    ratio: payload.ratio ?? factor,
-    baseUnit,
-    base_unit: payload.base_unit ?? baseUnit,
-  };
-};
+/** One farm unit helper as the backend stores it: a local unit for a stock item, in kg. */
+export const normalizeUnitConversion = (row = {}) => ({
+  id: row.id,
+  itemId: row.item_id ?? row.itemId ?? null,
+  unitName: row.unit_name ?? row.unitName ?? '',
+  kgEquivalent: row.kg_equivalent === null || row.kg_equivalent === undefined ? null : Number(row.kg_equivalent),
+});
 
 // Utility function to extract an array of breeding logs from various API response structures
 export const extractBreedingLogsArray = (data) => {
@@ -731,12 +812,18 @@ export const authApi = {
     return authClient.get('/auth/bootstrap-status').then((response) => response.data);
   },
   login(credentials) {
-    const payload = {
-      username: credentials?.username ?? credentials?.identifier ?? '',
-      password: credentials?.password ?? '',
-    };
+    const payload = toLoginPayload(
+      credentials?.login ?? credentials?.identifier ?? credentials?.username ?? '',
+      credentials?.password,
+    );
+    if (credentials?.farm_id) payload.farm_id = credentials.farm_id;
 
     return authClient.post('/auth/login', payload).then((response) => normalizeSessionUser(response.data));
+  },
+  // The public demo (backend docs/demo-account.md): no body, no credentials; answers with the
+  // same session shape as login, including the backend's `is_demo` and `read_only`.
+  demo() {
+    return authClient.post('/auth/demo').then((response) => normalizeSessionUser(response.data));
   },
   register(payload) {
     const requestBody = {
@@ -744,6 +831,7 @@ export const authApi = {
       full_name: payload?.full_name ?? payload?.fullName ?? '',
       cooperative_name: payload?.cooperative_name ?? payload?.cooperativeName ?? '',
       phone_number: payload?.phone_number ?? payload?.phoneNumber ?? payload?.phone ?? '',
+      email: payload?.email?.trim() ? payload.email.trim().toLowerCase() : undefined,
       password: payload?.password ?? '',
       role: payload?.role ?? payload?.account_role ?? payload?.accountRole ?? undefined,
       organization_role: payload?.organization_role ?? payload?.organizationRole ?? undefined,
@@ -769,24 +857,120 @@ export const authApi = {
   switchFarm(farmId) {
     return authClient.post('/auth/switch-farm', { farm_id: farmId }).then((response) => normalizeSessionUser(response.data));
   },
+  // A response that names a user is a valid session even without a token: after
+  // Google sign-in the HttpOnly cookie is the only credential (contract §5).
   me() {
     return requestWithFallback(authClient, [
       { method: 'get', url: '/auth/me' },
       { method: 'get', url: '/auth/status' },
-    ]).then((response) => normalizeSessionUser(withCurrentToken(response.data, readActiveSession()?.token)));
+    ]).then((response) => normalizeSessionUser(
+      withCurrentToken(response.data, readActiveSession()?.token),
+      { allowCookieSession: true },
+    ));
   },
   status() {
     return authClient.get('/auth/status').then((response) => normalizeSessionUser(response.data));
   },
+
+  // Google sign-in is a full-page redirect, not a request (contract §5.1).
+  googleStartUrl({ next, intent = 'signin' } = {}) {
+    const params = new URLSearchParams({ intent });
+    if (next) params.set('next', next);
+    return `${API_BASE_URL}/auth/google/start?${params}`;
+  },
+  googlePendingSignup() {
+    return authClient.get('/auth/google/pending-signup').then((response) => response.data);
+  },
+  googleSignup(payload) {
+    return authClient.post('/auth/google/signup', {
+      signup_token: payload?.signup_token ?? '',
+      farm_name: payload?.farm_name ?? '',
+      phone_number: payload?.phone_number ?? '',
+      name: payload?.name || undefined,
+    }).then((response) => normalizeSessionUser(response.data, { allowCookieSession: true }));
+  },
+
+  startPhoneVerification(phoneNumber) {
+    const body = phoneNumber ? { phone_number: phoneNumber } : {};
+    return authClient.post('/auth/phone/verification', body).then((response) => response.data);
+  },
+  phoneVerificationStatus(verificationId) {
+    return authClient.get(`/auth/phone/verification/${encodeURIComponent(verificationId)}`).then((response) => response.data);
+  },
+
+  forgotPasswordOptions() {
+    return authClient.get('/auth/password/forgot/options').then((response) => response.data);
+  },
+  requestPasswordReset({ channel, phone_number: phoneNumber, email }) {
+    const body = channel === 'email' ? { channel, email } : { channel, phone_number: phoneNumber };
+    return authClient.post('/auth/password/forgot', body).then((response) => response.data);
+  },
+  validateResetToken(token) {
+    return authClient.post('/auth/password/reset/validate', { token }).then((response) => response.data);
+  },
+  resetPassword({ token, password, confirm_password: confirmPassword }) {
+    return authClient.post('/auth/password/reset', { token, password, confirm_password: confirmPassword })
+      .then((response) => response.data);
+  },
+
+  // The profile page (backend: PATCH /auth/me, POST /auth/password, POST /auth/email/verification).
+  /**
+   * Saves the signed-in person's own details. Send only what changed, from `name`,
+   * `farm_location`, `phone_number` and `email`; an empty phone or email clears it. A new phone
+   * or email comes back unverified (`account_flags`), and a new email gets a verification link.
+   */
+  updateProfile(changes) {
+    return authClient.patch('/auth/me', changes).then((response) => response.data);
+  },
+  /**
+   * Changes (or, for a Google-only account, sets) the password. Every other session is signed
+   * out; the answer is a fresh session for this one, in the login shape.
+   */
+  changePassword({ current_password: currentPassword, new_password: newPassword, confirm_password: confirmPassword }) {
+    return authClient.post('/auth/password', {
+      ...(currentPassword ? { current_password: currentPassword } : {}),
+      new_password: newPassword,
+      confirm_password: confirmPassword,
+    }).then((response) => normalizeSessionUser(response.data, { allowCookieSession: true }));
+  },
+  /** Sends a verification link to the account's email (rate-limited by the backend). */
+  sendEmailVerification() {
+    return authClient.post('/auth/email/verification').then((response) => response.data);
+  },
+
+  confirmEmailVerification(token) {
+    return authClient.post('/auth/email/verification/confirm', { token }).then((response) => response.data);
+  },
+};
+
+// Period totals (docs/contracts/period-totals.md). Transport only: every figure is
+// computed by the backend and returned as-is; adapters in lib/periodTotals.js map it.
+export const ledgerApi = {
+  getSummary({ period, anchor, ...filters }) {
+    return apiClient.get('/ledger/summary', { params: { period, anchor, ...filters } }).then((response) => toObject(response.data));
+  },
+  getGroupTotals(filters = {}) {
+    // The page names its levels (`levels`); all four when it doesn't.
+    return apiClient.get('/ledger/group-totals', { params: { levels: 'year,month,week,day', ...filters } }).then((response) => toObject(response.data));
+  },
 };
 
 export const productionApi = {
+  // Legacy all-time summary (Command Center). The period summary below shares the path
+  // but always sends `period`.
   summary() {
     return apiClient.get('/production/summary').then((response) => toObject(response.data));
   },
-  listYield() {
+  getPeriodSummary({ period, anchor, ...filters }) {
+    return apiClient.get('/production/summary', { params: { period, anchor, ...filters } }).then((response) => toObject(response.data));
+  },
+  getGroupTotals(filters = {}) {
+    // The page names its levels (`levels`); all four when it doesn't.
+    return apiClient.get('/production/group-totals', { params: { levels: 'year,month,week,day', ...filters } }).then((response) => toObject(response.data));
+  },
+  listYield(filters = {}) {
     const perPage = 100;
-    const fetchPage = (page) => apiClient.get('/production/yield', { params: { page, per_page: perPage } }).then((response) => response.data);
+    const fetchPage = (page) => apiClient.get('/production/yield', { params: { ...filters, page, per_page: perPage } }).then((response) => response.data);
 
     return fetchPage(1).then(async (firstPage) => {
       const items = toArray(firstPage);
@@ -802,12 +986,54 @@ export const productionApi = {
       return items.concat(...remainingPages.map(toArray));
     });
   },
+  /**
+   * The backend's milk totals from the yield list's `summary`, for `filters` (the same params
+   * as listYield; none = the whole farm, all time). Each value is null when not sent.
+   * `{ totalRecords, totalLitres, verified, pending, flagged, isolated }`; pending is the
+   * backend's RECORDED (recorded, not yet verified).
+   */
+  yieldTotals(filters = {}) {
+    return apiClient.get('/production/yield', { params: { ...filters, page: 1, per_page: 1 } }).then((response) => {
+      const summary = response.data?.summary ?? {};
+      return {
+        totalRecords: numberOrNull(summary.total_records),
+        totalLitres: numberOrNull(summary.total_volume ?? summary.totalVolume),
+        verified: numberOrNull(summary.verified_count),
+        pending: numberOrNull(summary.recorded_count),
+        flagged: numberOrNull(summary.flagged_count),
+        isolated: numberOrNull(summary.isolated_count),
+      };
+    });
+  },
+  /**
+   * Who can be named as milker on a milk record: the farm's current employees, as the backend
+   * lists them for every role that records milk: `[{ id, name, jobTitle, status, isMe }]`.
+   */
+  listMilkers() {
+    return apiClient.get('/production/milkers').then((response) => toArray(response.data?.items ?? response.data).map((row) => ({
+      id: row.id,
+      name: row.name ?? '',
+      jobTitle: row.job_title ?? null,
+      status: row.status ?? null,
+      isMe: row.is_me === true,
+    })));
+  },
   createYield(payload, config = {}) {
     return apiClient.post('/production/yield', buildProductionYieldPayload(payload), config).then((response) => toObject(response.data));
   },
   listMilkDispositions(params = {}) {
-    return apiClient.get('/production/milk-dispositions', { params })
-      .then((response) => toArray(response.data).map(normalizeMilkDisposition));
+    return productionApi.listMilkDispositionsWithTotals(params).then((result) => result.items);
+  },
+  /**
+   * Calf feedings plus the backend's totals for them: `{ items, count, totalLitres }`
+   * (BR-027: `count` and `total_liters` cover exactly the filters sent).
+   */
+  listMilkDispositionsWithTotals(params = {}) {
+    return apiClient.get('/production/milk-dispositions', { params }).then((response) => ({
+      items: toArray(response.data).map(normalizeMilkDisposition),
+      count: numberOrNull(response.data?.count),
+      totalLitres: numberOrNull(response.data?.total_liters ?? response.data?.total_litres),
+    }));
   },
   createMilkDisposition(payload) {
     return apiClient.post('/production/milk-dispositions', buildCalfMilkFeedPayload(payload))
@@ -815,6 +1041,20 @@ export const productionApi = {
   },
   getYield(yieldId) {
     return apiClient.get(`/production/yield/${yieldId}`).then((response) => toObject(response.data));
+  },
+  // Edits one milk record in place (PATCH). Only the fields the backend applies are sent:
+  // amount, session, milking date and, when given, the milker (null clears it, so the record
+  // shows who entered it). The cow can't be changed by this endpoint (BACKEND_REQUESTS.md,
+  // BR-001). The answer carries the record's `status` and `significant_drop` as re-checked.
+  updateYield(yieldId, payload = {}, config = {}) {
+    const milkingDate = payload.milking_date ?? payload.milkingDate;
+    const body = {
+      amount: Number(payload.amount ?? payload.volume),
+      session: payload.session,
+      ...(milkingDate ? { milking_date: milkingDate } : {}),
+      ...('milker_id' in payload ? { milker_id: payload.milker_id === '' ? null : payload.milker_id } : {}),
+    };
+    return apiClient.patch(`/production/yield/${yieldId}`, body, config).then((response) => toObject(response.data));
   },
   deleteYield(yieldId) {
     return apiClient.delete(`/production/yield/${yieldId}`);
@@ -981,10 +1221,43 @@ export const hrApi = {
     const response = await requestWithFallback(apiClient, verifyRoutes(staffId).map((url) => ({ method: 'post', url, data: payload })));
     return normalizeStaffRecord(toObject(response.data) ?? payload);
   },
+  // Advances change the balance on the server, one recorded movement at a time
+  // (the backend rejects a loan balance sent through updateStaff).
+  // Returns { movement, loan_balance }.
+  async issueAdvance(staffId, { amount, date, note } = {}) {
+    const response = await apiClient.post(`/hr/staff/${staffId}/advances`, { amount: Number(amount), date, note: note || undefined });
+    return toObject(response.data) ?? {};
+  },
+  async recordAdvanceRepayment(staffId, { amount, date, note } = {}) {
+    const response = await apiClient.post(`/hr/staff/${staffId}/advance-repayments`, { amount: Number(amount), date, note: note || undefined });
+    return toObject(response.data) ?? {};
+  },
+  // Former staff: the backend checks the loan balance, disables the login and keeps the history.
+  async offboardStaff(staffId, { end_date: endDate, reason, note } = {}) {
+    const response = await apiClient.post(`/hr/staff/${staffId}/offboard`, {
+      end_date: endDate, offboarding_reason: reason, offboarding_note: note || undefined,
+    });
+    return normalizeStaffRecord(toObject(response.data) ?? {});
+  },
+  // Only for records added by mistake; the backend refuses staff with payroll or advance history.
+  async deleteStaff(staffId) {
+    await apiClient.delete(`/hr/staff/${staffId}`);
+  },
   async listPayrollRuns() {
     const response = await requestWithFallback(apiClient, payrollRoutes().map((url) => ({ method: 'get', url })));
     const runs = toArray(response.data).map(normalizePayrollRun);
     return Promise.all(runs.map((run) => hrApi.getPayrollRun(run.id)));
+  },
+  // One request for the history list and the next period to create (`next_period`).
+  async payrollSummary({ limit = 24 } = {}) {
+    const response = await apiClient.get('/hr/payroll/runs/summary', { params: { limit } });
+    const data = toObject(response.data) ?? {};
+    return { nextPeriod: data.next_period ?? null, runs: toArray(data.runs).map(normalizePayrollRun) };
+  },
+  // A5 PDF built by the backend from the stored line (finalized or paid runs only).
+  async downloadPayslip(runId, staffId) {
+    const response = await apiClient.get(`/hr/payroll/runs/${encodeURIComponent(runId)}/payslips/${staffId}.pdf`, { responseType: 'blob' });
+    return response.data;
   },
   async getPayrollRun(runId) {
     const response = await apiClient.get(`/hr/payroll/runs/${encodeURIComponent(runId)}`);
@@ -998,8 +1271,9 @@ export const hrApi = {
     const response = await apiClient.post(`/hr/payroll/runs/${runId}/finalize`);
     return normalizePayrollRun(response.data);
   },
-  async payPayrollRun(runId) {
-    const response = await apiClient.post(`/hr/payroll/runs/${runId}/pay`);
+  // `payment_reference` (e.g. "M-Pesa: QJK1234567") is stored with the run for tracing.
+  async payPayrollRun(runId, { payment_reference: paymentReference } = {}) {
+    const response = await apiClient.post(`/hr/payroll/runs/${runId}/pay`, paymentReference ? { payment_reference: paymentReference } : {});
     return normalizePayrollRun(response.data);
   },
   async listPayrollRecords() {
@@ -1081,9 +1355,30 @@ export const financeApi = {
 
     return apiClient.post('/finance/ledger', apiPayload).then((response) => toObject(response.data));
   },
-  voidAndReplaceExpense(transactionId, payload) {
-    return apiClient.post(`/finance/transactions/${transactionId}/void-and-replace`, payload)
+  // The server's categories and cost classes, so forms never drift from its rules.
+  categories() {
+    return apiClient.get('/finance/categories').then((response) => toObject(response.data) ?? {});
+  },
+  // Voids a posted income or expense entry and posts a linked replacement.
+  correctTransaction(transactionId, payload) {
+    return apiClient.post(`/finance/transactions/${transactionId}/corrections`, payload)
       .then((response) => response.data);
+  },
+  // Receipt photos (JPEG, PNG, WebP or PDF) kept with a ledger entry.
+  uploadAttachment(transactionId, file, { onProgress } = {}) {
+    const body = new FormData();
+    body.append('file', file);
+    return apiClient.post(`/finance/transactions/${transactionId}/attachments`, body, {
+      timeout: PHOTO_UPLOAD_TIMEOUT_MS,
+      onUploadProgress: onProgress
+        ? (event) => { if (event.total) onProgress(Math.round((event.loaded / event.total) * 100)); }
+        : undefined,
+    }).then((response) => toObject(response.data));
+  },
+  // The attachment's `url` from the backend, fetched with the user's login (not a plain <img src>).
+  async fetchAttachment(url) {
+    const response = await apiClient.get(toApiPath(url), { responseType: 'blob' });
+    return response.data;
   },
   getReceipt(receiptId) {
     return apiClient.get(`/finance/receipts/${receiptId}`).then((response) => toObject(response.data));
@@ -1117,17 +1412,34 @@ export const financeApi = {
 };
 
 export const inventoryApi = {
-  listItems() {
-    return apiClient.get('/inventory/items').then((response) => toArray(response.data).map(normalizeInventoryItem));
+  listItems({ includeArchived = false } = {}) {
+    const params = includeArchived ? { include_archived: true } : undefined;
+    return apiClient.get('/inventory/items', { params }).then((response) => toArray(response.data).map(normalizeInventoryItem));
   },
   createItem(payload) {
     return apiClient.post('/inventory/items', buildInventoryItemPayload(payload)).then((response) => normalizeInventoryItem(toObject(response.data) ?? payload));
   },
   updateItem(itemId, payload) {
-    return apiClient.patch(`/inventory/items/${itemId}`, buildInventoryItemPayload(payload)).then((response) => normalizeInventoryItem(toObject(response.data) ?? payload));
+    return apiClient.patch(`/inventory/items/${itemId}`, buildInventoryItemPayload(payload, { includeStock: false })).then((response) => normalizeInventoryItem(toObject(response.data) ?? payload));
   },
   deleteItem(itemId) {
     return apiClient.delete(`/inventory/items/${itemId}`);
+  },
+  archiveItem(itemId) {
+    return apiClient.post(`/inventory/items/${itemId}/archive`).then((response) => normalizeInventoryItem(toObject(response.data) ?? {}));
+  },
+  restoreItem(itemId) {
+    return apiClient.post(`/inventory/items/${itemId}/restore`).then((response) => normalizeInventoryItem(toObject(response.data) ?? {}));
+  },
+  // Physical stock count: the server compares it with its own balance and records
+  // the gain or loss as a movement. Returns { status: 'matched' | 'reconciled', ... }.
+  countStock(itemId, physicalCount) {
+    return apiClient.post(`/inventory/items/${itemId}/audit`, { physical_count: Number(physicalCount) })
+      .then((response) => toObject(response.data) ?? {});
+  },
+  // Applies the correction the server computed for one of the item's data warnings.
+  applyDataFix(itemId, code) {
+    return apiClient.post(`/inventory/items/${itemId}/data-fixes`, { code }).then((response) => normalizeInventoryItem(toObject(response.data) ?? {}));
   },
   listMovements() {
     return apiClient.get('/inventory/movements').then((response) => toArray(response.data));
@@ -1158,6 +1470,24 @@ export const herdApi = {
         ...params,
       },
     }).then((response) => toArray(response.data).map(normalizeHerdRecord));
+  },
+  /**
+   * The backend's herd counts for the whole farm (not just the first page of the list):
+   * `{ totalCount, milkingCount, dryCount, averageAgeMonths, latestCalved }`, each null when
+   * the backend didn't send it.
+   */
+  summary() {
+    return apiClient.get('/herd', { params: { per_page: 1 } }).then((response) => {
+      const summary = response.data?.summary ?? {};
+      const numberOrNull = (value) => (value === null || value === undefined || value === '' ? null : Number(value));
+      return {
+        totalCount: numberOrNull(summary.total_count),
+        milkingCount: numberOrNull(summary.milking_count),
+        dryCount: numberOrNull(summary.dry_count),
+        averageAgeMonths: numberOrNull(summary.average_age_months),
+        latestCalved: summary.latest_calved ?? null,
+      };
+    });
   },
   get(id) {
     return apiClient.get(`/herd/${id}`).then((response) => normalizeHerdRecord(toObject(response.data) ?? {}));
@@ -1294,9 +1624,12 @@ export const animalsApi = {
       }
 
       // Backend nests stats under `summary` or exposes them at the top level depending on route version.
+      // All four are computed by the backend over the cow's whole history.
       const stats = firstPage.stats ?? {
         average_yield: firstPage.summary?.average_yield ?? firstPage.average_yield ?? firstPage.average ?? null,
         peak_yield: firstPage.summary?.peak_yield ?? firstPage.peak_yield ?? firstPage.peak ?? null,
+        total_logged: firstPage.summary?.total_logged ?? firstPage.total_logged ?? firstPage.summary?.total ?? null,
+        session_count: firstPage.summary?.session_count ?? firstPage.session_count ?? null,
       };
       // Resolving this route already accepts the ear tag, unlike GET /animals/<id> which needs the internal id.
       return { sessions, stats, animal: firstPage.animal ?? null };
@@ -1518,14 +1851,79 @@ export const safetyApi = {
   activeHardlocks() {
     return apiClient.get('/veterinary/hardlocks/active').then((response) => toArray(response.data));
   },
+  // The paginated payload (`{ items, meta }`), for the safety board, which shows the total.
+  hardlockPage({ perPage = 100 } = {}) {
+    return apiClient.get('/veterinary/hardlocks/active', { params: { per_page: perPage } }).then((response) => response.data);
+  },
+  // Owners lock or release a cow's milk for sale.
+  // The clinical blueprint is mounted at /api/clinical. Releasing during a withdrawal
+  // needs `overrideReason` (audited); without it the backend answers 409 WITHDRAWAL_ACTIVE.
+  setHardlock(cowId, isLocked, { overrideReason } = {}) {
+    const body = { is_locked: Boolean(isLocked), ...(overrideReason ? { override_reason: overrideReason } : {}) };
+    return apiClient.put(`/clinical/cows/${cowId}/hardlock`, body).then((response) => toObject(response.data));
+  },
+  // Anyone who can see the board can hold a cow's milk; only the farmer releases it.
+  placeHold({ cowId, reason, until, notes }) {
+    const body = { cow_id: cowId, reason, ...(until ? { until } : {}), ...(notes ? { notes } : {}) };
+    return apiClient.post('/safety/holds', body).then((response) => toObject(response.data));
+  },
+  // A FAIL puts the milk on hold on the server; a PASS never releases it.
+  recordMilkTest({ cowId, testType, result, testedAt, notes }) {
+    const body = { cow_id: cowId, test_type: testType, result, ...(testedAt ? { tested_at: testedAt } : {}), ...(notes ? { notes } : {}) };
+    return apiClient.post('/safety/milk-tests', body).then((response) => {
+      const data = toObject(response.data) ?? {};
+      return { test: data.test ?? null, placedOnHold: Boolean(data.placed_on_hold), hold: data.hold ?? null };
+    });
+  },
+  milkTests(cowId) {
+    return apiClient.get(`/safety/cows/${cowId}/milk-tests`).then((response) => toArray(response.data?.items ?? response.data));
+  },
 };
+
+// "06:00:00" → "06:00"; null when the backend sent no time.
+const toClockTime = (value) => (typeof value === 'string' && /^\d{2}:\d{2}/.test(value) ? value.slice(0, 5) : null);
+const checklistLines = (text) => String(text ?? '').split('\n').map((line) => line.trim()).filter(Boolean);
+
+/**
+ * One time block of the farm's daily routine, as the pages use it. The checklist is the
+ * manager's text, one action per line (the backend's `notes`, or its `checklist_items`).
+ */
+export const normalizeRoutinePlan = (plan = {}) => {
+  const start = toClockTime(plan.start_time);
+  const end = toClockTime(plan.end_time);
+  const items = Array.isArray(plan.checklist_items) ? plan.checklist_items : [];
+  return {
+    id: plan.id,
+    title: plan.task_title ?? plan.title ?? '',
+    description: plan.task_description ?? '',
+    time: start && end ? `${start}–${end}` : (start ?? ''),
+    startTime: plan.start_time ?? null,
+    endTime: plan.end_time ?? null,
+    checklist: plan.notes ?? items.join('\n'),
+    displayOrder: plan.display_order ?? null,
+    isActive: plan.is_active !== false,
+  };
+};
+
+/** Normalized plans back into the body POST /routine/plans expects (it replaces the whole plan). */
+export const buildRoutinePlansPayload = (plans = []) => plans.map((plan, index) => ({
+  task_title: plan.title,
+  task_description: plan.description || plan.title,
+  start_time: plan.startTime,
+  end_time: plan.endTime,
+  notes: plan.checklist,
+  checklist_items: checklistLines(plan.checklist),
+  display_order: plan.displayOrder ?? index,
+  is_active: plan.isActive,
+}));
 
 export const routineApi = {
   listPlans() {
-    return apiClient.get('/routine/plans').then((response) => toArray(response.data));
+    return apiClient.get('/routine/plans').then((response) => toArray(response.data).map(normalizeRoutinePlan));
   },
-  savePlans(payload) {
-    return apiClient.post('/routine/plans', payload).then((response) => toObject(response.data));
+  /** Saves the whole plan (the backend replaces it). Takes normalized plans. */
+  savePlans(plans) {
+    return apiClient.post('/routine/plans', buildRoutinePlansPayload(plans)).then((response) => toObject(response.data));
   },
 };
 
@@ -1729,10 +2127,12 @@ export const nutritionApi = {
     return apiClient.post('/feed/formulate', payload).then((response) => toObject(response.data));
   },
   listConversions() {
-    return apiClient.get('/units/conversions').then((response) => toArray(response.data));
+    return apiClient.get('/units/conversions').then((response) => toArray(response.data).map(normalizeUnitConversion));
   },
-  saveConversion(payload) {
-    return apiClient.post('/units/conversions', normalizeConversionPayload(payload)).then((response) => toObject(response.data));
+  /** Saves a unit helper: `{ itemId, unitName, kgEquivalent }` → POST { item_id, unit_name, kg_equivalent }. */
+  saveConversion({ itemId, unitName, kgEquivalent }) {
+    return apiClient.post('/units/conversions', { item_id: itemId, unit_name: unitName, kg_equivalent: kgEquivalent })
+      .then((response) => normalizeUnitConversion(toObject(response.data)));
   },
   feedCosting() {
     return apiClient.get('/feed/costing').then((response) => toObject(response.data));
@@ -1742,6 +2142,14 @@ export const nutritionApi = {
   },
   createConsumptionEvent(batchId, payload) {
     return apiClient.post(`/v1/nutrition/batches/${batchId}/consumption-events`, payload).then((response) => toObject(response.data));
+  },
+  // Cost-free instructions for the people doing the feeding (page access `feeding`).
+  feedingToday() {
+    return apiClient.get('/v1/nutrition/feeding/today').then((response) => toObject(response.data));
+  },
+  suggestedBatchSize(recipeType, days) {
+    return apiClient.get('/v1/nutrition/batches/suggested-size', { params: { recipe_type: recipeType, days } })
+      .then((response) => toObject(response.data));
   },
   feedCostEfficiency() {
     return apiClient.get('/v1/nutrition/analytics/feed-cost-efficiency')
@@ -1766,6 +2174,24 @@ export const healthApi = {
 };
 
 export const reportsApi = {
+  /**
+   * Everything the operations reporting dashboard shows for a date range, as the backend
+   * returns it: `{ ledger, milkInventory, dairyEconomics, buyerPerformance: [one per buyer] }`.
+   */
+  getOperationsDashboard({ startDate, endDate, buyerIds = [], search = '' }) {
+    const params = { start_date: startDate, end_date: endDate, ...(search ? { search } : {}) };
+    return Promise.all([
+      apiClient.get('/finance/ledger', { params }),
+      apiClient.get('/reports/milk-inventory', { params }),
+      apiClient.get('/reports/dairy-unit-economics', { params }),
+      ...buyerIds.map((buyerId) => apiClient.get('/reports/buyer-performance', { params: { ...params, buyer_id: buyerId } })),
+    ]).then(([ledger, milkInventory, dairyEconomics, ...buyers]) => ({
+      ledger: ledger?.data ?? null,
+      milkInventory: milkInventory?.data ?? null,
+      dairyEconomics: dairyEconomics?.data ?? null,
+      buyerPerformance: buyers.map((response) => response?.data ?? null),
+    }));
+  },
   getMilkInventory: (startDate, endDate) => {
     const params = new URLSearchParams();
     if (startDate) {

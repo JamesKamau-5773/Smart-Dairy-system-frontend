@@ -1,10 +1,16 @@
 import { useState } from 'react';
-import { FileSpreadsheet, Mail, Upload, UserPlus } from 'lucide-react';
 import AlertBanner from '../../components/ui/AlertBanner';
 import InviteClaimPreview from '../../components/auth/InviteClaimPreview';
 import { useAuth } from '../../contexts/AuthContext';
 import { getApiErrorMessage, onboardingApi } from '../../lib/backendApi';
 import { getAssignableFarmMemberRoles } from '../../lib/staffOnboarding';
+import { formatKenyanPhoneInput, normalizeKenyanPhone } from '../../lib/phone';
+import { authCopy } from '../../i18n/auth';
+import FieldError from '../../components/ui/FieldError';
+import { fieldErrorProps } from '../../components/ui/fieldErrorProps';
+import { adminCopy } from '../../i18n/admin';
+
+const copy = adminCopy.members;
 
 export default function CooperativeAdminOnboardingPage() {
   const { currentUser } = useAuth();
@@ -21,10 +27,16 @@ export default function CooperativeAdminOnboardingPage() {
   const [isInviting, setIsInviting] = useState(false);
   const [isUploadingCsv, setIsUploadingCsv] = useState(false);
   const [message, setMessage] = useState({ type: '', text: '' });
+  const [phoneError, setPhoneError] = useState('');
 
   const handleManualInvite = async (event) => {
     event.preventDefault();
     setMessage({ type: '', text: '' });
+    const phoneNumber = normalizeKenyanPhone(manualInvite.phone_number);
+    if (!phoneNumber) {
+      setPhoneError(authCopy.fields.phoneInvalid);
+      return;
+    }
     setIsInviting(true);
 
     try {
@@ -32,14 +44,14 @@ export default function CooperativeAdminOnboardingPage() {
         ...manualInvite,
         full_name: manualInvite.full_name.trim(),
         email: manualInvite.email.trim(),
-        phone_number: manualInvite.phone_number.trim(),
+        phone_number: phoneNumber,
       });
 
       setCreatedInvite(invite);
       setManualInvite({ full_name: '', email: '', phone_number: '', role: 'FARM_HAND' });
-      setMessage({ type: 'success', text: 'Member invitation created. Share the server-issued claim link below.' });
+      setMessage({ type: 'success', text: copy.inviteCreated });
     } catch (error) {
-      setMessage({ type: 'danger', text: getApiErrorMessage(error, 'Could not send this invitation. Check the details and try again.') });
+      setMessage({ type: 'danger', text: getApiErrorMessage(error, copy.inviteFailed) });
     } finally {
       setIsInviting(false);
     }
@@ -49,7 +61,7 @@ export default function CooperativeAdminOnboardingPage() {
     event.preventDefault();
 
     if (!csvFile) {
-      setMessage({ type: 'danger', text: 'Attach a CSV file before importing members.' });
+      setMessage({ type: 'danger', text: copy.needCsv });
       return;
     }
 
@@ -60,9 +72,9 @@ export default function CooperativeAdminOnboardingPage() {
       await onboardingApi.importMembersCsv(csvFile, { default_role: csvDefaultRole });
       setCsvFile(null);
       event.currentTarget.reset();
-      setMessage({ type: 'success', text: 'CSV import queued successfully.' });
+      setMessage({ type: 'success', text: copy.csvQueued });
     } catch (error) {
-      setMessage({ type: 'danger', text: getApiErrorMessage(error, 'Could not import the member list. Check the file format and try again.') });
+      setMessage({ type: 'danger', text: getApiErrorMessage(error, copy.csvFailed) });
     } finally {
       setIsUploadingCsv(false);
     }
@@ -73,18 +85,19 @@ export default function CooperativeAdminOnboardingPage() {
       <div className="mx-auto grid max-w-6xl gap-6 lg:grid-cols-2">
         <section className="rounded-2xl border border-[#7a3e1f]/20 bg-white/90 p-6 ">
           <header className="mb-5">
-            <p className="inline-flex items-center gap-2 rounded-full bg-[#7a3e1f]/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.15em] text-[#5a2e16]">
-              <UserPlus size={14} /> Manual Invite
+            <p className="inline-flex items-center rounded-full bg-[#7a3e1f]/10 px-3 py-1 text-label text-[#5a2e16]">
+
+    {copy.manualBadge}
             </p>
-            <h1 className="mt-4 text-3xl font-black tracking-tight text-[#3d1f11]">Invite Member</h1>
-            <p className="mt-2 text-sm text-[#6b3f2a]">Invite one member at a time and assign organizational or operational roles per farm policy.</p>
+            <h1 className="mt-4 text-page-title text-[#3d1f11]">{copy.title}</h1>
+            <p className="mt-2 text-body text-[#6b3f2a]">{copy.subtitle}</p>
           </header>
 
           <form onSubmit={handleManualInvite} className="space-y-4">
-            <label className="block text-xs font-semibold uppercase tracking-[0.12em] text-[#6a3a24]">
-              Full Name
+            <label className="block text-field-label text-ink-muted">
+              {copy.fullName}
               <input
-                className="mt-2 w-full rounded-lg border border-[#7a3e1f]/20 bg-[#fffcfa] px-4 py-3 text-sm text-[#2e160b] outline-none transition focus:border-[#7a3e1f] focus:ring-2 focus:ring-[#7a3e1f]/20"
+                className="input-machined w-full text-control mt-2"
                 value={manualInvite.full_name}
                 onChange={(event) => setManualInvite((prev) => ({ ...prev, full_name: event.target.value }))}
                 placeholder="Njeri Maina"
@@ -92,13 +105,12 @@ export default function CooperativeAdminOnboardingPage() {
               />
             </label>
 
-            <label className="block text-xs font-semibold uppercase tracking-[0.12em] text-[#6a3a24]">
-              Email
+            <label className="block text-field-label text-ink-muted">
+              {copy.email}
               <div className="relative mt-2">
-                <Mail size={15} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[#8f5a41]" />
                 <input
                   type="email"
-                  className="w-full rounded-lg border border-[#7a3e1f]/20 bg-[#fffcfa] py-3 pl-10 pr-4 text-sm text-[#2e160b] outline-none transition focus:border-[#7a3e1f] focus:ring-2 focus:ring-[#7a3e1f]/20"
+                  className="input-machined w-full text-control"
                   value={manualInvite.email}
                   onChange={(event) => setManualInvite((prev) => ({ ...prev, email: event.target.value }))}
                   placeholder="member@cooperative.org"
@@ -107,21 +119,30 @@ export default function CooperativeAdminOnboardingPage() {
               </div>
             </label>
 
-            <label className="block text-xs font-semibold uppercase tracking-[0.12em] text-[#6a3a24]">
-              Phone Number
+            <label className="block text-field-label text-ink-muted">
+              {copy.phone}
               <input
-                className="mt-2 w-full rounded-lg border border-[#7a3e1f]/20 bg-[#fffcfa] px-4 py-3 text-sm text-[#2e160b] outline-none transition focus:border-[#7a3e1f] focus:ring-2 focus:ring-[#7a3e1f]/20"
+                id="member-invite-phone"
+                type="tel"
+                inputMode="tel"
+                autoComplete="tel"
+                className="input-machined w-full text-control mt-2"
                 value={manualInvite.phone_number}
-                onChange={(event) => setManualInvite((prev) => ({ ...prev, phone_number: event.target.value }))}
-                placeholder="+254722000000"
+                onChange={(event) => {
+                  setPhoneError('');
+                  setManualInvite((prev) => ({ ...prev, phone_number: formatKenyanPhoneInput(event.target.value) }));
+                }}
+                placeholder={authCopy.fields.phonePlaceholder}
                 required
+                {...fieldErrorProps('member-invite-phone', phoneError)}
               />
+              <FieldError id="member-invite-phone" message={phoneError} />
             </label>
 
-            <label className="block text-xs font-semibold uppercase tracking-[0.12em] text-[#6a3a24]">
-              Role
+            <label className="block text-field-label text-ink-muted">
+              {copy.role}
               <select
-                className="mt-2 w-full rounded-lg border border-[#7a3e1f]/20 bg-[#fffcfa] px-4 py-3 text-sm text-[#2e160b] outline-none transition focus:border-[#7a3e1f] focus:ring-2 focus:ring-[#7a3e1f]/20"
+                className="input-machined w-full text-control mt-2"
                 value={manualInvite.role}
                 onChange={(event) => setManualInvite((prev) => ({ ...prev, role: event.target.value }))}
               >
@@ -129,37 +150,38 @@ export default function CooperativeAdminOnboardingPage() {
                   <option key={option.value} value={option.value}>{option.label}</option>
                 ))}
               </select>
-              <span className="mt-2 block text-xs normal-case tracking-normal text-[#79513c]">
+              <span className="mt-2 block text-meta normal-case text-[#79513c]">
                 {roleOptions.find((option) => option.value === manualInvite.role)?.description}
               </span>
             </label>
 
             <InviteClaimPreview
               invite={createdInvite}
-              title="Member claim link"
-              description="For security, this link is generated only after the server accepts the invitation."
+              title={copy.linkTitle}
+              description={copy.linkText}
             />
 
             <button type="submit" className="btn-command w-full" disabled={isInviting}>
-              {isInviting ? 'Sending invite…' : 'Send invite'}
+              {isInviting ? copy.sending : copy.send}
             </button>
           </form>
         </section>
 
         <section className="rounded-2xl border border-[#224f87]/20 bg-white/90 p-6 ">
           <header className="mb-5">
-            <p className="inline-flex items-center gap-2 rounded-full bg-[#224f87]/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.15em] text-[#1d4370]">
-              <FileSpreadsheet size={14} /> Bulk Import
+            <p className="inline-flex items-center rounded-full bg-[#224f87]/10 px-3 py-1 text-label text-[#1d4370]">
+
+    {copy.bulkBadge}
             </p>
-            <h2 className="mt-4 text-3xl font-black tracking-tight text-[#132f4f]">CSV Onboarding</h2>
-            <p className="mt-2 text-sm text-[#35577d]">Import many members in one pass. Keep headers predictable: full_name,email,phone_number,role.</p>
+            <h2 className="mt-4 text-section-title text-[#132f4f]">{copy.csvTitle}</h2>
+            <p className="mt-2 text-body text-[#35577d]">{copy.csvText}</p>
           </header>
 
           <form onSubmit={handleCsvUpload} className="space-y-4">
-            <label className="block text-xs font-semibold uppercase tracking-[0.12em] text-[#35577d]">
-              Default Role
+            <label className="block text-field-label text-ink-muted">
+              {copy.defaultRole}
               <select
-                className="mt-2 w-full rounded-lg border border-[#224f87]/20 bg-[#f8fbff] px-4 py-3 text-sm text-[#112740] outline-none transition focus:border-[#224f87] focus:ring-2 focus:ring-[#224f87]/20"
+                className="input-machined w-full text-control mt-2"
                 value={csvDefaultRole}
                 onChange={(event) => setCsvDefaultRole(event.target.value)}
               >
@@ -169,16 +191,15 @@ export default function CooperativeAdminOnboardingPage() {
               </select>
             </label>
 
-            <label className="block text-xs font-semibold uppercase tracking-[0.12em] text-[#35577d]">
-              CSV File
+            <label className="block text-field-label text-ink-muted">
+              {copy.csvFile}
               <div className="mt-2 flex w-full items-center justify-between rounded-lg border border-dashed border-[#224f87]/35 bg-[#f8fbff] px-4 py-4">
                 <div>
-                  <p className="text-sm font-semibold text-[#112740]">{csvFile?.name || 'No file selected'}</p>
-                  <p className="text-xs text-[#446687]">Accepted format: .csv</p>
+                  <p className="text-body-strong text-[#112740]">{csvFile?.name || copy.noFile}</p>
+                  <p className="text-meta text-[#446687]">{copy.accepted}</p>
                 </div>
                 <label className="btn-secondary cursor-pointer">
-                  <Upload size={14} className="mr-2" />
-                  Choose File
+                  {copy.chooseFile}
                   <input
                     type="file"
                     accept=".csv,text/csv"
@@ -190,7 +211,7 @@ export default function CooperativeAdminOnboardingPage() {
             </label>
 
             <button type="submit" className="btn-command w-full" disabled={isUploadingCsv}>
-              {isUploadingCsv ? 'Uploading CSV…' : 'Import CSV members'}
+              {isUploadingCsv ? copy.uploading : copy.import}
             </button>
           </form>
         </section>
@@ -198,7 +219,7 @@ export default function CooperativeAdminOnboardingPage() {
 
       {message.text && (
         <div className="mx-auto mt-6 max-w-6xl">
-          <AlertBanner type={message.type || 'info'} title="Onboarding status" message={message.text} onDismiss={() => setMessage({ type: '', text: '' })} />
+          <AlertBanner type={message.type || 'info'} title={copy.statusTitle} message={message.text} onDismiss={() => setMessage({ type: '', text: '' })} />
         </div>
       )}
     </div>

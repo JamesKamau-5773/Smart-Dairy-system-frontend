@@ -1,5 +1,6 @@
 import React, { Fragment, useEffect, useMemo, useState } from 'react';
 import { ChevronDown, ChevronRight } from 'lucide-react';
+import { toLocalIsoDate } from '../../lib/localDate';
 
 const UNKNOWN_DATE = 'unknown';
 
@@ -13,7 +14,7 @@ function getDateParts(value) {
   return {
     year: String(parsed.getFullYear()),
     month: parsed.toLocaleDateString(undefined, { month: 'long' }),
-    date: raw || parsed.toISOString().slice(0, 10),
+    date: raw || toLocalIsoDate(parsed),
   };
 }
 
@@ -46,10 +47,10 @@ function buildGroups(items, getDate) {
 function GroupHeader({ level, label, items, isOpen, onToggle, renderGroupMeta, renderGroupCount, renderGroupTotal, labelColSpan, colSpan, dateRowClassName, yearRowClassName, monthRowClassName }) {
   const padding = level === 'year' ? 'px-5 py-3' : level === 'month' ? 'px-7 py-2.5' : 'px-9 py-2';
   const styles = level === 'year'
-    ? yearRowClassName || 'bg-brand/10 text-brand text-sm font-bold'
+    ? yearRowClassName || 'bg-brand/10 text-brand text-body-strong'
     : level === 'month'
-      ? monthRowClassName || 'bg-brand/5 text-brand text-xs font-bold'
-      : dateRowClassName || 'bg-surface-raised text-ink text-xs font-semibold';
+      ? monthRowClassName || 'bg-brand/5 text-brand text-meta'
+      : dateRowClassName || 'bg-surface-raised text-ink text-meta';
 
   const groupCount = renderGroupCount ? renderGroupCount(items, level) : null;
   const content = (
@@ -59,15 +60,15 @@ function GroupHeader({ level, label, items, isOpen, onToggle, renderGroupMeta, r
       className="flex w-full items-center gap-2 text-left"
       aria-expanded={isOpen}
     >
-      {isOpen ? <ChevronDown size={level === 'year' ? 16 : 14} /> : <ChevronRight size={level === 'year' ? 16 : 14} />}
+      {isOpen ? <ChevronDown size={level === 'year' ? 16 : 14} aria-hidden="true" /> : <ChevronRight size={level === 'year' ? 16 : 14} aria-hidden="true" />}
       <span>{label}</span>
       {renderGroupCount && (
-        <span className="rounded-full bg-black/5 px-1.5 py-0.5 text-[10px] font-medium text-ink-muted">
+        <span className="rounded-full bg-black/5 px-1.5 py-0.5 text-badge text-ink-muted">
           ({groupCount})
         </span>
       )}
       {!renderGroupTotal && !renderGroupCount && (
-        <span className="ml-auto text-[11px] font-medium text-ink-muted">
+        <span className="ml-auto text-meta text-ink-muted">
           {renderGroupMeta ? renderGroupMeta(items, level) : `${items.length} ${items.length === 1 ? 'entry' : 'entries'}`}
         </span>
       )}
@@ -79,7 +80,7 @@ function GroupHeader({ level, label, items, isOpen, onToggle, renderGroupMeta, r
       {renderGroupTotal ? (
         <>
           <td colSpan={labelColSpan} className={padding}>{content}</td>
-          <td className="p-4 text-right text-[11px] font-semibold tabular-nums">{renderGroupTotal(items, level)}</td>
+          <td className="p-4 text-right text-meta tabular-nums">{renderGroupTotal(items, level)}</td>
           {colSpan - labelColSpan - 1 > 0 && <td colSpan={colSpan - labelColSpan - 1} />}
         </>
       ) : <td colSpan={colSpan} className={padding}>{content}</td>}

@@ -1,17 +1,14 @@
 import React, { useEffect, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import toast from 'react-hot-toast';
-import {
-  Activity, Syringe, Baby, Calendar, Droplets,
-  HeartPulse, ShieldCheck, FileText, Filter, ArrowLeft, Download, Share2, Calculator, Plus, AlertCircle
-} from 'lucide-react';
+import { ArrowLeft } from 'lucide-react';
 import { Link, useLocation, useParams } from 'react-router-dom';
 import { Skeleton } from '../../components/ui';
 import AlertBanner from '../../components/ui/AlertBanner';
-import Modal from '../../components/ui/Modal';
+import BaseModal from '../../components/ui/BaseModal';
 import Confirmation, { useConfirmation } from '../../components/ui/Confirmation';
 import { validateForm, getFirstErrorMessage } from '../../lib/validation';
-import { formatDateTime, getRelativeTime, createAuditEntry, logToAuditTrail } from '../../lib/audit';
+import { formatDateTime, getRelativeTime } from '../../lib/audit';
 import {
   normalizeAnimal,
   normalizeTimelineResponse,
@@ -33,8 +30,14 @@ import cowAvatar from '../../assets/cow-avatar.svg';
 import AnimalSummaryCards from '../../components/operations/animalRecord/AnimalSummaryCards';
 import AnimalTimelineSection from '../../components/operations/animalRecord/AnimalTimelineSection';
 import AnimalNutritionPlanner from '../../components/operations/animalRecord/AnimalNutritionPlanner';
-
+import { reportError } from '../../lib/telemetry';
+import { herdCopy } from '../../i18n/herd';
+import { healthCopy } from '../../i18n/health';
+import { breedingCopy } from '../../i18n/breeding';
 export default function AnimalPassport() {
+  const copy = herdCopy.record;
+  const form = copy.form;
+  const service = breedingCopy.service;
   const queryClient = useQueryClient();
   const { tenantId, farmId } = useTenant();
   const [activeFilter, setActiveFilter] = useState('All');
@@ -107,11 +110,11 @@ export default function AnimalPassport() {
 
   const animal = animalData ? normalizeAnimal(animalData, id) : null;
   const resolvedAnimal = animal ?? {
-    id: id ?? 'Loading…',
-    name: 'Loading…',
-    breed: 'Unknown',
+    id: id ?? copy.loading,
+    name: copy.loading,
+    breed: copy.unknownBreed,
   };
-  const animalDisplayName = formatCowIdentity(resolvedAnimal, resolvedAnimal.name || 'Unknown cow');
+  const animalDisplayName = formatCowIdentity(resolvedAnimal, resolvedAnimal.name || copy.unknownCow);
   const timelineEvents = timelineResponse?.items ?? [];
   const timelineMeta = timelineResponse?.meta ?? { page: 1, per_page: timelinePerPage, total: 0, pages: 1 };
 
@@ -143,8 +146,8 @@ export default function AnimalPassport() {
 
   if (!animal && !isLoading) {
     return (
-      <div className="animate-reveal max-w-5xl mx-auto rounded-2xl border border-ink/10 bg-surface p-8 text-center text-sm text-ink-muted">
-        No animal record is available yet.
+      <div className="animate-reveal max-w-5xl mx-auto rounded-2xl border border-ink/10 bg-surface p-8 text-center text-body text-ink-muted">
+        {copy.notAvailable}
       </div>
     );
   }
@@ -157,10 +160,10 @@ export default function AnimalPassport() {
       const pdf = await animalsApi.downloadPassportPdf(resolvedAnimal.id);
       const url = URL.createObjectURL(pdf);
       setCertificatePreviewUrl(url);
-      notifySuccess(`Certified Biological Record is ready to preview for ${animalDisplayName}.`);
+      notifySuccess(copy.certificateReady(animalDisplayName));
     } catch (error) {
-      console.error('Failed to generate PDF', error);
-      notifyError(getApiErrorMessage(error, `Could not generate the record for ${animalDisplayName}. Please try again.`));
+      reportError(error, { where: 'AnimalRecord.generateCertificate' });
+      notifyError(getApiErrorMessage(error, copy.certificateFailed(animalDisplayName)));
     } finally {
       setIsGeneratingCertificate(false);
     }
@@ -176,10 +179,10 @@ export default function AnimalPassport() {
       document.body.appendChild(anchor);
       anchor.click();
       anchor.remove();
-      notifySuccess(`Certified Biological Record downloaded for ${animalDisplayName}.`);
+      notifySuccess(copy.certificateDownloaded(animalDisplayName));
     } catch (error) {
-      console.error('Failed to download PDF', error);
-      notifyError(`Could not download the Certified Biological Record for ${animalDisplayName}.`);
+      reportError(error, { where: 'AnimalRecord.downloadCertificate' });
+      notifyError(getApiErrorMessage(error, copy.certificateDownloadFailed(animalDisplayName)));
     }
   };
 
@@ -187,7 +190,7 @@ export default function AnimalPassport() {
     if (!animal) return;
 
     const publicVerifyLink = `https://jivu-dairy.com/verify/${resolvedAnimal.id}-TOKEN123`;
-    const text = `Hello, here is the official Certified Cow Record for ${animalDisplayName}.\n\nBreed: ${resolvedAnimal.breed}\nView the verified medical passport here: ${publicVerifyLink}`;
+    const text = copy.shareText(animalDisplayName, resolvedAnimal.breed, publicVerifyLink);
     window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank');
   };
 
@@ -213,26 +216,18 @@ export default function AnimalPassport() {
       // timeline itself, so there's no separate client-side mirror call here.
       if (actionType === 'Health') {
         const payload = buildHealthLogPayload(newEvent, resolvedAnimal.id);
-        const savedRecord = await medicalApi.createRecord(payload);
+        await medicalApi.createRecord(payload);
 
         await Promise.all([
           queryClient.invalidateQueries({ queryKey: ['medical-records', tenantId, farmId] }),
           queryClient.invalidateQueries({ queryKey: ['animal-passport-events', tenantId, farmId, id] }),
         ]);
 
-        logToAuditTrail(createAuditEntry({
-          action: 'create',
-          recordType: 'medical-record',
-          recordId: savedRecord?.id ?? null,
-          userName: payload.vet || 'You',
-          notes: `Logged vet visit: ${payload.diagnosis}`,
-        }));
-
-        notifySuccess(`Medical record saved for ${resolvedAnimal.id} — also visible on Medical Records.`);
+        notifySuccess(copy.healthSaved(resolvedAnimal.id));
       } else if (actionType === 'Breeding') {
         const payload = buildBreedingLogPayload(newEvent, id, resolvedAnimal.name);
         if (!payload) {
-          throw new Error('Unable to build a valid breeding log from the entered details.');
+          throw new Error(copy.breedingBuildFailed);
         }
 
         const savedLog = await breedingApi.createLog(payload);
@@ -243,8 +238,8 @@ export default function AnimalPassport() {
             await breedingApi.uploadCertificate(savedLogId, breedingCertificateFile);
             certificateUploaded = true;
           } catch (certificateError) {
-            console.error('AI certificate upload failed:', certificateError);
-            toast.error('AI service was saved, but the certificate could not be uploaded. Please retry the attachment.');
+            reportError(certificateError, { where: 'AnimalRecord.uploadCertificate' });
+            toast.error(copy.certificateUploadFailed);
           }
         }
 
@@ -253,18 +248,10 @@ export default function AnimalPassport() {
           queryClient.invalidateQueries({ queryKey: ['animal-passport-events', tenantId, farmId, id] }),
         ]);
 
-        logToAuditTrail(createAuditEntry({
-          action: 'create',
-          recordType: 'breeding-log',
-          recordId: savedLog?.id ?? null,
-          userName: 'You',
-          notes: `Logged AI service: ${payload.semen_id}`,
-        }));
-
-        notifySuccess(`Breeding log saved for ${resolvedAnimal.id}${certificateUploaded ? ' with certificate attached' : ''} — also visible on Breeding & Genetics.`);
+        notifySuccess(copy.breedingSaved(resolvedAnimal.id, certificateUploaded));
       } else if (actionType === 'Calving') {
         const payload = buildCalvingEventPayload(newEvent);
-        const savedEvent = await animalsApi.recordCalving(id, payload);
+        await animalsApi.recordCalving(id, payload);
 
         await Promise.all([
           queryClient.invalidateQueries({ queryKey: ['animal-passport', tenantId, farmId, id] }),
@@ -277,29 +264,13 @@ export default function AnimalPassport() {
           queryClient.invalidateQueries({ queryKey: ['milk-lab-target-overview', tenantId, farmId] }),
         ]);
 
-        logToAuditTrail(createAuditEntry({
-          action: 'create',
-          recordType: 'calving-event',
-          recordId: savedEvent?.id ?? null,
-          userName: 'You',
-          notes: `Recorded calving for ${resolvedAnimal.id}`,
-        }));
-
-        notifySuccess(`Birth recorded for ${resolvedAnimal.id}. The animal record is up to date.`);
+        notifySuccess(copy.birthRecorded(resolvedAnimal.id));
       } else {
         const eventData = buildGeneralEventPayload(newEvent);
         const createdEvent = await createEventMutation.mutateAsync(eventData);
         const normalizedCreatedEvent = normalizeTimelineEvent(createdEvent, id);
 
-        logToAuditTrail(createAuditEntry({
-          action: 'create',
-          recordType: 'timeline_event',
-          recordId: normalizedCreatedEvent.id,
-          userName: 'You',
-          notes: `Added ${normalizedCreatedEvent.type} event: ${normalizedCreatedEvent.title}`,
-        }));
-
-        notifySuccess(`Logged ${normalizedCreatedEvent.type.toLowerCase()} event for ${resolvedAnimal.id}.`);
+        notifySuccess(copy.eventLogged(copy.eventTypes[normalizedCreatedEvent.type] ?? normalizedCreatedEvent.type, resolvedAnimal.id));
       }
 
       setActiveFilter('All');
@@ -307,8 +278,8 @@ export default function AnimalPassport() {
       setBreedingCertificateFile(null);
       setIsEventOpen(false);
     } catch (error) {
-      console.error('Error adding event:', error);
-      notifyError(getApiErrorMessage(error, 'Could not save this event. Check the details and try again.'));
+      reportError(error, { where: 'AnimalRecord.addEvent' });
+      notifyError(getApiErrorMessage(error, copy.saveFailed));
     } finally {
       setIsSaving(false);
     }
@@ -325,7 +296,7 @@ export default function AnimalPassport() {
         <div className="fixed top-4 right-4 z-[60] w-[min(92vw,430px)]">
           <AlertBanner
             type="error"
-            title="Error"
+            title={copy.error}
             message={errorMessage}
             autoDismiss={4000}
             onDismiss={() => setShowError(false)}
@@ -337,7 +308,7 @@ export default function AnimalPassport() {
         <div className="fixed top-4 right-4 z-[60] w-[min(92vw,430px)]">
           <AlertBanner
             type="success"
-            title="Success"
+            title={copy.success}
             message={successMessage}
             autoDismiss={2400}
             onDismiss={() => setSuccessMessage('')}
@@ -346,33 +317,32 @@ export default function AnimalPassport() {
       )}
       <div className="flex items-center justify-between border-b border-ink/10 pb-4">
         <div className="flex items-center gap-4">
-          <Link to="/operations/herd" className="p-2 hover:bg-surface-raised rounded-lg text-ink-muted transition-colors">
-            <ArrowLeft size={20} />
+          <Link to="/operations/herd" aria-label={copy.back} className="p-2 hover:bg-surface-raised rounded-lg text-ink-muted transition-colors">
+            <ArrowLeft size={20} aria-hidden="true" />
           </Link>
+
           <div>
-            <div className="inline-flex items-center gap-2 px-3 py-1 bg-brand/5 text-brand text-[10px] font-bold uppercase tracking-widest rounded-full mb-1">
-              <Activity size={12} /> Cow Record
-            </div>
-            <h2 className="font-sans font-bold text-2xl tracking-tight text-brand m-0">
+            <h1 className="text-page-title text-brand m-0">
               {animalDisplayName}
-            </h2>
+            </h1>
           </div>
         </div>
 
         <div className="flex items-center gap-2">
           <button
             onClick={handleWhatsAppShare}
-            className="px-4 py-2 rounded-lg text-sm font-bold border border-[#25D366]/30 bg-white text-[#128C7E]  transition-colors hover:border-[#25D366] hover:bg-[#25D366]/5 flex items-center gap-2"
+            className="px-4 py-2 rounded-lg text-control border border-[#25D366]/30 bg-white text-[#128C7E] transition-colors hover:border-[#25D366] hover:bg-[#25D366]/5 flex items-center"
           >
-            <Share2 size={16} /> Send using WhatsApp
+
+    {copy.shareWhatsApp}
           </button>
 
           <button
             onClick={handleGenerateCertificate}
             disabled={isGeneratingCertificate}
-            className="btn-command flex items-center gap-2 text-sm "
+            className="btn-command flex items-center text-control "
           >
-            <FileText size={16} /> {isGeneratingCertificate ? 'Generating...' : 'Preview PDF'}
+            {isGeneratingCertificate ? copy.generating : copy.previewPdf}
           </button>
         </div>
       </div>
@@ -380,51 +350,52 @@ export default function AnimalPassport() {
       {/* ── ALERTS ── */}
       {successMessage && (
         <div className="fixed top-4 right-4 z-[60] w-[min(92vw,430px)]">
-          <AlertBanner type="success" title="Done" message={successMessage} autoDismiss={2400} onDismiss={() => setSuccessMessage('')} />
+          <AlertBanner type="success" title={copy.done} message={successMessage} autoDismiss={2400} onDismiss={() => setSuccessMessage('')} />
         </div>
       )}
 
       <AnimalSummaryCards animal={animal} isLoading={isLoading} />
 
-      <Modal
+      <BaseModal closeOnBackdrop
         isOpen={Boolean(certificatePreviewUrl)}
         onClose={() => setCertificatePreviewUrl(null)}
-        title={`Certified Biological Record: ${animalDisplayName}`}
+        title={copy.certificateTitle(animalDisplayName)}
       >
         <iframe
           src={certificatePreviewUrl || undefined}
-          title={`PDF preview for ${animalDisplayName}`}
+          title={copy.pdfPreview(animalDisplayName)}
           className="h-[65vh] w-full rounded-md border border-ink/10 bg-white"
         />
         <div className="mt-4 flex justify-end gap-3">
-          <button type="button" onClick={() => setCertificatePreviewUrl(null)} className="btn-secondary px-4 py-2 text-sm">
-            Close
+          <button type="button" onClick={() => setCertificatePreviewUrl(null)} className="btn-secondary px-4 py-2 text-control">
+            {copy.close}
           </button>
-          <button type="button" onClick={handleDownloadCertificate} className="btn-command flex items-center gap-2 px-4 py-2 text-sm">
-            <Download size={16} /> Download PDF
+          <button type="button" onClick={handleDownloadCertificate} className="btn-command flex items-center px-4 py-2 text-control">
+
+    {copy.downloadPdf}
           </button>
         </div>
-      </Modal>
+      </BaseModal>
 
       <div className="mb-8 flex items-center justify-between gap-4 rounded-2xl border border-ink/10 bg-surface p-4 ">
         <div>
-          <h3 className="font-bold text-brand">Record Workspace</h3>
-          <p className="text-sm text-ink-muted">Switch between the timeline and the nutrition planner. Each section is isolated behind a smaller component boundary.</p>
+          <h2 className="text-section-title text-brand">{copy.workspaceTitle}</h2>
+          <p className="text-body text-ink-muted">{copy.workspaceHint}</p>
         </div>
         <div className="flex items-center gap-2">
           <button
             type="button"
             onClick={() => setActiveTab('timeline')}
-            className={`px-3 py-1.5 rounded-md text-xs font-bold transition-all ${activeTab === 'timeline' ? 'bg-brand text-surface' : 'text-ink-muted hover:bg-ink/5'}`}
+            className={`px-3 py-1.5 rounded-md text-control transition-all ${activeTab === 'timeline' ? 'bg-brand text-surface' : 'text-ink-muted hover:bg-ink/5'}`}
           >
-            Timeline
+            {copy.tabs.timeline}
           </button>
           <button
             type="button"
             onClick={() => setActiveTab('nutrition')}
-            className={`px-3 py-1.5 rounded-md text-xs font-bold transition-all ${activeTab === 'nutrition' ? 'bg-brand text-surface' : 'text-ink-muted hover:bg-ink/5'}`}
+            className={`px-3 py-1.5 rounded-md text-control transition-all ${activeTab === 'nutrition' ? 'bg-brand text-surface' : 'text-ink-muted hover:bg-ink/5'}`}
           >
-            Nutrition Planner
+            {copy.tabs.nutrition}
           </button>
         </div>
       </div>
@@ -448,52 +419,52 @@ export default function AnimalPassport() {
       )}
 
       {/* ── LOG ACTION MODAL ── */}
-      <Modal isOpen={isEventOpen} onClose={() => { setIsEventOpen(false); setBreedingCertificateFile(null); }} title="Log Action">
+      <BaseModal closeOnBackdrop isOpen={isEventOpen} onClose={() => { setIsEventOpen(false); setBreedingCertificateFile(null); }} title={form.title}>
         <form
           className="space-y-5"
           onSubmit={handleAddTimelineEvent}
         >
           <div className="border-b border-ink/10 pb-3">
-            <h4 className="text-sm font-bold uppercase tracking-widest text-brand">{newEvent.type === 'Breeding' ? 'Service Details' : 'Action Details'}</h4>
+            <h3 className="text-section-title text-brand">{newEvent.type === 'Breeding' ? service.details : form.actionDetails}</h3>
           </div>
           <div>
-            <label className="mb-1 block text-xs font-bold uppercase tracking-wider text-ink-muted">Event Type</label>
+            <label className="mb-1 block text-field-label text-ink-muted">{form.eventType}</label>
             <select
               className="input-machined w-full"
               value={newEvent.type}
               onChange={(event) => setNewEvent((current) => ({ ...current, type: event.target.value }))}
             >
-              <option value="Health">Health</option>
-              <option value="Breeding">Breeding</option>
-              <option value="Calving">Birth / Calving</option>
-              <option value="General">General</option>
+              <option value="Health">{copy.eventTypes.Health}</option>
+              <option value="Breeding">{copy.eventTypes.Breeding}</option>
+              <option value="Calving">{copy.eventTypes.Calving}</option>
+              <option value="General">{copy.eventTypes.General}</option>
             </select>
           </div>
 
           {newEvent.type === 'Breeding' && (
             <div>
-              <label className="mb-1 block text-xs font-bold uppercase tracking-wider text-ink-muted">Cow name or ear tag *</label>
+              <label className="mb-1 block text-field-label text-ink-muted">{form.cow}</label>
               <input className="input-machined w-full" value={animalDisplayName} readOnly />
-              <p className="mt-1 text-[11px] text-ink-muted">This AI service will be recorded for the animal currently open.</p>
+              <p className="mt-1 text-meta text-ink-muted">{form.cowHint}</p>
             </div>
           )}
 
           {newEvent.type === 'General' && (
             <div>
-              <label className="mb-1 block text-xs font-bold uppercase tracking-wider text-ink-muted">Title</label>
+              <label className="mb-1 block text-field-label text-ink-muted">{form.eventTitle}</label>
               <input
                 className="input-machined w-full"
                 value={newEvent.title}
                 onChange={(event) => setNewEvent((current) => ({ ...current, title: event.target.value }))}
-                placeholder="e.g. Fence repaired"
+                placeholder={form.eventTitlePlaceholder}
               />
             </div>
           )}
 
           <div className={newEvent.type === 'Breeding' ? 'grid gap-4 md:grid-cols-2' : ''}>
             <div>
-              <label className="mb-1 block text-xs font-bold uppercase tracking-wider text-ink-muted">
-                {newEvent.type === 'Health' ? 'Visit date' : newEvent.type === 'Breeding' ? 'AI Date *' : newEvent.type === 'Calving' ? 'Calving date *' : 'Date'}
+              <label className="mb-1 block text-field-label text-ink-muted">
+                {newEvent.type === 'Health' ? form.visitDate : newEvent.type === 'Breeding' ? service.aiDate : newEvent.type === 'Calving' ? form.calvingDate : form.date}
               </label>
               <input
                 type="date"
@@ -504,47 +475,47 @@ export default function AnimalPassport() {
             </div>
             {newEvent.type === 'Breeding' && (
               <div>
-                <label className="mb-1 block text-xs font-bold uppercase tracking-wider text-ink-muted">AI Time</label>
+                <label className="mb-1 block text-field-label text-ink-muted">{service.aiTime}</label>
                 <input type="time" className="input-machined w-full" value={newEvent.aiTime} onChange={(event) => setNewEvent((current) => ({ ...current, aiTime: event.target.value }))} />
               </div>
             )}
           </div>
 
           {newEvent.type !== 'Breeding' && <div>
-            <label className="mb-1 block text-xs font-bold uppercase tracking-wider text-ink-muted">
-              {newEvent.type === 'Health' ? 'Signs of sickness *' : newEvent.type === 'Calving' ? 'Calving notes' : 'Description'}
+            <label className="mb-1 block text-field-label text-ink-muted">
+              {newEvent.type === 'Health' ? form.signs : newEvent.type === 'Calving' ? form.calvingNotes : form.description}
             </label>
             <textarea
               className="input-machined w-full min-h-[96px]"
               value={newEvent.description}
               onChange={(event) => setNewEvent((current) => ({ ...current, description: event.target.value }))}
-              placeholder="Add treatment notes, breeding details, or general remarks"
+              placeholder={form.descriptionPlaceholder}
             />
           </div>}
 
           {newEvent.type === 'Health' && (
             <>
               <div>
-                <label className="mb-1 block text-xs font-bold uppercase tracking-wider text-ink-muted">Diagnosis *</label>
+                <label className="mb-1 block text-field-label text-ink-muted">{form.diagnosis}</label>
                 <input
                   className="input-machined w-full"
                   value={newEvent.diagnosis}
                   onChange={(event) => setNewEvent((current) => ({ ...current, diagnosis: event.target.value }))}
-                  placeholder="e.g. Mastitis, Milk Fever"
+                  placeholder={form.diagnosisPlaceholder}
                 />
               </div>
               <div>
-                <label className="mb-1 block text-xs font-bold uppercase tracking-wider text-ink-muted">Medications prescribed *</label>
+                <label className="mb-1 block text-field-label text-ink-muted">{form.medications}</label>
                 <input
                   className="input-machined w-full"
                   value={newEvent.medications}
                   onChange={(event) => setNewEvent((current) => ({ ...current, medications: event.target.value }))}
-                  placeholder="Name and dosage"
+                  placeholder={form.medicationsPlaceholder}
                 />
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="mb-1 block text-xs font-bold uppercase tracking-wider text-ink-muted">Vet *</label>
+                  <label className="mb-1 block text-field-label text-ink-muted">{form.vet}</label>
                   <input
                     className="input-machined w-full"
                     value={newEvent.vet}
@@ -552,7 +523,7 @@ export default function AnimalPassport() {
                   />
                 </div>
                 <div>
-                  <label className="mb-1 block text-xs font-bold uppercase tracking-wider text-ink-muted">Follow-up date *</label>
+                  <label className="mb-1 block text-field-label text-ink-muted">{form.followUp}</label>
                   <input
                     type="date"
                     className="input-machined w-full"
@@ -563,27 +534,27 @@ export default function AnimalPassport() {
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="mb-1 block text-xs font-bold uppercase tracking-wider text-ink-muted">Severity</label>
+                  <label className="mb-1 block text-field-label text-ink-muted">{form.severity}</label>
                   <select
                     className="input-machined w-full"
                     value={newEvent.severity}
                     onChange={(event) => setNewEvent((current) => ({ ...current, severity: event.target.value }))}
                   >
-                    <option>Low</option>
-                    <option>Medium</option>
-                    <option>High</option>
+                    <option value="Low">{healthCopy.severities.Low}</option>
+                    <option value="Medium">{healthCopy.severities.Medium}</option>
+                    <option value="High">{healthCopy.severities.High}</option>
                   </select>
                 </div>
                 <div>
-                  <label className="mb-1 block text-xs font-bold uppercase tracking-wider text-ink-muted">Status</label>
+                  <label className="mb-1 block text-field-label text-ink-muted">{form.status}</label>
                   <select
                     className="input-machined w-full"
                     value={newEvent.status}
                     onChange={(event) => setNewEvent((current) => ({ ...current, status: event.target.value }))}
                   >
-                    <option>Under Treatment</option>
-                    <option>Follow-up Due</option>
-                    <option>Closed</option>
+                    <option value="Under Treatment">{healthCopy.statuses['Under Treatment']}</option>
+                    <option value="Follow-up Due">{healthCopy.statuses['Follow-up Due']}</option>
+                    <option value="Closed">{healthCopy.statuses.Closed}</option>
                   </select>
                 </div>
               </div>
@@ -593,65 +564,65 @@ export default function AnimalPassport() {
           {newEvent.type === 'Breeding' && (
             <>
               <div>
-                <label className="mb-1 block text-xs font-bold uppercase tracking-wider text-ink-muted">AI Certificate Image</label>
-                <input type="file" accept="image/*" className="input-machined w-full text-sm" onChange={(event) => setBreedingCertificateFile(event.target.files?.[0] ?? null)} />
-                <p className="mt-1 text-[11px] text-ink-muted">Optional. The image is attached to this AI record after it is created.</p>
+                <label className="mb-1 block text-field-label text-ink-muted">{service.certificateImage}</label>
+                <input type="file" accept="image/*" className="input-machined w-full text-control" onChange={(event) => setBreedingCertificateFile(event.target.files?.[0] ?? null)} />
+                <p className="mt-1 text-meta text-ink-muted">{service.certificateHint}</p>
               </div>
               <div className="grid gap-4 md:grid-cols-2">
                 <div>
-                  <label className="mb-1 block text-xs font-bold uppercase tracking-wider text-ink-muted">Technician Name</label>
-                  <input className="input-machined w-full" value={newEvent.technician} onChange={(event) => setNewEvent((current) => ({ ...current, technician: event.target.value }))} placeholder="e.g. Dr. Njeri" />
+                  <label className="mb-1 block text-field-label text-ink-muted">{service.technician}</label>
+                  <input className="input-machined w-full" value={newEvent.technician} onChange={(event) => setNewEvent((current) => ({ ...current, technician: event.target.value }))} placeholder={service.technicianPlaceholder} />
                 </div>
                 <div>
-                  <label className="mb-1 block text-xs font-bold uppercase tracking-wider text-ink-muted">Sire Code *</label>
-                  <input className="input-machined w-full" value={newEvent.sireCode} onChange={(event) => setNewEvent((current) => ({ ...current, sireCode: event.target.value }))} placeholder="e.g. FR-889" />
-                </div>
-              </div>
-              <div className="grid gap-4 md:grid-cols-2">
-                <div>
-                  <label className="mb-1 block text-xs font-bold uppercase tracking-wider text-ink-muted">Owner Name</label>
-                  <input className="input-machined w-full" value={newEvent.ownerName} onChange={(event) => setNewEvent((current) => ({ ...current, ownerName: event.target.value }))} placeholder="e.g. Elizabeth Mugo" />
-                </div>
-                <div>
-                  <label className="mb-1 block text-xs font-bold uppercase tracking-wider text-ink-muted">Farm / Location</label>
-                  <input className="input-machined w-full" value={newEvent.farmLocation} onChange={(event) => setNewEvent((current) => ({ ...current, farmLocation: event.target.value }))} placeholder="e.g. Bahati" />
+                  <label className="mb-1 block text-field-label text-ink-muted">{service.sireCode}</label>
+                  <input className="input-machined w-full" value={newEvent.sireCode} onChange={(event) => setNewEvent((current) => ({ ...current, sireCode: event.target.value }))} placeholder={service.sireCodePlaceholder} />
                 </div>
               </div>
               <div className="grid gap-4 md:grid-cols-2">
                 <div>
-                  <label className="mb-1 block text-xs font-bold uppercase tracking-wider text-ink-muted">Certificate Number</label>
-                  <input className="input-machined w-full" value={newEvent.certificateNumber} onChange={(event) => setNewEvent((current) => ({ ...current, certificateNumber: event.target.value }))} placeholder="e.g. AI-817" />
+                  <label className="mb-1 block text-field-label text-ink-muted">{service.ownerName}</label>
+                  <input className="input-machined w-full" value={newEvent.ownerName} onChange={(event) => setNewEvent((current) => ({ ...current, ownerName: event.target.value }))} placeholder={service.ownerNamePlaceholder} />
                 </div>
                 <div>
-                  <label className="mb-1 block text-xs font-bold uppercase tracking-wider text-ink-muted">Service Fee (KES)</label>
+                  <label className="mb-1 block text-field-label text-ink-muted">{service.farmLocation}</label>
+                  <input className="input-machined w-full" value={newEvent.farmLocation} onChange={(event) => setNewEvent((current) => ({ ...current, farmLocation: event.target.value }))} placeholder={service.farmLocationPlaceholder} />
+                </div>
+              </div>
+              <div className="grid gap-4 md:grid-cols-2">
+                <div>
+                  <label className="mb-1 block text-field-label text-ink-muted">{service.certificateNumber}</label>
+                  <input className="input-machined w-full" value={newEvent.certificateNumber} onChange={(event) => setNewEvent((current) => ({ ...current, certificateNumber: event.target.value }))} placeholder={service.certificateNumberPlaceholder} />
+                </div>
+                <div>
+                  <label className="mb-1 block text-field-label text-ink-muted">{service.serviceFee}</label>
                   <input type="number" min="0" step="0.01" className="input-machined w-full" value={newEvent.serviceFee} onChange={(event) => setNewEvent((current) => ({ ...current, serviceFee: event.target.value }))} placeholder="2500" />
                 </div>
               </div>
-              <label className="flex cursor-pointer items-center gap-2 rounded-lg border border-ink/10 bg-surface-raised p-3 text-sm font-semibold text-ink-strong">
+              <label className="flex cursor-pointer items-center gap-2 rounded-lg border border-ink/10 bg-surface-raised p-3 text-field-label text-ink-muted">
                 <input type="checkbox" checked={newEvent.isRepeatService} onChange={(event) => setNewEvent((current) => ({ ...current, isRepeatService: event.target.checked }))} />
-                Repeat service
+                {service.repeatService}
               </label>
               <div>
-                <label className="mb-1 block text-xs font-bold uppercase tracking-wider text-ink-muted">Notes</label>
-                <textarea className="input-machined w-full min-h-[96px]" value={newEvent.description} onChange={(event) => setNewEvent((current) => ({ ...current, description: event.target.value }))} placeholder="Optional service notes" />
+                <label className="mb-1 block text-field-label text-ink-muted">{service.notes}</label>
+                <textarea className="input-machined w-full min-h-[96px]" value={newEvent.description} onChange={(event) => setNewEvent((current) => ({ ...current, description: event.target.value }))} placeholder={service.notesPlaceholder} />
               </div>
               <div>
-                <label className="mb-2 block text-xs font-bold uppercase tracking-wider text-ink-muted">Semen Source *</label>
+                <label className="mb-2 block text-field-label text-ink-muted">{service.semenSource}</label>
                 <div className="grid grid-cols-1 gap-2 rounded-lg border border-ink/10 bg-surface-raised p-2 md:grid-cols-2">
-                  <label className="flex cursor-pointer items-center gap-2 rounded-md border border-ink/10 bg-white px-3 py-2 text-sm font-semibold text-ink-strong hover:border-brand/30">
+                  <label className="flex cursor-pointer items-center gap-2 rounded-md border border-ink/10 bg-white px-3 py-2 text-field-label text-ink-muted hover:border-brand/30">
                     <input type="radio" name="animal-breeding-semen-source" value="farm_stock" checked={newEvent.semenSource === 'farm_stock'} onChange={(event) => setNewEvent((current) => ({ ...current, semenSource: event.target.value }))} />
-                    Farm Stock
+                    {breedingCopy.sources.farm_stock}
                   </label>
-                  <label className="flex cursor-pointer items-center gap-2 rounded-md border border-ink/10 bg-white px-3 py-2 text-sm font-semibold text-ink-strong hover:border-brand/30">
+                  <label className="flex cursor-pointer items-center gap-2 rounded-md border border-ink/10 bg-white px-3 py-2 text-field-label text-ink-muted hover:border-brand/30">
                     <input type="radio" name="animal-breeding-semen-source" value="vet_provided" checked={newEvent.semenSource === 'vet_provided'} onChange={(event) => setNewEvent((current) => ({ ...current, semenSource: event.target.value }))} />
-                    Vet Provided
+                    {breedingCopy.sources.vet_provided}
                   </label>
                 </div>
               </div>
               {newEvent.semenSource === 'vet_provided' && (
                 <div>
-                  <label className="mb-1 block text-xs font-bold uppercase tracking-wider text-ink-muted">Sire PTA Milk Volume (L/day)</label>
-                  <input type="number" step="0.01" className="input-machined w-full" value={newEvent.milkVolumePta} onChange={(event) => setNewEvent((current) => ({ ...current, milkVolumePta: event.target.value }))} placeholder="e.g. 28.5" />
+                  <label className="mb-1 block text-field-label text-ink-muted">{service.sirePta}</label>
+                  <input type="number" step="0.01" className="input-machined w-full" value={newEvent.milkVolumePta} onChange={(event) => setNewEvent((current) => ({ ...current, milkVolumePta: event.target.value }))} placeholder={service.sirePtaPlaceholder} />
                 </div>
               )}
             </>
@@ -659,33 +630,33 @@ export default function AnimalPassport() {
 
           {newEvent.type === 'Calving' && (
             <div className="space-y-4 rounded-lg border border-brand-100 bg-brand-50/50 p-4">
-              <p className="text-xs text-brand-800">When you save, the mother’s details, breeding record, lactation cycle, and calf record will all be updated together.</p>
+              <p className="text-meta text-brand-800">{form.calvingHint}</p>
               <div>
-                <label className="mb-1 block text-xs font-bold uppercase tracking-wider text-ink-muted">Delivery outcome *</label>
+                <label className="mb-1 block text-field-label text-ink-muted">{form.outcome}</label>
                 <select className="input-machined w-full" value={newEvent.deliveryOutcome} onChange={(event) => setNewEvent((current) => ({ ...current, deliveryOutcome: event.target.value }))}>
-                  <option value="live">Live calf</option>
-                  <option value="stillborn">Stillborn</option>
+                  <option value="live">{form.liveCalf}</option>
+                  <option value="stillborn">{form.stillborn}</option>
                 </select>
               </div>
               {newEvent.deliveryOutcome === 'live' && <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <div>
-                  <label className="mb-1 block text-xs font-bold uppercase tracking-wider text-ink-muted">Calf tag</label>
+                  <label className="mb-1 block text-field-label text-ink-muted">{form.calfTag}</label>
                   <input className="input-machined w-full" value={newEvent.calfTag} onChange={(event) => setNewEvent((current) => ({ ...current, calfTag: event.target.value }))} />
                 </div>
                 <div>
-                  <label className="mb-1 block text-xs font-bold uppercase tracking-wider text-ink-muted">Calf name</label>
+                  <label className="mb-1 block text-field-label text-ink-muted">{form.calfName}</label>
                   <input className="input-machined w-full" value={newEvent.calfName} onChange={(event) => setNewEvent((current) => ({ ...current, calfName: event.target.value }))} />
                 </div>
                 <div>
-                  <label className="mb-1 block text-xs font-bold uppercase tracking-wider text-ink-muted">Calf sex</label>
+                  <label className="mb-1 block text-field-label text-ink-muted">{form.calfSex}</label>
                   <select className="input-machined w-full" value={newEvent.calfSex} onChange={(event) => setNewEvent((current) => ({ ...current, calfSex: event.target.value }))}>
-                    <option value="">Not recorded</option>
-                    <option value="female">Female</option>
-                    <option value="male">Male</option>
+                    <option value="">{form.notRecorded}</option>
+                    <option value="female">{form.female}</option>
+                    <option value="male">{form.male}</option>
                   </select>
                 </div>
                 <div>
-                  <label className="mb-1 block text-xs font-bold uppercase tracking-wider text-ink-muted">Birth weight (kg)</label>
+                  <label className="mb-1 block text-field-label text-ink-muted">{form.birthWeight}</label>
                   <input type="number" min="0" step="0.1" className="input-machined w-full" value={newEvent.birthWeightKg} onChange={(event) => setNewEvent((current) => ({ ...current, birthWeightKg: event.target.value }))} />
                 </div>
               </div>}
@@ -696,16 +667,16 @@ export default function AnimalPassport() {
             <button
               type="button"
               onClick={() => { setIsEventOpen(false); setBreedingCertificateFile(null); }}
-              className="btn-secondary px-4 py-2 text-sm"
+              className="btn-secondary px-4 py-2 text-control"
             >
-              Cancel
+              {form.cancel}
             </button>
-            <button type="submit" className="btn-command px-4 py-2 text-sm">
-              Save Event
+            <button type="submit" className="btn-command px-4 py-2 text-control">
+              {form.save}
             </button>
           </div>
         </form>
-      </Modal>
+      </BaseModal>
     </div>
   );
 }

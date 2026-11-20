@@ -3,7 +3,10 @@ import React, { createContext, useContext, useState, useEffect } from 'react';
 import { authApi, normalizeSessionUser, normalizeTenantProfile, tenantApi } from '../lib/backendApi';
 import { clearSession, loadSession, saveSession } from '../lib/sessionStore';
 import { tenantRef } from '../lib/tenantRef';
-import { getAuthErrorMessage } from '../lib/authErrorMessages';
+import { describeAuthError, getAuthErrorMessage } from '../lib/authErrorMessages';
+import { SESSION_EXPIRED_EVENT } from '../lib/sessionEvents';
+import { setFarmTimeZone } from '../lib/localDate';
+import { reportError } from '../lib/telemetry';
 
 const AuthContext = createContext();
 
@@ -12,6 +15,18 @@ const isSessionRejected = (error) => [401, 403].includes(error?.response?.status
 export function AuthProvider({ children }) {
   const [currentUser, setCurrentUser] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [sessionExpired, setSessionExpired] = useState(false);
+
+  // Farm calendar dates follow the backend's timezone once the session reports it.
+  useEffect(() => {
+    setFarmTimeZone(currentUser?.farm_timezone);
+  }, [currentUser?.farm_timezone]);
+
+  useEffect(() => {
+    const onExpired = () => setSessionExpired(true);
+    window.addEventListener(SESSION_EXPIRED_EVENT, onExpired);
+    return () => window.removeEventListener(SESSION_EXPIRED_EVENT, onExpired);
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -55,6 +70,12 @@ export function AuthProvider({ children }) {
             }
 
             console.warn('Saved session was rejected by the server.', error);
+            if (restoredUser.is_demo === true && error?.response?.status === 401) {
+              // An ended demo session gets the demo's own "session ended" sheet (restart or sign up)
+              // instead of a silent trip to the log-in page.
+              setSessionExpired(true);
+              return;
+            }
             setCurrentUser(null);
             await clearSession();
             tenantRef.tenantId = null;
@@ -106,18 +127,28 @@ export function AuthProvider({ children }) {
     };
   }, []);
 
-  const login = async (credentials) => {
+  // The one way a sign-in becomes the current session: password login and the public demo both
+  // end here, so the app treats them the same after this point.
+  const signIn = async (request, flow) => {
     try {
-      const user = await authApi.login(credentials);
-      
+      const user = await request();
+
       setCurrentUser(user);
       await saveSession(user);
-      
+      setSessionExpired(false);
+
       return { success: true, user };
     } catch (error) {
-      return { success: false, error: getAuthErrorMessage(error, 'login') };
+      const details = describeAuthError(error, flow);
+      return { success: false, error: details.message, details };
     }
   };
+
+  const login = (credentials) => signIn(() => authApi.login(credentials), 'login');
+
+  // "Try the live demo": the backend creates the session; whether it is a demo comes from its
+  // answer (`is_demo`), never from here.
+  const startDemo = () => signIn(() => authApi.demo(), 'demo');
 
   const register = async (payload) => {
     try {
@@ -129,7 +160,8 @@ export function AuthProvider({ children }) {
       return { success: true };
     } catch (error) {
       const flow = payload?.role === 'SUPER_ADMIN' ? 'bootstrap' : 'register';
-      return { success: false, error: getAuthErrorMessage(error, flow) };
+      const details = describeAuthError(error, flow);
+      return { success: false, error: details.message, details };
     }
   };
 
@@ -162,10 +194,12 @@ export function AuthProvider({ children }) {
   const logout = async () => {
     try {
       await authApi.logout();
-    } catch {
-      console.error('Logout request failed, clearing local state anyway.');
+    } catch (error) {
+      // Signing out on this phone must not depend on the server; just note the failure.
+      reportError(error, { where: 'AuthContext.logout' });
     } finally {
       setCurrentUser(null);
+      setSessionExpired(false);
       await clearSession();
       
       // Wipe the network interceptor variables
@@ -181,9 +215,18 @@ export function AuthProvider({ children }) {
     await saveSession(normalizedUser);
   };
 
+  // Re-reads the account from the server, e.g. after Google sign-in set the session
+  // cookie or a phone was verified. Throws so the caller can show its own error.
+  const refreshUser = async () => {
+    const user = await authApi.me();
+    await updateSession(user);
+    setSessionExpired(false);
+    return normalizeSessionUser(user);
+  };
+
   return React.createElement(
     AuthContext.Provider,
-    { value: { currentUser, login, register, claimAccount, completeRequiredPasswordReset, logout, updateSession, isLoading } },
+    { value: { currentUser, login, startDemo, register, claimAccount, completeRequiredPasswordReset, logout, updateSession, refreshUser, isLoading, sessionExpired } },
     children,
   );
 }

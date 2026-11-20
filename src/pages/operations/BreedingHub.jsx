@@ -1,9 +1,12 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
+import Skeleton from '../../components/ui/Skeleton';
+import { CardSkeletons, ListLoadMessage, ListLoadNotices, SlowLoadingHint } from '../../components/ui/ListLoadState';
+import { getListLoadState, hasRowsToShow } from '../../lib/listLoadState';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import toast from 'react-hot-toast';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import AlertBanner from '../../components/ui/AlertBanner';
-import Modal from '../../components/ui/Modal';
+import BaseModal from '../../components/ui/BaseModal';
 import Confirmation, { useConfirmation } from '../../components/ui/Confirmation';
 import {
   LogAIServiceForm,
@@ -14,173 +17,65 @@ import {
 import {
   enrichBreedingLogCowIdentity,
   filterBreedingHistory,
+  formatBreedingCowLabel,
   normalizeBreedingLog,
   normalizeHerdOption,
   normalizeSemenInventory,
 } from '../../lib/breedingUtils';
-import { createAuditEntry, logToAuditTrail } from '../../lib/audit';
 import { breedingApi, getApiErrorMessage, herdApi } from '../../lib/backendApi';
 import { formatCowIdentity, resolveCowIdentityFromHerd } from '../../lib/cowIdentity';
 import { useTenant } from '../../hooks/useTenant';
-import {
-  Dna,
-  TrendingUp,
-  Syringe,
-  CheckCircle2,
-  Stethoscope,
-  XCircle,
-  Flame,
-  Snowflake,
-  Plus,
-  Trash2,
-  ChevronRight,
-  ChevronDown,
-  ChevronUp,
-  Search,
-  Pencil,
-} from 'lucide-react';
-
-const bullStock = [];
-
-function getBreedingCacheKey(tenantId, farmId) {
-  return `breeding_logs_cache:${tenantId || 'tenant'}:${farmId || 'farm'}`;
-}
-
-function readCachedBreedingLogs(tenantId, farmId) {
-  if (typeof window === 'undefined') return [];
-
-  try {
-    const raw = window.localStorage.getItem(getBreedingCacheKey(tenantId, farmId));
-    const parsed = raw ? JSON.parse(raw) : [];
-    return Array.isArray(parsed) ? parsed : [];
-  } catch {
-    return [];
-  }
-}
-
-function writeCachedBreedingLogs(tenantId, farmId, logs) {
-  if (typeof window === 'undefined') return;
-
-  try {
-    window.localStorage.setItem(getBreedingCacheKey(tenantId, farmId), JSON.stringify(Array.isArray(logs) ? logs : []));
-  } catch {
-    // Ignore quota or storage errors and keep UI flow unaffected.
-  }
-}
-
-/**
- * NOTE: The following components should be extracted into their own files
- * under `src/components/breeding/` to improve code organization and reusability.
- */
-function createHistoryEntry(log, status = 'Pending', notes = '') {
-  const labelByStatus = {
-    Pregnant: 'Pregnant (In-Calf)',
-    Open: 'Open (Not Pregnant)',
-    Failed: 'Unsuccessful',
-    Pending: 'Pending Check',
-  };
-
-  return {
-    ...log,
-    status,
-    outcome: labelByStatus[status] || 'Pending Check',
-    notes: notes || (status === 'Pending' ? 'Awaiting vet window' : ''),
-    expectedCalvingDate: log.expectedCalvingDate ?? null,
-    updatedAt: new Date().toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' }),
-  };
-}
-
-function getStatusTone(status) {
-  if (status === 'Pregnant') return 'border-emerald-500/30 bg-emerald-500/10 text-emerald-700';
-  if (status === 'Open') return 'border-rose-500/30 bg-rose-500/10 text-rose-600';
-  if (status === 'Failed') return 'border-red-700/25 bg-red-600/10 text-red-800';
-  return 'border-brand/20 bg-brand/10 text-brand';
-}
-
-function formatSemenSource(source = 'farm_stock') {
-  if (source === 'unknown') return 'Unknown Source';
-  return source === 'vet_provided' ? 'Vet Provided' : 'Farm Stock';
-}
-
-function getSemenSourceTone(source = 'farm_stock') {
-  if (source === 'unknown') {
-    return 'border-ink/20 bg-surface-raised text-ink-muted';
-  }
-  return source === 'vet_provided'
-    ? 'border-amber-500/30 bg-amber-500/10 text-amber-700'
-    : 'border-sky-500/30 bg-sky-500/10 text-sky-700';
-}
-
-function formatCowLabel(log = {}) {
-  return formatCowIdentity({ cowName: log.cowName, cowTag: log.cowTag });
-}
-
-function getMonthLabel(dateValue) {
-  const parsedDate = new Date(dateValue);
-  if (Number.isNaN(parsedDate.getTime())) return 'Unknown Month';
-
-  return parsedDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
-}
-
-function groupHistoryByMonth(history) {
-  return history.reduce((groups, entry) => {
-    const monthLabel = getMonthLabel(entry.updatedAt);
-
-    if (!groups.has(monthLabel)) {
-      groups.set(monthLabel, []);
-    }
-
-    groups.get(monthLabel).push(entry);
-    return groups;
-  }, new Map());
-}
-
-function HistoryStatusBadge({ status, outcome }) {
-  return (
-    <span className={`inline-flex rounded-full border px-2 py-1 text-[10px] font-black uppercase tracking-wider ${getStatusTone(status)}`}>
-      {outcome}
-    </span>
-  );
-}
+import { ChevronRight } from 'lucide-react';
+import { toLocalIsoDate } from '../../lib/localDate';
+import { groupHistoryByMonth, historyFilters as breedingHistoryStatuses, outcomeLabel } from '../../lib/breedingHistory';
+import { SemenSourceBadge } from '../../components/breeding/BreedingBadges';
+import FilterPanel from '../../components/data/FilterPanel';
+import { Toolbar, ToolbarPills, ToolbarSearch } from '../../components/data/Toolbar';
+import { useBreedingHistoryFilters } from '../../hooks/useBreedingHistoryFilters';
+import BreedingHistoryList from '../../components/breeding/BreedingHistoryList';
+import { reportError } from '../../lib/telemetry';
+import { breedingCopy } from '../../i18n/breeding';
+import { shellCopy } from '../../i18n/shell';
 
 // ============================================================================
 // COMPONENT 1: Page Header & KPI Chips (Responsibility: High-level context & Global Actions)
 // ============================================================================
 function BreedingHeader({ metrics, onLogService, onRecordHeat }) {
+  const copy = breedingCopy.hub;
   return (
     <div className="flex flex-col gap-6 border-b border-ink/10 pb-6 md:flex-row md:items-end md:justify-between">
       <div>
-        <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-brand/10 bg-brand/5 px-3 py-1 text-[10px] font-bold uppercase tracking-widest text-brand">
-          <Dna size={12} /> Herd Reproduction
-        </div>
-        <h2 className="m-0 font-sans text-3xl font-bold tracking-tight text-brand mb-4">
-          AI & <span className="text-ink-muted">Pregnancy</span>
-        </h2>
+        <h1 className="m-0 text-page-title text-brand mb-4">
+          {/* The sidebar's label for this page: one key for both. */}
+          {shellCopy.nav.items.breeding}
+        </h1>
 
         {/* Compact KPI Chips */}
         <div className="flex flex-wrap items-center gap-3">
-          <div className="flex items-center gap-2 rounded-md bg-danger/10 px-3 py-1.5 text-xs font-bold text-danger border border-danger/20">
-            <Flame size={14} /> {metrics.onHeat} On Heat
+          <div className="flex items-center rounded-md bg-danger/10 px-3 py-1.5 text-meta text-danger border border-danger/20">
+            {copy.onHeat(metrics.onHeat)}
           </div>
-          <div className="flex items-center gap-2 rounded-md bg-surface-raised px-3 py-1.5 text-xs font-bold text-ink-strong border border-ink/10">
-            <Stethoscope size={14} /> {metrics.pendingTotal} Pending Checks ({metrics.pendingDueNow} Due)
+          <div className="flex items-center rounded-md bg-surface-raised px-3 py-1.5 text-meta text-ink-strong border border-ink/10">
+            {copy.pendingChecks(metrics.pendingTotal, metrics.pendingDueNow)}
           </div>
-          <div className="flex items-center gap-2 rounded-md bg-brand/5 px-3 py-1.5 text-xs font-bold text-brand border border-brand/10">
-            <Snowflake size={14} /> {metrics.totalStraws} Straws in Tank
+          <div className="flex items-center rounded-md bg-brand/5 px-3 py-1.5 text-meta text-brand border border-brand/10">
+            {copy.straws(metrics.totalStraws ?? '—')}
           </div>
         </div>
       </div>
 
       {/* Fixed Primary Action Button */}
       <div className="flex flex-wrap gap-2">
-        <button onClick={onRecordHeat} className="btn-secondary flex items-center gap-2 text-sm">
-          <Flame size={16} /> Record Heat
+        <button onClick={onRecordHeat} className="btn-secondary flex items-center text-control">
+
+  {copy.recordHeat}
         </button>
         <button
           onClick={onLogService}
-          className="btn-command flex items-center gap-2 text-sm bg-brand text-surface  hover:bg-brand-dark transition-colors"
+          className="btn-command flex items-center text-control bg-brand text-surface hover:bg-brand-dark transition-colors"
         >
-          <Syringe size={16} /> Log AI Service
+
+  {copy.logService}
         </button>
       </div>
     </div>
@@ -191,7 +86,7 @@ function SimpleModalSection({ title, children }) {
   return (
     <div className="space-y-4">
       <div className="border-b border-ink/10 pb-3">
-        <h4 className="text-sm font-bold uppercase tracking-widest text-brand">{title}</h4>
+        <h3 className="text-section-title text-brand">{title}</h3>
       </div>
       {children}
     </div>
@@ -203,23 +98,26 @@ function SimpleModalSection({ title, children }) {
 // ============================================================================
 function HeatAlerts({ alerts, onLogService }) {
   if (alerts.length === 0) return null;
+  const copy = breedingCopy.hub;
 
   return (
     <div className="card-machined border-danger/20 bg-danger/5 p-6 ">
-      <h3 className="mb-4 flex items-center gap-2 text-sm font-bold uppercase tracking-wider text-danger">
-        <Flame size={18} /> Action Needed: Cows in Heat
-      </h3>
+      <h2 className="mb-4 text-section-title text-danger">
+
+  {copy.heatAlerts}
+      </h2>
       <div className="space-y-3">
         {alerts.map((alert) => (
           <div key={alert.id} className="flex items-center justify-between rounded-lg bg-surface p-4  border border-danger/10">
             <div>
-              <h4 className="font-black text-brand text-lg">{formatCowIdentity(alert)}</h4>
-              <p className="text-xs font-bold text-danger mt-1">{alert.intensity} heat observed</p>
-              <p className="mt-1 text-xs text-ink-muted">Next watch window: {alert.nextWindowStart} to {alert.nextWindowEnd}</p>
+              <h3 className="text-section-title text-brand">{formatCowIdentity(alert)}</h3>
+              <p className="text-meta text-danger mt-1">{copy.heatObserved(breedingCopy.intensities[alert.intensity] ?? alert.intensity)}</p>
+              <p className="mt-1 text-meta text-ink-muted">{copy.nextWindow(alert.nextWindowStart, alert.nextWindowEnd)}</p>
             </div>
             <div className="text-right">
-              <button type="button" onClick={() => onLogService(alert)} className="btn-command px-3 py-2 text-xs">
-                <Syringe size={14} /> Log AI
+              <button type="button" onClick={() => onLogService(alert)} className="btn-command px-3 py-2 text-control">
+
+  {copy.logAi}
               </button>
             </div>
           </div>
@@ -233,41 +131,40 @@ function HeatAlerts({ alerts, onLogService }) {
 // COMPONENT 3: Vet Queue Item (Responsibility: Individual pregnancy check logic)
 // ============================================================================
 function VetQueueItem({ log, onOutcome, onEdit, isUpdating }) {
+  const copy = breedingCopy.hub;
   const isReady = log.daysPostAI >= 45;
 
   return (
-    <div className={`flex flex-col gap-4 rounded-lg border p-4 transition-colors md:flex-row md:items-center md:justify-between ${
+    <div className={`flex flex-col gap-4 rounded-lg border p-4 transition-colors ${
       isReady ? 'border-brand/20 bg-surface' : 'border-ink/5 bg-surface/50 opacity-80'
     }`}>
       <div>
-        <h4 className={`font-bold text-base ${isReady ? 'text-brand' : 'text-ink-strong'}`}>{formatCowLabel(log)}</h4>
-        <div className="mt-1 flex gap-3 font-mono text-xs text-ink-muted">
-          <span>Served: {log.aiDate || '--'}</span>
+        <h3 className={`text-section-title ${isReady ? 'text-brand' : 'text-ink-strong'}`}>{formatBreedingCowLabel(log)}</h3>
+        <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-meta text-ink-muted tabular-nums [&>span]:whitespace-nowrap">
+          <span>{copy.served(log.aiDate || '--')}</span>
           <span aria-hidden="true">•</span>
-          <span>Bull: {log.sireCode || '--'}</span>
+          <span>{copy.bull(log.sireCode || '--')}</span>
           {log.expectedCalvingDate && (
             <>
               <span aria-hidden="true">•</span>
-              <span>Expected Calving: {log.expectedCalvingDate}</span>
+              <span>{copy.expectedCalving(log.expectedCalvingDate)}</span>
             </>
           )}
           {log.pregnancyCheckDate && (
             <>
               <span aria-hidden="true">•</span>
-              <span>Pregnancy Check: {log.pregnancyCheckDate}</span>
+              <span>{copy.pregnancyCheck(log.pregnancyCheckDate)}</span>
             </>
           )}
           <span aria-hidden="true">•</span>
-          <span className={`rounded-full border px-2 py-0.5 font-sans text-[10px] font-bold uppercase tracking-wide ${getSemenSourceTone(log.semenSource)}`}>
-            {formatSemenSource(log.semenSource)}
-          </span>
+          <SemenSourceBadge source={log.semenSource} />
         </div>
       </div>
 
-      <div className="flex items-center gap-4 md:gap-6">
-        <div className="text-right">
-          <span className="block text-[10px] font-bold uppercase tracking-wider text-ink-muted">Days Since AI</span>
-          <span className={`text-lg font-black ${isReady ? 'text-brand' : 'text-ink-muted'}`}>
+      <div className="flex flex-wrap items-center gap-3 md:gap-4">
+        <div>
+          <span className="block text-label text-ink-muted">{copy.daysSinceAi}</span>
+          <span className={`text-body-strong ${isReady ? 'text-brand' : 'text-ink-muted'}`}>
             {log.daysPostAI}
           </span>
         </div>
@@ -275,32 +172,33 @@ function VetQueueItem({ log, onOutcome, onEdit, isUpdating }) {
         {isReady ? (
           <div className="flex gap-2">
             <button
-              onClick={() => onOutcome(log.id, 'Open (Not Pregnant)')}
+              onClick={() => onOutcome(log.id, 'Open')}
               disabled={isUpdating}
-              className="btn-danger gap-1 px-3 py-2 text-xs"
+              className="btn-danger gap-1 whitespace-nowrap px-3 py-2 text-control"
             >
-              <XCircle size={14} /> {isUpdating ? 'Saving...' : 'Mark Open'}
+              {isUpdating ? copy.saving : copy.markOpen}
             </button>
             <button
               onClick={() => onOutcome(log.id, 'Pregnant')}
               disabled={isUpdating}
-              className="btn-command gap-1 px-3 py-2 text-xs"
+              className="btn-command gap-1 whitespace-nowrap px-3 py-2 text-control"
             >
-              <CheckCircle2 size={14} /> {isUpdating ? 'Saving...' : 'Confirm Pregnant'}
+              {isUpdating ? copy.saving : copy.confirmPregnant}
             </button>
           </div>
         ) : (
-          <div className="rounded-md border border-ink/10 bg-surface-raised px-4 py-2 text-xs font-bold text-ink-muted">
-            Wait {45 - log.daysPostAI} Days
+          <div className="rounded-md border border-ink/10 bg-surface-raised px-4 py-2 text-meta text-ink-muted">
+            {copy.waitDays(45 - log.daysPostAI)}
           </div>
         )}
         <button
           type="button"
           onClick={() => onEdit(log)}
-          className="btn-secondary inline-flex items-center gap-1 px-3 py-2 text-xs"
-          aria-label={`Edit AI service for ${formatCowLabel(log)}`}
+          className="btn-secondary ml-auto inline-flex items-center gap-1 whitespace-nowrap px-3 py-2 text-control"
+          aria-label={copy.editFor(formatBreedingCowLabel(log))}
         >
-          <Pencil size={14} /> Edit
+
+  {copy.edit}
         </button>
       </div>
     </div>
@@ -310,19 +208,28 @@ function VetQueueItem({ log, onOutcome, onEdit, isUpdating }) {
 // ============================================================================
 // COMPONENT 4: Inventory Panel (Responsibility: Semen stock & Reorder logic)
 // ============================================================================
-function SemenInventory({ stock, onAddInventory, onRestockInventory, onDeleteInventory }) {
+function SemenInventory({ stock, loadState, error, onRetry, onAddInventory, onRestockInventory, onDeleteInventory }) {
+  const copy = breedingCopy.inventory;
   return (
     <div className="card-machined bg-surface p-6 h-full border border-ink/5 ">
       <div className="flex items-center justify-between mb-6">
-        <h3 className="flex items-center gap-2 text-base font-bold text-brand">
-          <Snowflake size={18} className="text-accent" /> Semen Inventory
-        </h3>
+        <h2 className="text-section-title text-brand">
+
+  {copy.title}
+        </h2>
       </div>
 
       <div className="space-y-3">
-        {stock.length === 0 && (
-          <div className="rounded-lg border border-dashed border-ink/10 bg-surface-raised p-4 text-sm text-ink-muted">
-            No semen inventory records yet.
+        {loadState !== 'ready' && (
+          <div className="overflow-hidden rounded-lg border border-ink/10">
+            <ListLoadNotices state={loadState} label={copy.listLabel} error={error} onRetry={onRetry} />
+            {loadState === 'loading' && <div aria-busy="true"><CardSkeletons rows={2} /></div>}
+          </div>
+        )}
+        {hasRowsToShow(loadState) && stock.length === 0 && (
+          <div className="flex flex-col items-start gap-3 rounded-lg border border-dashed border-ink/10 bg-surface-raised p-4 text-body text-ink-muted">
+            <p>{copy.empty}</p>
+            <button type="button" onClick={onAddInventory} className="btn-command">{copy.add}</button>
           </div>
         )}
 
@@ -331,31 +238,33 @@ function SemenInventory({ stock, onAddInventory, onRestockInventory, onDeleteInv
           return (
             <div key={bull.id} className={`rounded-lg border p-4 ${isLowStock ? 'border-orange-500/30 bg-orange-500/5' : 'border-ink/5 bg-surface-raised'}`}>
               <div className="mb-1 flex items-start justify-between">
-                <h4 className="text-sm font-bold text-ink-strong">{bull.name}</h4>
-                <span className={`inline-block rounded px-2 py-0.5 text-[10px] font-bold ${isLowStock ? 'bg-orange-500/20 text-orange-700' : 'bg-brand/10 text-brand'}`}>
-                  {bull.strawsLeft} left {isLowStock && '- Reorder'}
+                <h3 className="text-section-title text-ink-strong">{bull.name}</h3>
+                <span className={`inline-block rounded px-2 py-0.5 text-meta ${isLowStock ? 'bg-orange-500/20 text-orange-700' : 'bg-brand/10 text-brand'}`}>
+                  {copy.left(bull.strawsLeft)} {isLowStock && copy.reorder}
                 </span>
               </div>
-              <div className="mb-3 font-mono text-[10px] text-ink-muted">CODE: {bull.code}</div>
+              <div className="mb-3 text-meta text-ink-muted tabular-nums">{copy.code(bull.code)}</div>
 
-              <div className="flex items-center gap-2 text-xs font-semibold text-ink-strong">
-                <TrendingUp size={14} className="text-accent" /> Best for: {bull.improves}
+              <div className="text-meta text-ink-strong">
+
+  {copy.bestFor(bull.improves)}
               </div>
 
               <div className="mt-3 flex items-center gap-2">
                 <button
                   type="button"
                   onClick={() => onRestockInventory(bull)}
-                  className="rounded-md border border-brand/20 bg-brand/5 px-3 py-1.5 text-[11px] font-bold text-brand transition-colors hover:bg-brand/10"
+                  className="rounded-md border border-brand/20 bg-brand/5 px-3 py-1.5 text-control text-brand transition-colors hover:bg-brand/10"
                 >
-                  Restock
+                  {copy.restock}
                 </button>
                 <button
                   type="button"
                   onClick={() => onDeleteInventory(bull)}
-                  className="inline-flex items-center gap-1 rounded-md border border-rose-200 bg-rose-50 px-2.5 py-1.5 text-[11px] font-bold text-rose-700 transition-colors hover:bg-rose-100"
+                  className="inline-flex items-center gap-1 rounded-md border border-rose-200 bg-rose-50 px-2.5 py-1.5 text-control text-rose-700 transition-colors hover:bg-rose-100"
                 >
-                  <Trash2 size={12} /> Delete
+
+  {copy.delete}
                 </button>
               </div>
             </div>
@@ -363,8 +272,9 @@ function SemenInventory({ stock, onAddInventory, onRestockInventory, onDeleteInv
         })}
       </div>
 
-      <button onClick={onAddInventory} className="mt-6 flex w-full items-center justify-center gap-2 rounded-lg border-2 border-dashed border-ink/10 bg-surface-raised py-3 text-xs font-bold text-ink-muted transition-colors hover:border-brand/30 hover:text-brand">
-        <Plus size={14} /> Add New Inventory
+      <button onClick={onAddInventory} className="mt-6 flex w-full items-center justify-center rounded-lg border-2 border-dashed border-ink/10 bg-surface-raised py-3 text-control text-ink-muted transition-colors hover:border-brand/30 hover:text-brand">
+
+  {copy.addNew}
       </button>
     </div>
   );
@@ -374,9 +284,9 @@ function SemenInventory({ stock, onAddInventory, onRestockInventory, onDeleteInv
 // MAIN ORCHESTRATOR COMPONENT
 // ============================================================================
 export default function BreedingHub() {
+  const copy = breedingCopy.hub;
   const { tenantId, farmId } = useTenant();
   const queryClient = useQueryClient();
-  const [inventory, setInventory] = useState(bullStock);
   const [infoMessage, setInfoMessage] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
   const [, setShowError] = useState(false);
@@ -395,10 +305,9 @@ export default function BreedingHub() {
   const [isRestockOpen, setIsRestockOpen] = useState(false);
   const [selectedInventoryItem, setSelectedInventoryItem] = useState(null);
 
-  // Breeding history filter states
-  const [historyFilter, setHistoryFilter] = useState('All');
-  const [historySearch, setHistorySearch] = useState('');
-  const [historyControlsOpen, setHistoryControlsOpen] = useState(false);
+  // Breeding history filters (the shared useFilterState, kept in the page).
+  const historyFilters = useBreedingHistoryFilters();
+  const { status: historyFilter, search: historySearch } = historyFilters.values;
 
   // Form saving state
   const [isSaving, setIsSaving] = useState(false);
@@ -406,16 +315,11 @@ export default function BreedingHub() {
 
   const confirmation = useConfirmation();
 
+  // Same query (and cache) as the Cow Register. A failure leaves cow names unresolved rather
+  // than pretending the herd is empty.
   const { data: herdData = [] } = useQuery({
     queryKey: ['herd', tenantId, farmId],
-    queryFn: async () => {
-      try {
-        return await herdApi.list();
-      } catch (error) {
-        console.error('Failed to load herd list:', error);
-        return [];
-      }
-    },
+    queryFn: () => herdApi.list(),
     enabled: !!tenantId && !!farmId,
   });
 
@@ -433,44 +337,45 @@ export default function BreedingHub() {
       });
   }, [herdData]);
 
-  const { data: semenInventoryData } = useQuery({
-    queryKey: ['breeding', 'semen-inventory', tenantId, farmId],
-    queryFn: async () => {
-      try {
-        return await breedingApi.listSemenInventory();
-      } catch (error) {
-        console.error('Failed to load semen inventory:', error);
-        return [];
-      }
-    },
+  // The tank's contents as the backend has them; every change refetches this.
+  const semenInventoryKey = ['breeding', 'semen-inventory', tenantId, farmId];
+  const semenQuery = useQuery({
+    queryKey: semenInventoryKey,
+    queryFn: () => breedingApi.listSemenInventory(),
     enabled: !!tenantId && !!farmId,
   });
+  const semenLoadState = getListLoadState(semenQuery);
+  const inventory = useMemo(
+    () => (Array.isArray(semenQuery.data) ? semenQuery.data.map(normalizeSemenInventory) : []),
+    [semenQuery.data],
+  );
+  const refreshSemenInventory = () => queryClient.invalidateQueries({ queryKey: semenInventoryKey });
 
-  const { data: geneticProgressData, isLoading: isLoadingGeneticProgress } = useQuery({
+  const {
+    data: geneticProgressData,
+    error: geneticProgressError,
+    refetch: refetchGeneticProgress,
+    status: geneticProgressStatus,
+    fetchStatus: geneticProgressFetchStatus,
+  } = useQuery({
     queryKey: ['herd', 'genetic-progress', tenantId, farmId],
-    queryFn: async () => {
-      try {
-        return await herdApi.geneticProgress();
-      } catch (error) {
-        console.error('Failed to load genetic progress data:', error);
-        return [];
-      }
-    },
+    queryFn: () => herdApi.geneticProgress(),
     enabled: !!tenantId && !!farmId,
+  });
+  const geneticProgressLoadState = getListLoadState({
+    status: geneticProgressStatus,
+    fetchStatus: geneticProgressFetchStatus,
+    data: geneticProgressData,
   });
 
-  const { data: breedingLogsData } = useQuery({
+  // Saved on this phone by the app's query cache for offline use; there is no separate copy.
+  const breedingLogsQuery = useQuery({
     queryKey: ['breeding', 'logs', tenantId, farmId],
-    queryFn: async () => {
-      try {
-        return await breedingApi.listLogs();
-      } catch (error) {
-        console.error('Failed to load breeding logs:', error);
-        return readCachedBreedingLogs(tenantId, farmId);
-      }
-    },
+    queryFn: () => breedingApi.listLogs(),
     enabled: !!tenantId && !!farmId,
   });
+  const breedingLogsData = breedingLogsQuery.data;
+  const logsLoadState = getListLoadState(breedingLogsQuery);
 
   const { data: heatObservations = [] } = useQuery({
     queryKey: ['breeding', 'heat-observations', tenantId, farmId],
@@ -486,10 +391,7 @@ export default function BreedingHub() {
       .map((log) => enrichBreedingLogCowIdentity(log, herdOptions));
   }, [breedingLogsData, herdOptions]);
 
-  const vetHistory = useMemo(
-    () => (normalizedBreedingLogs ?? []).map((log) => createHistoryEntry(log, log.status, log.notes)),
-    [normalizedBreedingLogs],
-  );
+  const vetHistory = normalizedBreedingLogs ?? [];
   const vetQueue = useMemo(
     () => (normalizedBreedingLogs ?? []).filter((log) => log.status === 'Pending'),
     [normalizedBreedingLogs],
@@ -516,37 +418,30 @@ export default function BreedingHub() {
           };
         }), [heatObservations, herdOptions]);
 
-  useEffect(() => {
-    if (Array.isArray(semenInventoryData) && inventory.length === 0) {
-      setInventory(semenInventoryData.map(normalizeSemenInventory));
-    }
-  }, [inventory.length, semenInventoryData]);
-
-  useEffect(() => {
-    if (normalizedBreedingLogs) writeCachedBreedingLogs(tenantId, farmId, normalizedBreedingLogs);
-  }, [normalizedBreedingLogs, tenantId, farmId]);
-
   // Derived State for KPI Chips
   const metrics = {
     onHeat: breedingAlerts.length,
     pendingDueNow: vetQueue.filter((log) => log.daysPostAI >= 45).length,
     pendingTotal: vetQueue.length,
-    totalStraws: inventory.reduce((total, bull) => total + bull.strawsLeft, 0)
+    // TODO(BR-009): the backend should return the tank total; until then it is summed here,
+    // and shown as "—" while the inventory is unknown.
+    totalStraws: hasRowsToShow(semenLoadState) ? inventory.reduce((total, bull) => total + bull.strawsLeft, 0) : null,
   };
 
   const handleOutcome = async (logId, outcome) => {
     if (statusUpdatingById[logId]) return;
 
+    // 'Open' (not pregnant) is saved as the backend's 'Failed' status.
     const backendStatus = outcome === 'Pregnant' ? 'Pregnant' : 'Failed';
     setStatusUpdatingById((current) => ({ ...current, [logId]: true }));
 
     try {
       await breedingApi.updateLogStatus(logId, backendStatus);
-      notifyInfo(`Cow marked as ${outcome}. Records updated.`);
+      notifyInfo(copy.marked(outcomeLabel(outcome)));
       await queryClient.invalidateQueries({ queryKey: ['breeding', 'logs', tenantId, farmId] });
     } catch (error) {
-      console.error('Failed to update breeding log status:', error);
-      setErrorMessage(getApiErrorMessage(error, 'Could not save the vet outcome. Check the connection and retry.'));
+      reportError(error, { where: 'BreedingHub.updateLogStatus' });
+      setErrorMessage(getApiErrorMessage(error, copy.outcomeFailed));
       setShowError(true);
     } finally {
       setStatusUpdatingById((current) => {
@@ -583,8 +478,8 @@ export default function BreedingHub() {
     notifyInfo(message);
   };
 
-  const handleAddInventorySuccess = (nextInventory, message) => {
-    setInventory((current) => [nextInventory, ...current]);
+  const handleAddInventorySuccess = (_nextInventory, message) => {
+    refreshSemenInventory();
     setIsInventoryOpen(false);
     notifyInfo(message);
   };
@@ -594,8 +489,8 @@ export default function BreedingHub() {
     setIsRestockOpen(true);
   };
 
-  const handleRestockSuccess = (updated, message) => {
-    setInventory((current) => current.map((item) => (item.id === updated.id ? updated : item)));
+  const handleRestockSuccess = (_updated, message) => {
+    refreshSemenInventory();
     setIsRestockOpen(false);
     setSelectedInventoryItem(null);
     notifyInfo(message);
@@ -603,22 +498,20 @@ export default function BreedingHub() {
 
   const filteredHistory = filterBreedingHistory(vetHistory, historyFilter, historySearch);
   const groupedHistory = groupHistoryByMonth(filteredHistory);
-  const hasActiveHistoryFilters = historyFilter !== 'All' || historySearch.trim() !== '';
-  const activeHistoryControlCount = [historySearch.trim(), historyFilter !== 'All'].filter(Boolean).length;
 
   const handleDeleteInventory = async (bull) => {
     if (!bull?.id) {
-      setErrorMessage('This semen inventory item cannot be deleted because it has no identifier.');
+      setErrorMessage(copy.deleteNoId);
       setShowError(true);
       return;
     }
 
     const confirmed = await confirmation.confirm({
-      title: 'Delete semen inventory?',
-      message: `Remove ${bull.name} (${bull.code || 'NO-CODE'}) from inventory? This action cannot be undone.`,
+      title: copy.deleteTitle,
+      message: copy.deleteMessage(bull.name, bull.code || copy.noCode),
       type: 'danger',
-      confirmText: 'Delete',
-      cancelText: 'Cancel',
+      confirmText: copy.deleteConfirm,
+      cancelText: copy.cancel,
     });
 
     if (!confirmed) return;
@@ -626,22 +519,12 @@ export default function BreedingHub() {
     try {
       confirmation.setLoading(true);
       await breedingApi.deleteSemenInventory(bull.id);
-      setInventory((current) => current.filter((item) => item.id !== bull.id));
+      await refreshSemenInventory();
 
-      logToAuditTrail(
-        createAuditEntry({
-          action: 'delete',
-          recordType: 'semen_inventory',
-          recordId: bull.id,
-          userName: 'You',
-          notes: `Deleted ${bull.name} (${bull.code || 'NO-CODE'}) from semen inventory`,
-        })
-      );
-
-      notifyInfo(`Deleted ${bull.name} from semen inventory.`);
+      notifyInfo(copy.deleted(bull.name));
     } catch (error) {
-      console.error('Error deleting inventory:', error);
-      notifyError(getApiErrorMessage(error, 'Could not remove this semen inventory item. Please try again.'));
+      reportError(error, { where: 'BreedingHub.deleteSemen' });
+      notifyError(getApiErrorMessage(error, copy.deleteFailed));
     } finally {
       confirmation.setLoading(false);
       confirmation.close();
@@ -652,13 +535,13 @@ export default function BreedingHub() {
     <div className="animate-reveal space-y-8 max-w-7xl mx-auto">
       {errorMessage && (
         <div className="fixed top-4 right-4 z-[60] w-[min(92vw,430px)]">
-          <AlertBanner type="error" title="Error" message={errorMessage} autoDismiss={4000} onDismiss={() => setShowError(false)} />
+          <AlertBanner type="error" title={copy.error} message={errorMessage} autoDismiss={4000} onDismiss={() => setShowError(false)} />
         </div>
       )}
 
       {infoMessage && (
         <div className="fixed top-4 right-4 z-[60] w-[min(92vw,430px)]">
-          <AlertBanner type="success" title="Success" message={infoMessage} autoDismiss={2400} onDismiss={() => setInfoMessage('')} />
+          <AlertBanner type="success" title={copy.success} message={infoMessage} autoDismiss={2400} onDismiss={() => setInfoMessage('')} />
         </div>
       )}
 
@@ -674,12 +557,19 @@ export default function BreedingHub() {
 
           <div className="card-machined bg-surface p-6 border border-ink/5 ">
             <div className="mb-6 flex items-center justify-between border-b border-ink/10 pb-4">
-              <h3 className="flex items-center gap-2 text-base font-bold text-brand">
-                <Stethoscope size={18} className="text-brand-dark" /> Pending Vet Checks
-              </h3>
+              <h2 className="text-section-title text-brand">
+
+  {copy.pendingTitle}
+              </h2>
             </div>
 
             <div className="space-y-3">
+              {logsLoadState !== 'ready' && (
+                <div className="overflow-hidden rounded-lg border border-ink/10">
+                  <ListLoadNotices state={logsLoadState} label={copy.logsLabel} error={breedingLogsQuery.error} onRetry={breedingLogsQuery.refetch} />
+                  {logsLoadState === 'loading' && <div aria-busy="true"><CardSkeletons rows={2} /></div>}
+                </div>
+              )}
               {vetQueue.map((log) => (
                 <VetQueueItem
                   key={log.id}
@@ -689,33 +579,39 @@ export default function BreedingHub() {
                   isUpdating={!!statusUpdatingById[log.id]}
                 />
               ))}
-              {vetQueue.length === 0 && (
-                <div className="py-8 text-center text-sm font-medium text-ink-muted">
-                  All inseminated cows have been checked by the vet.
+              {hasRowsToShow(logsLoadState) && vetQueue.length === 0 && (
+                <div className="py-8 text-center text-body text-ink-muted">
+                  {copy.allChecked}
                 </div>
               )}
             </div>
 
             {/* Progressive Disclosure Scaffold */}
-            <button onClick={() => setIsHistoryOpen(true)} className="mt-4 flex w-full items-center justify-center gap-1 py-2 text-xs font-bold text-brand hover:underline">
-              View All Historical Checks <ChevronRight size={14} />
+            <button onClick={() => setIsHistoryOpen(true)} className="mt-4 flex w-full items-center justify-center gap-1 py-2 text-control text-brand hover:underline">
+              {copy.viewHistory} <ChevronRight size={14} aria-hidden="true" />
             </button>
           </div>
 
           {/* BOTTOM: TRENDS / ROI */}
           <div className="card-machined bg-surface-raised p-6 border border-brand/10">
-            <h3 className="mb-6 flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-ink-muted">
-              <TrendingUp size={16} className="text-accent" /> Herd Genetic Progress
-            </h3>
+            <h2 className="mb-6 text-section-title text-ink-muted">
 
-            {isLoadingGeneticProgress ? (
-              <div className="h-[300px] flex items-center justify-center text-ink-muted">Loading chart data...</div>
+  {copy.geneticTitle}
+            </h2>
+
+            {geneticProgressLoadState === 'loading' ? (
+              <div aria-busy="true">
+                <SlowLoadingHint label={copy.chartLabel} />
+                <Skeleton className="h-[300px] w-full" />
+              </div>
+            ) : geneticProgressLoadState === 'error' || geneticProgressLoadState === 'offline' ? (
+              <ListLoadMessage state={geneticProgressLoadState} label={copy.geneticChartLabel} error={geneticProgressError} onRetry={refetchGeneticProgress} />
             ) : geneticProgressData && geneticProgressData.length > 0 ? (
               <ResponsiveContainer width="100%" height={300}>
                 <LineChart data={geneticProgressData} margin={{ top: 5, right: 20, left: -10, bottom: 5 }}>
                   <CartesianGrid strokeDasharray="3 3" strokeOpacity={0.3} />
-                  <XAxis dataKey="year" stroke="#64748b" fontSize={12} />
-                  <YAxis stroke="#64748b" fontSize={12} label={{ value: 'Avg. Yield (L/day)', angle: -90, position: 'insideLeft', offset: 10, style: { textAnchor: 'middle', fill: '#64748b' } }} />
+                  <XAxis dataKey="year" stroke="#64748b" />
+                  <YAxis stroke="#64748b" label={{ value: copy.yieldAxis, angle: -90, position: 'insideLeft', offset: 10, style: { textAnchor: 'middle', fill: '#64748b' } }} />
                   <Tooltip
                     contentStyle={{
                       backgroundColor: 'rgba(255, 255, 255, 0.8)',
@@ -724,14 +620,14 @@ export default function BreedingHub() {
                       borderRadius: '0.5rem',
                     }}
                   />
-                  <Legend wrapperStyle={{ fontSize: '12px' }} />
-                  <Line type="monotone" dataKey="daughters_yield" name="Daughters' Avg Yield" stroke="#10b981" strokeWidth={2} dot={{ r: 4 }} activeDot={{ r: 6 }} />
-                  <Line type="monotone" dataKey="mothers_yield" name="Mothers' Avg Yield" stroke="#38BDF8" strokeWidth={2} dot={{ r: 4 }} activeDot={{ r: 6 }} />
+                  <Legend />
+                  <Line type="monotone" dataKey="daughters_yield" name={copy.daughters} stroke="#10b981" strokeWidth={2} dot={{ r: 4 }} activeDot={{ r: 6 }} />
+                  <Line type="monotone" dataKey="mothers_yield" name={copy.mothers} stroke="#38BDF8" strokeWidth={2} dot={{ r: 4 }} activeDot={{ r: 6 }} />
                 </LineChart>
               </ResponsiveContainer>
             ) : (
-              <div className="h-[300px] flex items-center justify-center rounded-lg border border-dashed border-ink/10 bg-surface p-6 text-sm text-ink-muted">
-                Not enough data to plot genetic progress chart.
+              <div className="h-[300px] flex items-center justify-center rounded-lg border border-dashed border-ink/10 bg-surface p-6 text-body text-ink-muted">
+                {copy.noGeneticData}
               </div>
             )}
           </div>
@@ -742,6 +638,9 @@ export default function BreedingHub() {
         <div className="h-full">
             <SemenInventory
               stock={inventory}
+              loadState={semenLoadState}
+              error={semenQuery.error}
+              onRetry={semenQuery.refetch}
               onAddInventory={() => setIsInventoryOpen(true)}
               onRestockInventory={handleOpenRestock}
               onDeleteInventory={handleDeleteInventory}
@@ -750,14 +649,14 @@ export default function BreedingHub() {
 
       </div>
 
-      <Modal
+      <BaseModal closeOnBackdrop
         isOpen={isLogServiceOpen}
         onClose={() => {
           setIsLogServiceOpen(false);
           setSelectedHeatObservation(null);
           setSelectedBreedingLog(null);
         }}
-        title={selectedBreedingLog ? 'Edit AI Service' : 'Log AI Service'}
+        title={selectedBreedingLog ? copy.editServiceTitle : copy.logService}
       >
         <LogAIServiceForm
           key={selectedBreedingLog?.id || selectedHeatObservation?.id || 'new-ai-service'}
@@ -771,7 +670,7 @@ export default function BreedingHub() {
             cowId: formatCowIdentity(selectedBreedingLog, selectedBreedingLog.cowId),
           } : selectedHeatObservation ? {
             cowId: selectedHeatObservation.cowId,
-            aiDate: new Date(selectedHeatObservation.observedAt).toISOString().slice(0, 10),
+            aiDate: toLocalIsoDate(selectedHeatObservation.observedAt),
             heatObservationId: selectedHeatObservation.id,
           } : {}}
         />
@@ -784,169 +683,47 @@ export default function BreedingHub() {
               setSelectedHeatObservation(null);
               setSelectedBreedingLog(null);
             }}
-            className="btn-secondary px-4 py-2 text-sm"
+            className="btn-secondary px-4 py-2 text-control"
           >
-            Cancel
+            {copy.cancel}
           </button>
         </div>
-      </Modal>
+      </BaseModal>
 
-      <Modal isOpen={isHeatObservationOpen} onClose={() => setIsHeatObservationOpen(false)} title="Record Heat Observation">
+      <BaseModal closeOnBackdrop isOpen={isHeatObservationOpen} onClose={() => setIsHeatObservationOpen(false)} title={copy.heatTitle}>
         <LogHeatObservationForm
           herdOptions={herdOptions}
           onSuccess={handleHeatObservationSuccess}
           onError={(msg) => { setErrorMessage(msg); setShowError(true); }}
         />
-      </Modal>
+      </BaseModal>
 
-      <Modal isOpen={isHistoryOpen} onClose={() => setIsHistoryOpen(false)} title="Historical Checks">
-        <div className="space-y-4">
-          <SimpleModalSection title="All Checks">
-            <div className="flex flex-col gap-3 border-b border-ink/10 pb-4 md:flex-row md:items-center md:justify-between">
-              <div>
-                <div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest text-ink-muted">
-                  <Search size={12} /> Search and filters
-                </div>
-                <p className="mt-1 text-sm leading-6 text-ink-muted">Filter breeding history by record status, cow name, or ear tag.</p>
-              </div>
+      <BaseModal
+        closeOnBackdrop
+        size="4xl"
+        isOpen={isHistoryOpen}
+        onClose={() => setIsHistoryOpen(false)}
+        title={copy.historyTitle}
+        footerActions={<button type="button" onClick={() => setIsHistoryOpen(false)} className="btn-command px-4 py-2 text-control">{copy.close}</button>}
+      >
+        <SimpleModalSection title={copy.allChecks}>
+          <FilterPanel title={copy.historyFiltersTitle} activeCount={historyFilters.activeCount} onReset={historyFilters.reset}>
+            <Toolbar>
+              <ToolbarSearch label={copy.historySearch} value={historySearch} onChange={historyFilters.setSearch} placeholder={copy.historySearch} />
+              <ToolbarPills
+                label={copy.historyStatusLabel}
+                value={historyFilter}
+                onChange={historyFilters.setStatus}
+                options={breedingHistoryStatuses()}
+              />
+            </Toolbar>
+          </FilterPanel>
 
-              <div className="flex items-center gap-2">
-                <span className="rounded-full border border-ink/10 bg-surface-warm/60 px-3 py-1 text-[10px] font-bold uppercase tracking-widest text-ink-muted">
-                  {activeHistoryControlCount} active
-                </span>
-                <button
-                  type="button"
-                  onClick={() => setHistoryControlsOpen((current) => !current)}
-                  aria-expanded={historyControlsOpen}
-                  className="inline-flex items-center gap-1.5 rounded-lg border border-ink/10 bg-surface px-3 py-1.5 text-xs font-semibold text-ink  transition-all hover:border-brand/20 hover:bg-brand/5 hover:text-brand"
-                >
-                  {historyControlsOpen ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
-                  {historyControlsOpen ? 'Hide filters' : 'Show filters'}
-                </button>
-              </div>
-            </div>
+          <BreedingHistoryList groups={groupedHistory} />
+        </SimpleModalSection>
+      </BaseModal>
 
-            {historyControlsOpen && (
-              <div className="space-y-4 pt-4">
-                <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-                  <div className="flex flex-1 items-center gap-2 rounded-lg border border-ink/10 bg-surface-raised px-3 py-2">
-                    <Search size={14} className="text-ink-muted" />
-                    <input
-                      type="search"
-                      value={historySearch}
-                      onChange={(event) => setHistorySearch(event.target.value)}
-                      placeholder="Search name or ear tag..."
-                      className="w-full bg-transparent text-sm text-ink-strong outline-none placeholder:text-ink-muted"
-                    />
-                  </div>
-
-                  <div className="flex items-center gap-2">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setHistoryFilter('All');
-                        setHistorySearch('');
-                      }}
-                      className={`rounded-lg border px-3 py-2 text-xs font-bold transition-colors ${
-                        hasActiveHistoryFilters
-                          ? 'border-brand/20 bg-brand/5 text-brand hover:bg-brand/10'
-                          : 'border-ink/10 bg-surface-raised text-ink-muted'
-                      }`}
-                    >
-                      Clear filters
-                    </button>
-                  </div>
-                </div>
-
-                <div className="flex flex-wrap gap-2">
-                  {[
-                    { value: 'All', label: 'All' },
-                    { value: 'Pregnant', label: 'Pregnant' },
-                    { value: 'Open', label: 'Open' },
-                    { value: 'Pending', label: 'Pending' },
-                    { value: 'Failed', label: 'Unsuccessful' },
-                  ].map(({ value, label }) => (
-                    <button
-                      key={value}
-                      type="button"
-                      onClick={() => setHistoryFilter(value)}
-                      className={`rounded-full border px-3 py-1.5 text-xs font-bold transition-colors ${
-                        historyFilter === value
-                          ? 'border-brand bg-brand text-surface'
-                          : 'border-ink/10 bg-surface-raised text-ink-muted hover:border-brand/20 hover:text-brand'
-                      }`}
-                    >
-                      {label}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            <div className="max-h-[420px] overflow-y-auto pr-1">
-              {filteredHistory.length === 0 && (
-                <div className="rounded-lg border border-dashed border-ink/10 bg-surface/50 p-6 text-center text-sm text-ink-muted">
-                  No records match the selected filter.
-                </div>
-              )}
-
-              {Array.from(groupedHistory.entries()).map(([monthLabel, entries]) => (
-                <div key={monthLabel} className="mb-4 space-y-2 last:mb-0">
-                  <div className="sticky top-0 z-10 flex items-center justify-between rounded-md border border-ink/10 bg-surface px-3 py-2 text-xs font-black uppercase tracking-widest text-brand ">
-                    <span>{monthLabel}</span>
-                    <span className="rounded-full bg-brand/5 px-2 py-0.5 text-[10px] font-black text-brand">
-                      {entries.length} {entries.length === 1 ? 'record' : 'records'}
-                    </span>
-                  </div>
-
-                  <div className="overflow-hidden rounded-lg border border-ink/10 bg-surface-raised">
-                    <table className="w-full border-collapse text-left">
-                      <thead className="bg-surface/70">
-                        <tr>
-                          <th className="px-2 py-1.5 text-[9px] font-black uppercase tracking-wider text-ink-muted">Cow</th>
-                          <th className="px-2 py-1.5 text-[9px] font-black uppercase tracking-wider text-ink-muted">AI Date</th>
-                          <th className="px-2 py-1.5 text-[9px] font-black uppercase tracking-wider text-ink-muted">Bull</th>
-                          <th className="px-2 py-1.5 text-[9px] font-black uppercase tracking-wider text-ink-muted">Expected Calving</th>
-                          <th className="px-2 py-1.5 text-[9px] font-black uppercase tracking-wider text-ink-muted">Source</th>
-                          <th className="px-2 py-1.5 text-[9px] font-black uppercase tracking-wider text-ink-muted">Status</th>
-                          <th className="px-2 py-1.5 text-[9px] font-black uppercase tracking-wider text-ink-muted">Updated</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {entries.map((entry) => (
-                          <tr key={entry.id} className="border-t border-ink/5 align-top hover:bg-surface/50">
-                            <td className="px-2 py-2">
-                              <div className="font-bold text-ink-strong">{formatCowLabel(entry)}</div>
-                              {entry.notes && <div className="mt-1 text-[11px] text-ink-muted">{entry.notes}</div>}
-                            </td>
-                            <td className="px-2 py-2 text-sm text-ink-muted">{entry.aiDate || '--'}</td>
-                            <td className="px-2 py-2 text-sm text-ink-muted">{entry.sireCode || '--'}</td>
-                            <td className="px-2 py-2 text-sm text-ink-muted">{entry.expectedCalvingDate || '--'}</td>
-                            <td className="px-2 py-2">
-                              <span className={`inline-flex rounded-full border px-2 py-1 text-[10px] font-black uppercase tracking-wider ${getSemenSourceTone(entry.semenSource)}`}>
-                                {formatSemenSource(entry.semenSource)}
-                              </span>
-                            </td>
-                            <td className="px-2 py-2">
-                              <HistoryStatusBadge status={entry.status} outcome={entry.outcome} />
-                            </td>
-                            <td className="px-2 py-2 text-sm text-ink-muted">{entry.updatedAt}</td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </SimpleModalSection>
-          <div className="flex justify-end pt-2">
-            <button type="button" onClick={() => setIsHistoryOpen(false)} className="btn-command px-4 py-2 text-sm">Close</button>
-          </div>
-        </div>
-      </Modal>
-
-      <Modal isOpen={isInventoryOpen} onClose={() => setIsInventoryOpen(false)} title="Add New Inventory">
+      <BaseModal closeOnBackdrop isOpen={isInventoryOpen} onClose={() => setIsInventoryOpen(false)} title={copy.addInventoryTitle}>
         <ManageSemenInventoryForm
           onSuccess={handleAddInventorySuccess}
           onError={(msg) => { setErrorMessage(msg); setShowError(true); }}
@@ -958,20 +735,20 @@ export default function BreedingHub() {
             type="button"
             disabled={isSaving}
             onClick={() => setIsInventoryOpen(false)}
-            className="btn-secondary px-4 py-2 text-sm"
+            className="btn-secondary px-4 py-2 text-control"
           >
-            Cancel
+            {copy.cancel}
           </button>
         </div>
-      </Modal>
+      </BaseModal>
 
-      <Modal
+      <BaseModal closeOnBackdrop
         isOpen={isRestockOpen}
         onClose={() => {
           setIsRestockOpen(false);
           setSelectedInventoryItem(null);
         }}
-        title="Restock Semen Inventory"
+        title={copy.restockTitle}
       >
         <RestockSemenInventoryForm
           inventoryItem={selectedInventoryItem}
@@ -988,24 +765,14 @@ export default function BreedingHub() {
               setIsRestockOpen(false);
               setSelectedInventoryItem(null);
             }}
-            className="btn-secondary px-4 py-2 text-sm"
+            className="btn-secondary px-4 py-2 text-control"
           >
-            Cancel
+            {copy.cancel}
           </button>
         </div>
-      </Modal>
+      </BaseModal>
 
-      <Confirmation
-        isOpen={confirmation.isOpen}
-        title={confirmation.title}
-        message={confirmation.message}
-        type={confirmation.type}
-        confirmText={confirmation.confirmText}
-        cancelText={confirmation.cancelText}
-        isLoading={confirmation.isLoading}
-        onConfirm={confirmation.onConfirm}
-        onCancel={confirmation.onCancel}
-      />
+      <Confirmation {...confirmation} />
     </div>
   );
 }

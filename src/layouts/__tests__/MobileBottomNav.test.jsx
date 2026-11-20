@@ -39,6 +39,13 @@ describe('MobileBottomNav', () => {
   it('limits tabs by page_access when the backend assigns pages', () => {
     renderAs({ name: 'Clerk', role: 'CLERK', tenant_id: 't1', cooperative_id: 'c1', page_access: [] });
 
+    // Same check as the sidebar: no access to milk records, no Production Log tab.
+    expect(tabLabels()).toEqual(['Dashboard']);
+  });
+
+  it('shows Production Log when the backend grants milk records', () => {
+    renderAs({ name: 'Clerk', role: 'CLERK', tenant_id: 't1', cooperative_id: 'c1', page_access: ['production'] });
+
     expect(tabLabels()).toEqual(['Dashboard', 'Production Log']);
   });
 });

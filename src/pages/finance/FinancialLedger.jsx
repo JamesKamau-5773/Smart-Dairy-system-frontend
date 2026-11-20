@@ -1,851 +1,162 @@
-import { useEffect, useState, useMemo } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { format, parseISO } from 'date-fns';
-import { createPortal } from 'react-dom';
-import { Wallet, TrendingUp, TrendingDown, ChevronsRight, ListChecks, BadgeDollarSign, Info, Plus, X, Search, Filter, RotateCcw, ChevronDown, ChevronUp, PencilLine } from 'lucide-react';
+import { useState } from 'react';
 import { useTenant } from '../../hooks/useTenant';
-import { useAuth } from '../../contexts/AuthContext';
-import { hasRole } from '../../lib/roles';
-import { financeApi, getApiErrorMessage, herdApi } from '../../lib/backendApi';
-import { QUEUED_OFFLINE_MESSAGE, isQueuedOffline } from '../../lib/offlinePolicy';
-import { QUERY_KEYS } from '../../providers/QueryProvider';
-import Money from '../../components/ui/Money';
+import { useLedgerCategories } from '../../hooks/useLedgerCategories';
+import { useLedgerData } from '../../hooks/useLedgerData';
+import { useLedgerFilters } from '../../hooks/useLedgerFilters';
+import { useLedgerRecordActions } from '../../hooks/useLedgerRecordActions';
+import { todayLocalIso } from '../../lib/localDate';
+import { formatCount } from '../../lib/numberFormat';
+import DataSection from '../../components/data/DataSection';
+import FilterPanel from '../../components/data/FilterPanel';
+import KpiGroup from '../../components/data/KpiGroup';
+import InfoTip from '../../components/ui/InfoTip';
 import ReceiptPreview from '../../components/finance/ReceiptPreview';
-import { buildLedgerEntryPayload } from '../../lib/ledgerEntryPayload';
-import { downloadReceiptPdf, shareReceiptText } from '../../lib/receipt';
-import toast from 'react-hot-toast';
-import GroupedDateRows from '../../components/ui/GroupedDateRows';
-import { Popover, PopoverContent, PopoverTrigger } from '../../components/ui/popover';
-import { formatCowIdentity } from '../../lib/cowIdentity';
+import LedgerEntryFormModal from '../../components/finance/LedgerEntryFormModal';
+import LedgerCorrectionModal from '../../components/finance/LedgerCorrectionModal';
+import ReceiptPhotosModal from '../../components/finance/ReceiptPhotosModal';
+import LedgerHeader from '../../components/finance/ledger/LedgerHeader';
+import LedgerFilters from '../../components/finance/ledger/LedgerFilters';
+import LedgerTable from '../../components/finance/ledger/LedgerTable';
+import LedgerList from '../../components/finance/ledger/LedgerList';
+import TransactionSheet from '../../components/finance/ledger/TransactionSheet';
+import { TABLE_QUERY, useMediaQuery } from '../../hooks/useMediaQuery';
+import { LEDGER_KPI_ROWS, ledgerReportRoute } from '../../components/finance/ledger/ledgerKpiConfig';
+import { summaryScope } from '../../components/periods/periodConfigs';
+import { financeCopy } from '../../i18n/finance';
 
-const SummaryTooltip = ({ text, label }) => (
-  <span className="group relative inline-flex cursor-help items-center" aria-label={label}>
-    <Info size={14} aria-hidden="true" />
-    <span role="tooltip" className="pointer-events-none absolute left-0 top-full z-30 mt-2 w-64 rounded-lg bg-gray-900 px-3 py-2 text-xs font-normal normal-case leading-relaxed tracking-normal text-white opacity-0  transition-opacity duration-200 group-hover:opacity-100">
-      {text}
-    </span>
-  </span>
-);
-
-const CurrencyValue = ({ amount, inverse = false }) => (
-  amount == null
-    ? <span className={`break-words text-sm font-semibold ${inverse ? 'text-white/70' : 'text-ink-muted'}`}>Not available</span>
-    : <>
-        <Money amount={amount} size="xs" className={`max-w-full !font-mono !text-xs font-bold tracking-tight sm:hidden ${inverse ? 'text-white' : 'text-ink'}`} />
-        <Money amount={amount} size="md" className={`hidden max-w-full !font-mono text-base font-bold tracking-tight sm:inline-flex sm:text-lg ${inverse ? 'text-white' : 'text-ink'}`} />
-      </>
-);
-
-const SummaryCard = ({ title, value, icon: Icon, tone = 'default', tooltip }) => {
-  const tones = {
-    default: 'text-brand-800',
-    success: 'text-brand-700',
-    danger: 'text-brand-dark',
-  };
-  return (
-    <div className="min-w-0 rounded-xl border border-ink/10 bg-surface p-3 sm:p-5">
-      <div className="flex min-w-0 flex-col gap-2 sm:flex-row sm:items-start sm:gap-4">
-        <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-ink/10 bg-brand-50 sm:h-11 sm:w-11 ${tones[tone]}`}>
-          <Icon size={20} />
-        </div>
-        <div className="min-w-0">
-          <div className="mb-1 flex min-w-0 items-start gap-1.5 text-[10px] font-semibold uppercase leading-tight tracking-wide text-ink-muted sm:mb-2 sm:text-xs sm:tracking-wider">
-            <span>{title}</span>
-            {tooltip && <SummaryTooltip text={tooltip} label={`About ${title}`} />}
-          </div>
-          {value}
-        </div>
-      </div>
-    </div>
-  );
-};
-
-const LiquidityCard = ({ title, value, icon: Icon, tooltip }) => (
-  <div className="rounded-lg border border-white/20 bg-white/10 p-5 sm:rounded-none sm:first:rounded-l-lg sm:last:rounded-r-lg">
-    <div className="flex items-start gap-4">
-      <div className="rounded-lg border border-white/20 bg-white/10 p-3 text-white">
-        <Icon size={20} />
-      </div>
-      <div className="min-w-0">
-        <div className="mb-2 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-white/70">
-          <span>{title}</span>
-          {tooltip && <SummaryTooltip text={tooltip} label={`About ${title}`} />}
-        </div>
-        {value}
-      </div>
-    </div>
-  </div>
-);
-
-const StatusBadge = ({ status }) => {
-  const normalizedStatus = String(status || '').toLowerCase();
-  let styles = 'bg-brand-50 text-brand-800';
-  if (normalizedStatus === 'posted' || normalizedStatus === 'cleared' || normalizedStatus === 'paid' || normalizedStatus === 'revenue') {
-    styles = 'bg-brand-100 text-brand-dark';
-  } else if (normalizedStatus === 'pending') {
-    styles = 'bg-brand-50 text-brand-800';
-  } else if (normalizedStatus === 'voided' || normalizedStatus === 'void' || normalizedStatus === 'cancelled') {
-    styles = 'bg-brand/5 text-brand-800';
-  } else if (normalizedStatus === 'expense') {
-    styles = 'bg-brand/10 text-brand-dark';
-  }
-  return (
-    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-badge text-xs font-medium ${styles}`}>
-      {status || 'Pending'}
-    </span>
-  );
-};
-
-const TransactionDescription = ({ transaction }) => {
-  const [isExpanded, setIsExpanded] = useState(false);
-  const description = transaction.description || (transaction.item_name ? 'No additional details' : 'N/A');
-  const firstSentence = description.match(/^(.+?[.!?])(?:\s|$)/)?.[1];
-  const summary = firstSentence && firstSentence.length <= 140
-    ? firstSentence
-    : `${description.slice(0, 137).replace(/\s+\S*$/, '')}…`;
-  const canExpand = description.length > summary.length;
-
-  return (
-    <div className="min-w-0">
-      {transaction.item_name && <div className="break-words font-semibold text-ink">{transaction.item_name}</div>}
-      <p className={`break-words text-ink-muted ${isExpanded ? 'whitespace-pre-wrap' : 'line-clamp-2'}`}>
-        {isExpanded ? description : summary}
-      </p>
-      {canExpand && (
-        <button
-          type="button"
-          onClick={() => setIsExpanded((expanded) => !expanded)}
-          aria-expanded={isExpanded}
-          className="mt-1 text-xs font-semibold text-brand hover:text-brand-dark"
-        >
-          {isExpanded ? 'See less' : 'See more'}
-        </button>
-      )}
-    </div>
-  );
-};
-
-const EXPENSE_CATEGORIES = [
-  ['Feed Purchase', 'Feed and supplies'],
-  ['Labor / Wages', 'Labor and wages'],
-  ['Utilities', 'Utilities'],
-  ['Vet Fees', 'Veterinary services'],
-  ['Equipment Maintenance', 'Equipment maintenance'],
-  ['Transport', 'Transport'],
-  ['Other', 'Other expense'],
-];
-
-const COST_CLASSES = [
-  ['production_cost', 'Direct Farm Costs'],
-  ['operating_cost', 'General Running Costs'],
-  ['customer_acquisition', 'Selling & Delivery'],
-  ['capital_expenditure', 'Major Purchases (Assets)'],
-];
-
-const COST_CLASS_DEFINITIONS = [
-  ['production_cost', 'Money spent directly on the cows and milk production, such as feeds, supplements, AI services, and veterinary bills.'],
-  ['operating_cost', 'Day-to-day farm overhead not directly tied to a specific cow, like electricity, water, fuel, and permanent staff wages.'],
-  ['customer_acquisition', 'Costs related to getting your milk to the buyer, including transport, packaging, marketing, and vendor fees.'],
-  ['capital_expenditure', 'Big, long-term investments for the farm, such as buying new machinery, building sheds, or purchasing new livestock.'],
-];
-
-const isCorrectableExpense = (transaction) => (
-  String(transaction?.transaction_type || transaction?.type || '').toLowerCase() === 'expense'
-  && String(transaction?.status || '').toUpperCase() === 'POSTED'
-);
-
-const LedgerCorrectionModal = ({ transaction, onClose, onSubmit, isPending }) => {
-  const [category, setCategory] = useState(transaction.category || 'Other');
-  const [costClass, setCostClass] = useState(transaction.cost_class || 'operating_cost');
-  const [reason, setReason] = useState('');
-  const isValid = category && costClass && reason.trim();
-
-  const handleSubmit = (event) => {
-    event.preventDefault();
-    if (!isValid) return;
-    onSubmit({
-      void_reason: reason.trim(),
-      replacement: { category, cost_class: costClass },
-    });
-  };
-
-  return createPortal(
-    <div className="fixed inset-0 z-[100] flex items-start justify-center overflow-y-auto overscroll-contain bg-black/50 p-3 backdrop-blur-sm touch-pan-y sm:items-center sm:p-4">
-      <form role="dialog" aria-modal="true" aria-label="Correct expense classification" onSubmit={handleSubmit} className="my-auto flex max-h-[calc(100dvh-1.5rem)] w-full max-w-md flex-col overflow-y-auto overscroll-contain rounded-lg bg-white touch-pan-y">
-        <div className="flex shrink-0 items-center justify-between border-b p-5">
-          <div>
-            <h3 className="text-lg font-bold text-ink">Correct expense classification</h3>
-            <p className="mt-1 text-sm text-ink-muted">The original entry will be voided and replaced with a linked corrected entry.</p>
-          </div>
-          <button type="button" onClick={onClose} disabled={isPending} className="rounded-full p-1 text-ink-muted hover:bg-gray-100" aria-label="Close correction form"><X size={20} /></button>
-        </div>
-        <div className="min-h-0 flex-1 space-y-4 overflow-y-auto p-4 touch-pan-y sm:p-5">
-          <dl className="grid grid-cols-2 gap-x-4 gap-y-2 rounded-lg bg-surface-raised p-3 text-sm">
-            <dt className="text-ink-muted">Expense</dt><dd className="text-right font-semibold text-ink">{transaction.item_name || transaction.description || transaction.category}</dd>
-            <dt className="text-ink-muted">Amount</dt><dd className="text-right font-semibold text-ink"><Money amount={transaction.amount} /></dd>
-          </dl>
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <label className="form-control"><span className="label-text">Corrected category</span><select value={category} onChange={(event) => setCategory(event.target.value)} className="input-machined" required>{EXPENSE_CATEGORIES.map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label>
-            <label className="form-control"><span className="label-text">Corrected cost class</span><select value={costClass} onChange={(event) => setCostClass(event.target.value)} className="input-machined" required>{COST_CLASSES.map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label>
-          </div>
-          <label className="form-control"><span className="label-text">Reason for correction</span><textarea value={reason} onChange={(event) => setReason(event.target.value)} className="input-machined" rows="3" placeholder="Explain why this classification is being corrected" required /></label>
-        </div>
-        <div className="flex shrink-0 justify-end gap-3 border-t bg-gray-50 p-4">
-          <button type="button" onClick={onClose} disabled={isPending} className="btn-secondary">Cancel</button>
-          <button type="submit" disabled={isPending || !isValid} className="btn-primary">{isPending ? 'Correcting...' : 'Void and replace'}</button>
-        </div>
-      </form>
-    </div>,
-    document.body,
-  );
-};
-
-const LedgerEntryFormModal = ({ onClose, transactionType, farmId, tenantId }) => {
-  const queryClient = useQueryClient();
-  const [isAnimalListOpen, setIsAnimalListOpen] = useState(false);
-  const [formData, setFormData] = useState(() => ({
-    date: format(new Date(), 'yyyy-MM-dd'),
-    amount: '',
-    category: transactionType === 'income' ? 'Milk Sale' : 'Feed Purchase',
-    incomePayerType: 'customer',
-    customer_id: '',
-    income_source: '',
-    party: '',
-    item_name: '',
-    quantity: '',
-    quantity_unit: 'kg',
-    cost_class: 'production_cost',
-    paymentMethod: 'M-Pesa',
-    animal_ids: [],
-    animal_cost_type: '',
-    reference_code: '',
-    description: '',
-  }));
-
-  const { data: customers = [] } = useQuery({
-    queryKey: [QUERY_KEYS.CUSTOMERS, tenantId, farmId],
-    queryFn: () => financeApi.listCustomers(),
-    enabled: !!tenantId && !!farmId && transactionType === 'income',
-  });
-  const { data: animals = [] } = useQuery({
-    queryKey: ['herd', tenantId],
-    queryFn: () => herdApi.list(),
-    enabled: !!tenantId && transactionType === 'expense',
-  });
-
-  const mutation = useMutation({
-    mutationFn: (newEntry) => {
-      if (transactionType === 'income' && formData.incomePayerType === 'customer') {
-        return financeApi.recordCustomerPayment(newEntry.customer_id, {
-          amount: newEntry.amount,
-          category: newEntry.category,
-          ...(newEntry.reference_code?.trim() ? { reference_code: newEntry.reference_code.trim() } : {}),
-          note: newEntry.description,
-          date: newEntry.date,
-          payment_method: newEntry.payment_method,
-        });
-      }
-      return financeApi.createLedgerEntry(newEntry);
-    },
-    onSuccess: (result) => {
-      queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.LEDGER_ENTRIES, tenantId, farmId] });
-      queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.CUSTOMERS, tenantId, farmId] });
-      if (isQueuedOffline(result)) {
-        toast(QUEUED_OFFLINE_MESSAGE);
-      } else {
-        toast.success(transactionType === 'income' && formData.incomePayerType === 'customer' ? 'Customer payment recorded.' : 'Transaction logged successfully!');
-      }
-      onClose();
-    },
-    onError: (error) => {
-      toast.error(`Failed to log transaction: ${getApiErrorMessage(error)}`);
-      console.error(error);
-    },
-  });
-
-  const handleChange = (e) => {
-    const { name, value } = e.target;
-    setFormData((prev) => ({
-      ...prev,
-      [name]: value,
-      ...(name === 'category' && value !== 'Feed Purchase' ? { quantity: '' } : {}),
-    }));
-  };
-
-  const handleAnimalToggle = (animalId) => {
-    setFormData((prev) => {
-      const selectedAnimals = prev.animal_ids.includes(animalId)
-        ? prev.animal_ids.filter((id) => id !== animalId)
-        : [...prev.animal_ids, animalId];
-
-      return {
-        ...prev,
-        animal_ids: selectedAnimals,
-        animal_cost_type: selectedAnimals.length === 0 ? '' : prev.animal_cost_type,
-      };
-    });
-  };
-
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    mutation.mutate(buildLedgerEntryPayload(formData, transactionType));
-  };
-
-  const isIncomeCounterpartyMissing = formData.incomePayerType === 'customer'
-    ? !formData.customer_id
-    : !formData.income_source.trim();
-  const isCustomerPayment = transactionType === 'income' && formData.incomePayerType === 'customer';
-  const isPaymentReferenceRequired = isCustomerPayment && formData.paymentMethod !== 'Cash';
-  const isIncomeFormInvalid = !formData.date || !formData.amount || !formData.category || isIncomeCounterpartyMissing || (isPaymentReferenceRequired && !formData.reference_code.trim());
-  const requiresCommodityQuantity = transactionType === 'expense' && formData.category === 'Feed Purchase';
-  const hasSelectedAnimals = formData.animal_ids.length > 0;
-  const isAnimalAllocationIncomplete = hasSelectedAnimals !== Boolean(formData.animal_cost_type);
-  const isExpenseFormInvalid = !formData.date || !formData.amount || !formData.category || !formData.party.trim() || !formData.item_name.trim() || (requiresCommodityQuantity && (!formData.quantity || Number(formData.quantity) <= 0 || !formData.quantity_unit)) || !hasSelectedAnimals || isAnimalAllocationIncomplete;
-  const isFormInvalid = transactionType === 'income' ? isIncomeFormInvalid : isExpenseFormInvalid;
-
-  return createPortal(
-    <div className="fixed inset-0 z-[100] flex items-start justify-center overflow-y-auto overscroll-contain bg-brand-dark/50 p-3 animate-reveal-fast touch-pan-y sm:items-center sm:p-4">
-      <section role="dialog" aria-modal="true" aria-label={transactionType === 'income' ? 'Record income or customer payment' : 'Log new expense'} className="my-auto flex max-h-[calc(100dvh-1.5rem)] min-h-0 w-full max-w-lg flex-col overflow-hidden rounded-lg bg-white shadow-2xl sm:max-h-[90dvh]">
-        <div className="flex shrink-0 items-center justify-between border-b p-4 sm:p-5">
-          <h3 className="text-lg font-bold text-ink">
-            {transactionType === 'income' ? 'Record Income or Customer Payment' : 'Log New Expense'}
-          </h3>
-          <button type="button" onClick={onClose} className="p-1 rounded-full hover:bg-gray-100 text-ink-muted" aria-label="Close transaction form">
-            <X size={20} />
-          </button>
-        </div>
-        <form onSubmit={handleSubmit} className="flex min-h-0 flex-1 flex-col overflow-hidden">
-          <div className="min-h-0 flex-1 space-y-4 overflow-y-auto overscroll-contain p-4 touch-pan-y sm:p-6">
-            {transactionType === 'income' ? (
-              <>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <label className="form-control"><span className="label-text">Date received</span><input type="date" name="date" value={formData.date} onChange={handleChange} className="input-machined" required /></label>
-                  <label className="form-control"><span className="label-text">Income amount (KES)</span><input type="number" min="0.01" step="0.01" name="amount" value={formData.amount} onChange={handleChange} className="input-machined" placeholder="e.g., 5000" required /></label>
-                </div>
-                <fieldset className="space-y-2">
-                  <legend className="label-text">Payment source</legend>
-                  <div className="grid grid-cols-2 gap-2 rounded-lg border border-ink/10 bg-surface-raised p-1">
-                    <button type="button" onClick={() => setFormData((current) => ({ ...current, incomePayerType: 'customer', income_source: '' }))} className={formData.incomePayerType === 'customer' ? 'btn-primary' : 'btn-secondary'}>Customer payment</button>
-                    <button type="button" onClick={() => setFormData((current) => ({ ...current, incomePayerType: 'other', customer_id: '' }))} className={formData.incomePayerType === 'other' ? 'btn-primary' : 'btn-secondary'}>Other payer</button>
-                  </div>
-                </fieldset>
-                {formData.incomePayerType === 'customer' ? (
-                  <label className="form-control">
-                    <span className="label-text">Customer making payment</span>
-                    <select name="customer_id" value={formData.customer_id} onChange={handleChange} className="input-machined" required>
-                      <option value="" disabled>Select who paid</option>
-                      {customers.map(customer => (
-                        <option key={customer.id} value={customer.id}>{customer.name}</option>
-                      ))}
-                    </select>
-                  </label>
-                ) : (
-                  <label className="form-control"><span className="label-text">Payer or income source</span><input type="text" name="income_source" value={formData.income_source} onChange={handleChange} className="input-machined" placeholder="e.g., County show or walk-in buyer" required /></label>
-                )}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <label className="form-control">
-                    <span className="label-text">Income source</span>
-                    <select name="category" value={formData.category} onChange={handleChange} className="input-machined" required>
-                      <option value="Milk Sale">Milk sales</option>
-                      <option value="Livestock Sale">Livestock sales</option>
-                      <option value="Other Income">Other income</option>
-                    </select>
-                  </label>
-                  <label className="form-control">
-                    <span className="label-text">Payment received via</span>
-                    <select name="paymentMethod" value={formData.paymentMethod} onChange={handleChange} className="input-machined" required>
-                      <option value="M-Pesa">M-Pesa</option><option value="Cash">Cash</option><option value="Bank">Bank transfer</option><option value="Other">Other</option>
-                    </select>
-                  </label>
-                </div>
-                <label className="form-control"><span className="label-text">Payment reference{isPaymentReferenceRequired ? ' (required)' : ' (optional)'}</span><input type="text" name="reference_code" value={formData.reference_code} onChange={handleChange} className="input-machined" placeholder={formData.paymentMethod === 'Cash' ? 'Optional for cash payments' : 'M-Pesa or bank transaction code'} required={isPaymentReferenceRequired} /></label>
-                <label className="form-control"><span className="label-text">Income notes</span><textarea name="description" value={formData.description} onChange={handleChange} className="input-machined" rows="2" placeholder="What was this payment for?" /></label>
-              </>
-            ) : (
-              <>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <label className="form-control"><span className="label-text">Expense date</span><input type="date" name="date" value={formData.date} onChange={handleChange} className="input-machined" required /></label>
-                  <label className="form-control"><span className="label-text">Amount paid (KES)</span><input type="number" min="0.01" step="0.01" name="amount" value={formData.amount} onChange={handleChange} className="input-machined" placeholder="e.g., 2500" required /></label>
-                </div>
-                <label className="form-control"><span className="label-text">Supplier or payee</span><input type="text" name="party" value={formData.party} onChange={handleChange} className="input-machined" placeholder="e.g., Agrovet Store or employee name" required /></label>
-                <label className="form-control"><span className="label-text">Expense category</span><select name="category" value={formData.category} onChange={handleChange} className="input-machined" required><option value="Feed Purchase">Feed and supplies</option><option value="Labor / Wages">Labor and wages</option><option value="Utilities">Utilities</option><option value="Vet Fees">Veterinary services</option><option value="Equipment Maintenance">Equipment maintenance</option><option value="Transport">Transport</option><option value="Other">Other expense</option></select></label>
-                <label className="form-control"><span className="label-text">{requiresCommodityQuantity ? 'Item / commodity name' : 'Expense or service description'}</span><input type="text" name="item_name" value={formData.item_name} onChange={handleChange} className="input-machined" placeholder={requiresCommodityQuantity ? 'e.g., Dairy Meal' : 'e.g., Veterinary visit or vaccination'} required /></label>
-                {requiresCommodityQuantity && (
-                  <div className="grid grid-cols-2 gap-3">
-                    <label className="form-control"><span className="label-text">Quantity</span><input type="number" min="0.001" step="0.001" name="quantity" value={formData.quantity} onChange={handleChange} className="input-machined" placeholder="e.g., 50" required /></label>
-                    <label className="form-control"><span className="label-text">Unit</span><select name="quantity_unit" value={formData.quantity_unit} onChange={handleChange} className="input-machined" required><option value="kg">Kilograms (kg)</option><option value="g">Grams (g)</option><option value="L">Litres (L)</option><option value="mL">Millilitres (mL)</option><option value="bags">Bags</option><option value="pieces">Pieces</option><option value="packs">Packs</option><option value="units">Units</option></select></label>
-                  </div>
-                )}
-                <div className="grid grid-cols-1 gap-4">
-                  <div className="form-control">
-                    <div className="mb-1.5 flex items-center gap-1.5">
-                      <span className="label-text">Cost classification</span>
-                      <Popover>
-                        <PopoverTrigger asChild>
-                          <button type="button" className="inline-flex text-ink-muted transition-colors hover:text-brand" aria-label="Explain cost classifications">
-                            <Info size={14} aria-hidden="true" />
-                          </button>
-                        </PopoverTrigger>
-                        <PopoverContent align="start" sideOffset={6} className="w-80 space-y-3">
-                          <div className="space-y-2 text-xs leading-relaxed text-slate-600">
-                            {COST_CLASS_DEFINITIONS.map(([value, definition]) => (
-                              <div key={value}>
-                                <p className="font-bold text-slate-900">{COST_CLASSES.find(([classValue]) => classValue === value)?.[1]}</p>
-                                <p>{definition}</p>
-                              </div>
-                            ))}
-                          </div>
-                        </PopoverContent>
-                      </Popover>
-                    </div>
-                    <select name="cost_class" value={formData.cost_class} onChange={handleChange} className="input-machined" required>
-                      {COST_CLASSES.map(([value, label]) => <option key={value} value={value}>{label}</option>)}
-                    </select>
-                  </div>
-                </div>
-                <label className="form-control">
-                  <span className="label-text">Payment method used</span>
-                  <select name="paymentMethod" value={formData.paymentMethod} onChange={handleChange} className="input-machined" required>
-                    <option value="M-Pesa">M-Pesa</option><option value="Cash">Cash</option><option value="Bank">Bank transfer</option><option value="Other">Other</option>
-                  </select>
-                </label>
-                <label className="form-control"><span className="label-text">Receipt or invoice number</span><input type="text" name="reference_code" value={formData.reference_code} onChange={handleChange} className="input-machined" placeholder="Supplier receipt, invoice, or transaction code" /></label>
-                <label className="form-control"><span className="label-text">Purchase or expense details</span><textarea name="description" value={formData.description} onChange={handleChange} className="input-machined" rows="2" placeholder="Describe the goods or services purchased" /></label>
-                <div className="grid grid-cols-1 gap-4 border-t border-ink/10 pt-4">
-                  <div className="form-control">
-                    <div className="mb-1.5 flex items-center gap-1.5">
-                      <span className="label-text">Cost classification</span>
-                      <Popover>
-                        <PopoverTrigger asChild>
-                          <button type="button" className="inline-flex text-ink-muted transition-colors hover:text-brand" aria-label="Explain cost classifications">
-                            <Info size={14} aria-hidden="true" />
-                          </button>
-                        </PopoverTrigger>
-                        <PopoverContent align="start" sideOffset={6} className="w-80 space-y-3">
-                          <div className="space-y-2 text-xs leading-relaxed text-slate-600">
-                            {COST_CLASS_DEFINITIONS.map(([value, definition]) => (
-                              <div key={value}>
-                                <p className="font-bold text-slate-900">{COST_CLASSES.find(([classValue]) => classValue === value)?.[1]}</p>
-                                <p>{definition}</p>
-                              </div>
-                            ))}
-                          </div>
-                        </PopoverContent>
-                      </Popover>
-                    </div>
-                    <select name="cost_class" value={formData.cost_class} onChange={handleChange} className="input-machined" required>
-                      {COST_CLASSES.map(([value, label]) => <option key={value} value={value}>{label}</option>)}
-                    </select>
-                  </div>
-                </div>
-                <div className="grid grid-cols-1 gap-4 border-t border-ink/10 pt-4">
-                  <div className="form-control">
-                    <span className="label-text">Animals for this expense <span className="text-brand-dark">*</span></span>
-                    <button
-                      type="button"
-                      onClick={() => setIsAnimalListOpen((current) => !current)}
-                      aria-expanded={isAnimalListOpen}
-                      aria-controls="animals-for-expense-list"
-                      className="mt-1 flex w-full items-center justify-between rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-left text-sm font-medium text-gray-900 shadow-sm transition-colors hover:border-gray-400 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:ring-offset-2"
-                    >
-                      <span>Select Animals ({formData.animal_ids.length} selected)</span>
-                      {isAnimalListOpen ? <ChevronUp size={18} aria-hidden="true" /> : <ChevronDown size={18} aria-hidden="true" />}
-                    </button>
-                    {isAnimalListOpen && (
-                      <div id="animals-for-expense-list" className="mt-2 max-h-48 overflow-y-auto rounded-lg border border-gray-300 bg-white">
-                        {animals.length === 0 ? (
-                          <p className="px-3 py-3 text-sm text-gray-500">No animals available</p>
-                        ) : (
-                          animals.map((animal) => (
-                            <label key={animal.id} className="flex cursor-pointer items-center gap-3 py-2 px-3 transition-colors hover:bg-gray-50 focus-within:bg-gray-50">
-                              <input
-                                type="checkbox"
-                                checked={formData.animal_ids.includes(animal.id)}
-                                onChange={() => handleAnimalToggle(animal.id)}
-                                className="h-4 w-4 rounded border-gray-300 text-brand-700 focus:ring-brand-500"
-                              />
-                              <span className="text-sm text-gray-900">{formatCowIdentity(animal)}</span>
-                            </label>
-                          ))
-                        )}
-                      </div>
-                    )}
-                  </div>
-                  <div className="form-control">
-                    <div className="mb-1.5 flex items-center gap-1.5">
-                      <span className="label-text">Animal cost type</span>
-                      <Popover>
-                        <PopoverTrigger asChild>
-                          <button type="button" className="inline-flex text-ink-muted transition-colors hover:text-brand" aria-label="Explain cost classifications">
-                            <Info size={14} aria-hidden="true" />
-                          </button>
-                        </PopoverTrigger>
-                        <PopoverContent align="start" sideOffset={6} className="w-80 space-y-3">
-                          <div className="space-y-2 text-xs leading-relaxed text-slate-600">
-                            {COST_CLASS_DEFINITIONS.map(([value, definition]) => (
-                              <div key={value}>
-                                <p className="font-bold text-slate-900">{COST_CLASSES.find(([classValue]) => classValue === value)?.[1]}</p>
-                                <p>{definition}</p>
-                              </div>
-                            ))}
-                          </div>
-                        </PopoverContent>
-                      </Popover>
-                    </div>
-                    <select name="animal_cost_type" value={formData.animal_cost_type} onChange={handleChange} className="input-machined" disabled={!hasSelectedAnimals}>
-                      <option value="">Select cost type</option>
-                      <option value="PURCHASE">Purchase</option><option value="CALF_FEED">Calf feed</option><option value="HEIFER_FEED">Heifer feed</option><option value="BREEDING">Breeding</option><option value="VETERINARY">Veterinary</option><option value="LABOR">Labor</option><option value="HOUSING">Housing</option><option value="OVERHEAD">Overhead</option><option value="OTHER">Other</option>
-                    </select>
-                  </div>
-                </div>
-                {!hasSelectedAnimals && <p className="text-xs text-brand-dark">Select at least one cow for this animal cost.</p>}
-                {hasSelectedAnimals && isAnimalAllocationIncomplete && <p className="text-xs text-brand-dark">Select a cost type to assign this expense to the selected cows.</p>}
-              </>
-            )}
-          </div>
-          <div className="flex shrink-0 justify-end gap-3 rounded-b-lg bg-gray-50 p-4">
-            <button type="button" onClick={onClose} className="btn-secondary">
-              Cancel
-            </button>
-            <button type="submit" className="btn-primary" disabled={mutation.isPending || isFormInvalid}>
-              {mutation.isPending ? 'Saving...' : `Log ${transactionType === 'income' ? 'Income' : 'Expense'}`}
-            </button>
-          </div>
-        </form>
-      </section>
-    </div>,
-    document.body,
-  );
-};
-
+/**
+ * /finance/ledger. Composition only: the hooks supply filters, data and record actions, and
+ * the components lay them out (header, KPI cards, filter panel, grouped table, dialogs).
+ */
 const FinancialLedger = () => {
+  const copy = financeCopy.ledger;
   const { tenantId, farmId } = useTenant();
-  const { currentUser } = useAuth();
-  const queryClient = useQueryClient();
-  const [filters] = useState({ per_page: 100 });
-  const [ledgerFilters, setLedgerFilters] = useState({ search: '', type: 'all', category: 'all', from: '', to: '' });
-  const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('');
-  const [isFiltersOpen, setIsFiltersOpen] = useState(false);
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [modalTransactionType, setModalTransactionType] = useState(null);
-  const [selectedReceipt, setSelectedReceipt] = useState(null);
-  const [isReceiptLoading, setIsReceiptLoading] = useState(false);
-  const [isReceiptDownloading, setIsReceiptDownloading] = useState(false);
-  const [transactionToCorrect, setTransactionToCorrect] = useState(null);
-  const canCorrectExpenses = hasRole(currentUser, ['FARMER']);
-  const searchQuery = ledgerFilters.search.trim();
+  const today = todayLocalIso();
+  const categories = useLedgerCategories(tenantId, farmId);
+  const filters = useLedgerFilters({ today });
+  const { rows, kpis, groupTotals } = useLedgerData({ filters: filters.query, range: filters.range });
+  const actions = useLedgerRecordActions();
+  const [entryFormType, setEntryFormType] = useState(null);
+  // The table from xl up; below it the list, whose rows open a record's sheet.
+  const isTable = useMediaQuery(TABLE_QUERY);
+  const [selected, setSelected] = useState(null);
+  const empty = filters.activeCount > 0 ? copy.noMatches : copy.empty;
 
-  useEffect(() => {
-    const timeoutId = window.setTimeout(() => setDebouncedSearchQuery(searchQuery), 300);
-    return () => window.clearTimeout(timeoutId);
-  }, [searchQuery]);
-
-  const { data, isLoading, isError, error } = useQuery({
-    queryKey: [QUERY_KEYS.LEDGER_ENTRIES, tenantId, farmId, filters, debouncedSearchQuery],
-    // The backend endpoint for the general ledger requires a scope. While this should
-    // be handled by the tenant/farm ID in the headers, the ledger endpoint specifically
-    // seems to require them as query parameters to return the farm-wide view instead
-    // of demanding a `customer_id`.
-    queryFn: () => financeApi.listLedgerEntries({
-      ...filters,
-      farm_id: farmId,
-      tenant_id: tenantId,
-      ...(debouncedSearchQuery ? { search_query: debouncedSearchQuery } : {}),
-    }),
-    enabled: !!tenantId && !!farmId,
-    keepPreviousData: true,
-  });
-
-  const transactions = useMemo(() => data?.items || [], [data]);
-  const filteredTransactions = useMemo(() => {
-    return transactions.filter((tx) => {
-      const transactionType = String(tx.transaction_type || tx.type || '').toLowerCase();
-      const matchesType = ledgerFilters.type === 'all' || transactionType === ledgerFilters.type.toLowerCase();
-      const matchesCategory = ledgerFilters.category === 'all' || String(tx.category || '').toLowerCase() === ledgerFilters.category.toLowerCase();
-      const matchesFrom = !ledgerFilters.from || String(tx.date || '').slice(0, 10) >= ledgerFilters.from;
-      const matchesTo = !ledgerFilters.to || String(tx.date || '').slice(0, 10) <= ledgerFilters.to;
-
-      return matchesType && matchesCategory && matchesFrom && matchesTo;
-    });
-  }, [transactions, ledgerFilters]);
-  const ledgerCategories = useMemo(() => [...new Set(transactions.map((tx) => tx.category).filter(Boolean))].sort(), [transactions]);
-  const summary = useMemo(() => data?.summary || {}, [data]);
-  const transactionTotal = summary.ledger_records ?? summary.transaction_count ?? data?.meta?.total ?? transactions.length;
-  const correctionMutation = useMutation({
-    mutationFn: ({ transactionId, payload }) => financeApi.voidAndReplaceExpense(transactionId, payload),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.LEDGER_ENTRIES, tenantId, farmId] });
-      setTransactionToCorrect(null);
-      toast.success('Expense corrected. The original entry is now voided.');
-    },
-    onError: (correctionError) => toast.error(`Could not correct expense: ${getApiErrorMessage(correctionError)}`),
-  });
-
-  const handleOpenModal = (type) => {
-    setModalTransactionType(type);
-    setIsModalOpen(true);
-  };
-
-  const handleCloseModal = () => {
-    setIsModalOpen(false);
-    setModalTransactionType(null);
-  };
-
-  const clearLedgerFilters = () => setLedgerFilters({ search: '', type: 'all', category: 'all', from: '', to: '' });
-  const openReceipt = async (transaction) => {
-    if (!transaction.receipt_available || !transaction.receipt?.id) return;
-    setIsReceiptLoading(true);
-    try {
-      setSelectedReceipt(await financeApi.getReceipt(transaction.receipt.id));
-    } catch (receiptError) {
-      toast.error(getApiErrorMessage(receiptError));
-    } finally {
-      setIsReceiptLoading(false);
-    }
-  };
-  const closeReceipt = () => setSelectedReceipt(null);
-  const handleDownloadReceipt = async () => {
-    setIsReceiptDownloading(true);
-    try {
-      downloadReceiptPdf(selectedReceipt, await financeApi.downloadReceiptPdf(selectedReceipt.id));
-    } catch (receiptError) {
-      toast.error(getApiErrorMessage(receiptError));
-    } finally {
-      setIsReceiptDownloading(false);
-    }
-  };
-  const handleShareReceipt = async () => {
-    try {
-      await shareReceiptText(selectedReceipt);
-      toast.success(navigator.share ? 'Receipt shared.' : 'Receipt copied.');
-    } catch (receiptError) {
-      if (receiptError?.name !== 'AbortError') toast.error('Could not share receipt.');
-    }
-  };
+  const resultsSummary = rows.total != null && (
+    <p role="status" className="flex flex-wrap items-center gap-1">
+      <span>{copy.showing(rows.total, formatCount(rows.total))}</span>
+      <InfoTip topic={copy.kpis.label}>{copy.resultsInfo}</InfoTip>
+    </p>
+  );
 
   return (
-    <div className="animate-reveal space-y-6 max-w-7xl mx-auto">
-      <div className="flex min-w-0 flex-col gap-4 rounded-card border border-brand/20 bg-brand-50 p-4 sm:flex-row sm:items-center sm:justify-between sm:p-5">
-        <div className="flex min-w-0 items-center gap-3">
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-brand/20 bg-surface text-brand"><Wallet size={20} /></div>
-          <div className="min-w-0">
-            <h2 className="m-0 break-words font-sans text-xl font-bold tracking-tight text-brand-dark sm:text-2xl">Financial Ledger</h2>
-            <p className="text-sm text-brand-700/80 mt-1">All income and expense transactions.</p>
-          </div>
-        </div>
-        <div className="grid w-full grid-cols-2 gap-2 sm:w-auto sm:gap-2">
-          <button onClick={() => handleOpenModal('income')} className="flex min-w-0 items-center justify-center gap-1.5 rounded-button bg-brand px-2 py-2 text-xs font-semibold text-white transition-colors hover:bg-brand-dark sm:gap-2 sm:px-4 sm:text-sm"><Plus size={16} /><span>Log Income</span></button>
-          <button onClick={() => handleOpenModal('expense')} className="flex min-w-0 items-center justify-center gap-1.5 rounded-button bg-brand px-2 py-2 text-xs font-semibold text-white transition-colors hover:bg-brand-dark sm:gap-2 sm:px-4 sm:text-sm"><Plus size={16} /><span>Log Expense</span></button>
-        </div>
-      </div>
+    <div className="mx-auto max-w-7xl animate-reveal space-y-4">
+      <LedgerHeader
+        title={copy.heading}
+        subtitle={copy.subtitle}
+        incomeLabel={copy.logIncome}
+        expenseLabel={copy.logExpense}
+        onLogIncome={() => setEntryFormType('income')}
+        onLogExpense={() => setEntryFormType('expense')}
+      />
 
-      <div className={`grid min-w-0 grid-cols-2 gap-3 sm:gap-4 ${searchQuery ? '' : 'lg:grid-cols-3'}`}>
-        <SummaryCard
-          title="Total Sales"
-          value={<CurrencyValue amount={summary.recognized_sales} />}
-          icon={TrendingUp}
-          tone="success"
-          tooltip="The total value of all milk billed through this ledger, whether the buyer has paid yet or not."
+      <KpiGroup
+        label={copy.kpis.label}
+        rows={LEDGER_KPI_ROWS}
+        values={kpis.data}
+        scope={summaryScope(filters.range, { isDefault: filters.isDefaultRange, short: !isTable })}
+        reportTo={ledgerReportRoute(filters.range)}
+        loadState={kpis.loadState}
+        error={kpis.error}
+        onRetry={kpis.refetch}
+        layout={isTable ? 'tiles' : 'list'}
+      />
+
+      <FilterPanel title={copy.filtersTitle} activeCount={filters.activeCount} onReset={filters.reset} resultsSummary={resultsSummary}>
+        <LedgerFilters filters={filters} categories={categories} maxDate={today} layout={isTable ? 'row' : 'stacked'} />
+      </FilterPanel>
+
+      <DataSection
+        label={copy.recordsLabel}
+        notices={rows.searchScope?.typo_matched && (
+          <p role="status" className="border-b border-ink/10 bg-ink-50 px-4 py-2 text-body text-ink">
+            {copy.typoMatch(rows.searchScope.search_query, rows.searchScope.matched_names?.join(', '))}
+          </p>
+        )}
+      >
+        {isTable ? (
+          <LedgerTable
+            rows={rows}
+            groupTotals={groupTotals}
+            categories={categories}
+            menuItemsFor={actions.menuItemsFor}
+            onOpenReceipt={actions.openReceipt}
+            empty={empty}
+          />
+        ) : (
+          <LedgerList
+            rows={rows}
+            groupTotals={groupTotals}
+            categories={categories}
+            onRowSelect={setSelected}
+            showYear={filters.range.from.slice(0, 4) !== filters.range.to.slice(0, 4)}
+            empty={empty}
+          />
+        )}
+      </DataSection>
+
+      {!isTable && (
+        <TransactionSheet
+          tx={selected}
+          categories={categories}
+          menuItems={selected ? actions.menuItemsFor(selected) : []}
+          onViewReceipt={actions.openReceipt}
+          onClose={() => setSelected(null)}
         />
-        {!searchQuery && (
-          <SummaryCard title="Posted Costs" value={<CurrencyValue amount={summary.posted_costs} />} icon={TrendingDown} tone="danger" />
-        )}
-        {!searchQuery && (
-          <SummaryCard title="Net Profit" value={<CurrencyValue amount={summary.net_profit} />} icon={ChevronsRight} />
-        )}
-      </div>
+      )}
 
-      <div className="rounded-xl bg-brand-900 p-4 ">
-        <div className="grid grid-cols-1 gap-px rounded-lg bg-white/20 sm:grid-cols-3">
-          <LiquidityCard
-            title="Customer Credit"
-            value={<CurrencyValue amount={summary.customer_credit} inverse />}
-            icon={BadgeDollarSign}
-          />
-          <LiquidityCard
-            title="Unpaid Money"
-            value={<CurrencyValue amount={summary.outstanding_receivables} inverse />}
-            icon={TrendingDown}
-            tooltip="The total amount buyers currently owe you. This includes older debts that were added to a buyer's profile before you started using this daily ledger."
-          />
-          <LiquidityCard
-            title="Ledger Records"
-            value={transactionTotal == null
-              ? <span className="text-base font-semibold text-white/70">Not available</span>
-              : <span className="font-mono text-2xl font-bold tabular-nums tracking-tight text-white">{Number(transactionTotal).toLocaleString()}</span>}
-            icon={ListChecks}
-          />
-        </div>
-      </div>
-
-      <div className="card-machined p-4 space-y-3">
-        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-          <button type="button" onClick={() => setIsFiltersOpen((current) => !current)} className="inline-flex items-center gap-2 text-sm font-bold text-brand" aria-expanded={isFiltersOpen}>
-            <Filter size={15} /> Search and filter transactions
-            {isFiltersOpen ? <ChevronUp size={15} /> : <ChevronDown size={15} />}
-          </button>
-          {isFiltersOpen && (
-            <button type="button" onClick={clearLedgerFilters} className="inline-flex items-center gap-2 text-xs font-semibold text-ink-muted hover:text-brand">
-              <RotateCcw size={14} /> Reset filters
-            </button>
-          )}
-        </div>
-        {isFiltersOpen && (
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-5">
-          <label className="relative sm:col-span-2 xl:col-span-2">
-            <span className="sr-only">Search transactions</span>
-            <Search size={14} className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-brand" />
-            <input type="search" value={ledgerFilters.search} onChange={(event) => setLedgerFilters((current) => ({ ...current, search: event.target.value }))} placeholder="Search customer, item, category, description, reference..." className="input-machined pl-10" />
-          </label>
-          <label>
-            <span className="sr-only">Transaction type</span>
-            <select value={ledgerFilters.type} onChange={(event) => setLedgerFilters((current) => ({ ...current, type: event.target.value }))} className="input-machined">
-              <option value="all">All types</option>
-              <option value="revenue">Income</option>
-              <option value="expense">Expense</option>
-            </select>
-          </label>
-          <label>
-            <span className="sr-only">Category</span>
-            <select value={ledgerFilters.category} onChange={(event) => setLedgerFilters((current) => ({ ...current, category: event.target.value }))} className="input-machined">
-              <option value="all">All categories</option>
-              {ledgerCategories.map((category) => <option key={category} value={category}>{category}</option>)}
-            </select>
-          </label>
-          <div className="grid grid-cols-2 gap-3 sm:col-span-2 xl:col-span-1">
-            <label><span className="sr-only">From date</span><input type="date" value={ledgerFilters.from} onChange={(event) => setLedgerFilters((current) => ({ ...current, from: event.target.value }))} className="input-machined" aria-label="From date" /></label>
-            <label><span className="sr-only">To date</span><input type="date" value={ledgerFilters.to} onChange={(event) => setLedgerFilters((current) => ({ ...current, to: event.target.value }))} className="input-machined" aria-label="To date" /></label>
-          </div>
-        </div>
-        )}
-        <div className="flex items-center gap-2 text-xs text-ink-muted"><Search size={14} /> Showing {filteredTransactions.length} of {transactionTotal} ledger records. Summary cards follow the customer or buyer search; other filters affect rows only.</div>
-      </div>
-
-      <div className="card-machined overflow-hidden !p-0">
-        <div className="hidden overflow-x-auto md:block">
-          <table className="w-full text-left border-collapse">
-            <thead className="bg-brand-800">
-              <tr>
-                <th className="p-4 text-xs font-bold uppercase tracking-wider text-white">Date</th>
-                <th className="p-4 text-xs font-bold uppercase tracking-wider text-white">Customer/Supplier</th>
-                <th className="p-4 text-xs font-bold uppercase tracking-wider text-white">Category</th>
-                <th className="min-w-56 p-4 text-xs font-bold uppercase tracking-wider text-white">Description</th>
-                <th className="p-4 text-xs font-bold uppercase tracking-wider text-white">Ref Code</th>
-                <th className="p-4 text-xs font-bold uppercase tracking-wider text-white text-right">Amount</th>
-                <th className="p-4 text-xs font-bold uppercase tracking-wider text-white">Status</th>
-                <th className="p-4 text-xs font-bold uppercase tracking-wider text-white text-right">Receipt</th>
-                <th className="p-4 text-xs font-bold uppercase tracking-wider text-white text-right">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-ink/5 bg-white">
-              {isLoading ? (
-                <tr><td colSpan="9" className="p-10 text-center text-ink-muted">Loading transactions...</td></tr>
-              ) : isError ? (
-                <tr><td colSpan="9" className="p-10 text-center text-brand-dark">Error: {getApiErrorMessage(error)}</td></tr>
-              ) : filteredTransactions.length > 0 ? (
-                <GroupedDateRows
-                  items={filteredTransactions}
-                  getDate={(tx) => tx.date}
-                  colSpan={9}
-                  labelColSpan={5}
-                  yearRowClassName="bg-brand-100 text-brand-dark text-sm font-bold"
-                  monthRowClassName="bg-brand-50 text-brand-800 text-xs font-bold"
-                  dateRowClassName="bg-surface text-ink text-xs font-semibold"
-                  renderGroupCount={(items) => items.length}
-                  renderGroupTotal={(items) => {
-                    const total = items.reduce((sum, tx) => {
-                      const amount = Number(tx.amount);
-                      return sum + (Number.isFinite(amount) ? amount : 0);
-                    }, 0);
-                    return <Money amount={total} size="xs" showSign={total < 0} />;
-                  }}
-                  renderItem={(tx) => (
-                <tr key={tx.id} className="hover:bg-surface-raised transition-colors">
-                  <td className="p-4 text-sm text-ink-muted font-medium font-mono">{format(parseISO(tx.date), 'PPP')}</td>
-                  <td className="p-4 text-sm text-ink font-semibold">{tx.counterparty_name || tx.customer_name || tx.buyer_name || 'N/A'}</td>
-                  <td className="p-4 text-sm text-ink-muted">{tx.category}</td>
-                  <td className="min-w-56 p-4 text-sm text-ink-muted">
-                    <TransactionDescription transaction={tx} />
-                  </td>
-                  <td className="p-4 text-sm text-ink-muted font-mono">{tx.reference_code || 'N/A'}</td>
-                  <td className="p-4 text-right font-mono text-sm font-semibold tabular-nums text-brand"><Money amount={tx.amount} /></td>
-                  <td className="p-4 text-sm"><StatusBadge status={tx.status || tx.transaction_type} /></td>
-                  <td className="p-4 text-right">
-                    {tx.receipt_available && tx.receipt?.id ? (
-                      <button type="button" disabled={isReceiptLoading} onClick={() => openReceipt(tx)} className="text-xs font-bold text-brand hover:text-brand-dark underline-offset-2 hover:underline disabled:opacity-50">
-                        View receipt
-                      </button>
-                    ) : (
-                      <span className="text-xs text-ink-muted">—</span>
-                    )}
-                  </td>
-                  <td className="p-4 text-right">
-                    {canCorrectExpenses && isCorrectableExpense(tx) ? (
-                      <button type="button" onClick={() => setTransactionToCorrect(tx)} className="inline-flex items-center gap-1.5 text-xs font-bold text-brand hover:text-brand-dark" title="Void this expense and create a corrected replacement">
-                        <PencilLine size={14} /> Correct cost
-                      </button>
-                    ) : <span className="text-xs text-ink-muted">—</span>}
-                  </td>
-                </tr>
-                  )}
-                />
-              ) : null}
-              {!isLoading && !isError && filteredTransactions.length === 0 && (
-                <tr><td colSpan="9" className="p-10 text-center text-ink-muted">{transactions.length === 0 ? 'No transactions recorded yet.' : 'No transactions match the selected filters.'}</td></tr>
-              )}
-            </tbody>
-          </table>
-        </div>
-        <div className="divide-y divide-ink/10 md:hidden">
-          {isLoading ? <p className="p-5 text-center text-sm text-ink-muted">Loading transactions...</p> : isError ? <p className="p-5 text-center text-sm text-brand-dark">Error: {getApiErrorMessage(error)}</p> : filteredTransactions.map((tx) => (
-            <article key={tx.id} className="min-w-0 space-y-3 p-4">
-              <div className="flex min-w-0 items-start justify-between gap-3">
-                <div className="min-w-0"><time className="text-xs text-ink-muted">{format(parseISO(tx.date), 'PPP')}</time><p className="mt-1 break-words font-semibold text-ink">{tx.counterparty_name || tx.customer_name || tx.buyer_name || 'N/A'}</p></div>
-                <span className="shrink-0 text-right font-mono text-sm font-bold tabular-nums text-brand"><Money amount={tx.amount} /></span>
-              </div>
-              <dl className="grid min-w-0 grid-cols-2 gap-x-3 gap-y-2 border-t border-ink/10 pt-3 text-xs">
-                <div className="min-w-0"><dt className="text-ink-muted">Category</dt><dd className="mt-1 break-words font-medium text-ink">{tx.category || '—'}</dd></div>
-                <div className="min-w-0"><dt className="text-ink-muted">Status</dt><dd className="mt-1"><StatusBadge status={tx.status || tx.transaction_type} /></dd></div>
-                <div className="col-span-2 min-w-0"><dt className="text-ink-muted">Description</dt><dd className="mt-1 text-sm"><TransactionDescription transaction={tx} /></dd></div>
-                <div className="col-span-2 min-w-0"><dt className="text-ink-muted">Reference</dt><dd className="mt-1 break-all font-mono text-ink">{tx.reference_code || 'N/A'}</dd></div>
-              </dl>
-              <div className="flex flex-wrap justify-end gap-2 border-t border-ink/10 pt-3">
-                {tx.receipt_available && tx.receipt?.id ? <button type="button" disabled={isReceiptLoading} onClick={() => openReceipt(tx)} className="rounded-lg border border-brand/20 px-3 py-2 text-xs font-semibold text-brand">View receipt</button> : <span className="self-center text-xs text-ink-muted">No receipt</span>}
-                {canCorrectExpenses && isCorrectableExpense(tx) && <button type="button" onClick={() => setTransactionToCorrect(tx)} className="inline-flex items-center gap-1 rounded-lg border border-brand/20 px-3 py-2 text-xs font-semibold text-brand"><PencilLine size={13} /> Correct cost</button>}
-              </div>
-            </article>
-          ))}
-          {!isLoading && !isError && filteredTransactions.length === 0 && <p className="p-6 text-center text-sm text-ink-muted">{transactions.length === 0 ? 'No transactions recorded yet.' : 'No transactions match the selected filters.'}</p>}
-        </div>
-      </div>
-
-      {isModalOpen && (
+      {entryFormType && (
         <LedgerEntryFormModal
-          key={modalTransactionType}
-          onClose={handleCloseModal}
-          transactionType={modalTransactionType}
+          key={entryFormType}
+          onClose={() => setEntryFormType(null)}
+          transactionType={entryFormType}
           farmId={farmId}
           tenantId={tenantId}
         />
       )}
 
-      {transactionToCorrect && (
+      {actions.correction.transaction && (
         <LedgerCorrectionModal
-          transaction={transactionToCorrect}
-          onClose={() => setTransactionToCorrect(null)}
-          onSubmit={(payload) => correctionMutation.mutate({ transactionId: transactionToCorrect.id, payload })}
-          isPending={correctionMutation.isPending}
+          kind={actions.correction.kind}
+          transaction={actions.correction.transaction}
+          onClose={actions.correction.close}
+          onSubmit={actions.correction.submit}
+          isPending={actions.correction.isPending}
+          error={actions.correction.error}
+          tenantId={tenantId}
+          farmId={farmId}
         />
       )}
 
-      {selectedReceipt && (
+      {actions.photos.transaction && (
+        <ReceiptPhotosModal
+          transaction={rows.items.find((tx) => tx.id === actions.photos.transaction.id) ?? actions.photos.transaction}
+          title={actions.photos.title}
+          canUpload={actions.photos.canUpload}
+          onClose={actions.photos.close}
+          onUploaded={actions.photos.onUploaded}
+        />
+      )}
+
+      {actions.receipt.value && (
         <ReceiptPreview
-          receipt={selectedReceipt}
-          isOpen={Boolean(selectedReceipt)}
-          onClose={closeReceipt}
-          onDownload={handleDownloadReceipt}
-          onShare={handleShareReceipt}
-          isDownloading={isReceiptDownloading}
+          receipt={actions.receipt.value}
+          isOpen
+          onClose={actions.receipt.close}
+          onDownload={actions.receipt.download}
+          onShare={actions.receipt.share}
+          isDownloading={actions.receipt.isDownloading}
+          isSharing={actions.receipt.isSharing}
         />
       )}
     </div>

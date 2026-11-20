@@ -24,8 +24,8 @@ const renderWithProviders = (ui) => render(
   </QueryClientProvider>,
 );
 
-const renderChecklist = ({ milkRecords = [] } = {}) => renderWithProviders(
-  <WelcomeChecklist tenantId="tenant_1" farmId="farm_1" milkRecords={milkRecords} milkLoaded />,
+const renderChecklist = ({ milkRecordCount = 0 } = {}) => renderWithProviders(
+  <WelcomeChecklist tenantId="tenant_1" farmId="farm_1" milkRecordCount={milkRecordCount} milkLoaded />,
 );
 
 describe('WelcomeChecklist', () => {
@@ -60,7 +60,7 @@ describe('WelcomeChecklist', () => {
     localStorage.setItem(STORAGE_KEY, 'active');
     api.listHerd.mockResolvedValue([{ id: 1 }]);
     api.listCustomers.mockResolvedValue([{ id: 7 }]);
-    renderChecklist({ milkRecords: [{ amount: 12 }] });
+    renderChecklist({ milkRecordCount: 1 });
 
     expect(await screen.findByText('Hongera! Your farm is set up.')).toBeTruthy();
     fireEvent.click(screen.getByRole('button', { name: 'Done' }));
@@ -72,7 +72,7 @@ describe('WelcomeChecklist', () => {
   it('never shows to a farm that was already set up', async () => {
     api.listHerd.mockResolvedValue([{ id: 1 }]);
     api.listCustomers.mockResolvedValue([{ id: 7 }]);
-    const { container } = renderChecklist({ milkRecords: [{ amount: 12 }] });
+    const { container } = renderChecklist({ milkRecordCount: 1 });
 
     await waitFor(() => expect(localStorage.getItem(STORAGE_KEY)).toBe('done'));
     expect(container.textContent).toBe('');
@@ -95,7 +95,7 @@ describe('WelcomeChecklist', () => {
 describe('MilestoneBanner', () => {
   const MILESTONE_KEY = 'maziwa_milestone:tenant_1:farm_1';
   const renderBanner = (litres) => renderWithProviders(
-    <MilestoneBanner tenantId="tenant_1" farmId="farm_1" milkRecords={[{ amount: litres }]} milkLoaded />,
+    <MilestoneBanner tenantId="tenant_1" farmId="farm_1" totalLitres={litres} milkLoaded />,
   );
 
   beforeEach(() => localStorage.clear());

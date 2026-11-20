@@ -2,7 +2,7 @@
 
 **Scope:** `jivu-frontend` (React 19 + Vite PWA), audited read-only on 2026-10-31 at commit `982521c` plus the uncommitted landing-page work.
 **Lens:** Kenyan dairy farmers on low-end Android phones with weak or intermittent connections, paying in KSh, mostly through M-Pesa.
-**Last updated:** 2026-10-31, after fixes 1–3 from the top-5 list (see [Progress since the audit](#progress-since-the-audit)).
+**Last updated:** 2026-11-01, after all five fixes from the top-5 list (see [Progress since the audit](#progress-since-the-audit)).
 
 ### Legend
 
@@ -26,7 +26,7 @@ Badges use only colours from the app's theme palette (`tailwind.config.js` → `
 1. ![Fixed](https://img.shields.io/badge/-Fixed-0369A1?style=flat-square) ~~**Opening the app offline logs the farmer out.** The session check at start-up clears the stored session on any failure, including "no network". Most of the offline work is lost at that point.~~
 2. ![Fixed](https://img.shields.io/badge/-Fixed-0369A1?style=flat-square) ~~**Offline money actions are reported as completed.** Ledger entries, expense corrections, customer records and **payroll payments** are silently queued offline, then reported as done ("Payroll run paid successfully.").~~
 3. ![Fixed](https://img.shields.io/badge/-Fixed-0369A1?style=flat-square) ~~**The milk log and medical records screens never read their own loading or error state.** On a slow or failed load they say "No … match the selected filters", which looks like data loss.~~
-4. **No error boundary is mounted.** Any render crash shows a blank white screen. *(Still open.)*
+4. ![Fixed](https://img.shields.io/badge/-Fixed-0369A1?style=flat-square) ~~**No error boundary is mounted.** Any render crash shows a blank white screen.~~
 
 ### Progress since the audit
 
@@ -35,12 +35,53 @@ Badges use only colours from the app's theme palette (`tailwind.config.js` → `
 | 1. Keep farmers signed in offline ![Fixed](https://img.shields.io/badge/-Fixed-0369A1?style=flat-square) | The app opens straight from the saved session and verifies it with `/auth/me` in the background. Only a 401 or 403 ends the session; no network, timeouts, 5xx errors and malformed responses keep the farmer signed in. The full-screen "Verifying access…" no longer appears when a saved session exists. | `src/contexts/AuthContext.jsx:10, 22-62`; tests in `src/contexts/__tests__/AuthContext.test.jsx` |
 | 2. No false success for money actions ![Fixed](https://img.shields.io/badge/-Fixed-0369A1?style=flat-square) | Payroll (run, finalize, pay) and expense corrections are online-only, so offline they fail with the connection error instead of queueing. Ledger entries and new or edited customers may still queue, but now say "Saved on this phone. It will be sent when you're back online." instead of a success toast. | `src/lib/offlinePolicy.js:7-8, 15, 28-30`; `src/pages/finance/FinancialLedger.jsx:253`; `src/pages/operations/Customers.jsx:35`; `src/pages/finance/BuyersList.jsx:66`; tests in `src/lib/__tests__/apiClientOffline.test.js` |
 | 3. Real loading and error states on the milk log and medical records ![Fixed](https://img.shields.io/badge/-Fixed-0369A1?style=flat-square) | Skeleton rows (table) and skeleton cards (phone) while loading. A load error says what went wrong with a **Try again** button. Offline with nothing cached says the records aren't on this phone yet and will load when the connection returns. A failed refresh keeps the cached rows visible under a "Showing … saved on this phone" notice. A first-time empty list ("No milk recorded yet") is now distinct from filters that match nothing. The summary cards above each list (total volume, open cases and so on) show a skeleton while loading and "—" when the list couldn't load, instead of a false 0. Verified in the browser against the local backend (desktop and phone width: loaded, loading, failed, and recovery after **Try again**). | Shared `src/components/ui/ListLoadState.jsx` and `src/lib/listLoadState.js`; `src/pages/operations/productionLog.jsx:144-156, 606-611`; `src/pages/operations/MedicalRecords.jsx:84-96`; tests in `src/pages/operations/__tests__/ListLoadStates.test.jsx` |
+| 4. Offline and sync state in plain words ![Fixed](https://img.shields.io/badge/-Fixed-0369A1?style=flat-square) | A banner under the header says "You're offline. Milk records and other daily work are saved on this phone and sent when you're back online. Payments and payroll need internet.", with a count of waiting changes and a **Review** button. It switches to "Back online. Sending N saved changes…" while syncing, and to a warning if the server rejected a change. Milk entries saved offline appear in a **Not sent yet** section on the milk log with cow name, date, session and litres. The milk form says "Saved on this phone" instead of "Saved!" (it used to show "Saved!" and add a blank "-- L" row). Queued items retry every 30 s and when the app comes back into view; parallel sync runs are merged so nothing is sent twice. Removing an unsent change now asks "Remove this unsent change?" first. Verified in the browser: offline banner, offline save, queued row, remove confirmation, banner clearing on reconnect. | `src/components/ui/OfflineBanner.jsx`; `src/hooks/useOfflineQueue.js`; `src/components/operations/QueuedMilkEntries.jsx`; `src/lib/queuedMilkRows.js`; `src/lib/offlineQueue.js:54-62`; `src/providers/QueryProvider.jsx:10, 79, 94`; `src/components/operations/FastMilkLog.jsx:293`; `src/components/ui/OfflineQueueInspector.jsx:76`; tests in `src/components/ui/__tests__/OfflineBanner.test.jsx`, `src/lib/__tests__/queuedMilkRows.test.js`, `src/lib/__tests__/offlineQueue.test.jsx`, `src/components/operations/__tests__/FastMilkLogOffline.test.jsx` |
+| 5. Photos, uploads and slow reads ![Fixed](https://img.shields.io/badge/-Fixed-0369A1?style=flat-square) | Cow photos are shrunk on the phone before upload (longest side 1280 px, JPEG); in the browser a 10 MB photo became 750 KB, and the form shows "750 KB (from 10.0 MB)". Phone photos up to 25 MB are accepted; the 3 MB limit now applies to what's uploaded. Uploads show real progress ("Uploading 45%") and have a 2-minute timeout instead of 10 s. Lists show "Still loading … – your connection seems slow" after 4 s. `requestWithFallback` no longer tries alternative URLs after network errors: a failed medical list now makes 3 requests instead of 6. | `src/lib/animalPhoto.js`; `src/pages/operations/HerdRegistry.jsx:352`; `src/lib/backendApi.js:49, 94, 1174`; `SlowLoadingHint` in `src/components/ui/ListLoadState.jsx`; tests in `src/lib/__tests__/animalPhoto.test.js`, `src/lib/__tests__/slowNetworkRequests.test.js`, `src/components/ui/__tests__/SlowLoadingHint.test.jsx` |
 
-**Not covered by these fixes, still open:**
-- `requestWithFallback` (`src/lib/backendApi.js:90-111`) also tries the alternative URL on *network* errors, not only on 404/405/501. On a weak connection, each failed medical list load makes two requests, each with a 10 s timeout, and React Query retries the pair twice. That's up to about a minute before the error appears (see item 11).
-- Offline, payroll and expense corrections fail with the generic "We couldn't reach the server…" error, which doesn't say that nothing was paid or changed.
-- A token the server rejects mid-session still signs the farmer out without saving what they'd typed (item 14).
-- `ListLoadState` is reusable, but milk history, the ledger and the breeding chart still show text-only loading (item 2).
+**Found and fixed while testing in the browser:**
+- **Offline saves were paused, not queued.** React Query pauses mutations while the browser reports offline, so the milk form's save never ran, nothing was queued, and the save fired silently on reconnect. Mutations now always run (`networkMode: 'always'`, `src/providers/QueryProvider.jsx:49`), so offline writes reach the queue and online-only actions fail with a clear error.
+- **Every reload signed the farmer out.** `/auth/me` returns the user without a token, so the session check always rejected it; before fix 1 that cleared the session on each reload. `authApi.me()` now keeps the token the request was made with (`withCurrentToken`, `src/lib/backendApi.js:129`).
+
+
+**Follow-up recommendations, done on 2026-11-01:**
+
+| Recommendation | What changed | Where |
+|---|---|---|
+| Error boundary ![Fixed](https://img.shields.io/badge/-Fixed-0369A1?style=flat-square) | Mounted around the whole app and around page content. A crash shows "This page stopped working… This is a problem in the app, not something you did. Records you already saved are safe…" with **Try again** and **Reload the app**. The page-level boundary clears when the farmer moves to another page, so the menu stays usable. Theme colours only; the support number comes from the landing content. | `src/components/errors/ErrorBoundary.jsx`; `src/main.jsx`; `src/layouts/DashboardLayout.jsx`; tests in `src/components/errors/__tests__/ErrorBoundary.test.jsx` |
+| Expired session keeps typed input ![Fixed](https://img.shields.io/badge/-Fixed-0369A1?style=flat-square) | A 401 from the API opens a "Please sign in again" sheet over the current page instead of signing out. The page stays mounted, so the form keeps what was typed; after signing in the farmer presses Save again. The milk form says "You were signed out, so this wasn't saved. Sign in again, then press Save." Queued offline changes that hit a 401 stay pending and are sent after sign-in. Verified in the browser by revoking the session mid-entry: the sheet covered the milk form, and the typed 9.5 L was still there after signing in. | `src/components/ui/SessionExpiredSheet.jsx`; `src/lib/sessionEvents.js`; `src/lib/apiClient.js`; `src/contexts/AuthContext.jsx`; `src/lib/offlineQueue.js`; tests in `src/components/ui/__tests__/SessionExpiredSheet.test.jsx` |
+| "Nothing happened" offline messages ![Fixed](https://img.shields.io/badge/-Fixed-0369A1?style=flat-square) | Offline, online-only actions now say exactly what didn't happen: "No internet connection. Nobody was paid and nothing was changed…" (payroll), "The payroll run was not created/finalized", "The expense was not corrected and the original entry is unchanged", "This payment was not recorded". | `offlineFailureMessage` in `src/lib/offlinePolicy.js`; `src/pages/hr/Payroll.jsx`; `src/pages/finance/FinancialLedger.jsx` |
+| Cow list available offline ![Fixed](https://img.shields.io/badge/-Fixed-0369A1?style=flat-square) | The dashboard prefetches the cow list whenever the app is open online, so the milk form can offer cows offline later. | `src/hooks/usePrefetchOfflineEssentials.js` |
+| M-Pesa code check ![Fixed](https://img.shields.io/badge/-Fixed-0369A1?style=flat-square) | Customer payments by M-Pesa check the code inline (10 letters and numbers, with an example and "Copy it from the M-Pesa SMS") and save it in capitals. | `getMpesaCodeError` in `src/lib/validation.js`; `src/pages/finance/FinancialLedger.jsx` |
+| Customer phone numbers ![Fixed](https://img.shields.io/badge/-Fixed-0369A1?style=flat-square) | The customer form checks Kenyan mobile numbers inline ("Enter a Kenyan mobile number, for example 0712 345 678.") on blur and on save. | `src/components/finance/CustomerForm.jsx` |
+| Cow photo loading ![Fixed](https://img.shields.io/badge/-Fixed-0369A1?style=flat-square) | Cow photos load lazily with fixed width and height. | `src/components/operations/animalRecord/AnimalSummaryCards.jsx`; `src/pages/operations/HerdRegistry.jsx` |
+
+**Second follow-up, also done on 2026-11-01:**
+
+| Item | What changed | Where |
+|---|---|---|
+| Sign-out warning ![Fixed](https://img.shields.io/badge/-Fixed-0369A1?style=flat-square) | Signing out with unsent changes asks first: "Changes not sent yet – 1 change saved on this phone hasn't been sent yet…", with **Stay signed in** (which also tries to send them) or **Sign out anyway**. The expired-session sheet notes waiting changes inline. Verified in the browser. | `src/layouts/Header.jsx`; `src/components/ui/SessionExpiredSheet.jsx`; tests in `src/layouts/__tests__/HeaderSignOut.test.jsx` |
+| Loading states on milk history, ledger, breeding chart ![Fixed](https://img.shields.io/badge/-Fixed-0369A1?style=flat-square) | Skeletons and the slow-connection hint while loading; "Couldn't load …" with **Try again** on failure; offline-with-nothing-saved message. Milk history's summary cards no longer show "Unknown Cow" or zero totals while loading. The ledger's six summary figures show a placeholder or "—" instead of KES 0. The breeding chart no longer hides failures as "Not enough data". | `src/pages/operations/MilkHistory.jsx`; `src/pages/finance/FinancialLedger.jsx`; `src/pages/operations/BreedingHub.jsx`; tests in `src/pages/operations/__tests__/MilkHistoryStates.test.jsx` |
+| Data-saver mode ![Fixed](https://img.shields.io/badge/-Fixed-0369A1?style=flat-square) | A **Data saver** switch in the profile menu, on by default when the phone's own data saver is on. Cow photos wait behind **Show photo**, and data stays fresh for 30 minutes instead of 5, so pages refetch less. Verified in the browser. | `src/lib/dataSaver.js`; `src/hooks/useDataSaver.js`; `src/components/ui/CowPhoto.jsx`; `src/providers/QueryProvider.jsx`; tests in `src/components/ui/__tests__/DataSaver.test.jsx` |
+| Typo-tolerant herd search ![Fixed](https://img.shields.io/badge/-Fixed-0369A1?style=flat-square) | Ear tags match regardless of dashes, spaces and case ("ke012" finds KE-012). With no results the page offers "Did you mean …" for the closest names or tags; in the browser "Sccess" suggested "Success · S-009". | `getHerdSearchSuggestions` in `src/lib/herdUtils.js`; `src/pages/operations/HerdRegistry.jsx`; tests in `src/lib/__tests__/herdUtils.test.js` |
+| Empty-state actions ![Fixed](https://img.shields.io/badge/-Fixed-0369A1?style=flat-square) | First-time empty lists now offer the next step: **Add your first cow**, **Record the first milking**, **Log New Visit**, **Log income / Log expense**, **Register your first item**, **Add semen inventory**. Milk-drop alerts explain that they appear automatically. | `HerdRegistry.jsx`, `productionLog.jsx`, `MedicalRecords.jsx`, `FinancialLedger.jsx`, `InventoryRegistry.jsx`, `BreedingHub.jsx`, `MilkDropReports.jsx` |
+
+**Third follow-up, done on 2026-11-01:**
+
+| Item | What changed | Where |
+|---|---|---|
+| Duplicate milk entries (backend) ![Fixed](https://img.shields.io/badge/-Fixed-0369A1?style=flat-square) | The backend now rejects a second record for the same cow, milking session and day with `409 DUPLICATE_MILK_ENTRY` and a plain message ("Neema's morning milk for 2026-10-30 is already recorded (6.5 L). Edit that record instead of adding another."). Retries of the same submission are still replayed by the idempotency middleware, so offline sync is unaffected. The WhatsApp flow shows the same message. | `backend/app/services/production_service.py`; `find_session_log` in `backend/app/repositories/supply_repo.py`; tests in `backend/tests/test_operations.py` (`DuplicateMilkEntryTestCase`) |
+| Milk errors reported as success (backend) ![Fixed](https://img.shields.io/badge/-Fixed-0369A1?style=flat-square) | Found while adding the duplicate check: `_augment_yield_response` dropped the status code of error responses, so every rejected milk entry (cow marked Dry, duplicate) reached the app as **200**. Error responses now keep their status. | `backend/app/api/operations.py` (`_augment_yield_response`) |
+| Drafts survive a reload ![Fixed](https://img.shields.io/badge/-Fixed-0369A1?style=flat-square) | The milk, ledger and medical-visit forms keep what the farmer types on the phone (per user and farm, for up to 7 days). After a reload, crash or forced sign-out the form reopens with "Restored what you were typing before the app closed." and **Start over**. Drafts are cleared on save or when the form is closed on purpose. | `src/hooks/useFormDraft.js`; `src/components/ui/DraftRestoredNotice.jsx`; `FastMilkLog.jsx`, `FinancialLedger.jsx`, `MedicalRecords.jsx`; tests in `src/hooks/__tests__/useFormDraft.test.jsx` |
+| Typo-tolerant search on more lists ![Fixed](https://img.shields.io/badge/-Fixed-0369A1?style=flat-square) | Shared fuzzy matching: buyers and medical records now match regardless of spaces, dashes and case (phone numbers too), and suggest "Did you mean …" when nothing matches. | `src/lib/fuzzySearch.js`; `src/components/ui/SearchSuggestions.jsx`; `BuyersList.jsx`, `MedicalRecords.jsx`, `herdUtils.js`; tests in `src/lib/__tests__/fuzzySearch.test.js` |
+
+**Fourth follow-up, done on 2026-11-01:**
+
+| Item | What changed | Where |
+|---|---|---|
+| Typo-tolerant ledger search ![Fixed](https://img.shields.io/badge/-Fixed-0369A1?style=flat-square) | The server matches customer and buyer names ignoring spaces, dashes and case, and falls back to the closest names when nothing matches exactly. The ledger then says "No exact match for “Njeru”. Showing results for Mama Njeri Hotel." | `backend/app/utils/fuzzy_search.py`; `backend/app/api/finance.py`; `src/pages/finance/FinancialLedger.jsx`; tests in `backend/tests/test_ledger_search.py` and `src/pages/finance/__tests__/FinancialLedgerSummary.test.jsx` |
+| Herd list crash for cows with a lactation history (backend) ![Fixed](https://img.shields.io/badge/-Fixed-0369A1?style=flat-square) | `CowStatusService` read a non-existent `LactationCycle.end_date`, so any herd list containing a cow with a lactation cycle failed with a 500 error. Status now comes from the cycle's `is_active` flag and drying-off date. | `backend/app/services/cow_status_service.py`; tests in `backend/tests/test_operations.py` (`CowStatusFromLactationTestCase`) |
+
+All items from the audit's top-5 list and its follow-up recommendations are now done.
 
 ---
 
@@ -68,7 +109,7 @@ Badges use only colours from the app's theme palette (`tailwind.config.js` → `
 - Add `/finance/ledger`, `/finance/transactions/`, `/hr/payroll` and `/buyers` to `ONLINE_ONLY_PATHS`, or make every caller check `response.data.queued` and say "Saved on this phone – not yet sent".
 - Make the milk log optimistic: insert a row tagged `pending`, then flip it to `synced` or `needs attention` from the queue events.
 
-### 2. Skeleton screens ![Partial](https://img.shields.io/badge/-Partial-D97706?style=flat-square) ![M](https://img.shields.io/badge/-M-0369A1?style=flat-square)
+### 2. Skeleton screens ![Implemented](https://img.shields.io/badge/-Implemented-0369A1?style=flat-square) ![M](https://img.shields.io/badge/-M-0369A1?style=flat-square)
 
 **Evidence**
 - A shared `Skeleton` with shimmer that respects `prefers-reduced-motion` (`src/components/ui/Skeleton.jsx:3-12`). It's used well on:
@@ -102,9 +143,13 @@ Neither `<img>` sets `loading="lazy"`, `decoding="async"`, `width`/`height` or `
 
 **Gap:** data cost, not layout. A farmer opening one animal record can spend megabytes on a thumbnail.
 
+> **Update (fix 5):** new uploads are shrunk to about 1280 px before upload, so future photos are far smaller. Images still lack `loading="lazy"` and a thumbnail size for the 64 px avatar.
+
 **Fix:** add `loading="lazy" decoding="async" width height`. Request a server-side thumbnail (for example `?w=128`), or compress on upload (see 5). Show the initials avatar (already there as a fallback) until `onLoad`.
 
-### 4. Progress bars ![Missing](https://img.shields.io/badge/-Missing-EF4444?style=flat-square) ![S](https://img.shields.io/badge/-S-38BDF8?style=flat-square)
+### 4. Progress bars ![Partial](https://img.shields.io/badge/-Partial-D97706?style=flat-square) ![S](https://img.shields.io/badge/-S-38BDF8?style=flat-square)
+
+> **Update (fix 5):** photo uploads now show real progress from axios `onUploadProgress`. Sync still shows a spinner rather than "2 of 5".
 
 **Evidence:** there are no `<progress>`, `role="progressbar"` or `onUploadProgress` usages anywhere in `src/`.
 - **No fake or time-based bars were found.** The only timer-driven UI is an honest 5-second undo countdown before an inventory log is written (`src/pages/nutrition/StandardBatchLog.jsx:66-85`, also `src/components/dashboard/StandardBatchLog.jsx:29`). Neither copy is mounted by any route, so it's currently dead code.
@@ -117,7 +162,9 @@ Neither `<img>` sets `loading="lazy"`, `decoding="async"`, `width`/`height` or `
 - Wire axios `onUploadProgress` into the photo upload button.
 - Emit `{ done, total }` from `offlineQueue.flush` and show "Sending 2 of 5…".
 
-### 5. Early upload ![Missing](https://img.shields.io/badge/-Missing-EF4444?style=flat-square) ![M](https://img.shields.io/badge/-M-0369A1?style=flat-square)
+### 5. Early upload ![Partial](https://img.shields.io/badge/-Partial-D97706?style=flat-square) ![M](https://img.shields.io/badge/-M-0369A1?style=flat-square)
+
+> **Update (fix 5):** compression and a 2-minute upload timeout are in. Uploads still start only on button press (the right default on metered data) and still aren't queued offline.
 
 **Evidence:** choosing a photo only validates type and size (`src/pages/operations/HerdRegistry.jsx:348-360`). Upload starts when the farmer presses a separate button (`:362-389`). The file is sent as-is, with no resize or compression (`src/lib/backendApi.js:1164-1167`). Photo uploads are `FormData`, so they are never queued offline (`src/lib/offlineMutationStore.js:35-36`) and simply fail when there's no signal.
 
@@ -147,7 +194,7 @@ The one server-side search, Reports, debounces 500 ms (`src/pages/operations/Ope
 
 ## B. States
 
-### 7. Empty state ![Partial](https://img.shields.io/badge/-Partial-D97706?style=flat-square) ![S](https://img.shields.io/badge/-S-38BDF8?style=flat-square)
+### 7. Empty state ![Implemented](https://img.shields.io/badge/-Implemented-0369A1?style=flat-square) ![S](https://img.shields.io/badge/-S-38BDF8?style=flat-square)
 
 **Evidence**
 - Herd separates "Your herd is empty. Add your first animal!" from "No animals match your filters", with a **Clear filters** button (`src/pages/operations/HerdRegistry.jsx:763-786`). There's no **Add animal** button inside the empty state, though; the farmer has to find it in the page header.
@@ -179,6 +226,8 @@ The one server-side search, Reports, debounces 500 ms (`src/pages/operations/Ope
 
 ### 9. Error state ![Partial](https://img.shields.io/badge/-Partial-D97706?style=flat-square) ![M](https://img.shields.io/badge/-M-0369A1?style=flat-square)
 
+> **Update (2026-11-01):** error boundaries are mounted with plain-language copy, M-Pesa codes are checked inline, and offline payment and payroll failures say nothing was recorded or paid. The milk form's generic "Failed to save" remains for non-401 server errors.
+
 **Evidence**
 - **Strong central mapping:** `getApiErrorMessage` (`src/lib/backendApi.js:340-389`) turns network, 400/422, 401, 403, 404, 409, 429 and 5xx into plain, actionable copy, and filters out SQL and stack-trace text. Most screens use it.
 - **No error boundary is mounted.** `ErrorBoundary` and `RootErrorBoundary` exist (`src/components/errors/`) but are never imported by `main.jsx` or `App.jsx` (`src/main.jsx:32-52`). An uncaught render error gives a white screen.
@@ -202,7 +251,9 @@ The one server-side search, Reports, debounces 500 ms (`src/pages/operations/Ope
 - Validate M-Pesa codes inline (`/^[A-Z0-9]{10}$/` after upper-casing).
 - On a payment failure, say explicitly "Payment not recorded – nothing was saved".
 
-### 10. No internet ![Partial](https://img.shields.io/badge/-Partial-D97706?style=flat-square) ![L](https://img.shields.io/badge/-L-0C4A6E?style=flat-square)
+### 10. No internet ![Partial](https://img.shields.io/badge/-Partial-D97706?style=flat-square) ![M](https://img.shields.io/badge/-M-0369A1?style=flat-square)
+
+> **Update (fixes 1 and 4):** the critical sign-out, the missing banner, the reconnect-only retries and the one-tap delete below are fixed. Still open: photos aren't cached for offline use, and the cow list must have been loaded online once.
 
 **Evidence (good foundations)**
 - **PWA:** the Workbox service worker precaches the app shell, with SPA navigation fallback to `/app.html` (`vite.config.js:63-74`). The manifest has `start_url: /app` (`vite.config.js:47-62`), and the service worker is registered in `src/main.jsx:17`.
@@ -223,11 +274,13 @@ The one server-side search, Reports, debounces 500 ms (`src/pages/operations/Ope
 - Confirm before deleting queued items.
 - Add a `CacheFirst` runtime rule for `/uploads/` images.
 
-### 11. Slow network ![Missing](https://img.shields.io/badge/-Missing-EF4444?style=flat-square) ![M](https://img.shields.io/badge/-M-0369A1?style=flat-square)
+### 11. Slow network ![Implemented](https://img.shields.io/badge/-Implemented-0369A1?style=flat-square) ![M](https://img.shields.io/badge/-M-0369A1?style=flat-square)
+
+> **Update (fix 5):** slow-loading hint on the milk log and medical records, a 2-minute photo upload timeout, and no more doubled requests from alias fallback. No data-saver mode yet.
 
 **Evidence**
 - Every client uses a fixed `timeout: 10000` (`src/lib/apiClient.js:21`, `src/lib/backendApi.js:14, 43`), uploads included. Queries `retry: 2` (`src/providers/QueryProvider.jsx:38`), so a slow read can take about 30 s before any message appears.
-- `requestWithFallback` retries alias URLs on network errors (`src/lib/backendApi.js:90-93`, `!status` counts as aliasable), doubling the wait on endpoints with fallbacks, such as medical records, when the connection is down. Found while testing fix 3.
+- ~~`requestWithFallback` retries alias URLs on network errors~~ Fixed (fix 5): only 404/405/501 fall back now.
 - There's no "This is taking longer than usual…" message, no progress during long requests, and no reduced-data mode. `navigator.connection` and `saveData` are never read.
 - The landing page is static and light (about 9 KB gzipped). The app bundle precaches about 1.9 MB through the service worker on first visit.
 
@@ -236,7 +289,10 @@ The one server-side search, Reports, debounces 500 ms (`src/pages/operations/Ope
 - Lengthen the upload timeout.
 - Add a "Data saver" setting: no photos, no charts, and skip background `refetchOnMount`. Default it on when `navigator.connection.saveData` is true.
 
-### 12. No search results ![Partial](https://img.shields.io/badge/-Partial-D97706?style=flat-square) ![M](https://img.shields.io/badge/-M-0369A1?style=flat-square)
+### 12. No search results ![Implemented](https://img.shields.io/badge/-Implemented-0369A1?style=flat-square)
+
+> **Update (2026-11-01):** the herd list now matches tags loosely and suggests the closest cows; other lists don't yet.
+ ![M](https://img.shields.io/badge/-M-0369A1?style=flat-square)
 
 **Evidence**
 - Herd: "No animals match your filters" plus **Clear filters** (`src/pages/operations/HerdRegistry.jsx:770-781`).
@@ -256,7 +312,9 @@ The one server-side search, Reports, debounces 500 ms (`src/pages/operations/Ope
 
 **Fix:** add `capture="environment"` to the photo input, which uses the OS camera with no app-level permission. Before any future permission request, show a pre-prompt explaining why, plus a working fallback.
 
-### 14. Session expired ![Missing](https://img.shields.io/badge/-Missing-EF4444?style=flat-square) ![M](https://img.shields.io/badge/-M-0369A1?style=flat-square)
+### 14. Session expired ![Implemented](https://img.shields.io/badge/-Implemented-0369A1?style=flat-square) ![M](https://img.shields.io/badge/-M-0369A1?style=flat-square)
+
+> **Update (2026-11-01):** a global 401 handler opens a sign-in sheet over the page, keeping typed input. Still open: input isn't saved as a draft across a full reload, and logout doesn't warn about unsent changes.
 
 **Evidence**
 - There's no global 401/403 response interceptor. `apiClient` only handles network failures (`src/lib/apiClient.js:88-123`). A token that expires mid-session gives a per-request toast, "Your session may have expired. Sign in again, then retry." (`src/lib/backendApi.js:382`), but the user stays "signed in" in the UI and each later action fails the same way.
@@ -270,6 +328,8 @@ The one server-side search, Reports, debounces 500 ms (`src/pages/operations/Ope
 - Block logout with "3 changes haven't been sent yet" when the queue isn't empty.
 
 ### 15. Form validation ![Partial](https://img.shields.io/badge/-Partial-D97706?style=flat-square) ![M](https://img.shields.io/badge/-M-0369A1?style=flat-square)
+
+> **Update (2026-11-01):** the customer form and registration now validate Kenyan numbers inline, and M-Pesa codes are checked. The ledger's disabled Save still doesn't name the missing field when the problem isn't the M-Pesa code.
 
 **Evidence**
 - **Good:**
@@ -312,19 +372,19 @@ The one server-side search, Reports, debounces 500 ms (`src/pages/operations/Ope
 | # | Item | Status | Effort |
 |---|---|---|---|
 | 1 | Instant feedback (optimistic UI) | ![Partial](https://img.shields.io/badge/-Partial-D97706?style=flat-square) | ![M](https://img.shields.io/badge/-M-0369A1?style=flat-square) |
-| 2 | Skeleton screens | ![Partial](https://img.shields.io/badge/-Partial-D97706?style=flat-square) | ![M](https://img.shields.io/badge/-M-0369A1?style=flat-square) |
+| 2 | Skeleton screens | ![Implemented](https://img.shields.io/badge/-Implemented-0369A1?style=flat-square) | ![M](https://img.shields.io/badge/-M-0369A1?style=flat-square) |
 | 3 | Progressive image loading | ![Partial](https://img.shields.io/badge/-Partial-D97706?style=flat-square) | ![S](https://img.shields.io/badge/-S-38BDF8?style=flat-square) |
-| 4 | Progress bars | ![Missing](https://img.shields.io/badge/-Missing-EF4444?style=flat-square) (none fake) | ![S](https://img.shields.io/badge/-S-38BDF8?style=flat-square) |
-| 5 | Early upload | ![Missing](https://img.shields.io/badge/-Missing-EF4444?style=flat-square) | ![M](https://img.shields.io/badge/-M-0369A1?style=flat-square) |
+| 4 | Progress bars | ![Partial](https://img.shields.io/badge/-Partial-D97706?style=flat-square) (none fake) | ![S](https://img.shields.io/badge/-S-38BDF8?style=flat-square) |
+| 5 | Early upload | ![Partial](https://img.shields.io/badge/-Partial-D97706?style=flat-square) | ![M](https://img.shields.io/badge/-M-0369A1?style=flat-square) |
 | 6 | Busy-search feedback | ![Partial](https://img.shields.io/badge/-Partial-D97706?style=flat-square) | ![S](https://img.shields.io/badge/-S-38BDF8?style=flat-square) |
-| 7 | Empty state | ![Partial](https://img.shields.io/badge/-Partial-D97706?style=flat-square) | ![S](https://img.shields.io/badge/-S-38BDF8?style=flat-square) |
+| 7 | Empty state | ![Implemented](https://img.shields.io/badge/-Implemented-0369A1?style=flat-square) | ![S](https://img.shields.io/badge/-S-38BDF8?style=flat-square) |
 | 8 | Loading state | ![Partial](https://img.shields.io/badge/-Partial-D97706?style=flat-square) | ![M](https://img.shields.io/badge/-M-0369A1?style=flat-square) |
 | 9 | Error state (incl. M-Pesa) | ![Partial](https://img.shields.io/badge/-Partial-D97706?style=flat-square) | ![M](https://img.shields.io/badge/-M-0369A1?style=flat-square) |
-| 10 | No internet | ![Partial](https://img.shields.io/badge/-Partial-D97706?style=flat-square) | ![L](https://img.shields.io/badge/-L-0C4A6E?style=flat-square) |
-| 11 | Slow network | ![Missing](https://img.shields.io/badge/-Missing-EF4444?style=flat-square) | ![M](https://img.shields.io/badge/-M-0369A1?style=flat-square) |
-| 12 | No search results | ![Partial](https://img.shields.io/badge/-Partial-D97706?style=flat-square) | ![M](https://img.shields.io/badge/-M-0369A1?style=flat-square) |
+| 10 | No internet | ![Partial](https://img.shields.io/badge/-Partial-D97706?style=flat-square) | ![M](https://img.shields.io/badge/-M-0369A1?style=flat-square) |
+| 11 | Slow network | ![Implemented](https://img.shields.io/badge/-Implemented-0369A1?style=flat-square) | ![M](https://img.shields.io/badge/-M-0369A1?style=flat-square) |
+| 12 | No search results | ![Implemented](https://img.shields.io/badge/-Implemented-0369A1?style=flat-square) | ![M](https://img.shields.io/badge/-M-0369A1?style=flat-square) |
 | 13 | Permission denied | ![Missing](https://img.shields.io/badge/-Missing-EF4444?style=flat-square) (not used yet) | ![S](https://img.shields.io/badge/-S-38BDF8?style=flat-square) |
-| 14 | Session expired | ![Missing](https://img.shields.io/badge/-Missing-EF4444?style=flat-square) | ![M](https://img.shields.io/badge/-M-0369A1?style=flat-square) |
+| 14 | Session expired | ![Implemented](https://img.shields.io/badge/-Implemented-0369A1?style=flat-square) | ![M](https://img.shields.io/badge/-M-0369A1?style=flat-square) |
 | 15 | Form validation | ![Partial](https://img.shields.io/badge/-Partial-D97706?style=flat-square) | ![M](https://img.shields.io/badge/-M-0369A1?style=flat-square) |
 | 16 | Success state | ![Partial](https://img.shields.io/badge/-Partial-D97706?style=flat-square) | ![S](https://img.shields.io/badge/-S-38BDF8?style=flat-square) |
 
@@ -335,8 +395,8 @@ No item is fully **Implemented**. The offline-write foundation (item 10) is the 
 1. ![Fixed](https://img.shields.io/badge/-Fixed-0369A1?style=flat-square) **Keep farmers signed in offline** (`src/contexts/AuthContext.jsx:20-44`). Don't clear the session when `/auth/me` fails for network reasons; render from the stored session and verify in the background. Today the offline queue and 7-day cache are unreachable for anyone who opens the app without signal. ![M](https://img.shields.io/badge/-M-0369A1?style=flat-square)
 2. ![Fixed](https://img.shields.io/badge/-Fixed-0369A1?style=flat-square) **Stop reporting queued money actions as done.** Make ledger, void-and-replace, payroll and customer writes online-only, or label them "Saved on this phone – not sent yet". Payroll "paid successfully" while offline is the most harmful message in the app. ![S](https://img.shields.io/badge/-S-38BDF8?style=flat-square)
 3. ![Fixed](https://img.shields.io/badge/-Fixed-0369A1?style=flat-square) **Give the milk log and medical records real loading and error states.** Replace the false "no entries match" with skeleton rows and a retry message, so farmers don't think records were lost and log them twice. ![S](https://img.shields.io/badge/-S-38BDF8?style=flat-square)
-4. **Show offline and sync state in words on phones.** Add a slim offline banner ("No internet – milk records will be saved on this phone") and a per-row pending/synced tag on queued milk entries. Retry queued items on a timer, not only on reconnect. ![M](https://img.shields.io/badge/-M-0369A1?style=flat-square)
-5. **Compress photos and fix request timeouts.** Resize photos before upload, give uploads real progress and a longer timeout, and add a "still working…" hint on slow reads. ![M](https://img.shields.io/badge/-M-0369A1?style=flat-square)
+4. ![Fixed](https://img.shields.io/badge/-Fixed-0369A1?style=flat-square) **Show offline and sync state in words on phones.** Add a slim offline banner ("No internet – milk records will be saved on this phone") and a per-row pending/synced tag on queued milk entries. Retry queued items on a timer, not only on reconnect. ![M](https://img.shields.io/badge/-M-0369A1?style=flat-square)
+5. ![Fixed](https://img.shields.io/badge/-Fixed-0369A1?style=flat-square) **Compress photos and fix request timeouts.** Resize photos before upload, give uploads real progress and a longer timeout, and add a "still working…" hint on slow reads. ![M](https://img.shields.io/badge/-M-0369A1?style=flat-square)
 
 ## Things that work against good practice
 
@@ -347,12 +407,12 @@ No item is fully **Implemented**. The offline-write foundation (item 10) is the 
 | **Silent failures** (milk log and medical records fixed by fix 3) | `src/pages/inventory/InventoryRegistry.jsx:70-98`, `src/pages/finance/AddBuyerForm.jsx:44-47` | Errors are logged to the console only; the screen looks empty or the action looks done |
 | ~~**Loading shown as "no results"**~~ Fixed (fix 3) | `productionLog.jsx:673-678`, `MedicalRecords.jsx:719-726` | Looks like data loss on a slow connection |
 | **Full-page text spinners** | `src/App.jsx:59-70` ("Verifying access…"), `src/App.jsx:78-88` ("Loading route…") | Blank screen on every start and every first visit to a section, even with cached data |
-| **White screen on crash** | No error boundary mounted (`src/main.jsx:32-52`) | Any render error loses the whole app with no recovery button |
-| **Input lost on session expiry or logout** | No drafts; no 401 interceptor; logout ignores the pending queue (`src/layouts/Header.jsx:27-28`) | Typed records vanish; unsynced changes are stranded after logout |
-| **Retries only on reconnect** | `src/lib/offlineQueue.js:50-71`, `src/providers/QueryProvider.jsx:61-74` | Items that hit a server error stay "pending" indefinitely while the phone stays online |
-| **One-tap delete of unsynced records** | `src/components/ui/OfflineQueueInspector.jsx:45-48, 74-80` | Accidental data loss with no confirmation |
+| ~~**White screen on crash**~~ Fixed | No error boundary mounted (`src/main.jsx:32-52`) | Any render error loses the whole app with no recovery button |
+| ~~**No drafts across reloads**~~ Fixed | Milk, ledger and medical forms now keep drafts on the phone | — |
+| ~~**Retries only on reconnect**~~ Fixed (fix 4) | `src/lib/offlineQueue.js:50-71`, `src/providers/QueryProvider.jsx:61-74` | Items that hit a server error stay "pending" indefinitely while the phone stays online |
+| ~~**One-tap delete of unsynced records**~~ Fixed (fix 4) | `src/components/ui/OfflineQueueInspector.jsx:45-48, 74-80` | Accidental data loss with no confirmation |
 | **Dead submit button** | `src/pages/finance/FinancialLedger.jsx:299, 505` | Disabled without saying which field is wrong |
-| **Undefined colour classes** | `text-danger-800` in `OfflineQueueInspector.jsx:67, 77` (the palette defines `danger` 50/100/500/900 only) | Sync error text and delete icon render without the intended danger colour |
+| **Undefined colour classes** (sync panel fixed in fix 4; `text-success` on the milk form's "Saved!" icon also replaced) | Other pages may still use shades the palette doesn't define | Sync error text and delete icon render without the intended danger colour |
 | **Off-palette colours** | 650 uses of `rose-*`, `emerald-*`, `slate-*` or `gray-*` across 71 files (for example `ErrorBoundary.jsx:51-52`, `OperationsReportsPage.jsx:463, 468`, `Payroll.jsx:316`) | Error and success states look different on every screen; states aren't recognisable at a glance |
 
 No fake or time-based progress bars were found.
@@ -365,22 +425,22 @@ Run on a mid-range Android phone (Chrome) or Chrome DevTools device mode. Sign i
 - [ ] Cold-load `/app`. Note the time spent on "Verifying access…" and "Loading route…" before content appears.
 - [ ] Open Milk log and Medical records. Does any "No … match" message appear before data arrives? (Fixed: expect skeleton rows, then data. On failure, "Couldn't load …" with **Try again**.)
 - [ ] Search the herd for a tag; confirm the "Showing X of Y" count updates and is correct.
-- [ ] Upload a 3 MB cow photo. Is there progress? Does it fail at about 10 s with a clear message?
+- [ ] Pick an 8–10 MB phone photo for a cow. Expect it to shrink first ("… KB (from … MB)"), then "Uploading N%" with no 10 s timeout.
 - [ ] Open Reports and type in search. Is there any "searching" feedback during the 500 ms debounce and the request?
 
 **Go offline mid-entry (DevTools → "Offline", or airplane mode)**
-- [ ] Partway through the milk log form, go offline and press Save. Expect "Saved to device…". Check that the header count increases, and whether the entry appears in the list.
+- [ ] Partway through the milk log form, go offline and press Save. Expect the offline banner, then "Saved on this phone". Check that the header count increases and the entry appears under **Not sent yet**.
 - [ ] Record an expense in the Ledger while offline. Note the exact toast. (Fixed: expect "Saved on this phone. It will be sent when you're back online.")
 - [ ] Finalize, then **Pay** a payroll run while offline. Note the toast. (Fixed: expect an error toast, "We couldn't reach the server…", and the run stays unpaid.)
 - [ ] With the phone still offline, **close and reopen the app**. Are you still signed in? (Fixed: expect to stay signed in, with cached data visible.)
 - [ ] Go back online. Confirm the queue drains, the count reaches 0 and the entries appear in their lists.
-- [ ] Open the sync panel and tap the bin on a queued item. Was there a confirmation?
+- [ ] Open the sync panel and tap the bin on a queued item. Expect "Remove this unsent change?" with **Keep** and **Remove**.
 
 **Expire the token**
 - [ ] In DevTools → Application → Session Storage, edit `jivu_user.token` to an invalid value. Then, without reloading, submit a milk entry and a ledger entry.
-- [ ] Note the message. Are you offered a way to sign in again without losing the typed values?
-- [ ] Reload with the invalid token. Note where you land and whether any typed data survives.
-- [ ] Queue an offline entry, then press **Log out**. Were you warned about unsynced changes?
+- [ ] Note the message. Expect a "Please sign in again" sheet over the page; after signing in, the typed values are still there.
+- [ ] Type a milk entry, then reload the app. Expect the form to reopen with "Restored what you were typing before the app closed."
+- [ ] Queue an offline entry, then press **Sign out**. Expect "Changes not sent yet" with **Stay signed in** and **Sign out anyway**.
 
 **Deny camera permission**
 - [ ] Chrome site settings → Camera → Block. Open a cow → Edit → choose photo. Confirm the picker still offers gallery and files. Today this is a plain file input, so no permission prompt appears.
@@ -388,12 +448,12 @@ Run on a mid-range Android phone (Chrome) or Chrome DevTools device mode. Sign i
 
 **Invalid phone number**
 - [ ] Add employee with phone `12345`. Expect an inline Kenyan-format hint under the field.
-- [ ] Add customer (Buyers → Add) with phone `12345`. (Expected today: accepted, with no format check.)
+- [ ] Add customer (Buyers → Add) with phone `12345`. (Expect an inline hint: "Enter a Kenyan mobile number, for example 0712 345 678.")
 - [ ] Register with an empty phone. Note that the error appears as a banner, not on the field.
 - [ ] Enter `0712 345 678`, `254712345678` and `+254 712 345 678`. All three should be accepted and saved in one consistent format.
 
 **Simulate a failed M-Pesa payment**
-- [ ] Ledger → Income → Customer payment → method **M-Pesa**. Try saving with a blank reference, then with an invalid one such as `abc`. (Expected today: blank is blocked, `abc` is accepted.)
+- [ ] Ledger → Income → Customer payment → method **M-Pesa**. Try saving with a blank reference, then with an invalid one such as `abc`. (Expect both blocked; `abc` shows the 10-character M-Pesa hint.)
 - [ ] While offline, record the same customer payment. Confirm it is **not** queued and the message makes clear nothing was recorded.
 - [ ] Use DevTools request blocking on `/finance/customers/*/payments` to return 500. Confirm the error says the payment was not saved and suggests what to do next.
 - [ ] Once an STK-push flow exists, re-test with the following and check that each has distinct, plain-language copy:

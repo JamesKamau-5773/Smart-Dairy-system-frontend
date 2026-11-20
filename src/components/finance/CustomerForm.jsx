@@ -1,6 +1,18 @@
 import { useState, useEffect } from 'react';
+import { normalizeKenyanPhone } from '../../lib/phone';
+import { useServerFieldErrors } from '../../hooks/useServerFieldErrors';
+import FieldError from '../ui/FieldError';
+import { fieldErrorProps } from '../ui/fieldErrorProps';
+import { financeCopy } from '../../i18n/finance';
 
-export default function CustomerForm({ customer, onSave, onCancel, isSaving }) {
+
+/**
+ * Add or edit a customer. `serverError` is the failed save, if any: the backend's per-field
+ * validation shows under each input (useServerFieldErrors).
+ */
+export default function CustomerForm({ customer, onSave, onCancel, isSaving, serverError = null }) {
+  const copy = financeCopy.customerForm;
+  const server = useServerFieldErrors(serverError);
   const [formData, setFormData] = useState({
     id: null,
     name: '',
@@ -58,13 +70,21 @@ export default function CustomerForm({ customer, onSave, onCancel, isSaving }) {
     }
   }, [customer]);
 
+  const [phoneError, setPhoneError] = useState('');
+
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
+    server.dismiss(name === 'custom_customer_type' ? 'customer_type' : name);
+    if (name === 'phone_number' && phoneError && normalizeKenyanPhone(value)) setPhoneError('');
   };
 
   const handleSubmit = (e) => {
     e.preventDefault();
+    if (!normalizeKenyanPhone(formData.phone_number)) {
+      setPhoneError(copy.phoneError);
+      return;
+    }
     
     // Determine the final customer type string to send to the backend
     const finalCustomerType = formData.customer_type === 'other' 
@@ -92,9 +112,11 @@ export default function CustomerForm({ customer, onSave, onCancel, isSaving }) {
       {/* --- Row 1: Name & Type --- */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <label className="block">
-          <span className="text-sm font-medium text-ink-muted">Full Name / Company</span>
+          <span className="text-body text-ink-muted">{copy.name}</span>
           <input
             type="text"
+            id="customer-name"
+            {...fieldErrorProps('customer-name', server.errorFor('name'))}
             name="name"
             value={formData.name}
             onChange={handleChange}
@@ -102,35 +124,39 @@ export default function CustomerForm({ customer, onSave, onCancel, isSaving }) {
             required
             disabled={isSaving}
           />
+          <FieldError id="customer-name" message={server.errorFor('name')} />
         </label>
         
         <label className="block">
-          <span className="text-sm font-medium text-ink-muted">Customer Type</span>
+          <span className="text-body text-ink-muted">{copy.type}</span>
           <select
+            id="customer-customer_type"
+            {...fieldErrorProps('customer-customer_type', server.errorFor('customer_type'))}
             name="customer_type"
             value={formData.customer_type}
             onChange={handleChange}
             className="input-machined mt-1"
             disabled={isSaving}
           >
-            <option value="individual">Individual</option>
-            <option value="cooperative">Cooperative</option>
-            <option value="company">Company</option>
-            <option value="other">Other (Specify)</option>
+            <option value="individual">{financeCopy.customerTypes.individual}</option>
+            <option value="cooperative">{financeCopy.customerTypes.cooperative}</option>
+            <option value="company">{financeCopy.customerTypes.company}</option>
+            <option value="other">{copy.other}</option>
           </select>
+          <FieldError id="customer-customer_type" message={server.errorFor('customer_type')} />
         </label>
       </div>
 
       {/* --- Conditional Field: Custom Type --- */}
       {formData.customer_type === 'other' && (
         <label className="block animate-reveal">
-          <span className="text-sm font-medium text-ink-muted">Specify Customer Type</span>
+          <span className="text-body text-ink-muted">{copy.specifyType}</span>
           <input
             type="text"
             name="custom_customer_type"
             value={formData.custom_customer_type}
             onChange={handleChange}
-            placeholder="e.g., Government, NGO, etc."
+            placeholder={copy.specifyPlaceholder}
             className="input-machined mt-1"
             required={formData.customer_type === 'other'}
             disabled={isSaving}
@@ -141,38 +167,49 @@ export default function CustomerForm({ customer, onSave, onCancel, isSaving }) {
       {/* --- Row 2: Contact & Phone --- */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <label className="block">
-          <span className="text-sm font-medium text-ink-muted">Contact Person (Optional)</span>
+          <span className="text-body text-ink-muted">{copy.contactPerson}</span>
           <input
             type="text"
+            id="customer-contact_person"
+            {...fieldErrorProps('customer-contact_person', server.errorFor('contact_person'))}
             name="contact_person"
             value={formData.contact_person}
             onChange={handleChange}
             className="input-machined mt-1"
             disabled={isSaving}
           />
+          <FieldError id="customer-contact_person" message={server.errorFor('contact_person')} />
         </label>
         
         <label className="block">
-          <span className="text-sm font-medium text-ink-muted">Phone Number</span>
+          <span className="text-body text-ink-muted">{copy.phone}</span>
           <input
             type="tel"
             name="phone_number"
+            inputMode="tel"
+            autoComplete="tel"
+            placeholder="0712 345 678"
             value={formData.phone_number}
             onChange={handleChange}
+            onBlur={() => setPhoneError(formData.phone_number && !normalizeKenyanPhone(formData.phone_number) ? copy.phoneError : '')}
             className="input-machined mt-1"
             required
             disabled={isSaving}
+            {...fieldErrorProps('customer-phone', phoneError || server.errorFor('phone_number'))}
           />
+          <FieldError id="customer-phone" message={phoneError || server.errorFor('phone_number')} />
         </label>
       </div>
 
       {/* --- Row 3: Financials --- */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <label className="block">
-          <span className="text-sm font-medium text-ink-muted">Agreed Rate (per litre)</span>
+          <span className="text-body text-ink-muted">{copy.rate}</span>
           <input
             type="number"
             step="0.01"
+            id="customer-agreed_rate_per_liter"
+            {...fieldErrorProps('customer-agreed_rate_per_liter', server.errorFor('agreed_rate_per_liter'))}
             name="agreed_rate_per_liter"
             value={formData.agreed_rate_per_liter}
             onChange={handleChange}
@@ -181,13 +218,16 @@ export default function CustomerForm({ customer, onSave, onCancel, isSaving }) {
             required
             disabled={isSaving}
           />
+          <FieldError id="customer-agreed_rate_per_liter" message={server.errorFor('agreed_rate_per_liter')} />
         </label>
 
         <label className="block">
-          <span className="text-sm font-medium text-ink-muted">Existing Balance (Optional)</span>
+          <span className="text-body text-ink-muted">{copy.balance}</span>
           <input
             type="number"
             step="0.01"
+            id="customer-account_balance"
+            {...fieldErrorProps('customer-account_balance', server.errorFor('account_balance'))}
             name="account_balance"
             value={formData.account_balance}
             onChange={handleChange}
@@ -195,18 +235,21 @@ export default function CustomerForm({ customer, onSave, onCancel, isSaving }) {
             placeholder="0.00"
             disabled={isSaving || isEditMode} 
           />
+          <FieldError id="customer-account_balance" message={server.errorFor('account_balance')} />
           {isEditMode && (
-            <span className="text-xs text-ink-muted mt-1 block">Balance adjustments should be managed through ledgers.</span>
+            <span className="text-meta text-ink-muted mt-1 block">{copy.balanceHint}</span>
           )}
         </label>
       </div>
 
       {/* --- Row: Periodic billing contract (weekly/monthly customers) --- */}
       <label className="block">
-        <span className="text-sm font-medium text-ink-muted">Daily Contract Litres (Optional)</span>
+        <span className="text-body text-ink-muted">{copy.contractLitres}</span>
         <input
           type="number"
           step="0.01"
+          id="customer-daily_contract_liters"
+          {...fieldErrorProps('customer-daily_contract_liters', server.errorFor('daily_contract_liters'))}
           name="daily_contract_liters"
           value={formData.daily_contract_liters}
           onChange={handleChange}
@@ -214,27 +257,33 @@ export default function CustomerForm({ customer, onSave, onCancel, isSaving }) {
           placeholder="0.00"
           disabled={isSaving}
         />
-        <span className="text-xs text-ink-muted mt-1 block">
-          For customers invoiced periodically (e.g. weekly or monthly) rather than per delivery. Leave blank if this customer pays per delivery.
+        <FieldError id="customer-daily_contract_liters" message={server.errorFor('daily_contract_liters')} />
+        <span className="text-meta text-ink-muted mt-1 block">
+          {copy.contractHint}
         </span>
       </label>
 
       {/* --- Row 4: Contact Details --- */}
       <label className="block">
-        <span className="text-sm font-medium text-ink-muted">Email Address (Optional)</span>
+        <span className="text-body text-ink-muted">{copy.email}</span>
         <input 
           type="email" 
+          id="customer-email"
+          {...fieldErrorProps('customer-email', server.errorFor('email'))}
           name="email" 
           value={formData.email} 
           onChange={handleChange} 
           className="input-machined mt-1" 
           disabled={isSaving} 
         />
+        <FieldError id="customer-email" message={server.errorFor('email')} />
       </label>
       
       <label className="block">
-        <span className="text-sm font-medium text-ink-muted">Address (Optional)</span>
+        <span className="text-body text-ink-muted">{copy.address}</span>
         <textarea 
+          id="customer-address"
+          {...fieldErrorProps('customer-address', server.errorFor('address'))}
           name="address" 
           value={formData.address} 
           onChange={handleChange} 
@@ -242,12 +291,13 @@ export default function CustomerForm({ customer, onSave, onCancel, isSaving }) {
           rows="2" 
           disabled={isSaving}
         ></textarea>
+        <FieldError id="customer-address" message={server.errorFor('address')} />
       </label>
 
       <div className="flex justify-end gap-3 pt-4 border-t border-ink/10">
-        <button type="button" onClick={onCancel} className="btn-secondary" disabled={isSaving}>Cancel</button>
+        <button type="button" onClick={onCancel} className="btn-secondary" disabled={isSaving}>{copy.cancel}</button>
         <button type="submit" className="btn-command" disabled={isSaving}>
-          {isSaving ? 'Saving...' : (isEditMode ? 'Save Changes' : 'Create Customer')}
+          {isSaving ? copy.saving : (isEditMode ? copy.saveChanges : copy.create)}
         </button>
       </div>
     </form>

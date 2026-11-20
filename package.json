@@ -9,13 +9,16 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
+    "images": "node scripts/landing-images.js",
     "test": "vitest",
     "test:watch": "vitest --watch",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "test:e2e": "playwright test --project=phone-mocked",
+    "test:e2e:full": "playwright test --project=phone-full-stack"
   },
   "dependencies": {
-    "@fontsource-variable/geist": "^5.3.0",
+    "@fontsource-variable/inter": "^5.3.0",
     "@tanstack/query-async-storage-persister": "^5.103.1",
     "@tanstack/react-query": "^5.100.9",
     "@tanstack/react-query-persist-client": "^5.103.1",
@@ -39,7 +42,9 @@
     "zod": "^4.4.2"
   },
   "devDependencies": {
+    "@eslint/css": "^2.0.1",
     "@eslint/js": "^10.0.1",
+    "@playwright/test": "1.57.0",
     "@tanstack/react-query-devtools": "^5.100.9",
     "@testing-library/dom": "^10.4.2",
     "@testing-library/jest-dom": "^6.0.1",

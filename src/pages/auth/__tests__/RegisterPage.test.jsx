@@ -15,7 +15,7 @@ vi.mock('../../../contexts/AuthContext', () => ({
 }));
 
 vi.mock('../../../lib/backendApi', () => ({
-  authApi: { bootstrapStatus },
+  authApi: { bootstrapStatus, googleStartUrl: () => 'https://api.example/api/auth/google/start?intent=signin' },
 }));
 
 const renderRegister = (path = '/register') => render(
@@ -39,10 +39,12 @@ describe('RegisterPage', () => {
     Object.defineProperty(navigator, 'onLine', { configurable: true, get: () => true });
   });
 
-  it('asks farmers for only farm name, phone and password', () => {
+  it('asks for farm name, phone and password, with email optional', () => {
     renderRegister();
     expect(screen.getByLabelText('Farm name')).toBeTruthy();
     expect(screen.getByLabelText('Phone number').getAttribute('inputmode')).toBe('tel');
+    expect(screen.getByText(/07… or \+254… both work/)).toBeTruthy();
+    expect(screen.getByLabelText('Email (optional)').getAttribute('type')).toBe('email');
     expect(screen.getByLabelText('Password').getAttribute('autocomplete')).toBe('new-password');
     expect(screen.queryByLabelText('Owner setup code')).toBeNull();
     expect(screen.queryByRole('combobox')).toBeNull();
@@ -110,6 +112,68 @@ describe('RegisterPage', () => {
 
     expect(await screen.findByText('This phone number is already registered.')).toBeTruthy();
     expect(screen.getByRole('button', { name: /Create farm account/ }).disabled).toBe(false);
+  });
+
+  it('accepts a +254 number and sends the optional email', async () => {
+    auth.register.mockResolvedValue({ success: true });
+    renderRegister();
+
+    fill('Farm name', 'Bahati Dairies');
+    fill('Phone number', '+254 712 345 678');
+    fill('Email (optional)', ' Jane@Example.com ');
+    fill('Password', 'Maziwa2026');
+    submit();
+
+    await waitFor(() => expect(auth.register).toHaveBeenCalledWith({
+      farm_name: 'Bahati Dairies',
+      phone_number: '254712345678',
+      password: 'Maziwa2026',
+      email: 'Jane@Example.com',
+    }));
+  });
+
+  it('rejects an invalid email only when one is given', () => {
+    renderRegister();
+    fill('Farm name', 'Bahati Dairies');
+    fill('Phone number', '0712345678');
+    fill('Email (optional)', 'jane@');
+    fill('Password', 'Maziwa2026');
+    submit();
+
+    expect(screen.getByText(/Enter a valid email address/)).toBeTruthy();
+    expect(auth.register).not.toHaveBeenCalled();
+  });
+
+  it('shows the password strength and the rules as they are met', () => {
+    renderRegister();
+    fill('Password', 'abcdefgh');
+    expect(screen.getByText('Weak')).toBeTruthy();
+
+    fill('Password', 'Maziwa2026!');
+    expect(screen.getByText('Strong')).toBeTruthy();
+  });
+
+  it('puts a server field error next to the field it belongs to', async () => {
+    auth.register.mockResolvedValue({
+      success: false,
+      error: 'Another account already uses this phone number.',
+      details: { fieldErrors: { phone_number: 'Another account already uses this phone number.' }, passwordViolations: [] },
+    });
+    renderRegister();
+
+    fill('Farm name', 'Bahati Dairies');
+    fill('Phone number', '0712345678');
+    fill('Password', 'Maziwa2026');
+    submit();
+
+    expect(await screen.findByText('Another account already uses this phone number.')).toBeTruthy();
+    expect(screen.getByLabelText('Phone number').getAttribute('aria-invalid')).toBe('true');
+    expect(document.activeElement).toBe(screen.getByLabelText('Phone number'));
+  });
+
+  it('offers Google sign-up', () => {
+    renderRegister();
+    expect(screen.getByRole('link', { name: /Continue with Google/ }).getAttribute('href')).toContain('/auth/google/start');
   });
 
   describe('platform owner setup (?setup=owner)', () => {

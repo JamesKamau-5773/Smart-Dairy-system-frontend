@@ -1,142 +1,120 @@
 import { useParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { Droplets, Calendar, Receipt, ShieldCheck, Download, CheckCircle2 } from 'lucide-react';
+import { AlertTriangle } from 'lucide-react';
 import { financeApi } from '../../lib/backendApi';
+import { normalizeStatement } from '../../lib/customerStatement';
+import { isFeatureEnabled } from '../../lib/featureFlags';
+import { formatMoneyText } from '../../components/ui/Money';
 import { Skeleton } from '../../components/ui';
+import { SITE } from '../../landing/content';
+import { financeCopy } from '../../i18n/finance';
 
+const STATUS_NOT_FOUND = 404;
+const MAX_RETRIES = 2;
+
+// Only the load-failure notice carries an icon: it marks an error, the others are plain information.
+function Notice({ isError = false, title, children }) {
+  return (
+    <main className="flex min-h-screen items-center justify-center bg-surface-warm p-4">
+      <section aria-labelledby="statement-notice" className="mx-auto w-full max-w-md rounded-card border border-ink/10 bg-surface p-6 text-center sm:p-8">
+        {isError && (
+          <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-brand-50 text-brand">
+            <AlertTriangle size={22} aria-hidden="true" />
+          </div>
+        )}
+        <h1 id="statement-notice" className="text-page-title text-ink">{title}</h1>
+        <div className="mt-2 text-body text-ink-muted">{children}</div>
+      </section>
+    </main>
+  );
+}
+
+/**
+ * A buyer's statement opened from a shared link. Shows only what the backend's statement
+ * route returns; a missing figure is "—". Off unless the `customerPortal` flag is on, because
+ * today's links use the buyer's phone number as the token (BR-016); while off, no request is made.
+ */
 export default function CustomerPortal() {
+  const copy = financeCopy.portal;
   const { token } = useParams();
+  const enabled = isFeatureEnabled('customerPortal');
 
-  const { data: portalData, isLoading } = useQuery({
-    queryKey: ['finance-statement', token],
-    queryFn: async () => {
-      const statement = await financeApi.statement(token);
-
-      return {
-        customerName: statement?.buyer?.name || statement?.customer_name || 'Customer',
-        farmOrigin: statement?.farm_origin || statement?.farmOrigin || 'Jivu Smart Dairy',
-        billingCycle: statement?.billing_cycle || statement?.billingCycle || 'Current cycle',
-        paymentTerms: statement?.payment_terms || statement?.paymentTerms || 'Monthly (Net 30)',
-        totalAmountDue: Number(statement?.summary?.outstanding_balance ?? statement?.totalAmountDue ?? 0),
-        todaysDelivery: statement?.todaysDelivery || statement?.today_delivery || {
-          date: statement?.latest_delivery?.date || statement?.latestDelivery?.date || '',
-          volume: Number(statement?.latest_delivery?.volume ?? statement?.latestDelivery?.volume ?? 0),
-          antibiotics: statement?.latest_delivery?.antibiotics || 'Unknown',
-          status: statement?.latest_delivery?.status || 'Verified',
-        },
-        history: statement?.history || statement?.consumption_breakdown || [],
-      };
-    },
-    enabled: !!token,
+  const { data, isLoading, isError, error, refetch, isFetching } = useQuery({
+    queryKey: ['shared-statement', token],
+    queryFn: async () => normalizeStatement(await financeApi.statement(token)),
+    enabled: enabled && Boolean(token),
+    // An unknown link won't start working on a retry.
+    retry: (count, err) => err?.response?.status !== STATUS_NOT_FOUND && count < MAX_RETRIES,
   });
+  // Not sent to telemetry: the request address holds the link token.
 
-  if (isLoading || !portalData) {
-    return <div className="p-8"><Skeleton className="h-96 w-full" /></div>;
+  if (!enabled) {
+    return (
+      <Notice title={copy.offTitle}>
+        {copy.offMessage}
+      </Notice>
+    );
+  }
+  if (isLoading) {
+    return <main className="p-4 sm:p-8" aria-busy="true"><span className="sr-only">{copy.loading}</span><Skeleton className="mx-auto h-96 w-full max-w-4xl" /></main>;
+  }
+  if (isError) {
+    if (error?.response?.status === STATUS_NOT_FOUND) {
+      return (
+        <Notice title={copy.invalidTitle}>
+          {copy.invalidMessage}
+        </Notice>
+      );
+    }
+    return (
+      <Notice isError title={copy.failedTitle}>
+        <p>{copy.failedMessage}</p>
+        <button type="button" onClick={() => refetch()} disabled={isFetching} className="btn-command mt-6 inline-flex justify-center">
+          {isFetching ? copy.retrying : copy.retry}
+        </button>
+      </Notice>
+    );
   }
 
+  const { customerName, balance, transactions } = data;
+
   return (
-    <div className="min-h-screen p-4 md:p-8 flex justify-center">
-      <div className="w-full max-w-4xl animate-reveal space-y-6">
-        <header className="flex flex-col md:flex-row justify-between items-start md:items-end border-b border-ink/10 pb-6 gap-4">
-          <div>
-            <div className="inline-flex items-center gap-2 bg-brand/5 text-brand px-3 py-1 mb-3 rounded-full font-semibold text-xs border border-brand/10">
-              <ShieldCheck size={14} /> Official Supply Record
-            </div>
-            <h1 className="font-sans font-bold text-3xl text-brand">{portalData.farmOrigin}</h1>
-            <p className="text-ink-muted mt-1">Issued to: <span className="font-semibold text-ink">{portalData.customerName}</span></p>
-          </div>
-          <button className="btn-secondary gap-2 text-sm">
-            <Download size={16} /> Download PDF
-          </button>
+    <main className="flex min-h-screen justify-center bg-surface-warm p-4 md:p-8">
+      <div className="w-full max-w-4xl space-y-6">
+        <header className="border-b border-ink/10 pb-6">
+          <p className="text-label text-ink-muted">{copy.eyebrow(SITE.name)}</p>
+          <h1 className="mt-2 break-words text-page-title text-ink">{customerName ?? '—'}</h1>
         </header>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div className="card-machined bg-surface/80 p-6 relative overflow-hidden text-ink-strong">
-            <div className="absolute -right-10 -top-10 opacity-10">
-              <Droplets size={150} />
-            </div>
-            <div className="relative z-10">
-              <h3 className="font-semibold text-brand flex items-center gap-2 mb-4 text-sm uppercase tracking-wide">
-                <CheckCircle2 size={16} className="text-brand" /> Today's Received Volume
-              </h3>
-              <div className="text-3xl font-bold tracking-tight text-ink-strong mb-2">
-                {portalData.todaysDelivery.volume} <span className="text-xl text-ink-muted font-medium">Litres</span>
-              </div>
-              <div>
-                <div className="text-xs text-ink-muted uppercase">Safety</div>
-                <div className="font-semibold text-brand">{portalData.todaysDelivery.antibiotics}</div>
-              </div>
-            </div>
-          </div>
+        <section aria-labelledby="statement-balance" className="rounded-card border border-ink/10 bg-surface p-6">
+          <h2 id="statement-balance" className="text-section-title text-ink-muted">
 
-          <div className="card-machined bg-surface/80 p-6 text-ink-strong">
-            <h3 className="font-semibold text-ink-muted flex items-center gap-2 mb-4 text-sm uppercase tracking-wide">
-              <Receipt size={16} /> Current Billing Cycle
-            </h3>
-            <div className="mb-2 font-mono text-3xl font-semibold tracking-tight text-ink-strong tabular-nums">
-              KES {portalData.totalAmountDue.toLocaleString(undefined, { minimumFractionDigits: 2 })}
-            </div>
-            <div className="flex items-center gap-2 text-sm text-ink-muted mb-6">
-              <Calendar size={14} /> {portalData.billingCycle} &mdash; {portalData.paymentTerms}
-            </div>
-            <div className="p-3 bg-brand/5 rounded-lg border border-brand/10 text-sm text-brand flex items-start gap-2">
-              <span className="font-semibold mt-0.5">Note:</span>
-              This total is supplied by the backend statement route.
-            </div>
-          </div>
-        </div>
+  {copy.balance}
+          </h2>
+          <p className="mt-3 text-stat-value tabular-nums text-ink-strong">{formatMoneyText(balance)}</p>
+        </section>
 
-        <div className="card-machined overflow-hidden bg-surface/80 mt-8">
-          <div className="p-6 border-b border-ink/10 flex justify-between items-center bg-white/35 backdrop-blur-sm">
-            <h3 className="font-semibold text-brand text-lg">Supply Breakdown</h3>
-            <span className="text-sm text-ink-muted">Sorted by Newest First</span>
-          </div>
-
-          <div className="hidden overflow-x-auto md:block">
-            <table className="w-full text-left border-collapse">
-              <thead className="bg-brand/10 text-ink-muted">
-                <tr>
-                  <th className="p-4 font-semibold text-xs uppercase tracking-wider text-ink-muted">Date</th>
-                  <th className="p-4 font-semibold text-xs uppercase tracking-wider text-ink-muted">Status</th>
-                  <th className="p-4 font-semibold text-xs uppercase tracking-wider text-right text-ink-muted">Volume (L)</th>
-                  <th className="p-4 font-semibold text-xs uppercase tracking-wider text-right text-ink-muted">Rate (KES)</th>
-                  <th className="p-4 font-semibold text-xs uppercase tracking-wider text-right text-ink-muted">Daily Total</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-ink/5">
-                {portalData.history.map((row, index) => (
-                  <tr key={index} className="hover:bg-surface-warm/30 transition-colors">
-                    <td className="p-4 font-medium text-ink">{row.date}</td>
-                    <td className="p-4">
-                      <span className="inline-flex items-center gap-1 px-2 py-1 rounded bg-brand/10 text-brand text-xs font-medium">
-                        <CheckCircle2 size={12} /> {row.status}
-                      </span>
-                    </td>
-                    <td className="p-4 text-right font-medium text-ink tabular-nums">{Number(row.volume || 0).toFixed(1)}</td>
-                    <td className="p-4 text-right text-ink-muted tabular-nums">{Number(row.rate || 0).toFixed(2)}</td>
-                    <td className="p-4 text-right font-semibold text-brand tabular-nums">{Number(row.dailyTotal || row.amount || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-          <div className="divide-y divide-ink/10 md:hidden">
-            {portalData.history.map((row, index) => (
-              <article key={index} className="space-y-3 p-4">
-                <div className="flex items-start justify-between gap-3">
-                  <p className="min-w-0 text-sm font-semibold text-ink">{row.date}</p>
-                  <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-brand/10 px-2 py-1 text-[11px] font-semibold text-brand"><CheckCircle2 size={12} />{row.status}</span>
-                </div>
-                <div className="grid grid-cols-2 gap-3 text-xs">
-                  <div><p className="text-ink-muted">Volume</p><p className="mt-1 font-semibold tabular-nums text-ink">{Number(row.volume || 0).toFixed(1)} L</p></div>
-                  <div><p className="text-ink-muted">Rate</p><p className="mt-1 font-semibold tabular-nums text-ink">KES {Number(row.rate || 0).toFixed(2)}</p></div>
-                  <div className="col-span-2"><p className="text-ink-muted">Daily total</p><p className="mt-1 font-bold tabular-nums text-brand">KES {Number(row.dailyTotal || row.amount || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</p></div>
-                </div>
-              </article>
-            ))}
-          </div>
-        </div>
+        <section aria-labelledby="statement-transactions" className="overflow-hidden rounded-card border border-ink/10 bg-surface">
+          <h2 id="statement-transactions" className="border-b border-ink/10 p-4 text-section-title text-ink sm:p-6">{copy.transactions}</h2>
+          {transactions.length === 0 ? (
+            <p className="p-6 text-body text-ink-muted">{copy.noTransactions}</p>
+          ) : (
+            <ul className="divide-y divide-ink/10">
+              {transactions.map((tx, index) => (
+                <li key={tx.id ?? index} className="flex items-start justify-between gap-4 p-4 sm:px-6">
+                  <div className="min-w-0">
+                    <p className="break-words text-body text-ink">{tx.description ?? '—'}</p>
+                    <p className="mt-1 text-meta text-ink-muted">
+                      {tx.date ?? '—'}{tx.reference ? ` · ${tx.reference}` : ''}
+                    </p>
+                  </div>
+                  <p className="shrink-0 text-body-strong tabular-nums text-ink">{formatMoneyText(tx.amount)}</p>
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
       </div>
-    </div>
+    </main>
   );
 }

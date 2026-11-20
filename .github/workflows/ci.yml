@@ -1,0 +1,109 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main, development]
+  schedule:
+    # Nightly full-stack journey, 02:00 Nairobi (23:00 UTC).
+    - cron: '0 23 * * *'
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  unit:
+    name: Unit tests
+    if: github.event_name != 'schedule'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      - run: npx vitest run
+
+  e2e-mocked:
+    name: Journey (phone, mocked API)
+    if: github.event_name != 'schedule'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      # Builds the app, serves the production build and answers the API in the browser.
+      - run: npm run test:e2e
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright-report-mocked
+          path: playwright-report/
+          retention-days: 14
+
+  e2e-full-stack:
+    name: Journey (phone, real backend)
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    env:
+      FRONTEND_PORT: '4173'
+      BACKEND_PORT: '5000'
+    # The backend's docker-compose.yml mounts ../frontend/jivu-frontend, so both
+    # repositories are checked out side by side in that layout.
+    defaults:
+      run:
+        working-directory: frontend/jivu-frontend
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: frontend/jivu-frontend
+      - name: Check out the backend
+        uses: actions/checkout@v4
+        with:
+          repository: JamesKamau-5773/Smart-Farm-ERP-Backend
+          ref: development
+          path: backend
+          # Needed only if the backend repository is private.
+          token: ${{ secrets.BACKEND_REPO_TOKEN || github.token }}
+      - name: Start database, Redis and API
+        working-directory: backend
+        # Development mode, no secrets needed. FRONTEND_PORT also sets the API's
+        # allowed CORS origin. --wait uses the image's healthcheck.
+        run: docker compose up -d --build --wait db redis backend
+      - name: Apply migrations
+        working-directory: backend
+        run: docker compose exec -T backend flask --app run:app db upgrade heads
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: frontend/jivu-frontend/.nvmrc
+          cache: npm
+          cache-dependency-path: frontend/jivu-frontend/package-lock.json
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - name: Build and serve the frontend against the real API
+        run: |
+          VITE_API_BASE_URL="http://localhost:${BACKEND_PORT}" npm run build
+          npx vite preview --port "${FRONTEND_PORT}" --strictPort &
+          for i in $(seq 1 30); do curl -fsS "http://localhost:${FRONTEND_PORT}/app.html" >/dev/null && exit 0; sleep 2; done
+          exit 1
+      - run: npm run test:e2e:full
+        env:
+          E2E_FULL_STACK: '1'
+          E2E_BASE_URL: http://localhost:${{ env.FRONTEND_PORT }}
+      - name: Backend logs
+        if: failure()
+        working-directory: backend
+        run: docker compose logs backend --tail 300
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright-report-full-stack
+          path: frontend/jivu-frontend/playwright-report/
+          retention-days: 14

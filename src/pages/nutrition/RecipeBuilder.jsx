@@ -1,15 +1,20 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { Calculator, AlertTriangle } from 'lucide-react';
+import { AlertTriangle } from 'lucide-react';
 import { calculateRecipeMetrics, validateRecipe } from '../../services/NutritionalCalculator';
+import DataWarningList from '../../components/inventory/DataWarningList';
+import { getShareTotal, sharesAddUp } from '../../lib/mixPlannerRules';
+import { feedCopy } from '../../i18n/feed';
+
+const copy = feedCopy.builder;
 
 const RECIPE_CONFIG = {
   dairy_meal: {
-    title: 'Dairy Meal Mixer',
+    get title() { return copy.titles.dairy_meal; },
     defaultBatchSize: 500,
     targetProtein: 16,
   },
   main_meal: {
-    title: 'Main Feed Mixer',
+    get title() { return copy.titles.main_meal; },
     defaultBatchSize: 2000,
     targetProtein: 14,
   },
@@ -24,16 +29,16 @@ const resolveBatchSize = (value, fallback) => {
 
 function BatchSizeControl({ value, onChange }) {
   return (
-    <label className="flex items-center gap-2 rounded-full border border-ink/10 bg-surface-raised px-3 py-1.5 text-xs font-bold text-ink-muted">
-      <span className="shrink-0">Mix Size</span>
+    <label className="flex items-center gap-2 rounded-full border border-ink/10 bg-surface-raised px-3 py-1.5 text-field-label text-ink-muted">
+      <span className="shrink-0">{copy.mixSize}</span>
       <input
         type="number"
         min="1"
         step="1"
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        className="w-20 bg-transparent text-right font-black text-brand focus:outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-        aria-label="Batch size in kilograms"
+        className="w-20 bg-transparent text-right text-control text-brand focus:outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+        aria-label={copy.batchSizeLabel}
       />
       <span>kg</span>
     </label>
@@ -46,8 +51,8 @@ function RecipeAlerts({ alerts }) {
   return (
     <div className="mb-6 space-y-2 animate-in fade-in slide-in-from-top-2">
       {alerts.map((alert, idx) => (
-        <div key={idx} className="flex items-start gap-2 rounded-md border border-brand/20 bg-brand-50 p-3 text-xs font-bold text-brand-dark">
-          <AlertTriangle size={16} className="shrink-0 mt-0.5" />
+        <div key={idx} className="flex items-start gap-2 rounded-md border border-brand/20 bg-brand-50 p-3 text-meta text-brand-dark">
+          <AlertTriangle size={16} className="shrink-0 mt-0.5" aria-hidden="true" />
           <p>{alert.message}</p>
         </div>
       ))}
@@ -58,10 +63,10 @@ function RecipeAlerts({ alerts }) {
 function ProteinMeter({ averageProtein, targetProtein }) {
   return (
     <div className="space-y-1.5 mb-8 bg-surface-raised p-4 rounded-lg border border-ink/5">
-      <div className="flex justify-between text-xs font-black uppercase text-ink-muted">
-        <span>Protein Goal ({targetProtein}%)</span>
+      <div className="flex justify-between text-label text-ink-muted">
+        <span>{copy.proteinGoal(targetProtein)}</span>
         <span className="text-brand-dark">
-          Current Mix: {averageProtein.toFixed(1)}%
+          {copy.currentMix(averageProtein.toFixed(1))}
         </span>
       </div>
       <div className="h-2.5 w-full bg-white rounded-full overflow-hidden ">
@@ -74,36 +79,51 @@ function ProteinMeter({ averageProtein, targetProtein }) {
   );
 }
 
-function IngredientAllocationRow({ item, onPercentageChange }) {
+function IngredientAllocationRow({ item, warnings, onPercentageChange, onApplyFix, pendingFixCode }) {
   const availableStock = Number(item.availableStock ?? 0);
   const showStock = Number.isFinite(availableStock) && availableStock > 0;
 
   return (
-    <div className="grid grid-cols-12 gap-2 items-center bg-white p-3 rounded-md border border-ink/10 hover:border-brand/30 transition-colors focus-within:border-brand focus-within:ring-1 focus-within:ring-brand ">
-      <div className="col-span-5 pr-2">
-        <div className="text-sm font-bold text-ink-strong truncate">{item.name}</div>
+    <div className="rounded-md border border-ink/10 bg-white p-3 transition-colors hover:border-brand/30 focus-within:border-brand focus-within:ring-1 focus-within:ring-brand">
+    <div className="grid grid-cols-12 items-center gap-2">
+      <div className="col-span-4 min-w-0 pr-2">
+        <div className="text-body-strong text-ink-strong truncate">{item.name}</div>
         {showStock && (
-          <div className="text-[10px] font-bold uppercase tracking-wide text-ink-muted">
-            In stock: {availableStock.toFixed(0)} {item.stockUnit || 'kg'}
+          <div className="text-label text-ink-muted">
+            {copy.inStock(availableStock.toFixed(0), item.stockUnit || 'kg')}
           </div>
         )}
       </div>
-      <div className="col-span-3 flex items-center justify-end gap-2">
+      <div className="col-span-4 flex items-center justify-end gap-2">
         <input
           type="number"
-          className="w-16 bg-transparent text-right font-black text-brand text-lg focus:outline-none"
+          inputMode="decimal"
+          min="0"
+          max="100"
+          step="any"
+          className="input-machined px-2 py-1.5 text-control w-24 text-right"
           value={item.percentage}
           onChange={(e) => onPercentageChange(item.id, e.target.value)}
-          aria-label={`${item.name} percentage`}
+          aria-label={copy.percentageLabel(item.name)}
         />
-        <span className="text-xs font-bold text-ink-muted">%</span>
+        <span className="text-meta text-ink-muted">%</span>
       </div>
       <div className="col-span-4 text-right">
-        <div className="text-sm font-black text-ink-strong tabular-nums">{item.weightKg.toFixed(2)} kg</div>
-        <div className="text-[10px] font-bold uppercase tracking-wide text-ink-muted">
+        <div className="text-body-strong text-ink-strong tabular-nums">{item.weightKg.toFixed(2)} kg</div>
+        <div className="text-label text-ink-muted">
           KES {item.cost.toFixed(0)}
         </div>
       </div>
+    </div>
+      {warnings?.length > 0 && (
+        <div className="mt-2">
+          <DataWarningList
+            warnings={warnings}
+            onApplyFix={onApplyFix ? (code) => onApplyFix(item, code) : undefined}
+            pendingCode={pendingFixCode}
+          />
+        </div>
+      )}
     </div>
   );
 }
@@ -111,11 +131,11 @@ function IngredientAllocationRow({ item, onPercentageChange }) {
 function MetricsFooter({ metrics }) {
   return (
     <div className="flex justify-between items-center pt-4 border-t border-ink/5">
-      <div className="text-xs text-ink-muted font-medium">
-        Cost: <span className="font-bold text-ink-strong">KES {metrics.totalCost.toFixed(0)}</span> / batch
+      <div className="text-meta text-ink-muted">
+        {copy.costPerBatch} <span className="text-body-strong text-ink-strong">KES {metrics.totalCost.toFixed(0)}</span>{copy.perBatch}
       </div>
-      <div className="text-xs text-ink-muted font-medium">
-        Yield: <span className="font-bold text-ink-strong">{metrics.totalWeight.toFixed(0)} kg</span>
+      <div className="text-meta text-ink-muted">
+        {copy.yield} <span className="text-body-strong text-ink-strong">{metrics.totalWeight.toFixed(0)} kg</span>
       </div>
     </div>
   );
@@ -130,6 +150,9 @@ export default function RecipeBuilder({
   onBatchSizeChange,
   targetProtein,
   isLoading = false,
+  ingredientWarnings = {},
+  onApplyFix,
+  pendingFix = null,
 }) {
   const config = getRecipeConfig(recipeType);
   const resolvedTargetProtein = Number.isFinite(Number(targetProtein)) && Number(targetProtein) > 0
@@ -175,6 +198,8 @@ export default function RecipeBuilder({
     calculateRecipeMetrics(activeIngredients, batchSize), [activeIngredients, batchSize]
   );
 
+  const shareTotal = getShareTotal(activeIngredients);
+
   const alerts = useMemo(() => 
     validateRecipe(metrics, batchSize, resolvedTargetProtein), [metrics, batchSize, resolvedTargetProtein]
   );
@@ -205,10 +230,9 @@ export default function RecipeBuilder({
     <div className="bg-surface p-6 border border-ink/5 rounded-card ">
       {/* Header Area */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between mb-6 border-b border-ink/5 pb-4">
-        <h3 className="flex items-center gap-2 text-sm font-black uppercase tracking-wide text-brand-dark">
-          <Calculator size={18} /> 
+        <h2 className="text-section-title text-brand-dark">
           {config.title}
-        </h3>
+        </h2>
         <BatchSizeControl value={batchSize} onChange={updateBatchSize} />
       </div>
 
@@ -221,27 +245,36 @@ export default function RecipeBuilder({
 
       {/* Ingredient Inputs */}
       <div className="space-y-2 mb-8">
-        <div className="grid grid-cols-12 gap-2 px-3 pb-2 text-[10px] font-black uppercase text-ink-muted border-b border-ink/5">
-          <div className="col-span-5">Feed Item</div>
-          <div className="col-span-3 text-right">Share</div>
-          <div className="col-span-4 text-right">Mix Amount</div>
+        <div className="grid grid-cols-12 gap-2 px-3 pb-2 text-label text-ink-muted border-b border-ink/5">
+          <div className="col-span-4">{copy.feedItem}</div>
+          <div className="col-span-4 text-right">{copy.share}</div>
+          <div className="col-span-4 text-right">{copy.mixAmount}</div>
         </div>
 
         {isLoading ? (
-          <div className="px-3 py-6 text-sm text-ink-muted">Loading feed items...</div>
+          <div className="px-3 py-6 text-body text-ink-muted">{copy.loading}</div>
         ) : metrics.ingredients.length > 0 ? (
           metrics.ingredients.map((item) => (
             <IngredientAllocationRow
               key={item.id}
               item={item}
+              warnings={ingredientWarnings[item.ingredientId ?? item.id]}
               onPercentageChange={updatePercentage}
+              onApplyFix={onApplyFix}
+              pendingFixCode={pendingFix?.ingredientId === (item.ingredientId ?? item.id) ? pendingFix.code : null}
             />
           ))
         ) : (
-          <div className="px-3 py-6 text-sm text-ink-muted">No feed items found. Add feed stock in Inventory first.</div>
+          <div className="px-3 py-6 text-body text-ink-muted">{copy.empty}</div>
         )}
       </div>
       
+      {metrics.ingredients.length > 0 && (
+        <p role="status" className={`mb-4 text-right text-meta ${sharesAddUp(shareTotal) ? 'text-ink-muted' : 'text-danger'}`}>
+          {feedCopy.planner.shareTotal(shareTotal)}
+        </p>
+      )}
+
       <MetricsFooter metrics={metrics} />
     </div>
   );

@@ -91,3 +91,33 @@ export function buildBatchPayload({
     })),
   };
 }
+/**
+ * The largest batch stock allows, from the backend (`max_batch_kg`, already
+ * rounded down to 0.1 kg). null when no mix of this type is assigned or the
+ * backend hasn't answered, so no cap is shown.
+ */
+export function resolveMaxBatchKg(suggestion) {
+  const max = suggestion?.max_batch_kg;
+  return max === null || max === undefined || !Number.isFinite(Number(max)) ? null : Number(max);
+}
+
+/**
+ * The backend's suggested batch size (`batches/suggested-size`), capped to its
+ * `max_batch_kg`. `kg` is null when there is no usable suggestion; `reason` then
+ * says why (from the backend). `limitingIngredient` names the feed that runs out
+ * first when the cap applies.
+ */
+export function resolveSuggestedBatch(suggestion) {
+  const suggestedKg = Number(suggestion?.suggested_batch_kg);
+  if (!Number.isFinite(suggestedKg) || suggestedKg <= 0) {
+    return { kg: null, capped: false, reason: suggestion?.reason ?? null, limitingIngredient: null };
+  }
+  const max = resolveMaxBatchKg(suggestion);
+  const capped = max !== null && max > 0 && suggestedKg > max;
+  return {
+    kg: capped ? max : suggestedKg,
+    capped,
+    reason: null,
+    limitingIngredient: capped ? (suggestion?.limiting_ingredient?.name ?? null) : null,
+  };
+}

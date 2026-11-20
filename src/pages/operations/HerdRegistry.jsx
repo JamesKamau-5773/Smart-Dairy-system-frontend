@@ -1,48 +1,41 @@
-import { useState, useRef, useEffect } from 'react';
+import { useMemo, useState, useRef, useEffect } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import toast from 'react-hot-toast';
-import {
-  BookOpen,
-  Calendar,
-  ChevronDown,
-  ChevronUp,
-  Filter,
-  Scale,
-  Search,
-  ShieldCheck,
-  AlertCircle,
-  Trash2,
-  Pencil,
-  ImagePlus,
-  Upload,
-  MoreVertical,
-} from 'lucide-react';
+import { AlertCircle, MoreVertical } from 'lucide-react';
 import { Skeleton } from '../../components/ui';
-import Modal from '../../components/ui/Modal';
+import BaseModal from '../../components/ui/BaseModal';
 import AlertBanner from '../../components/ui/AlertBanner';
 import Confirmation, { useConfirmation } from '../../components/ui/Confirmation';
 import { Popover, PopoverContent, PopoverTrigger } from '../../components/ui/popover';
 import { validateForm, ValidationRules, getFirstErrorMessage } from '../../lib/validation';
-import { formatDateTime, getRelativeTime, createAuditEntry, logToAuditTrail } from '../../lib/audit';
-import { getApiErrorMessage, herdApi } from '../../lib/backendApi'; 
+import { formatDateTime, getRelativeTime } from '../../lib/audit';
+import { getApiErrorMessage, herdApi } from '../../lib/backendApi';
+import { offlineFailureMessage } from '../../lib/offlinePolicy';
+import { reportError } from '../../lib/telemetry';
+import { getListLoadState, hasRowsToShow } from '../../lib/listLoadState';
+import { ListLoadNotices, StatValue } from '../../components/ui/ListLoadState';
+import CowPhoto from '../../components/ui/CowPhoto';
 import { ANIMAL_PHOTO_ACCEPT, compressAnimalPhoto, formatPhotoSize, getAnimalPhotoSourceError, getAnimalPhotoValidationError } from '../../lib/animalPhoto';
 import { formatCowIdentity } from '../../lib/cowIdentity';
 import { useTenant } from '../../hooks/useTenant';
+import { herdCopy, herdStatusLabel } from '../../i18n/herd';
+import { HERD_SORTS, useHerdFilters } from '../../hooks/useHerdFilters';
+import FilterPanel from '../../components/data/FilterPanel';
+import { Toolbar, ToolbarPills, ToolbarSearch, ToolbarSelect } from '../../components/data/Toolbar';
+import AnimalAge from '../../components/operations/AnimalAge';
+import { shellCopy } from '../../i18n/shell';
 import {
-  formatAge,
   formatDate,
   statusTone,
   hasValidTimestamp,
   normalizeHerdCow,
   getFilteredHerd,
+  getHerdSearchSuggestions,
   getHerdSummary,
-  isMilkingStatus,
-  isDryStatus,
   normalizeEarTag,
 } from '../../lib/herdUtils';
 
-const INITIAL_HERD = [];
 const statusOptions = ['Calf', 'Heifer', 'Lactating', 'Dry'];
 
 // ─────────────────────────────────────────────────────────────────────────
@@ -50,14 +43,15 @@ const statusOptions = ['Calf', 'Heifer', 'Lactating', 'Dry'];
 // ─────────────────────────────────────────────────────────────────────────
 
 export default function HerdRegistry() {
+  const copy = herdCopy.registry;
+  const form = copy.form;
   const { tenantId, farmId } = useTenant();
   const queryClient = useQueryClient();
   // State
-  const [sortBy, setSortBy] = useState('age');
-  const [statusFilter, setStatusFilter] = useState('All'); // This filter is for the table, not the form dropdown
-  const [herdSearch, setHerdSearch] = useState('');
-  const [controlsOpen, setControlsOpen] = useState(false);
-  const [herdState, setHerdState] = useState(INITIAL_HERD);
+  // Table filters live in the address (Back, reload and shared links keep them).
+  const filters = useHerdFilters();
+  const { sort: sortBy, status: statusFilter, q: herdSearch } = filters.values;
+  const setHerdSearch = filters.setSearch;
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [successMessage, setSuccessMessage] = useState('');
@@ -81,8 +75,6 @@ export default function HerdRegistry() {
     dam_id: '',
     birth_weight_kg: '',
   });
-  const [herdOptions, setHerdOptions] = useState([]);
-  const [loadingHerdOptions, setLoadingHerdOptions] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [isEditSaving, setIsEditSaving] = useState(false);
   const [editPhotoFile, setEditPhotoFile] = useState(null);
@@ -94,40 +86,35 @@ export default function HerdRegistry() {
   const photoInputRef = useRef(null);
   const confirmation = useConfirmation();
 
-  const { data: herdData, isLoading } = useQuery({
+  // The herd is rendered straight from the backend's list (shared cache with other pages);
+  // the dam dropdown uses the same list instead of fetching it again.
+  const herdQuery = useQuery({
     queryKey: ['herd', tenantId, farmId],
     queryFn: () => herdApi.list(),
     enabled: !!tenantId && !!farmId,
   });
+  const herdData = herdQuery.data;
+  const herdLoadState = getListLoadState(herdQuery);
+  const isLoading = herdLoadState === 'loading';
+  const herdState = useMemo(
+    () => (Array.isArray(herdData) ? herdData.map((cow) => normalizeHerdCow(cow)) : []),
+    [herdData],
+  );
+  const herdOptions = useMemo(
+    () => (Array.isArray(herdData) ? herdData.map((cow) => ({ value: cow.id, label: formatCowIdentity(cow) })) : []),
+    [herdData],
+  );
+  const loadingHerdOptions = isLoading;
+  const herdOptionsFailed = herdLoadState === 'error' || herdLoadState === 'offline';
 
-  // Fetch herd data for Dam dropdown
-  useEffect(() => {
-    const fetchHerdForDam = async () => {
-      setLoadingHerdOptions(true);
-      try {
-        // Using herdApi.list() as it's already imported and provides the necessary data
-        const response = await herdApi.list();
-        setHerdOptions(
-          response.map((cow) => ({
-            value: cow.id, // Assuming 'id' is the unique identifier for a cow
-            label: formatCowIdentity(cow),
-          }))
-        );
-      } catch (err) {
-        console.error('Failed to fetch herd for Dam dropdown:', err);
-        // Optionally set an error state here if you want to display it in the UI
-      } finally {
-        setLoadingHerdOptions(false);
-      }
-    };
-    fetchHerdForDam();
-  }, [tenantId, farmId]); // Re-fetch if tenant or farm changes
-
-  useEffect(() => {
-    if (Array.isArray(herdData)) {
-      setHerdState(herdData.map((cow) => normalizeHerdCow(cow)));
-    }
-  }, [herdData]);
+  // Counts for the whole farm, from the backend (the list above is capped at one page).
+  const herdSummaryQuery = useQuery({
+    queryKey: ['herd', tenantId, farmId, 'summary'],
+    queryFn: () => herdApi.summary(),
+    enabled: !!tenantId && !!farmId,
+  });
+  const summaryLoadState = getListLoadState(herdSummaryQuery);
+  const backendSummary = herdSummaryQuery.data;
 
   const [newCow, setNewCow] = useState({
     tagNumber: '',
@@ -145,12 +132,23 @@ export default function HerdRegistry() {
     if (sortBy === 'breed') return a.breed.localeCompare(b.breed) || a.id.localeCompare(b.id);
     if (sortBy === 'status') return a.status.localeCompare(b.status) || a.id.localeCompare(b.id);
     if (sortBy === 'name') return a.name.localeCompare(b.name) || a.id.localeCompare(b.id);
+    // Unknown ages (null) sort last, never as 0.
+    if (a.ageMonths === null || b.ageMonths === null) return (a.ageMonths === null) - (b.ageMonths === null) || a.id.localeCompare(b.id);
     return a.ageMonths - b.ageMonths;
   });
 
-  const hasActiveFilters = statusFilter !== 'All' || herdSearch.trim() !== '';
-  const activeFilterCount = [herdSearch.trim(), statusFilter !== 'All'].filter(Boolean).length;
-  const herdSummary = getHerdSummary(herdState);
+  const hasActiveFilters = filters.activeCount > 0;
+  const herdSummary = {
+    totalAnimals: backendSummary?.totalCount ?? null,
+    milkingCount: backendSummary?.milkingCount ?? null,
+    dryCount: backendSummary?.dryCount ?? null,
+    averageAgeMonths: backendSummary?.averageAgeMonths == null ? null : Math.round(backendSummary.averageAgeMonths),
+    latestCalved: backendSummary?.latestCalved ?? null,
+    // TODO(BR-011): the backend summary should include the latest update; until then it is
+    // read from the rows on this page.
+    latestUpdatedAt: getHerdSummary(herdState).latestUpdatedAt,
+  };
+  const countText = (value) => (value === null ? '—' : value);
 
   // Keyboard shortcuts
   useEffect(() => {
@@ -215,7 +213,7 @@ export default function HerdRegistry() {
 
       // Client-side check for immediate feedback, backend will enforce uniqueness definitively.
       if (herdState.some((c) => c.id === tagNumber)) {
-        setErrorMessage(`Animal with tag ${tagNumber} already exists for this tenant`);
+        setErrorMessage(copy.tagExists(tagNumber));
         setShowError(true);
         setIsSaving(false);
         return;
@@ -239,23 +237,11 @@ export default function HerdRegistry() {
 
       await refreshHerdViews(savedCow.recordId);
 
-      // Log audit entry
-      logToAuditTrail(
-        createAuditEntry({
-          action: 'create',
-          recordType: 'cow',
-          recordId: savedCow.id,
-          userName: 'You',
-          changes: { name: { before: '', after: savedCow.name } },
-          notes: `Added new animal: ${savedCow.name} (${savedCow.id})`,
-        })
-      );
-
-      notifySuccess(`Successfully added ${formatCowIdentity({ name: savedCow.name, earTag: savedCow.id })}`);
+      notifySuccess(copy.added(formatCowIdentity({ name: savedCow.name, earTag: savedCow.id })));
       handleCloseModal();
     } catch (error) {
-      console.error('Error adding cow:', error);
-      setErrorMessage(getApiErrorMessage(error, 'Failed to add animal. Please try again.'));
+      reportError(error, { where: 'HerdRegistry.add' });
+      setErrorMessage(getApiErrorMessage(error, copy.addFailed));
       setShowError(true);
     } finally {
       setIsSaving(false);
@@ -263,12 +249,15 @@ export default function HerdRegistry() {
   };
 
   const handleDeleteCow = async (cowId, cowName, cowDisplayId = cowId) => {
+    const cowLabel = formatCowIdentity({ name: cowName, earTag: cowDisplayId });
     const confirmed = await confirmation.confirm({
-      title: 'Delete Animal?',
-      message: `Are you sure you want to remove ${cowName} (${cowDisplayId}) from your herd? This action cannot be undone.`,
+      title: copy.deleteTitle(cowName || cowDisplayId),
+      message: copy.deleteMessage(cowLabel),
       type: 'danger',
-      confirmText: 'Delete',
-      cancelText: 'Keep',
+      confirmText: copy.deleteConfirm,
+      cancelText: copy.deleteKeep,
+      // A cow carries milk, breeding and health records: make the farmer type her tag.
+      requireText: String(cowDisplayId),
     });
 
     if (!confirmed) return;
@@ -280,21 +269,11 @@ export default function HerdRegistry() {
 
       await refreshHerdViews(cowId);
 
-      // Log audit entry
-      logToAuditTrail(
-        createAuditEntry({
-          action: 'delete',
-          recordType: 'cow',
-          recordId: cowDisplayId,
-          userName: 'You',
-          notes: `Deleted animal: ${cowName} (${cowDisplayId})`,
-        })
-      );
-
-      notifySuccess(`Removed ${cowName} from your herd`);
+      notifySuccess(copy.removed(cowName));
     } catch (error) {
-      console.error('Error deleting cow:', error);
-      notifyError('Failed to delete animal. Please try again.');
+      reportError(error, { where: 'HerdRegistry.delete' });
+      notifyError(offlineFailureMessage(error, copy.notDeleted(cowName || cowDisplayId))
+        ?? getApiErrorMessage(error, copy.deleteFailed(cowName || cowDisplayId)));
     } finally {
       confirmation.setLoading(false);
       confirmation.close();
@@ -311,7 +290,7 @@ export default function HerdRegistry() {
   const handleOpenEdit = async (cow) => {
     const routeId = getCowRouteId(cow);
     if (!routeId) {
-      notifyError('Failed to resolve animal record for editing.');
+      notifyError(copy.resolveEdit);
       return;
     }
 
@@ -334,8 +313,8 @@ export default function HerdRegistry() {
       setShowError(false);
       setIsEditOpen(true);
     } catch (error) {
-      console.error('Failed to load animal for editing:', error);
-      notifyError(getApiErrorMessage(error, 'Failed to load the latest animal details. Please retry.'));
+      reportError(error, { where: 'HerdRegistry.loadForEdit' });
+      notifyError(getApiErrorMessage(error, copy.loadEditFailed));
     }
   };
   
@@ -390,7 +369,7 @@ export default function HerdRegistry() {
 
     const routeId = getCowRouteId(editingCow);
     if (!routeId) {
-      notifyError('Failed to resolve animal record for photo upload.');
+      notifyError(copy.resolvePhoto);
       return;
     }
 
@@ -403,10 +382,10 @@ export default function HerdRegistry() {
       setPhotoSourceSize(null);
       if (photoInputRef.current) photoInputRef.current.value = '';
       await refreshHerdViews(routeId);
-      notifySuccess(`Updated photo for ${savedCow.name}`);
+      notifySuccess(copy.photoUpdated(savedCow.name));
     } catch (error) {
-      console.error('Error uploading animal photo:', error);
-      notifyError(getApiErrorMessage(error, 'Failed to upload animal photo. Please try again.'));
+      reportError(error, { where: 'HerdRegistry.uploadPhoto' });
+      notifyError(getApiErrorMessage(error, copy.photoUploadFailed));
     } finally {
       setIsPhotoSaving(false);
       setPhotoUploadProgress(null);
@@ -416,16 +395,16 @@ export default function HerdRegistry() {
   const handleDeletePhoto = async () => {
     const routeId = getCowRouteId(editingCow);
     if (!routeId) {
-      notifyError('Failed to resolve animal record for photo removal.');
+      notifyError(copy.resolvePhotoRemoval);
       return;
     }
 
     const confirmed = await confirmation.confirm({
-      title: 'Remove Animal Photo?',
-      message: `Remove the current photo for ${editingCow.name}?`,
+      title: copy.removePhotoTitle,
+      message: copy.removePhotoMessage(editingCow.name),
       type: 'danger',
-      confirmText: 'Remove Photo',
-      cancelText: 'Keep Photo',
+      confirmText: copy.removePhotoConfirm,
+      cancelText: copy.removePhotoKeep,
     });
     if (!confirmed) return;
 
@@ -438,10 +417,10 @@ export default function HerdRegistry() {
       setPhotoSourceSize(null);
       if (photoInputRef.current) photoInputRef.current.value = '';
       await refreshHerdViews(routeId);
-      notifySuccess(`Removed photo for ${savedCow.name}`);
+      notifySuccess(copy.photoRemoved(savedCow.name));
     } catch (error) {
-      console.error('Error removing animal photo:', error);
-      notifyError(getApiErrorMessage(error, 'Failed to remove animal photo. Please try again.'));
+      reportError(error, { where: 'HerdRegistry.removePhoto' });
+      notifyError(getApiErrorMessage(error, copy.photoRemoveFailed));
     } finally {
       setIsPhotoSaving(false);
       confirmation.setLoading(false);
@@ -464,7 +443,7 @@ export default function HerdRegistry() {
 
     const routeId = getCowRouteId(editingCow);
     if (!routeId) {
-      setErrorMessage('Failed to resolve animal record id for update.');
+      setErrorMessage(copy.resolveUpdate);
       setShowError(true);
       return;
     }
@@ -489,21 +468,11 @@ export default function HerdRegistry() {
 
       await refreshHerdViews(routeId);
 
-      logToAuditTrail(
-        createAuditEntry({
-          action: 'update',
-          recordType: 'cow',
-          recordId: normalizedUpdatedCow.id,
-          userName: 'You',
-          notes: `Updated animal: ${normalizedUpdatedCow.name} (${normalizedUpdatedCow.id})`,
-        })
-      );
-
-      notifySuccess(`Updated ${formatCowIdentity({ name: normalizedUpdatedCow.name, earTag: normalizedUpdatedCow.id })}`);
+      notifySuccess(copy.updated(formatCowIdentity({ name: normalizedUpdatedCow.name, earTag: normalizedUpdatedCow.id })));
       handleCloseEditModal();
     } catch (error) {
-      console.error('Error editing cow:', error);
-      notifyError(getApiErrorMessage(error, 'Failed to update animal. Please try again.'));
+      reportError(error, { where: 'HerdRegistry.edit' });
+      notifyError(getApiErrorMessage(error, copy.updateFailed));
     } finally {
       setIsEditSaving(false);
     }
@@ -514,10 +483,40 @@ export default function HerdRegistry() {
     return String(routeId ?? '').trim();
   };
 
-  const handleClearFilters = () => {
-    setStatusFilter('All');
-    setHerdSearch('');
-  };
+  // Typo-tolerant "Did you mean…" when a search finds nothing (e.g. "Nema" → Neema, "KE12" → KE-012).
+  const herdSuggestions = herdSearch.trim() && visibleHerd.length === 0 ? getHerdSearchSuggestions(herdState, herdSearch) : [];
+  const emptyHerdContent = (
+    <div className="flex flex-col items-center gap-2">
+      <p className="text-body text-ink-muted">
+        {hasActiveFilters ? copy.noMatches : copy.empty}
+      </p>
+      {herdSuggestions.length > 0 && (
+        <div className="flex flex-wrap items-center justify-center gap-2 text-body">
+          <span className="text-ink-muted">{copy.didYouMean}</span>
+          {herdSuggestions.map((cow) => (
+            <button
+              key={cow.recordId || cow.id}
+              type="button"
+              onClick={() => setHerdSearch(cow.name && cow.name !== 'Unnamed' ? cow.name : cow.id)}
+              className="rounded-full border border-brand/30 bg-brand-50 px-3 py-1 text-control text-brand hover:bg-brand-100"
+            >
+              {cow.name && cow.name !== 'Unnamed' ? `${cow.name} · ${cow.id}` : cow.id}
+            </button>
+          ))}
+        </div>
+      )}
+      {hasActiveFilters ? (
+        <button type="button" onClick={filters.reset} className="mt-1 text-control text-brand hover:underline">
+          {copy.clearFilters}
+        </button>
+      ) : (
+        <button type="button" onClick={() => setIsAddOpen(true)} className="btn-command mt-2 inline-flex items-center">
+
+      {copy.addFirst}
+        </button>
+      )}
+    </div>
+  );
 
   // ─────────────────────────────────────────────────────────────────────────
   // RENDER
@@ -528,34 +527,32 @@ export default function HerdRegistry() {
       {/* ── HEADER ── */}
       <div className="flex flex-col gap-4 border-b border-ink/10 pb-6 md:flex-row md:items-end md:justify-between">
         <div>
-          <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-brand/10 bg-brand/5 px-3 py-1 text-[10px] font-bold uppercase tracking-widest text-brand">
-            <BookOpen size={12} /> Herd List
-          </div>
-          <h2 className="m-0 font-sans text-3xl font-bold tracking-tight text-brand">
-            My <span className="text-ink-muted">Herd</span>
-          </h2>
-          <p className="mt-2 font-mono text-xs text-ink-muted">
-            A complete list of all animals in your boma and their current status.
+          <h1 className="m-0 text-page-title text-brand">
+            {/* The sidebar's label for this page: one key for both. */}
+            {shellCopy.nav.items.cowRegister}
+          </h1>
+          <p className="mt-2 text-body text-ink-muted">
+            {copy.subtitle}
           </p>
         </div>
 
-        <div className="grid grid-cols-3 gap-3 md:min-w-[360px]">
+        <div className="grid grid-cols-3 gap-3 md:min-w-[26rem] md:shrink-0">
           <div className="card-machined bg-surface/80 p-3">
-            <div className="text-[10px] font-bold uppercase tracking-wider text-ink-muted">Total Animals</div>
-            <div className="text-2xl font-black text-ink-strong">
-              {isLoading ? <Skeleton className="h-6 w-16" /> : herdSummary.totalAnimals}
+            <div className="text-label text-ink-muted">{copy.totalAnimals}</div>
+            <div className="text-stat-value text-ink-strong">
+              <StatValue state={summaryLoadState} label={copy.statLabel}>{countText(herdSummary.totalAnimals)}</StatValue>
             </div>
           </div>
           <div className="card-machined bg-surface/80 p-3">
-            <div className="text-[10px] font-bold uppercase tracking-wider text-ink-muted">Milking</div>
-            <div className="text-2xl font-black text-ink-strong">
-              {isLoading ? <Skeleton className="h-6 w-16" /> : herdSummary.milkingCount}
+            <div className="text-label text-ink-muted">{copy.milking}</div>
+            <div className="text-stat-value text-ink-strong">
+              <StatValue state={summaryLoadState} label={copy.statLabel}>{countText(herdSummary.milkingCount)}</StatValue>
             </div>
           </div>
           <div className="card-machined bg-surface/80 p-3">
-            <div className="text-[10px] font-bold uppercase tracking-wider text-ink-muted">Dry</div>
-            <div className="text-2xl font-black text-ink-strong">
-              {isLoading ? <Skeleton className="h-6 w-16" /> : herdSummary.dryCount}
+            <div className="text-label text-ink-muted">{copy.dry}</div>
+            <div className="text-stat-value text-ink-strong">
+              <StatValue state={summaryLoadState} label={copy.statLabel}>{countText(herdSummary.dryCount)}</StatValue>
             </div>
           </div>
         </div>
@@ -564,10 +561,10 @@ export default function HerdRegistry() {
           <button
             type="button"
             onClick={() => setIsAddOpen(true)}
-            className="btn-command flex items-center gap-2"
-            aria-label="Add new animal to herd"
+            className="btn-command flex shrink-0 items-center gap-2 whitespace-nowrap"
+            aria-label={copy.addCowLabel}
           >
-            + Add Cow
+            {copy.addCow}
           </button>
         </div>
       </div>
@@ -577,7 +574,7 @@ export default function HerdRegistry() {
         <div className="fixed top-4 right-4 z-[60] w-[min(92vw,430px)]">
           <AlertBanner
             type="error"
-            title="Error"
+            title={copy.error}
             message={errorMessage}
             autoDismiss={4000}
             onDismiss={() => setShowError(false)}
@@ -589,7 +586,7 @@ export default function HerdRegistry() {
         <div className="fixed top-4 right-4 z-[60] w-[min(92vw,430px)]">
           <AlertBanner
             type="success"
-            title="Success"
+            title={copy.success}
             message={successMessage}
             autoDismiss={2400}
             onDismiss={() => setSuccessMessage('')}
@@ -602,157 +599,81 @@ export default function HerdRegistry() {
         {/* Summary Strip */}
         <div className="mb-6 grid gap-3 border-b border-ink/10 pb-4 sm:grid-cols-2 xl:grid-cols-4">
           <div className="rounded-lg border border-ink/10 bg-surface-raised px-4 py-3">
-            <div className="text-[10px] font-bold uppercase tracking-widest text-ink-muted">Registry Summary</div>
-            <div className="mt-1 text-lg font-black text-brand">{herdSummary.totalAnimals} Cows</div>
+            <div className="text-label text-ink-muted">{copy.summary}</div>
+            <div className="mt-1 text-stat-value text-brand">{copy.cowCount(countText(herdSummary.totalAnimals))}</div>
             <div
-              className="text-[9px] text-ink-muted mt-1"
-              title={herdSummary.latestUpdatedAt ? formatDateTime(herdSummary.latestUpdatedAt) : 'Not available'}
+              className="text-meta text-ink-muted mt-1"
+              title={herdSummary.latestUpdatedAt ? formatDateTime(herdSummary.latestUpdatedAt) : copy.notAvailable}
             >
-              Last updated {herdSummary.latestUpdatedAt ? getRelativeTime(herdSummary.latestUpdatedAt) : 'Not available'}
+              {copy.lastUpdated(herdSummary.latestUpdatedAt ? getRelativeTime(herdSummary.latestUpdatedAt) : copy.notAvailable)}
             </div>
           </div>
           <div className="rounded-lg border border-ink/10 bg-surface-raised px-4 py-3">
-            <div className="text-[10px] font-bold uppercase tracking-widest text-ink-muted">Average Age</div>
-            <div className="mt-1 text-lg font-black text-ink-strong">{formatAge(herdSummary.averageAgeMonths)}</div>
+            <div className="text-label text-ink-muted">{copy.averageAge}</div>
+            <div className="mt-1 text-stat-value text-ink-strong"><AnimalAge months={herdSummary.averageAgeMonths} /></div>
           </div>
           <div className="rounded-lg border border-ink/10 bg-surface-raised px-4 py-3">
-            <div className="text-[10px] font-bold uppercase tracking-widest text-ink-muted">Milking / Dry</div>
-            <div className="mt-1 text-lg font-black text-ink-strong">
-              {herdSummary.milkingCount}{' '}
-              <span className="text-sm font-bold text-ink-muted">/ {herdSummary.dryCount}</span>
+            <div className="text-label text-ink-muted">{copy.milkingDry}</div>
+            <div className="mt-1 text-stat-value text-ink-strong">
+              {countText(herdSummary.milkingCount)}{' '}
+              <span className="text-body-strong text-ink-muted">/ {countText(herdSummary.dryCount)}</span>
             </div>
           </div>
           <div className="rounded-lg border border-ink/10 bg-surface-raised px-4 py-3">
-            <div className="text-[10px] font-bold uppercase tracking-widest text-ink-muted">Latest Calved</div>
-            <div className="mt-1 text-sm font-black text-ink-strong">{formatDate(herdSummary.latestCalved)}</div>
+            <div className="text-label text-ink-muted">{copy.latestCalved}</div>
+            <div className="mt-1 text-body-strong text-ink-strong">{formatDate(herdSummary.latestCalved)}</div>
           </div>
         </div>
 
-        {/* Controls */}
-        <div className="mb-6 rounded-2xl border border-ink/10 bg-surface/90 p-4 ">
-          <div className="flex flex-col gap-3 border-b border-ink/10 pb-4 lg:flex-row lg:items-center lg:justify-between">
-            <div className="flex items-center gap-2 text-ink-strong font-bold text-sm">
-              <Filter size={18} className="text-ink-strong" />
-              <span className="leading-none">Organize List</span>
-            </div>
-
-            <div className="flex flex-wrap items-center gap-2">
-              <span className="rounded-full border border-ink/10 bg-surface-warm/60 px-3 py-1 text-[10px] font-bold uppercase tracking-widest text-ink-muted">
-                {activeFilterCount} active
-              </span>
-              <button
-                type="button"
-                onClick={() => setControlsOpen((current) => !current)}
-                aria-expanded={controlsOpen}
-                className="inline-flex items-center gap-1.5 rounded-lg border border-ink/10 bg-surface px-3 py-1.5 text-xs font-semibold text-ink  transition-all hover:border-brand/20 hover:bg-brand/5 hover:text-brand"
-              >
-                {controlsOpen ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
-                {controlsOpen ? 'Hide filters' : 'Show filters'}
-              </button>
-            </div>
-          </div>
-
-          {controlsOpen && (
-            <div className="flex flex-col gap-3 pt-4 lg:flex-row lg:items-center">
-              <div className="flex items-center gap-2 rounded-lg border border-ink/20 bg-surface/95 px-3 py-2 lg:min-w-[280px]">
-                <Search size={16} className="text-ink-muted" />
-                <input
-                  ref={searchInputRef}
-                  type="search"
-                  value={herdSearch}
-                  onChange={(event) => setHerdSearch(event.target.value)}
-                  placeholder="Search herd... (Cmd+K)"
-                  className="w-full bg-transparent text-sm font-semibold text-ink-strong outline-none placeholder:text-ink-muted"
-                  aria-label="Search herd by ID, name, breed, or status"
-                />
-              </div>
-
-              <div className="flex items-center gap-2 rounded-lg border border-ink/20 bg-surface/95 px-3 py-2">
-                <Scale size={16} className="text-ink-strong" />
-                <label className="text-xs font-bold uppercase tracking-wider text-ink-strong" htmlFor="herd-sort">
-                  Sort by
-                </label>
-                <select
-                  id="herd-sort"
-                  value={sortBy}
-                  onChange={(event) => setSortBy(event.target.value)}
-                  className="bg-transparent text-sm font-semibold text-ink-strong outline-none"
-                  aria-label="Sort herd by"
-                >
-                  <option value="age">Age</option>
-                  <option value="breed">Breed</option>
-                  <option value="status">Current Status</option>
-                </select>
-                <ChevronDown size={14} className="text-ink-strong" />
-              </div>
-
-              <div className="flex flex-wrap items-center gap-2">
-                {[
-                  { label: 'All', count: herdState.length },
-                  { label: 'Milking', count: herdState.filter((cow) => isMilkingStatus(cow.status)).length },
-                  { label: 'Dry', count: herdState.filter((cow) => isDryStatus(cow.status)).length },
-                ].map((option) => (
-                  <button
-                    key={option.label}
-                    type="button"
-                    onClick={() => setStatusFilter(option.label)}
-                    className={`rounded-lg border px-3 py-2 text-xs font-bold transition-colors ${
-                      statusFilter === option.label
-                        ? 'border-brand bg-brand text-surface'
-                        : 'border-ink/10 bg-surface-raised text-ink-muted hover:border-brand/20 hover:text-brand'
-                    }`}
-                    aria-pressed={statusFilter === option.label}
-                    aria-label={`Filter by ${option.label} status`}
-                  >
-                    {option.label} <span className="ml-1 opacity-80">({option.count})</span>
-                  </button>
-                ))}
-
-                <button
-                  type="button"
-                  onClick={handleClearFilters}
-                  className={`rounded-lg border px-3 py-2 text-xs font-bold transition-colors ${
-                    hasActiveFilters
-                      ? 'border-brand/20 bg-brand/5 text-brand hover:bg-brand/10'
-                      : 'border-ink/10 bg-surface-raised text-ink-muted'
-                  }`}
-                  aria-label="Clear all active filters"
-                >
-                  Clear filters
-                </button>
-              </div>
-            </div>
-          )}
+        <div className="mb-6">
+          <FilterPanel title={copy.filtersTitle} activeCount={filters.activeCount} onReset={filters.reset}>
+            <Toolbar>
+              <ToolbarSearch label={copy.searchLabel} value={herdSearch} onChange={setHerdSearch} placeholder={copy.searchPlaceholder} inputRef={searchInputRef} />
+              <ToolbarSelect label={copy.sortLabel} value={sortBy} onChange={filters.setSort} options={HERD_SORTS.map((sort) => [sort, copy.sortOption(copy.sort[sort])])} />
+              <ToolbarPills
+                label={copy.statusFilterLabel}
+                value={statusFilter}
+                onChange={filters.setStatus}
+                options={[
+                  { value: 'All', count: countText(herdSummary.totalAnimals) },
+                  { value: 'Milking', count: countText(herdSummary.milkingCount) },
+                  { value: 'Dry', count: countText(herdSummary.dryCount) },
+                ].map((option) => ({ ...option, label: copy.filters[option.value], ariaLabel: copy.filterBy(copy.filters[option.value]) }))}
+              />
+            </Toolbar>
+          </FilterPanel>
         </div>
+
+        <ListLoadNotices state={herdLoadState} label={copy.listLabel} error={herdQuery.error} onRetry={herdQuery.refetch} />
 
         {/* Table */}
         <div className="hidden overflow-x-auto md:block">
           <table className="w-full border-collapse text-left">
             <thead>
               <tr className="bg-surface-raised border-b border-ink/10">
-                <th className="px-3 py-2 text-[10px] font-black uppercase tracking-wider text-ink-strong">
-                  Ear Tag
+                <th className="px-3 py-2 text-label text-ink-strong">
+                  {copy.columns.earTag}
                 </th>
-                <th className="px-3 py-2 text-[10px] font-black uppercase tracking-wider text-ink-strong">
-                  Name
+                <th className="px-3 py-2 text-label text-ink-strong">
+                  {copy.columns.name}
                 </th>
-                <th className="px-3 py-2 text-[10px] font-black uppercase tracking-wider text-ink-strong">
-                  Breed
+                <th className="px-3 py-2 text-label text-ink-strong">
+                  {copy.columns.breed}
                 </th>
-                <th className="px-3 py-2 text-[10px] font-black uppercase tracking-wider text-ink-strong">
-                  Last Calved
+                <th className="px-3 py-2 text-label text-ink-strong">
+                  {copy.columns.lastCalved}
                 </th>
-                <th className="px-3 py-2 text-[10px] font-black uppercase tracking-wider text-ink-strong">
-                  Age
+                <th className="px-3 py-2 text-label text-ink-strong">
+                  {copy.columns.age}
                 </th>
-                <th className="px-3 py-2 text-[10px] font-black uppercase tracking-wider text-ink-strong">
-                  Status
+                <th className="px-3 py-2 text-label text-ink-strong">
+                  {copy.columns.status}
                 </th>
-                <th className="px-3 py-2 text-[10px] font-black uppercase tracking-wider text-ink-strong">
-                  Updated
+                <th className="px-3 py-2 text-label text-ink-strong">
+                  {copy.columns.updated}
                 </th>
-                <th className="px-3 py-2 text-[10px] font-black uppercase tracking-wider text-ink-strong text-right">
-                  Actions
+                <th className="px-3 py-2 text-label text-ink-strong text-right">
+                  {copy.columns.actions}
                 </th>
               </tr>
             </thead>
@@ -786,28 +707,10 @@ export default function HerdRegistry() {
                     </td>
                   </tr>
                 ))
-                : visibleHerd.length === 0
+                : !hasRowsToShow(herdLoadState) ? null : visibleHerd.length === 0
                   ? (
                     <tr>
-                      <td colSpan="8" className="px-4 py-8 text-center">
-                        <div className="flex flex-col items-center gap-2">
-                          <AlertCircle size={24} className="text-ink-muted" />
-                          <p className="text-sm text-ink-muted font-medium">
-                            {herdSearch || statusFilter !== 'All'
-                              ? 'No animals match your filters'
-                              : 'Your herd is empty. Add your first animal!'}
-                          </p>
-                          {(herdSearch || statusFilter !== 'All') && (
-                            <button
-                              type="button"
-                              onClick={handleClearFilters}
-                              className="text-xs text-brand font-bold hover:underline mt-2"
-                            >
-                              Clear filters
-                            </button>
-                          )}
-                        </div>
-                      </td>
+                      <td colSpan="8" className="px-4 py-8 text-center">{emptyHerdContent}</td>
                     </tr>
                   )
                   : visibleHerd.map((cow) => {
@@ -818,57 +721,56 @@ export default function HerdRegistry() {
                       <td className="px-3 py-2.5">
                         <Link
                           to={`/operations/animal/${routeId}`}
-                          className="font-sans font-black text-brand hover:underline"
+                          className="text-body-strong text-brand hover:underline"
                         >
                           {cow.id}
                         </Link>
                       </td>
-                      <td className="px-3 py-2.5 text-sm font-semibold text-ink">{cow.name}</td>
-                      <td className="px-3 py-2.5 text-sm text-ink-muted">{cow.breed}</td>
-                      <td className="px-3 py-2.5 text-sm text-ink-muted">{formatDate(cow.lastCalved)}</td>
-                      <td className="px-3 py-2.5 text-sm text-ink-muted">
-                        <div className="flex items-center gap-2">
-                          <Calendar size={14} className="text-ink-muted" />
-                          {formatAge(cow.ageMonths)}
-                        </div>
+                      <td className="px-3 py-2.5 text-body-strong text-ink">{cow.name}</td>
+                      <td className="px-3 py-2.5 text-body text-ink-muted">{cow.breed}</td>
+                      <td className="px-3 py-2.5 text-body text-ink-muted">{formatDate(cow.lastCalved)}</td>
+                      <td className="px-3 py-2.5 text-body text-ink-muted">
+                        <AnimalAge months={cow.ageMonths} />
                       </td>
                       <td className="px-3 py-2.5">
                         <span
-                          className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-bold ${statusTone(cow.status)}`}
+                          className={`inline-flex items-center rounded-full border px-2 py-0.5 text-badge ${statusTone(cow.status)}`}
                         >
-                          <ShieldCheck size={12} /> {cow.status}
+                          {herdStatusLabel(cow.status)}
                         </span>
                       </td>
-                      <td className="px-3 py-2.5 text-xs text-ink-muted">
+                      <td className="px-3 py-2.5 text-meta text-ink-muted">
                         {hasValidTimestamp(cow.updatedAt) ? (
                           <>
-                            <div className="text-[10px] text-ink" title={formatDateTime(cow.updatedAt)}>
+                            <div className="text-meta text-ink" title={formatDateTime(cow.updatedAt)}>
                               {formatDateTime(cow.updatedAt)}
                             </div>
-                            <div className="text-[9px] text-ink-muted/60">
+                            <div className="text-meta text-ink-muted/60">
                               {getRelativeTime(cow.updatedAt)}{cow.updatedBy ? ` · ${cow.updatedBy}` : ''}
                             </div>
                           </>
                         ) : (
-                          <div className="text-[10px] text-ink-muted">-</div>
+                          <div className="text-meta text-ink-muted">-</div>
                         )}
                       </td>
                       <td className="px-3 py-2.5 text-right">
                         <div className="flex items-center justify-end gap-2">
                           <Link
                             to={`/operations/animal/${routeId}`}
-                            className="btn-command gap-2 px-3 py-2 text-[11px]"
-                            aria-label={`View record for ${cow.name}`}
+                            className="btn-command gap-2 px-3 py-2 text-control"
+                            aria-label={copy.viewRecordFor(cow.name)}
                           >
-                            View
+                            {copy.view}
                           </Link>
                           <Popover>
                             <PopoverTrigger asChild>
-                              <button type="button" className="inline-flex h-8 w-8 items-center justify-center rounded-button border border-slate-300 text-slate-600 hover:border-brand-400 hover:text-brand-700" aria-label={`Actions for ${cow.name}`}><MoreVertical size={16} /></button>
+                              <button type="button" className="inline-flex h-8 w-8 items-center justify-center rounded-button border border-slate-300 text-slate-600 hover:border-brand-400 hover:text-brand-700" aria-label={copy.actionsFor(cow.name)}><MoreVertical size={16} aria-hidden="true" /></button>
                             </PopoverTrigger>
                             <PopoverContent align="end" className="w-40 p-1.5">
-                              <button type="button" onClick={() => handleOpenEdit(cow)} className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm text-ink-900 hover:bg-brand-50"><Pencil size={14} /> Edit</button>
-                              <button type="button" onClick={() => handleDeleteCow(routeId, cow.name, cow.id)} className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm text-danger hover:bg-danger/10"><Trash2 size={14} /> Delete</button>
+                              <button type="button" onClick={() => handleOpenEdit(cow)} className="flex w-full items-center rounded-md px-3 py-2 text-left text-control text-ink-900 hover:bg-brand-50">
+            {copy.edit}</button>
+                              <button type="button" onClick={() => handleDeleteCow(routeId, cow.name, cow.id)} className="flex w-full items-center rounded-md px-3 py-2 text-left text-control text-danger hover:bg-danger/10">
+            {copy.delete}</button>
                             </PopoverContent>
                           </Popover>
                         </div>
@@ -881,47 +783,48 @@ export default function HerdRegistry() {
         </div>
         <div className="space-y-3 p-3 md:hidden">
           {isLoading ? Array.from({ length: 4 }, (_, index) => <Skeleton key={index} className="h-36 w-full" />)
-            : visibleHerd.length === 0 ? <p className="p-5 text-center text-sm text-ink-muted">{herdSearch || statusFilter !== 'All' ? 'No animals match your filters.' : 'Your herd is empty.'}</p>
+            : !hasRowsToShow(herdLoadState) ? null
+            : visibleHerd.length === 0 ? <div className="p-5 text-center">{emptyHerdContent}</div>
               : visibleHerd.map((cow) => {
                 const routeId = getCowRouteId(cow);
                 return (
                   <article key={`${cow.id}-${routeId || 'card'}`} className="min-w-0 rounded-xl border border-ink/10 bg-surface p-4">
                     <div className="flex items-start justify-between gap-3">
-                      <div className="min-w-0"><Link to={`/operations/animal/${routeId}`} className="text-sm font-bold text-brand">{cow.name || cow.id}</Link><p className="mt-1 text-xs text-ink-muted">Tag {cow.id} · {cow.breed}</p></div>
-                      <span className={`shrink-0 rounded-full border px-2 py-1 text-[10px] font-bold ${statusTone(cow.status)}`}>{cow.status}</span>
+                      <div className="min-w-0"><Link to={`/operations/animal/${routeId}`} className="text-body-strong text-brand">{cow.name || cow.id}</Link><p className="mt-1 text-meta text-ink-muted">{copy.tag(cow.id, cow.breed)}</p></div>
+                      <span className={`shrink-0 rounded-full border px-2 py-1 text-badge ${statusTone(cow.status)}`}>{herdStatusLabel(cow.status)}</span>
                     </div>
-                    <div className="mt-3 grid grid-cols-2 gap-3 rounded-lg bg-surface-raised p-3 text-xs">
-                      <div><p className="text-ink-muted">Last calved</p><p className="mt-1 font-semibold text-ink">{formatDate(cow.lastCalved)}</p></div>
-                      <div><p className="text-ink-muted">Age</p><p className="mt-1 font-semibold text-ink">{formatAge(cow.ageMonths)}</p></div>
-                      <div className="col-span-2"><p className="text-ink-muted">Updated</p><p className="mt-1 font-semibold text-ink">{hasValidTimestamp(cow.updatedAt) ? `${getRelativeTime(cow.updatedAt)}${cow.updatedBy ? ` · ${cow.updatedBy}` : ''}` : '—'}</p></div>
+                    <div className="mt-3 grid grid-cols-2 gap-3 rounded-lg bg-surface-raised p-3 text-meta">
+                      <div><p className="text-ink-muted">{copy.lastCalvedShort}</p><p className="mt-1 text-body-strong text-ink">{formatDate(cow.lastCalved)}</p></div>
+                      <div><p className="text-ink-muted">{copy.ageShort}</p><p className="mt-1 text-body-strong text-ink"><AnimalAge months={cow.ageMonths} /></p></div>
+                      <div className="col-span-2"><p className="text-ink-muted">{copy.updatedShort}</p><p className="mt-1 text-body-strong text-ink">{hasValidTimestamp(cow.updatedAt) ? `${getRelativeTime(cow.updatedAt)}${cow.updatedBy ? ` · ${cow.updatedBy}` : ''}` : '—'}</p></div>
                     </div>
                     <div className="mt-3 flex gap-2">
-                      <Link to={`/operations/animal/${routeId}`} className="flex-1 rounded-lg bg-brand px-3 py-2 text-center text-xs font-semibold text-white">View record</Link>
-                      <button type="button" onClick={() => handleOpenEdit(cow)} className="rounded-lg border border-brand/20 px-3 py-2 text-xs font-semibold text-brand">Edit</button>
-                      <button type="button" onClick={() => handleDeleteCow(routeId, cow.name, cow.id)} className="rounded-lg border border-brand/20 px-3 py-2 text-xs font-semibold text-brand">Delete</button>
+                      <Link to={`/operations/animal/${routeId}`} className="flex-1 rounded-lg bg-brand px-3 py-2 text-center text-meta text-white">{copy.viewRecord}</Link>
+                      <button type="button" onClick={() => handleOpenEdit(cow)} className="rounded-lg border border-brand/20 px-3 py-2 text-control text-brand">{copy.edit}</button>
+                      <button type="button" onClick={() => handleDeleteCow(routeId, cow.name, cow.id)} className="rounded-lg border border-brand/20 px-3 py-2 text-control text-brand">{copy.delete}</button>
                     </div>
                   </article>
                 );
               })}
         </div>
 
-        <div className="mt-4 text-xs text-ink-muted">
-          Showing {visibleHerd.length} of {herdState.length} animals.
+        <div className="mt-4 text-meta text-ink-muted">
+          {copy.showing(visibleHerd.length, countText(herdSummary.totalAnimals))}
         </div>
       </div>
 
       {/* ── ADD COW MODAL ── */}
-      <Modal
+      <BaseModal closeOnBackdrop
         isOpen={isAddOpen}
         onClose={handleCloseModal}
-        title="Add New Animal"
-        subtitle="Register a new cow to your herd registry"
+        title={form.addTitle}
+        subtitle={form.addSubtitle}
       >
         <form className="space-y-4" onSubmit={handleAddCow}>
           {/* ID Field */}
           <div>
-            <label className="block text-xs font-bold uppercase text-ink-muted mb-1">
-              Ear Tag Number *
+            <label className="block text-field-label text-ink-muted mb-1">
+              {form.earTag}
             </label>
             <input
               type="text"
@@ -931,49 +834,49 @@ export default function HerdRegistry() {
                 setNewCow({ ...newCow, tagNumber: e.target.value });
                 if (formErrors.tagNumber) setFormErrors({ ...formErrors, tagNumber: null });
               }}
-              placeholder="e.g. C-108"
-              aria-label="Ear tag number"
+              placeholder={form.earTagPlaceholder}
+              aria-label={form.earTagLabel}
               aria-invalid={!!formErrors.tagNumber}
               aria-describedby={formErrors.tagNumber ? 'tag-number-error' : undefined}
             />
             {formErrors.tagNumber && (
-              <p id="tag-number-error" className="mt-1 text-xs text-rose-600 flex items-center gap-1">
-                <AlertCircle size={12} /> {formErrors.tagNumber}
+              <p id="tag-number-error" className="mt-1 text-meta text-rose-600 flex items-center gap-1">
+                <AlertCircle size={12} aria-hidden="true" /> {formErrors.tagNumber}
               </p>
             )}
           </div>
 
           {/* Name Field */}
           <div>
-            <label className="block text-xs font-bold uppercase text-ink-muted mb-1">Name</label>
+            <label className="block text-field-label text-ink-muted mb-1">{form.name}</label>
             <input
               type="text"
               className="input-machined w-full"
               value={newCow.name}
               onChange={(e) => setNewCow({ ...newCow, name: e.target.value })}
-              placeholder="Optional (e.g. Luna)"
-              aria-label="Animal name"
+              placeholder={form.namePlaceholder}
+              aria-label={form.nameLabel}
             />
           </div>
 
           {/* Breed Field */}
           <div>
-            <label className="block text-xs font-bold uppercase text-ink-muted mb-1">
-              Breed
+            <label className="block text-field-label text-ink-muted mb-1">
+              {form.breed}
             </label>
             <input
               type="text"
               className="input-machined w-full"
               value={newCow.breed}
               onChange={(e) => setNewCow({ ...newCow, breed: e.target.value })}
-              placeholder="Optional (e.g. Friesian)"
-              aria-label="Breed"
+              placeholder={form.breedPlaceholder}
+              aria-label={form.breed}
             />
           </div>
 
           {/* DOB Field */}
           <div>
-            <label className="block text-xs font-bold uppercase text-ink-muted mb-1">Date of Birth *</label>
+            <label className="block text-field-label text-ink-muted mb-1">{form.dateOfBirth}</label>
             <input
               type="date"
               className={`input-machined w-full ${formErrors.dateOfBirth ? 'border-rose-300 bg-rose-50' : ''}`}
@@ -982,29 +885,29 @@ export default function HerdRegistry() {
                 setNewCow({ ...newCow, dateOfBirth: e.target.value });
                 if (formErrors.dateOfBirth) setFormErrors({ ...formErrors, dateOfBirth: null });
               }}
-              aria-label="Date of birth"
+              aria-label={form.dateOfBirthLabel}
               aria-invalid={!!formErrors.dateOfBirth}
               aria-describedby={formErrors.dateOfBirth ? 'date-of-birth-error' : undefined}
             />
             {formErrors.dateOfBirth && (
-              <p id="date-of-birth-error" className="mt-1 text-xs text-rose-600 flex items-center gap-1">
-                <AlertCircle size={12} /> {formErrors.dateOfBirth}
+              <p id="date-of-birth-error" className="mt-1 text-meta text-rose-600 flex items-center gap-1">
+                <AlertCircle size={12} aria-hidden="true" /> {formErrors.dateOfBirth}
               </p>
             )}
           </div>
 
           {/* NEW FIELD: Current Status */}
           <div>
-            <label className="block text-xs font-bold uppercase text-ink-muted mb-1">Current Status</label>
+            <label className="block text-field-label text-ink-muted mb-1">{form.status}</label>
             <select
               className="input-machined w-full"
               value={newCow.current_status}
               onChange={(e) => setNewCow({ ...newCow, current_status: e.target.value })}
-              aria-label="Current Status"
+              aria-label={form.status}
             >
               {statusOptions.map((status) => (
                 <option key={status} value={status}>
-                  {status}
+                  {herdStatusLabel(status)}
                 </option>
               ))}
             </select>
@@ -1012,30 +915,31 @@ export default function HerdRegistry() {
 
           {/* NEW FIELD: Sire Name */}
           <div>
-            <label className="block text-xs font-bold uppercase text-ink-muted mb-1">Sire Name (Father)</label>
+            <label className="block text-field-label text-ink-muted mb-1">{form.sire}</label>
             <input
               type="text"
               className="input-machined w-full"
               value={newCow.sire_name}
               onChange={(e) => setNewCow({ ...newCow, sire_name: e.target.value })}
-              placeholder="e.g., Bull 123 or AI Code (Optional)"
-              aria-label="Sire Name"
+              placeholder={form.sirePlaceholder}
+              aria-label={form.sireLabel}
             />
           </div>
 
           {/* NEW FIELD: Dam (Mother) */}
           <div>
-            <label className="block text-xs font-bold uppercase text-ink-muted mb-1">Dam (Mother)</label>
+            <label className="block text-field-label text-ink-muted mb-1">{form.dam}</label>
+            {herdOptionsFailed && <p role="status" className="mb-1 text-meta text-ink-muted">{form.damLoadFailed}</p>}
             {loadingHerdOptions ? (
-              <p className="text-sm text-ink-muted">Loading herd options...</p>
+              <p className="text-body text-ink-muted">{form.damLoading}</p>
             ) : (
               <select
                 className="input-machined w-full"
                 value={newCow.dam_id}
                 onChange={(e) => setNewCow({ ...newCow, dam_id: e.target.value })}
-                aria-label="Dam (Mother)"
+                aria-label={form.dam}
               >
-                <option value="">-- Select a Dam (Optional) --</option>
+                <option value="">{form.damNone}</option>
                 {herdOptions.map((option) => (
                   <option key={option.value} value={option.value}>
                     {option.label}
@@ -1056,7 +960,6 @@ export default function HerdRegistry() {
             */}
           </div>
 
-
           {/* Checkbox */}
           <div className="flex items-center gap-3">
             <input
@@ -1065,10 +968,10 @@ export default function HerdRegistry() {
               checked={newCow.hasCalved}
               onChange={(e) => setNewCow({ ...newCow, hasCalved: e.target.checked })}
               className="w-4 h-4 cursor-pointer"
-              aria-label="Has had a calf before"
+              aria-label={form.hasCalved}
             />
-            <label htmlFor="hasCalved" className="text-sm font-semibold text-ink-strong cursor-pointer">
-              Has had a calf before
+            <label htmlFor="hasCalved" className="text-field-label text-ink-muted cursor-pointer">
+              {form.hasCalved}
             </label>
           </div>
 
@@ -1080,7 +983,7 @@ export default function HerdRegistry() {
               disabled={isSaving}
               className="btn-secondary"
             >
-              Cancel
+              {form.cancel}
             </button>
             <button
               type="submit"
@@ -1088,35 +991,32 @@ export default function HerdRegistry() {
               className="btn-command disabled:opacity-50"
               aria-busy={isSaving}
             >
-              {isSaving ? 'Saving...' : 'Save Animal'}
+              {isSaving ? form.saving : form.saveAnimal}
             </button>
           </div>
         </form>
-      </Modal>
+      </BaseModal>
 
-      <Modal
+      <BaseModal closeOnBackdrop
         isOpen={isEditOpen}
         onClose={handleCloseEditModal}
-        title="Edit Animal"
-        subtitle="Update cow details in your herd registry"
+        title={form.editTitle}
+        subtitle={form.editSubtitle}
       >
         <form className="space-y-4" onSubmit={handleEditCow}>
           <div className="rounded-lg border border-ink/10 bg-surface-raised p-4">
             <div className="flex items-center gap-4">
               <div className="flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-ink/10 bg-surface text-brand">
-                {editingCow?.photoUrl ? (
-                  <img
-                    src={editingCow.photoUrl}
-                    alt={`${editingCow.name} profile`}
-                    className="h-full w-full object-cover"
-                  />
-                ) : (
-                  <ImagePlus size={28} aria-hidden="true" />
-                )}
+                <CowPhoto
+                  src={editingCow?.photoUrl}
+                  alt={form.photoAlt(editingCow?.name)}
+                  size={80}
+                  fallback={<span className="text-meta text-ink-muted">No photo</span>}
+                />
               </div>
               <div className="min-w-0 flex-1">
-                <label className="mb-1 block text-xs font-bold uppercase text-ink-muted" htmlFor="edit-animal-photo">
-                  Animal Photo
+                <label className="mb-1 block text-field-label text-ink-muted" htmlFor="edit-animal-photo">
+                  {form.photo}
                 </label>
                 <input
                   ref={photoInputRef}
@@ -1125,14 +1025,14 @@ export default function HerdRegistry() {
                   accept={ANIMAL_PHOTO_ACCEPT}
                   onChange={handlePhotoSelection}
                   disabled={isPhotoSaving || isPhotoPreparing}
-                  className="block w-full text-xs text-ink-muted file:mr-3 file:rounded-md file:border-0 file:bg-brand/10 file:px-3 file:py-2 file:font-bold file:text-brand hover:file:bg-brand/15"
+                  className="block w-full text-control text-ink-muted file:mr-3 file:rounded-md file:border-0 file:bg-brand/10 file:px-3 file:py-2 file:text-control file:text-brand hover:file:bg-brand/15"
                 />
-                <p className="mt-1 truncate text-xs text-ink-muted" aria-live="polite">
+                <p className="mt-1 truncate text-meta text-ink-muted" aria-live="polite">
                   {isPhotoPreparing
-                    ? 'Making the photo smaller to save data…'
+                    ? form.photoShrinking
                     : editPhotoFile
-                      ? `${editPhotoFile.name} · ${formatPhotoSize(editPhotoFile.size)}${photoSourceSize && photoSourceSize > editPhotoFile.size ? ` (from ${formatPhotoSize(photoSourceSize)})` : ''}`
-                      : 'JPG, PNG, or WebP. Large phone photos are made smaller before upload.'}
+                      ? `${editPhotoFile.name} · ${formatPhotoSize(editPhotoFile.size)}${photoSourceSize && photoSourceSize > editPhotoFile.size ? form.photoFrom(formatPhotoSize(photoSourceSize)) : ''}`
+                      : form.photoHint}
                 </p>
               </div>
             </div>
@@ -1142,29 +1042,29 @@ export default function HerdRegistry() {
                   type="button"
                   onClick={handleDeletePhoto}
                   disabled={isPhotoSaving}
-                  className="btn-secondary inline-flex items-center gap-2 text-danger disabled:opacity-50"
+                  className="btn-secondary inline-flex items-center text-danger disabled:opacity-50"
                 >
-                  <Trash2 size={15} aria-hidden="true" /> Remove
+
+      {form.removePhoto}
                 </button>
               )}
               <button
                 type="button"
                 onClick={handleUploadPhoto}
                 disabled={!editPhotoFile || isPhotoSaving || isPhotoPreparing}
-                className="btn-command inline-flex items-center gap-2 disabled:opacity-50"
+                className="btn-command inline-flex items-center disabled:opacity-50"
                 aria-busy={isPhotoSaving}
               >
-                <Upload size={15} aria-hidden="true" />
                 {isPhotoSaving
-                  ? `Uploading${photoUploadProgress ? ` ${photoUploadProgress}%` : '…'}`
-                  : editingCow?.photoUrl ? 'Replace Photo' : 'Upload Photo'}
+                  ? form.uploading(photoUploadProgress)
+                  : editingCow?.photoUrl ? form.replacePhoto : form.uploadPhoto}
               </button>
             </div>
           </div>
 
           <div>
-            <label className="block text-xs font-bold uppercase text-ink-muted mb-1">
-              Ear Tag Number *
+            <label className="block text-field-label text-ink-muted mb-1">
+              {form.earTag}
             </label>
             <input
               type="text"
@@ -1174,46 +1074,46 @@ export default function HerdRegistry() {
                 setEditCow({ ...editCow, tagNumber: e.target.value });
                 if (editFormErrors.tagNumber) setEditFormErrors({ ...editFormErrors, tagNumber: null });
               }}
-              placeholder="e.g. C-108"
-              aria-label="Ear tag number"
+              placeholder={form.earTagPlaceholder}
+              aria-label={form.earTagLabel}
               aria-invalid={!!editFormErrors.tagNumber}
               aria-describedby={editFormErrors.tagNumber ? 'edit-tag-number-error' : undefined}
             />
             {editFormErrors.tagNumber && (
-              <p id="edit-tag-number-error" className="mt-1 text-xs text-rose-600 flex items-center gap-1">
-                <AlertCircle size={12} /> {editFormErrors.tagNumber}
+              <p id="edit-tag-number-error" className="mt-1 text-meta text-rose-600 flex items-center gap-1">
+                <AlertCircle size={12} aria-hidden="true" /> {editFormErrors.tagNumber}
               </p>
             )}
           </div>
 
           <div>
-            <label className="block text-xs font-bold uppercase text-ink-muted mb-1">Name</label>
+            <label className="block text-field-label text-ink-muted mb-1">{form.name}</label>
             <input
               type="text"
               className="input-machined w-full"
               value={editCow.name}
               onChange={(e) => setEditCow({ ...editCow, name: e.target.value })}
-              placeholder="Optional (e.g. Luna)"
-              aria-label="Animal name"
+              placeholder={form.namePlaceholder}
+              aria-label={form.nameLabel}
             />
           </div>
 
           <div>
-            <label className="block text-xs font-bold uppercase text-ink-muted mb-1">
-              Breed
+            <label className="block text-field-label text-ink-muted mb-1">
+              {form.breed}
             </label>
             <input
               type="text"
               className="input-machined w-full"
               value={editCow.breed}
               onChange={(e) => setEditCow({ ...editCow, breed: e.target.value })}
-              placeholder="Optional (e.g. Friesian)"
-              aria-label="Breed"
+              placeholder={form.breedPlaceholder}
+              aria-label={form.breed}
             />
           </div>
 
           <div>
-            <label className="block text-xs font-bold uppercase text-ink-muted mb-1">Date of Birth *</label>
+            <label className="block text-field-label text-ink-muted mb-1">{form.dateOfBirth}</label>
             <input
               type="date"
               className={`input-machined w-full ${editFormErrors.dateOfBirth ? 'border-rose-300 bg-rose-50' : ''}`}
@@ -1222,36 +1122,36 @@ export default function HerdRegistry() {
                 setEditCow({ ...editCow, dateOfBirth: e.target.value });
                 if (editFormErrors.dateOfBirth) setEditFormErrors({ ...editFormErrors, dateOfBirth: null });
               }}
-              aria-label="Date of birth"
+              aria-label={form.dateOfBirthLabel}
               aria-invalid={!!editFormErrors.dateOfBirth}
               aria-describedby={editFormErrors.dateOfBirth ? 'edit-date-of-birth-error' : undefined}
             />
             {editFormErrors.dateOfBirth && (
-              <p id="edit-date-of-birth-error" className="mt-1 text-xs text-rose-600 flex items-center gap-1">
-                <AlertCircle size={12} /> {editFormErrors.dateOfBirth}
+              <p id="edit-date-of-birth-error" className="mt-1 text-meta text-rose-600 flex items-center gap-1">
+                <AlertCircle size={12} aria-hidden="true" /> {editFormErrors.dateOfBirth}
               </p>
             )}
           </div>
 
           {/* NEW FIELD: Current Status */}
           <div>
-            <label className="block text-xs font-bold uppercase text-ink-muted mb-1">Current Status</label>
+            <label className="block text-field-label text-ink-muted mb-1">{form.status}</label>
             <select
               className="input-machined w-full"
               value={editCow.current_status}
               onChange={(e) => setEditCow({ ...editCow, current_status: e.target.value })}
-              aria-label="Current Status"
+              aria-label={form.status}
             >
               {statusOptions.map((status) => (
                 <option key={status} value={status}>
-                  {status}
+                  {herdStatusLabel(status)}
                 </option>
               ))}
             </select>
           </div>
 
           <div>
-            <label className="block text-xs font-bold uppercase text-ink-muted mb-1">Birth Weight (kg)</label>
+            <label className="block text-field-label text-ink-muted mb-1">{form.birthWeight}</label>
             <input
               type="number"
               min="0"
@@ -1259,37 +1159,38 @@ export default function HerdRegistry() {
               className="input-machined w-full"
               value={editCow.birth_weight_kg}
               onChange={(e) => setEditCow({ ...editCow, birth_weight_kg: e.target.value })}
-              placeholder="Not recorded"
-              aria-label="Birth weight in kilograms"
+              placeholder={form.birthWeightPlaceholder}
+              aria-label={form.birthWeightLabel}
             />
           </div>
 
           {/* NEW FIELD: Sire Name */}
           <div>
-            <label className="block text-xs font-bold uppercase text-ink-muted mb-1">Sire Name (Father)</label>
+            <label className="block text-field-label text-ink-muted mb-1">{form.sire}</label>
             <input
               type="text"
               className="input-machined w-full"
               value={editCow.sire_name}
               onChange={(e) => setEditCow({ ...editCow, sire_name: e.target.value })}
-              placeholder="e.g., Bull 123 or AI Code (Optional)"
-              aria-label="Sire Name"
+              placeholder={form.sirePlaceholder}
+              aria-label={form.sireLabel}
             />
           </div>
 
           {/* NEW FIELD: Dam (Mother) */}
           <div>
-            <label className="block text-xs font-bold uppercase text-ink-muted mb-1">Dam (Mother)</label>
+            <label className="block text-field-label text-ink-muted mb-1">{form.dam}</label>
+            {herdOptionsFailed && <p role="status" className="mb-1 text-meta text-ink-muted">{form.damLoadFailed}</p>}
             {loadingHerdOptions ? (
-              <p className="text-sm text-ink-muted">Loading herd options...</p>
+              <p className="text-body text-ink-muted">{form.damLoading}</p>
             ) : (
               <select
                 className="input-machined w-full"
                 value={editCow.dam_id}
                 onChange={(e) => setEditCow({ ...editCow, dam_id: e.target.value })}
-                aria-label="Dam (Mother)"
+                aria-label={form.dam}
               >
-                <option value="">-- Select a Dam (Optional) --</option>
+                <option value="">{form.damNone}</option>
                 {herdOptions.map((option) => (
                   <option key={option.value} value={option.value}>
                     {option.label}
@@ -1317,7 +1218,7 @@ export default function HerdRegistry() {
               disabled={isEditSaving || isPhotoSaving}
               className="btn-secondary"
             >
-              Cancel
+              {form.cancel}
             </button>
             <button
               type="submit"
@@ -1325,24 +1226,14 @@ export default function HerdRegistry() {
               className="btn-command disabled:opacity-50"
               aria-busy={isEditSaving}
             >
-              {isEditSaving ? 'Saving...' : 'Save Changes'}
+              {isEditSaving ? form.saving : form.saveChanges}
             </button>
           </div>
         </form>
-      </Modal>
+      </BaseModal>
 
       {/* ── CONFIRMATION DIALOG ── */}
-      <Confirmation
-        isOpen={confirmation.isOpen}
-        title={confirmation.title}
-        message={confirmation.message}
-        type={confirmation.type}
-        confirmText={confirmation.confirmText}
-        cancelText={confirmation.cancelText}
-        isLoading={confirmation.isLoading}
-        onConfirm={confirmation.onConfirm}
-        onCancel={confirmation.onCancel}
-      />
+      <Confirmation {...confirmation} />
     </div>
   );
 }

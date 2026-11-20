@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
-import { ArrowRight, Beef, CheckCircle2, Milk, PartyPopper, Users, X } from 'lucide-react';
+import { X } from 'lucide-react';
 import { financeApi, herdApi } from '../../lib/backendApi';
 import { checklistKey, checklistView, readFlag, writeFlag } from '../../lib/welcomeProgress';
+import { dashboardCopy } from '../../i18n/dashboard';
 
 const toList = (value) => (Array.isArray(value) ? value : []);
 
@@ -12,7 +13,16 @@ const toList = (value) => (Array.isArray(value) ? value : []);
  * Shares query keys with the herd and buyer pages, so finishing a step there updates it here.
  * Remount with `key` when the farm changes.
  */
-export default function WelcomeChecklist({ tenantId, farmId, milkRecords, milkLoaded }) {
+/**
+ * @param {object} props
+ * @param {number|null} props.milkRecordCount How many milk records the backend has (null while unknown).
+ * @param {boolean} props.milkLoaded True once that count has loaded.
+ *
+ * TODO(BR-008): which steps are done, and whether the list was dismissed, should come from the
+ * backend; today they are worked out from the farm's lists and remembered on this phone only.
+ */
+export default function WelcomeChecklist({ tenantId, farmId, milkRecordCount, milkLoaded }) {
+  const copy = dashboardCopy.welcome;
   const storageKey = checklistKey(tenantId, farmId);
   const [stored, setStored] = useState(() => readFlag(storageKey));
   const finished = stored === 'done' || stored === 'dismissed';
@@ -32,26 +42,23 @@ export default function WelcomeChecklist({ tenantId, farmId, milkRecords, milkLo
   const steps = [
     {
       id: 'cow',
-      title: 'Add your first cow',
-      description: 'Her name or tag is enough to start.',
+      title: copy.steps.cow.title,
+      description: copy.steps.cow.description,
       to: '/operations/herd',
-      icon: Beef,
       done: toList(herdQuery.data).length > 0,
     },
     {
       id: 'milk',
-      title: 'Record a milking',
-      description: 'Log the litres from your next milking.',
+      title: copy.steps.milk.title,
+      description: copy.steps.milk.description,
       to: '/operations/yield',
-      icon: Milk,
-      done: toList(milkRecords).length > 0,
+      done: Number(milkRecordCount) > 0,
     },
     {
       id: 'buyer',
-      title: 'Add a buyer',
-      description: 'Anyone you sell milk to, with their rate.',
+      title: copy.steps.buyer.title,
+      description: copy.steps.buyer.description,
       to: '/finance/buyers',
-      icon: Users,
       done: toList(buyersQuery.data).length > 0,
     },
   ];
@@ -69,16 +76,11 @@ export default function WelcomeChecklist({ tenantId, farmId, milkRecords, milkLo
   if (view === 'celebrate') {
     return (
       <section aria-labelledby="welcome-done-title" className="card-machined flex flex-col gap-4 bg-brand/5 p-6 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex gap-4">
-          <span className="inline-flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-brand text-white">
-            <PartyPopper size={22} aria-hidden="true" />
-          </span>
-          <div>
-            <h2 id="welcome-done-title" className="text-xl font-bold text-ink-900">Hongera! Your farm is set up.</h2>
-            <p className="mt-1 text-sm text-ink-muted">Cows, milk and buyers are all in. Record every milking and your trends will grow from here.</p>
-          </div>
+        <div>
+          <h2 id="welcome-done-title" className="text-section-title text-ink-900">{copy.doneTitle}</h2>
+          <p className="mt-1 text-body text-ink-muted">{copy.doneMessage}</p>
         </div>
-        <button type="button" onClick={() => setStored('done')} className="btn-command shrink-0">Done</button>
+        <button type="button" onClick={() => setStored('done')} className="btn-command shrink-0">{copy.done}</button>
       </section>
     );
   }
@@ -92,14 +94,14 @@ export default function WelcomeChecklist({ tenantId, farmId, milkRecords, milkLo
     <section aria-labelledby="welcome-title" className="card-machined p-6">
       <div className="flex items-start justify-between gap-4">
         <div>
-          <h2 id="welcome-title" className="text-xl font-bold text-ink-900">Get your farm set up</h2>
-          <p className="mt-1 text-sm text-ink-muted">{doneCount} of {steps.length} done. Each step takes a minute or two.</p>
+          <h2 id="welcome-title" className="text-section-title text-ink-900">{copy.title}</h2>
+          <p className="mt-1 text-body text-ink-muted">{copy.progress(doneCount, steps.length)}</p>
         </div>
         <button
           type="button"
           onClick={() => setStored('dismissed')}
           className="btn-ghost h-11 w-11 shrink-0 border-transparent !p-0"
-          aria-label="Hide the setup checklist"
+          aria-label={copy.hide}
         >
           <X size={18} aria-hidden="true" />
         </button>
@@ -107,7 +109,7 @@ export default function WelcomeChecklist({ tenantId, farmId, milkRecords, milkLo
 
       <div
         role="progressbar"
-        aria-label="Farm setup progress"
+        aria-label={copy.progressLabel}
         aria-valuemin={0}
         aria-valuemax={100}
         aria-valuenow={percent}
@@ -118,16 +120,15 @@ export default function WelcomeChecklist({ tenantId, farmId, milkRecords, milkLo
 
       <ol className="mt-5 space-y-3">
         {steps.map((step, index) => {
-          const Icon = step.icon;
           const isNext = step === nextStep;
           return (
             <li key={step.id}>
               {step.done ? (
                 <div className="flex items-center gap-4 rounded-card border border-ink/10 bg-surface p-4">
-                  <CheckCircle2 size={24} className="shrink-0 text-brand" aria-hidden="true" />
-                  <p className="flex-1 font-semibold text-ink-muted">
-                    <span className="sr-only">Done: </span>{step.title}
-                  </p>
+                  <p className="flex-1 text-body-strong text-ink-muted">{step.title}</p>
+                  {/* A word, not a tick, so "done" doesn't rest on colour alone. */}
+                  <span className="shrink-0 rounded-badge bg-brand-50 px-2 py-0.5 text-badge text-brand-dark">
+          {copy.doneBadge}</span>
                 </div>
               ) : (
                 <Link
@@ -136,16 +137,12 @@ export default function WelcomeChecklist({ tenantId, farmId, milkRecords, milkLo
                     isNext ? 'border-brand/30 bg-brand/5 hover:bg-brand/10' : 'border-ink/10 bg-surface hover:border-brand/20'
                   }`}
                 >
-                  <span className={`inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full ${isNext ? 'bg-brand text-white' : 'bg-brand-50 text-brand'}`}>
-                    <Icon size={18} aria-hidden="true" />
-                  </span>
                   <span className="min-w-0 flex-1">
-                    <span className="block font-semibold text-ink-900">
-                      <span className="sr-only">Step {index + 1}: </span>{step.title}
+                    <span className="block text-body-strong text-ink-900">
+                      <span className="sr-only">{copy.step(index + 1)}</span>{step.title}
                     </span>
-                    <span className="block text-sm text-ink-muted">{step.description}</span>
+                    <span className="block text-body text-ink-muted">{step.description}</span>
                   </span>
-                  <ArrowRight size={18} className="shrink-0 text-brand transition-transform group-hover:translate-x-0.5" aria-hidden="true" />
                 </Link>
               )}
             </li>

@@ -13,15 +13,23 @@ function retryDelay(attempts) {
   return Math.min(BASE_RETRY_DELAY_MS * (2 ** Math.max(attempts - 1, 0)), MAX_RETRY_DELAY_MS);
 }
 
-async function enqueue(item) {
+/**
+ * Queues one milk log for sending later.
+ * @param {object} item The milk log (cow, amount, session, milking date).
+ * @param {{ idempotencyKey?: string }} [options] The key of the submission being queued.
+ *   Pass it when the same submission may already have reached the server (e.g. a request
+ *   that failed without a response), so the backend saves it only once. Without it, a new
+ *   key is made: every new queued log gets its own, even for the same cow/date/session.
+ * @returns {Promise<string>} The queue entry id.
+ */
+async function enqueue(item, { idempotencyKey } = {}) {
   const payload = buildProductionYieldPayload(item);
   const entry = await enqueueRequest({
     method: 'POST',
     url: '/production/yield',
     data: payload,
-    // The stored request keeps this key for retries, but every new queued log
-    // gets its own key even when cow/date/session are the same.
-    headers: { 'Idempotency-Key': createIdempotencyKey() },
+    // The stored request keeps this key for every retry.
+    headers: { 'Idempotency-Key': idempotencyKey ?? createIdempotencyKey() },
   });
   return entry.id;
 }
@@ -30,7 +38,8 @@ async function markFailure(entry, error) {
   const status = error?.response?.status;
   const code = error?.response?.data?.code;
   const attempts = entry.attempts + 1;
-  const isRetryable = !status || status >= 500 || code === 'IDEMPOTENCY_IN_PROGRESS';
+  // 401: the session ended; keep the change and send it after the farmer signs in again.
+  const isRetryable = !status || status >= 500 || status === 401 || code === 'IDEMPOTENCY_IN_PROGRESS';
   await update({
     ...entry,
     attempts,

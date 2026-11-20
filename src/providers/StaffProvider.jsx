@@ -1,6 +1,9 @@
 import { createContext, useContext, useEffect, useState } from 'react';
 import { useTenant } from '../hooks/useTenant';
 import { hrApi, normalizeStaffRecord, staffOnboardingApi } from '../lib/backendApi';
+import { useAuth } from '../contexts/AuthContext';
+import { hasPageAccess } from '../lib/roles';
+import { todayLocalIso } from '../lib/localDate';
 
 const sortStaff = (records) => [...records].sort((a, b) => a.name.localeCompare(b.name));
 
@@ -8,6 +11,10 @@ const StaffContext = createContext();
 
 export function StaffProvider({ children }) {
   const { tenantId, activeFarm } = useTenant();
+  const { currentUser } = useAuth();
+  // Only the staff and payroll pages read this list. Loading it for everyone sent
+  // a /hr/staff request (and a 403) on every page for staff without those pages.
+  const canReadStaff = Boolean(currentUser) && (hasPageAccess(currentUser, 'staff') || hasPageAccess(currentUser, 'payroll'));
   const [staffData, setStaffData] = useState([]);
   const [isHydrating, setIsHydrating] = useState(true);
 
@@ -15,7 +22,7 @@ export function StaffProvider({ children }) {
     let cancelled = false;
 
     const loadStaff = async () => {
-      if (!tenantId || !activeFarm?.id) {
+      if (!tenantId || !activeFarm?.id || !canReadStaff) {
         setStaffData([]);
         setIsHydrating(false);
         return;
@@ -48,7 +55,7 @@ export function StaffProvider({ children }) {
     return () => {
       cancelled = true;
     };
-  }, [tenantId, activeFarm?.id]);
+  }, [tenantId, activeFarm?.id, canReadStaff]);
 
   const mergeStaffRecord = (record) => {
     const normalized = normalizeStaffRecord(record);
@@ -107,23 +114,24 @@ export function StaffProvider({ children }) {
     return saved;
   };
 
-  const issueAdvance = async (staffMember, amount, monthlyDeduction) => {
-    const currentLoanBalance = Number(staffMember?.loanBalance || 0);
-    const updatedStaff = {
-      ...staffMember,
-      loanBalance: currentLoanBalance + Number(amount || 0),
-      monthlyDeduction: typeof monthlyDeduction === 'number'
-        ? monthlyDeduction
-        : staffMember?.monthlyDeduction || Math.max(0, Math.round(Number(amount || 0) / 3)),
-    };
-
-    const saved = await hrApi.updateStaff(staffMember.id, {
-      loanBalance: updatedStaff.loanBalance,
-      monthlyDeduction: updatedStaff.monthlyDeduction,
-    });
-    return mergeStaffRecord(saved);
+  // The backend records the advance and returns the new balance; nothing is added up here.
+  const issueAdvance = async (staffMember, amount) => {
+    const result = await hrApi.issueAdvance(staffMember.id, { amount, date: todayLocalIso() });
+    return mergeStaffRecord({ ...staffMember, loanBalance: result.loan_balance ?? staffMember.loanBalance });
   };
-  
+
+  const recordRepayment = async (staffMember, details) => {
+    const result = await hrApi.recordAdvanceRepayment(staffMember.id, details);
+    return mergeStaffRecord({ ...staffMember, loanBalance: result.loan_balance ?? staffMember.loanBalance });
+  };
+
+  const offboardEmployee = async (staffId, details) => mergeStaffRecord(await hrApi.offboardStaff(staffId, details));
+
+  const deleteEmployee = async (staffId) => {
+    await hrApi.deleteStaff(staffId);
+    setStaffData((currentStaff) => currentStaff.filter((staff) => staff.id !== staffId));
+  };
+
   const editEmployee = async (staffId, updatedData) => {
     const payload = { ...updatedData };
 
@@ -149,18 +157,7 @@ export function StaffProvider({ children }) {
     return mergeStaffRecord(saved);
   };
 
-  const reduceLoanBalance = (staffId, amount) => {
-    setStaffData(currentStaff =>
-      currentStaff.map(staff => {
-        if (staff.id === staffId) {
-          return { ...staff, loanBalance: Math.max(0, staff.loanBalance - amount) };
-        }
-        return staff;
-      })
-    );
-  };
-
-  const value = { staff: staffData, addEmployee, inviteEmployeeAccount, provisionEmployeeAccount, updateEmployeePageAccess, issueAdvance, editEmployee, verifyReturn, toggleEmployeeStatus, reduceLoanBalance, isHydrating };
+  const value = { staff: staffData, addEmployee, inviteEmployeeAccount, provisionEmployeeAccount, updateEmployeePageAccess, issueAdvance, recordRepayment, offboardEmployee, deleteEmployee, editEmployee, verifyReturn, toggleEmployeeStatus, isHydrating };
 
   return (
     <StaffContext.Provider value={value}>

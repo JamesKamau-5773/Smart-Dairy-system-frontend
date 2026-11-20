@@ -2,11 +2,15 @@
  * Validation utilities for forms and inputs
  * Provides validation rules, error formatting, and form submission helpers
  */
+import { errorsCopy } from '../i18n/errors';
+
+// Read when a rule runs, so messages follow the chosen language.
+const { rules } = errorsCopy;
 
 export const ValidationRules = {
   required: (value) => {
     if (!value || (typeof value === 'string' && !value.trim())) {
-      return 'This field is required';
+      return rules.required;
     }
     return null;
   },
@@ -14,56 +18,56 @@ export const ValidationRules = {
   email: (value) => {
     if (!value) return null;
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    return emailRegex.test(value) ? null : 'Please enter a valid email address';
+    return emailRegex.test(value) ? null : rules.email;
   },
 
   minLength: (min) => (value) => {
     if (!value) return null;
-    return value.length < min ? `Minimum ${min} characters required` : null;
+    return value.length < min ? rules.minLength(min) : null;
   },
 
   maxLength: (max) => (value) => {
     if (!value) return null;
-    return value.length > max ? `Maximum ${max} characters allowed` : null;
+    return value.length > max ? rules.maxLength(max) : null;
   },
 
   numeric: (value) => {
     if (!value) return null;
     const numRegex = /^-?\d+(\.\d+)?$/;
-    return numRegex.test(value) ? null : 'Please enter a valid number';
+    return numRegex.test(value) ? null : rules.numeric;
   },
 
   positiveNumber: (value) => {
     if (!value) return null;
     const numValue = parseFloat(value);
-    return numValue > 0 ? null : 'Must be a positive number';
+    return numValue > 0 ? null : rules.positiveNumber;
   },
 
   date: (value) => {
     if (!value) return null;
     const dateObj = new Date(value);
-    return !Number.isNaN(dateObj.getTime()) ? null : 'Please enter a valid date';
+    return !Number.isNaN(dateObj.getTime()) ? null : rules.date;
   },
 
   futureDate: (value) => {
     if (!value) return null;
     const dateObj = new Date(value);
-    if (Number.isNaN(dateObj.getTime())) return 'Please enter a valid date';
-    return dateObj > new Date() ? null : 'Date must be in the future';
+    if (Number.isNaN(dateObj.getTime())) return rules.date;
+    return dateObj > new Date() ? null : rules.futureDate;
   },
 
   pastDate: (value) => {
     if (!value) return null;
     const dateObj = new Date(value);
-    if (Number.isNaN(dateObj.getTime())) return 'Please enter a valid date';
-    return dateObj <= new Date() ? null : 'Date must be in the past or today';
+    if (Number.isNaN(dateObj.getTime())) return rules.date;
+    return dateObj <= new Date() ? null : rules.pastDate;
   },
 
   phoneNumber: (value) => {
     if (!value) return null;
     // Supports formats: +254, 0, with spaces/dashes
     const phoneRegex = /^[\d\s+\-()]{8,}$/;
-    return phoneRegex.test(value) ? null : 'Please enter a valid phone number';
+    return phoneRegex.test(value) ? null : rules.phoneNumber;
   },
 };
 
@@ -131,7 +135,7 @@ export function formatValidationErrors(errors) {
  */
 export function getFirstErrorMessage(errors) {
   const messages = Object.values(errors).filter(Boolean);
-  return messages[0] || 'Please check the form for errors';
+  return messages[0] || rules.checkForm;
 }
 
 /**
@@ -177,4 +181,16 @@ export function parseFormData(formData) {
     data[key] = value;
   });
   return data;
+}
+
+/**
+ * M-Pesa transaction codes are 10 letters and digits (shown in the M-Pesa SMS).
+ * Returns an error message, or null when the code is empty or looks valid.
+ */
+export function getMpesaCodeError(value) {
+  const code = String(value ?? '').trim().toUpperCase();
+  if (!code) return null;
+  return /^[A-Z0-9]{10}$/.test(code)
+    ? null
+    : rules.mpesaCode;
 }

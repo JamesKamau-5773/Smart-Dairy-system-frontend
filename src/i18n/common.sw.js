@@ -1,0 +1,164 @@
+/**
+ * Kiswahili for the shared building blocks. Same keys as common.en.js; anything missing falls
+ * back to English. Pages pass in their own nouns, so list sentences put the noun after a colon
+ * or at the end, where it needs no agreement. Lines marked REVIEW need a native speaker's check.
+ */
+const changes = (count) => (count === 1 ? 'Badiliko 1' : `Mabadiliko ${count}`);
+
+export const commonCopy = {
+  confirm: {
+    title: 'Thibitisha',
+    message: 'Una uhakika unataka kuendelea?',
+    confirm: 'Thibitisha',
+    cancel: 'Ghairi',
+    pleaseWait: 'Subiri kidogo…',
+    typeBefore: 'Andika',
+    typeAfter: 'ili kuthibitisha',
+  },
+
+  modal: {
+    close: 'Funga',
+  },
+
+  controls: {
+    moreActions: 'Vitendo zaidi', // REVIEW
+    close: 'Funga',
+    back: 'Rudi',
+    showPassword: 'Onyesha nenosiri',
+    hidePassword: 'Ficha nenosiri',
+    increase: 'Ongeza',
+    decrease: 'Punguza',
+    showDetails: 'Onyesha maelezo',
+    hideDetails: 'Ficha maelezo',
+    dismiss: 'Funga ujumbe', // REVIEW
+    pickDate: (label) => `Chagua ${label.toLowerCase()} kwenye kalenda`, // REVIEW
+    dismissMilestone: 'Funga ujumbe wa hatua', // REVIEW
+    hideChecklist: 'Ficha orodha ya kuanza', // REVIEW
+    about: (label) => `Kuhusu ${label}`,
+    explainCostTypes: 'Eleza aina za gharama', // REVIEW
+    toggleSuggestions: 'Onyesha au ficha mapendekezo', // REVIEW
+    showConfirmPassword: 'Onyesha nenosiri la uthibitisho', // REVIEW
+    hideConfirmPassword: 'Ficha nenosiri la uthibitisho', // REVIEW
+    showPasswords: 'Onyesha manenosiri', // REVIEW
+    hidePasswords: 'Ficha manenosiri', // REVIEW
+    actionsFor: (name) => `Vitendo vya ${name}`, // REVIEW
+    previousMonth: 'Nenda mwezi uliopita', // REVIEW
+    nextMonth: 'Nenda mwezi ujao', // REVIEW
+    syncStatus: (online, pending) => `${online ? 'Mtandaoni' : 'Nje ya mtandao'}, mabadiliko ${pending} yanasubiri`, // REVIEW
+  },
+
+  draft: {
+    restored: 'Tumerudisha ulichokuwa ukiandika kabla programu haijafungwa.',
+    startOver: 'Anza upya',
+    ok: 'Sawa',
+  },
+
+  session: {
+    title: 'Tafadhali ingia tena',
+    message: 'Kwa usalama wako umetolewa. Ulichoandika kwenye ukurasa huu kimehifadhiwa. Ingia, kisha bonyeza Hifadhi tena.',
+    identifier: 'Jina la mtumiaji au namba ya simu',
+    password: 'Nenosiri',
+    missing: 'Weka jina la mtumiaji au namba ya simu, na nenosiri lako.',
+    pending: (count) => `${changes(count)} ${count === 1 ? 'linasubiri' : 'yanasubiri'} kutumwa. Ingia ili ${count === 1 ? 'litumwe' : 'yatumwe'}; ukitoka, ${count === 1 ? 'litabaki' : 'yatabaki'} kwenye simu hii hadi utakapoingia tena hapa.`, // REVIEW
+    signingIn: 'Inaingia…',
+    signIn: 'Ingia uendelee',
+    signOut: 'Toka badala yake',
+  },
+
+  queue: {
+    title: 'Mabadiliko yaliyohifadhiwa kwenye simu hii',
+    intro: 'Mabadiliko yaliyohifadhiwa kwenye simu hii hutumwa yenyewe mtandao ukirudi.',
+    empty: 'Kila kitu kimetumwa.',
+    kinds: {
+      milk: 'Rekodi ya maziwa',
+      inventory: 'Badiliko la stoo', // REVIEW
+      customer: 'Rekodi ya mnunuzi',
+      staff: 'Rekodi ya mfanyakazi',
+      finance: 'Rekodi ya fedha',
+      other: 'Badiliko lililohifadhiwa',
+    },
+    rejected: (detail) => `Badiliko hili halikukubaliwa. ${detail} Rekebisha taarifa kwenye ukurasa husika, kisha ondoa nakala hii ikiwa huihitaji tena.`,
+    removeQuestion: 'Ondoa badiliko hili ambalo halijatumwa?',
+    keep: 'Acha',
+    remove: 'Ondoa',
+    removeLabel: (kind) => `Ondoa: ${kind}`,
+    removeHint: 'Ondoa badiliko ambalo halijatumwa',
+    close: 'Funga',
+    sending: 'Inatuma…',
+    sendNow: 'Tuma sasa',
+  },
+
+  list: {
+    tryAgain: 'Jaribu tena',
+    offlineTitle: (label) => `Huna mtandao, na bado hakuna kilichohifadhiwa kwenye simu hii: ${label}.`, // REVIEW
+    offlineDetail: 'Zitapakia zenyewe mtandao ukirudi.',
+    errorTitle: (label) => `Imeshindwa kupakia: ${label}.`,
+    errorDetail: 'Angalia mtandao wako ujaribu tena.',
+    stale: (label) => `Inaonyesha zilizohifadhiwa kwenye simu hii: ${label}. Imeshindwa kusasisha:`,
+    staleDetail: 'angalia mtandao wako.',
+    statUnavailable: (label) => `Haipatikani hadi zipakie: ${label}`,
+    slow: (label) => `Bado inapakia: ${label}. Mtandao wako unaonekana kuwa wa polepole. Zitaonekana mara zitakapofika.`,
+  },
+
+  filters: {
+    resetFilters: 'Futa vichujio',
+    active: (count) => (count === 1 ? 'Kichujio 1 kimewekwa' : `Vichujio ${count} vimewekwa`), // REVIEW
+    all: 'Zote',
+    searchShort: 'Tafuta',
+  },
+
+  summary: {
+    offline: 'Huna mtandao na jumla hizi bado hazijahifadhiwa kwenye simu hii. Zitapakia mtandao ukirudi.',
+    loadFailed: 'Imeshindwa kupakia jumla.',
+    refreshFailed: 'Imeshindwa kusasisha.',
+    checkConnection: 'Angalia mtandao wako.',
+    asOf: (time) => `Hadi saa ${time}`,
+    scope: (label) => `Jumla za ${label}`,
+    caption: (label) => `Muhtasari · ${label}`, // REVIEW
+    acrossYears: 'Jumla huonyeshwa kwa mwaka mmoja kwa wakati. Chagua tarehe ndani ya mwaka mmoja ili kuziona.', // REVIEW
+    fullReport: 'Ona ripoti kamili',
+    dates: 'Tarehe',
+  },
+
+  groups: {
+    totalsUnavailable: 'jumla hazipatikani',
+    countUnavailable: 'idadi haipatikani',
+    totalsFailed: 'Jumla za makundi zimeshindwa kupakia, kwa hivyo vichwa vinaonyesha —.',
+    ungrouped: 'Kundi la tarehe halipatikani',
+    emptyDay: 'Hakuna rekodi zilizopakiwa kwa siku hii.',
+  },
+
+  time: {
+    unknown: 'Haijulikani',
+    justNow: 'Sasa hivi',
+    minutesAgo: (count) => `dakika ${count} zilizopita`,
+    hoursAgo: (count) => `saa ${count} zilizopita`,
+    daysAgo: (count) => (count === 1 ? 'jana' : `siku ${count} zilizopita`),
+  },
+
+  photo: {
+    dataSaverHint: 'Okoa data imewashwa. Gusa ili kupakia picha hii.',
+    show: 'Onyesha picha',
+  },
+
+  ui: {
+    dismiss: 'Funga',
+    close: 'Funga',
+    moreActions: 'Vitendo zaidi',
+    didYouMean: 'Ulimaanisha',
+    syncStatus: 'Fungua hali ya kutuma',
+  },
+  dateRange: {
+    label: 'Chagua tarehe',
+    from: 'Kuanzia',
+    to: 'Hadi',
+    reversed: 'Tarehe ya Kuanzia lazima iwe sawa au kabla ya tarehe ya Hadi.',
+    cancel: 'Ghairi',
+    apply: 'Tumia',
+    rangeLabel: 'Kipindi cha tarehe', // REVIEW
+    dayLabel: 'Chagua siku', // REVIEW
+    day: 'Siku',
+    anyDay: 'Siku yoyote', // REVIEW
+    clear: 'Futa', // REVIEW
+  },
+};

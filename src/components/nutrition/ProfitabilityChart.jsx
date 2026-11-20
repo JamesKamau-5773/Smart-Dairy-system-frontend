@@ -1,41 +1,68 @@
-import { TrendingDown } from 'lucide-react';
+import { formatCostPerLitre } from '../../lib/feedCost';
+import { hasRowsToShow } from '../../lib/listLoadState';
+import { ListLoadNotices } from '../ui/ListLoadState';
+import Skeleton from '../ui/Skeleton';
+import { feedCopy } from '../../i18n/feed';
 
-export default function ProfitabilityChart({ trends }) {
-  if (!Array.isArray(trends) || trends.length === 0) {
-    return (
-      <div className="flex flex-col border border-slate-300 bg-white p-6">
-        <h3 className="mb-2 flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-slate-500">
-          <TrendingDown size={16} /> Feed Cost Per Liter of Milk
-        </h3>
-        <p className="text-xs font-medium text-slate-600">
-          No profitability trend data is available yet.
-        </p>
-      </div>
-    );
-  }
+const TITLE = 'Feed cost per litre of milk';
+const SUBTITLE = 'How much of your milk money goes to buying feed. Lower is better.';
+
+/** Bar height as a share of the most expensive week; unknown weeks draw no bar. */
+const barPercent = (cost, max) => (cost === null || !(max > 0) ? 0 : Math.max(4, Math.round((cost / max) * 100)));
+const SKELETON_BARS = ['h-1/3', 'h-1/2', 'h-2/3', 'h-2/5', 'h-3/4'];
+
+/**
+ * Weekly feed cost per litre, as the backend computed it.
+ * @param {object} props
+ * @param {Array<{ week: string, cost: number|null, isCurrent: boolean }>} props.trends
+ * @param {'loading'|'offline'|'error'|'stale'|'ready'} [props.state] Load state of the trend
+ *   (`getListLoadState`); "no data yet" only shows once it has loaded.
+ * @param {unknown} [props.error]
+ * @param {() => void} [props.onRetry]
+ */
+export default function ProfitabilityChart({ trends, state = 'ready', error, onRetry }) {
+  const points = Array.isArray(trends) ? trends : [];
+  const max = Math.max(0, ...points.map((point) => point.cost ?? 0));
 
   return (
-    <div className="flex flex-col border border-slate-300 bg-white p-6">
-      <h3 className="mb-2 flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-slate-500">
-        <TrendingDown size={16} /> Feed Cost Per Liter of Milk
-      </h3>
-      <p className="mb-8 border-b border-slate-300 pb-4 text-xs font-medium text-slate-600">
-        How much of your milk money goes to buying feed. Lower numbers mean you keep more profit.
-      </p>
+    <section className="card-machined flex flex-col p-5 sm:p-6" aria-label={TITLE}>
+      <h2 className="text-section-title text-ink-muted">
+        {TITLE}
+      </h2>
 
-      <div className="flex-1 flex items-end justify-between gap-2 mt-auto pt-4 min-h-[160px]">
-        {trends.map((data, index) => (
-          <div key={index} className="flex flex-col items-center flex-1 group">
-            <span className={`mb-2 font-mono text-[10px] font-bold tabular-nums tracking-tight transition-colors ${data.isCurrent ? 'text-slate-900' : 'text-slate-600 group-hover:text-slate-900'}`}>
-              KES {data.cost.toFixed(2)}
-            </span>
-            <div className={`w-full max-w-[40px] rounded-t-sm transition-all duration-500 ${data.isCurrent ? 'bg-brand' : 'bg-brand/15 group-hover:bg-brand/30'} ${data.height}`} />
-            <span className={`mt-3 text-[10px] font-bold uppercase tracking-wider ${data.isCurrent ? 'text-slate-900' : 'text-slate-600'}`}>
-              {data.week}
-            </span>
-          </div>
-        ))}
-      </div>
-    </div>
+      {state !== 'ready' && (
+        <div className="-mx-5 mt-3 sm:-mx-6">
+          <ListLoadNotices state={state} label={feedCopy.costs.weeklyLabel} error={error} onRetry={onRetry} />
+        </div>
+      )}
+      {state === 'loading' && (
+        <div className="mt-4 flex h-28 items-end justify-between gap-2" aria-hidden="true">
+          {SKELETON_BARS.map((height) => <Skeleton key={height} className={`w-full max-w-[40px] ${height}`} />)}
+        </div>
+      )}
+      {!hasRowsToShow(state) ? null : points.length === 0 ? (
+        <p className="mt-2 text-body text-ink-muted">{feedCopy.costs.noWeekly}</p>
+      ) : (
+        <>
+          <p className="mt-1 border-b border-ink/10 pb-4 text-meta text-ink-muted">{SUBTITLE}</p>
+          <ol className="mt-4 flex min-h-[180px] items-end justify-between gap-2">
+            {points.map((point) => (
+              <li key={point.week} className="flex h-full min-w-0 flex-1 flex-col items-center justify-end">
+                <span className={`mb-1.5 text-meta tabular-nums ${point.isCurrent ? 'text-ink' : 'text-ink-muted'}`}>
+                  {formatCostPerLitre(point.cost, { suffix: '' })}
+                </span>
+                <div className="flex h-28 w-full max-w-[40px] items-end">
+                  <div
+                    className={`w-full rounded-t-sm ${point.isCurrent ? 'bg-brand' : 'bg-brand-100'}`}
+                    style={{ height: `${barPercent(point.cost, max)}%` }}
+                  />
+                </div>
+                <span className={`mt-2 truncate text-meta ${point.isCurrent ? 'text-ink' : 'text-ink-muted'}`}>{point.week}</span>
+              </li>
+            ))}
+          </ol>
+        </>
+      )}
+    </section>
   );
 }

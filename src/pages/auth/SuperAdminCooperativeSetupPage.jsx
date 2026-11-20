@@ -1,12 +1,19 @@
 import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Building2, Mail, Phone, UserRound, UserRoundPlus } from 'lucide-react';
 import AlertBanner from '../../components/ui/AlertBanner';
 import InviteClaimPreview from '../../components/auth/InviteClaimPreview';
 import { getApiErrorMessage, onboardingApi } from '../../lib/backendApi';
+import { formatKenyanPhoneInput, normalizeKenyanPhone } from '../../lib/phone';
+import { authCopy } from '../../i18n/auth';
+import FieldError from '../../components/ui/FieldError';
+import { fieldErrorProps } from '../../components/ui/fieldErrorProps';
+import { adminCopy } from '../../i18n/admin';
+import { FIELD_CONTROL } from '../../components/ui/formFieldStyles';
+
+const copy = adminCopy.coopSetup;
 
 const panelClassName = 'rounded-2xl border border-ink/10 bg-white/90  backdrop-blur';
-const inputClassName = 'mt-2 w-full rounded-lg border border-ink/10 bg-[#fbfcfa] px-4 py-3 text-sm text-ink-strong outline-none transition focus:border-brand focus:ring-2 focus:ring-brand/15';
+const inputClassName = `${FIELD_CONTROL} mt-2`;
 
 const extractCooperativeId = (response) => (
   response?.cooperative_id
@@ -22,18 +29,18 @@ function SectionHeader({ eyebrow, title, description, accent = 'brand' }) {
 
   return (
     <header className="mb-6">
-      <p className={`inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-[0.16em] ${accentClass}`}>
-        <Building2 size={14} /> {eyebrow}
+      <p className={`inline-flex items-center rounded-full px-3 py-1 text-label ${accentClass}`}>
+        {eyebrow}
       </p>
-      <h2 className="mt-4 text-3xl font-black tracking-tight text-ink-strong">{title}</h2>
-      <p className="mt-2 text-sm leading-6 text-ink-muted">{description}</p>
+      <h2 className="mt-4 text-section-title text-ink-strong">{title}</h2>
+      <p className="mt-2 text-body text-ink-muted">{description}</p>
     </header>
   );
 }
 
 function FormField({ label, children }) {
   return (
-    <label className="block text-xs font-semibold uppercase tracking-[0.14em] text-ink-muted">
+    <label className="block text-field-label text-ink-muted">
       {label}
       {children}
     </label>
@@ -55,24 +62,30 @@ export default function SuperAdminCooperativeSetupPage() {
   const [isSendingInvite, setIsSendingInvite] = useState(false);
   const [cooperative, setCooperative] = useState(null);
   const [message, setMessage] = useState({ type: '', text: '' });
+  const [phoneErrors, setPhoneErrors] = useState({});
 
   const cooperativeId = useMemo(() => extractCooperativeId(cooperative), [cooperative]);
 
   const handleCreateCooperative = async (event) => {
     event.preventDefault();
     setMessage({ type: '', text: '' });
+    const contactPhone = normalizeKenyanPhone(cooperativeForm.contact_phone);
+    if (!contactPhone) {
+      setPhoneErrors((current) => ({ ...current, contact: authCopy.fields.phoneInvalid }));
+      return;
+    }
     setIsSavingCooperative(true);
 
     try {
       const payload = {
         cooperative_name: cooperativeForm.cooperative_name.trim(),
-        contact_phone: cooperativeForm.contact_phone.trim(),
+        contact_phone: contactPhone,
       };
       const created = await onboardingApi.createCooperative(payload);
       setCooperative(created);
-      setMessage({ type: 'success', text: 'Cooperative created. Add the first admin invite next.' });
+      setMessage({ type: 'success', text: copy.created });
     } catch (error) {
-      setMessage({ type: 'danger', text: getApiErrorMessage(error, 'Could not create this cooperative. Check the details and try again.') });
+      setMessage({ type: 'danger', text: getApiErrorMessage(error, copy.createFailed) });
     } finally {
       setIsSavingCooperative(false);
     }
@@ -82,26 +95,32 @@ export default function SuperAdminCooperativeSetupPage() {
     event.preventDefault();
 
     if (!cooperativeId) {
-      setMessage({ type: 'danger', text: 'Create a cooperative first before inviting the initial admin.' });
+      setMessage({ type: 'danger', text: copy.needCoop });
       return;
     }
 
     setMessage({ type: '', text: '' });
+    // The admin's phone is optional; when given it must be a Kenyan mobile.
+    const adminPhone = normalizeKenyanPhone(adminForm.phone_number);
+    if (adminForm.phone_number.trim() && !adminPhone) {
+      setPhoneErrors((current) => ({ ...current, admin: authCopy.fields.phoneInvalid }));
+      return;
+    }
     setIsSendingInvite(true);
 
     try {
       const payload = {
         full_name: adminForm.full_name.trim(),
         email: adminForm.email.trim(),
-        phone_number: adminForm.phone_number.trim(),
+        ...(adminPhone ? { phone_number: adminPhone } : {}),
         role: 'COOP_ADMIN',
       };
 
       await onboardingApi.createFirstAdmin(cooperativeId, payload);
       setAdminForm({ full_name: '', email: '', phone_number: '', role: 'COOP_ADMIN' });
-      setMessage({ type: 'success', text: 'First cooperative admin invite sent.' });
+      setMessage({ type: 'success', text: copy.inviteSent });
     } catch (error) {
-      setMessage({ type: 'danger', text: getApiErrorMessage(error, 'Could not send the administrator invitation. Check the details and try again.') });
+      setMessage({ type: 'danger', text: getApiErrorMessage(error, copy.inviteFailed) });
     } finally {
       setIsSendingInvite(false);
     }
@@ -112,13 +131,13 @@ export default function SuperAdminCooperativeSetupPage() {
       <div className="mx-auto grid max-w-6xl gap-6 lg:grid-cols-2">
         <section className={`${panelClassName} p-6`}>
           <SectionHeader
-            eyebrow="Platform Setup"
-            title="Create Cooperative"
-            description="Super admins can provision a cooperative workspace and immediately establish ownership through an initial admin invite."
+            eyebrow={copy.platformSetup}
+            title={copy.createTitle}
+            description={copy.createText}
           />
 
           <form onSubmit={handleCreateCooperative} className="space-y-4">
-            <FormField label="Cooperative Name">
+            <FormField label={copy.coopName}>
               <input
                 className={inputClassName}
                 value={cooperativeForm.cooperative_name}
@@ -128,39 +147,46 @@ export default function SuperAdminCooperativeSetupPage() {
               />
             </FormField>
 
-            <FormField label="Contact Phone">
+            <FormField label={copy.contactPhone}>
               <div className="relative mt-2">
-                <Phone size={15} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-ink-muted" />
                 <input
-                  className={`${inputClassName} mt-0 pl-10`}
+                  id="cooperative-contact-phone"
+                  type="tel"
+                  inputMode="tel"
+                  autoComplete="tel"
+                  className={`${inputClassName} mt-0`}
                   value={cooperativeForm.contact_phone}
-                  onChange={(event) => setCooperativeForm((prev) => ({ ...prev, contact_phone: event.target.value }))}
-                  placeholder="+254712345678"
+                  onChange={(event) => {
+                    setPhoneErrors((current) => ({ ...current, contact: undefined }));
+                    setCooperativeForm((prev) => ({ ...prev, contact_phone: formatKenyanPhoneInput(event.target.value) }));
+                  }}
+                  placeholder={authCopy.fields.phonePlaceholder}
                   required
+                  {...fieldErrorProps('cooperative-contact-phone', phoneErrors.contact)}
                 />
               </div>
+              <FieldError id="cooperative-contact-phone" message={phoneErrors.contact} />
             </FormField>
 
             <button type="submit" className="btn-command w-full" disabled={isSavingCooperative}>
-              {isSavingCooperative ? 'Creating cooperative…' : 'Create cooperative'}
+              {isSavingCooperative ? copy.creating : copy.create}
             </button>
           </form>
         </section>
 
         <section className={`${panelClassName} p-6`}>
           <SectionHeader
-            eyebrow="Step 2"
-            title="Invite First Admin"
-            description="Send a claim invite so the cooperative admin sets their own password via the claim-account flow."
+            eyebrow={copy.step2}
+            title={copy.inviteTitle}
+            description={copy.inviteText}
             accent="secondary"
           />
 
           <form onSubmit={handleFirstAdminInvite} className="space-y-4">
-            <FormField label="Full Name">
+            <FormField label={copy.fullName}>
               <div className="relative mt-2">
-                <UserRound size={15} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-ink-muted" />
                 <input
-                  className={`${inputClassName} mt-0 pl-10`}
+                  className={`${inputClassName} mt-0`}
                   value={adminForm.full_name}
                   onChange={(event) => setAdminForm((prev) => ({ ...prev, full_name: event.target.value }))}
                   placeholder="Amina Wanjiru"
@@ -169,12 +195,11 @@ export default function SuperAdminCooperativeSetupPage() {
               </div>
             </FormField>
 
-            <FormField label="Email">
+            <FormField label={copy.email}>
               <div className="relative mt-2">
-                <Mail size={15} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-ink-muted" />
                 <input
                   type="email"
-                  className={`${inputClassName} mt-0 pl-10`}
+                  className={`${inputClassName} mt-0`}
                   value={adminForm.email}
                   onChange={(event) => setAdminForm((prev) => ({ ...prev, email: event.target.value }))}
                   placeholder="admin@greenrift.coop"
@@ -183,27 +208,36 @@ export default function SuperAdminCooperativeSetupPage() {
               </div>
             </FormField>
 
-            <FormField label="Phone">
+            <FormField label={copy.phone}>
               <input
+                id="cooperative-admin-phone"
+                type="tel"
+                inputMode="tel"
+                autoComplete="tel"
                 className={inputClassName}
                 value={adminForm.phone_number}
-                onChange={(event) => setAdminForm((prev) => ({ ...prev, phone_number: event.target.value }))}
-                placeholder="+254700111222"
+                onChange={(event) => {
+                  setPhoneErrors((current) => ({ ...current, admin: undefined }));
+                  setAdminForm((prev) => ({ ...prev, phone_number: formatKenyanPhoneInput(event.target.value) }));
+                }}
+                placeholder={authCopy.fields.phonePlaceholder}
+                {...fieldErrorProps('cooperative-admin-phone', phoneErrors.admin)}
               />
+              <FieldError id="cooperative-admin-phone" message={phoneErrors.admin} />
             </FormField>
 
             <InviteClaimPreview
-              title="First Admin Claim Preview"
-              description="Preview the claim link that will be used for the first cooperative admin before you send the invite."
+              title={copy.previewTitle}
+              description={copy.previewText}
             />
 
             <button type="submit" className="btn-command w-full" disabled={isSendingInvite || !cooperativeId}>
-              {isSendingInvite ? 'Sending invite…' : 'Send admin claim invite'}
+              {isSendingInvite ? copy.sending : copy.send}
             </button>
 
             {!cooperativeId && (
-              <p className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
-                Create a cooperative first to unlock admin invite.
+              <p className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-meta text-amber-800">
+                {copy.unlockHint}
               </p>
             )}
           </form>
@@ -212,17 +246,16 @@ export default function SuperAdminCooperativeSetupPage() {
 
       {message.text && (
         <div className="mx-auto mt-6 max-w-6xl">
-          <AlertBanner type={message.type || 'info'} title="Onboarding status" message={message.text} onDismiss={() => setMessage({ type: '', text: '' })} />
+          <AlertBanner type={message.type || 'info'} title={copy.statusTitle} message={message.text} onDismiss={() => setMessage({ type: '', text: '' })} />
         </div>
       )}
 
-      <div className="mx-auto mt-6 max-w-6xl rounded-xl border border-ink/10 bg-white/75 p-4 text-sm text-ink-muted  backdrop-blur">
-        Next: cooperative admins continue member onboarding in
-        {' '}
-        <Link to="/cooperative-admin/members" className="font-semibold text-brand underline underline-offset-4">
-          cooperative admin onboarding
+      <div className="mx-auto mt-6 max-w-6xl rounded-xl border border-ink/10 bg-white/75 p-4 text-body text-ink-muted backdrop-blur">
+        {copy.nextBefore}
+        <Link to="/cooperative-admin/members" className="text-body-strong text-brand underline underline-offset-4">
+          {copy.nextLink}
         </Link>
-        .
+        {copy.nextAfter}
       </div>
     </div>
   );

@@ -1,0 +1,105 @@
+import React from 'react';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { MemoryRouter, Route, Routes } from 'react-router-dom';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import MilkHistory from '../MilkHistory';
+import { animalsApi, herdApi } from '../../../lib/backendApi';
+
+void React;
+afterEach(cleanup);
+
+vi.mock('../../../hooks/useTenant', () => ({ useTenant: () => ({ tenantId: 't1', farmId: 'f1' }) }));
+vi.mock('../../../lib/backendApi', async (importOriginal) => ({
+  ...(await importOriginal()),
+  herdApi: { list: vi.fn() },
+  animalsApi: { get: vi.fn(), milkHistory: vi.fn() },
+}));
+
+const renderPage = () => render(
+  <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
+    <MemoryRouter initialEntries={['/operations/animal/KE-012/milk-history']}>
+      <Routes><Route path="/operations/animal/:id/milk-history" element={<MilkHistory />} /></Routes>
+    </MemoryRouter>
+  </QueryClientProvider>,
+);
+
+describe('milk history load states', () => {
+  it('shows placeholders, not "Unknown Cow" or zero totals, while loading', () => {
+    herdApi.list.mockReturnValue(new Promise(() => {}));
+    renderPage();
+    expect(document.querySelector('[aria-busy="true"]')).not.toBeNull();
+    expect(screen.queryByText('Unknown Cow')).toBeNull();
+    expect(screen.queryByText(/Loading milk history/)).toBeNull();
+  });
+
+  it('explains a failed load with a retry button', async () => {
+    herdApi.list.mockRejectedValue(Object.assign(new Error('Network Error'), { code: 'ERR_NETWORK', isAxiosError: true }));
+    renderPage();
+    expect(await screen.findByText('Couldn’t load this cow’s milk history.')).toBeTruthy();
+    expect(screen.getByRole('button', { name: /try again/i })).toBeTruthy();
+  });
+
+  it('shows the backend’s average, peak, total and milking count, not sums of the rows', async () => {
+    herdApi.list.mockResolvedValue([{ id: 57, tag_number: 'KE-012', name: 'Neema' }]);
+    animalsApi.get.mockResolvedValue({ id: 57, tag_number: 'KE-012', name: 'Neema' });
+    animalsApi.milkHistory.mockResolvedValue({
+      // Only two sessions came back on this phone; the backend's figures cover her whole history.
+      sessions: [
+        { date: '2026-11-07', session: 'morning', liters: 8 },
+        { date: '2026-11-07', session: 'evening', liters: 6 },
+      ],
+      stats: { average_yield: 15.25, peak_yield: 19, total_logged: 412.5, session_count: 30 },
+      animal: { id: 57, tag_number: 'KE-012', name: 'Neema' },
+    });
+    renderPage();
+
+    expect(await screen.findByText('15.3 L/day')).toBeTruthy();
+    expect(screen.getByText('19.0 L/day')).toBeTruthy();
+    expect(screen.getByText('412.5 L')).toBeTruthy();
+    expect(screen.queryByText('14.0 L')).toBeNull();
+  });
+
+  it('shows "—" when the backend sent no figures, rather than working them out', async () => {
+    herdApi.list.mockResolvedValue([{ id: 57, tag_number: 'KE-012', name: 'Neema' }]);
+    animalsApi.get.mockResolvedValue({ id: 57, tag_number: 'KE-012', name: 'Neema' });
+    animalsApi.milkHistory.mockResolvedValue({
+      sessions: [{ date: '2026-11-07', session: 'morning', liters: 8 }],
+      stats: { average_yield: null, peak_yield: null, total_logged: null, session_count: null },
+      animal: null,
+    });
+    renderPage();
+
+    await waitFor(() => expect(screen.getAllByText('—').length).toBeGreaterThanOrEqual(3));
+    expect(screen.queryByText('8.0 L/day')).toBeNull();
+  });
+});
+
+describe('milk history filters', () => {
+  it('uses the shared panel: collapsed, one day picker instead of a native date input, and Reset', async () => {
+    herdApi.list.mockResolvedValue([{ id: 57, tag_number: 'KE-012', name: 'Neema' }]);
+    animalsApi.get.mockResolvedValue({ id: 57, tag_number: 'KE-012', name: 'Neema' });
+    animalsApi.milkHistory.mockResolvedValue({
+      sessions: [
+        { date: '2026-11-07', session: 'morning', liters: 8 },
+        { date: '2026-11-06', session: 'evening', liters: 6 },
+      ],
+      stats: { average_yield: 7, peak_yield: 8, total_logged: 14, session_count: 2 },
+      animal: { id: 57, tag_number: 'KE-012', name: 'Neema' },
+    });
+    renderPage();
+    const PANEL = 'Search and filter milk sessions';
+    const toggle = await screen.findByRole('button', { name: PANEL });
+    expect(toggle.getAttribute('aria-expanded')).toBe('false');
+    expect(document.querySelector('input[type="date"]')).toBeNull();
+
+    fireEvent.click(toggle);
+    const panel = screen.getByRole('region', { name: PANEL });
+    fireEvent.change(within(panel).getByRole('combobox', { name: 'Session' }), { target: { value: 'evening' } });
+    expect(await within(panel).findByText('Showing 1 of 2 sessions')).toBeTruthy();
+    expect(within(panel).getByRole('button', { name: 'Any day' })).toBeTruthy();
+
+    fireEvent.click(within(panel).getByRole('button', { name: 'Reset filters' }));
+    expect(await within(panel).findByText('Showing 2 of 2 sessions')).toBeTruthy();
+  });
+});

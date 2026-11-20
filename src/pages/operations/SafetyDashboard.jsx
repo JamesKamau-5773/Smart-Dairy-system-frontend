@@ -1,408 +1,340 @@
 import { useMemo, useState } from 'react';
-import { ShieldAlert, ShieldCheck, Search, Filter, Activity, Milk, X, AlertTriangle, CheckCircle2, ChevronDown, ChevronUp } from 'lucide-react';
-import { useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
-import { herdApi, safetyApi } from '../../lib/backendApi';
-import { formatCowIdentity, resolveCowIdentityFromHerd } from '../../lib/cowIdentity';
-import { QUERY_KEYS } from '../../providers/QueryProvider';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { ShieldAlert, ShieldCheck } from 'lucide-react';
+import toast from 'react-hot-toast';
+import AlertBanner from '../../components/ui/AlertBanner';
+import Confirmation, { useConfirmation } from '../../components/ui/Confirmation';
 import { Skeleton } from '../../components/ui';
-import Modal from '../../components/ui/Modal';
+import ReleaseMilkModal from '../../components/operations/ReleaseMilkModal';
+import PlaceHoldModal from '../../components/operations/PlaceHoldModal';
+import RecordMilkTestModal from '../../components/operations/RecordMilkTestModal';
+import MilkTestHistory from '../../components/operations/MilkTestHistory';
+import { getApiErrorCode } from '../../lib/apiErrors';
+import { getApiErrorMessage, herdApi, safetyApi } from '../../lib/backendApi';
+import { formatCowIdentity, resolveCowIdentityFromHerd } from '../../lib/cowIdentity';
+import { SEVERITIES, countBySeverity, daysUntilClear, formatLockExpiry, milkTestsKey, readHardlockPage } from '../../lib/milkSafety';
+import { hasRole } from '../../lib/roles';
+import { QUERY_KEYS } from '../../providers/QueryProvider';
+import { useAuth } from '../../contexts/AuthContext';
 import { useTenant } from '../../hooks/useTenant';
+import { useSafetyFilters } from '../../hooks/useSafetyFilters';
+import FilterPanel from '../../components/data/FilterPanel';
+import { Toolbar, ToolbarSearch, ToolbarSelect } from '../../components/data/Toolbar';
+import { safetyCopy as copy } from '../../i18n/safety';
+import { tone } from '../../components/ui/tones';
+import { shellCopy } from '../../i18n/shell';
 
-const fetchHardlocks = async () => {
-  return safetyApi.activeHardlocks();
-};
+// Risk is the strength of the app's blue (./tones), with the label in words.
+const SEVERITY_TONE = { high: tone('critical'), medium: tone('attention'), low: tone('neutral') };
 
-export function normalizeHardlock(lock = {}) {
-  const cowId = lock.cow_id ?? lock.cowId ?? lock.animal_id ?? lock.animalId ?? '';
-
-  return {
-    id: lock.id ?? lock.hardlock_id ?? lock.lock_id,
-    cowName: lock.cow_name ?? lock.cowName ?? lock.animal_name ?? lock.animalName ?? 'Unknown cow',
-    cowId,
-    cowRecordId: cowId,
-    cowTag: lock.cow_tag ?? lock.cowTag ?? lock.tag_number ?? lock.tagNumber ?? '',
-    reason: lock.reason ?? 'Not provided',
-    severity: String(lock.severity ?? lock.status ?? 'WARNING').toUpperCase(),
-    lockExpires: lock.lock_expires ?? lock.lockExpires ?? lock.expires_at ?? lock.expiresAt ?? null,
-    section: lock.section ?? lock.herd_section ?? 'Main herd',
-    medication: lock.medication ?? lock.treatment ?? 'Not specified',
-    updatedAt: lock.updated_at ?? lock.updatedAt ?? lock.lock_expires ?? lock.lockExpires ?? null,
-    updatedBy: lock.updated_by ?? lock.updatedBy ?? 'Veterinary team',
-    notes: lock.notes ?? 'No additional notes available.',
-  };
+function SeverityChip({ severity }) {
+  if (!severity) return <span className="text-meta text-ink-muted">{copy.notRecorded}</span>;
+  const tone = SEVERITY_TONE[severity];
+  return (
+    <span className={`inline-flex items-center gap-1.5 rounded-badge px-2 py-0.5 text-meta ${tone.chip}`}>
+      <span className={`h-1.5 w-1.5 rounded-full ${tone.dot}`} aria-hidden="true" /> {copy.severity[severity]}
+    </span>
+  );
 }
 
-export function formatLockExpiry(value) {
-  if (!value) return 'Not available';
-  const parsed = new Date(value);
-  return Number.isNaN(parsed.getTime()) ? 'Not available' : parsed.toLocaleDateString();
+function ClearsOn({ lockExpires }) {
+  const date = formatLockExpiry(lockExpires);
+  const days = daysUntilClear(lockExpires);
+  if (!date) return <span className="text-body text-ink-muted">{copy.noDate}</span>;
+  return (
+    <span className="block text-body">
+      <span className="text-body-strong text-ink">{date}</span>
+      <span className={`block text-meta ${days === 0 ? 'text-body-strong text-brand' : 'text-ink-muted'}`}>
+        {days === 0 ? copy.withdrawalOver : copy.clearsIn(days)}
+      </span>
+    </span>
+  );
 }
 
+function HoldSummary({ total, counts }) {
+  const onHold = total > 0;
+  return (
+    <section className="card-machined p-5 sm:p-6" aria-labelledby="hold-summary">
+      <div className="flex items-start gap-3">
+        <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full ${onHold ? tone('critical').surface : tone('info').surface}`} aria-hidden="true">
+          {onHold ? <ShieldAlert size={20} className={tone('critical').icon} /> : <ShieldCheck size={20} className={tone('info').icon} />}
+        </span>
+        <div className="min-w-0">
+          <h2 id="hold-summary" className="text-section-title text-ink">{onHold ? copy.holdTitle(total) : copy.clearTitle}</h2>
+          <p className="text-body text-ink-muted">{onHold ? copy.holdHint : copy.clearHint}</p>
+        </div>
+      </div>
+      {onHold && (
+        <dl className="mt-4 grid grid-cols-3 divide-x divide-ink/10 rounded-card border border-ink/10">
+          {SEVERITIES.map((severity) => (
+            <div key={severity} className="px-3 py-2.5">
+              <dt className="flex items-center gap-1.5 text-label text-ink-muted">
+                <span className={`h-1.5 w-1.5 rounded-full ${SEVERITY_TONE[severity].dot}`} aria-hidden="true" /> {copy.severity[severity]}
+              </dt>
+              <dd className="mt-0.5 text-body-strong tabular-nums text-ink">{counts[severity]}</dd>
+              <dd className="text-meta text-ink-muted">{copy.severityHint[severity]}</dd>
+            </div>
+          ))}
+        </dl>
+      )}
+    </section>
+  );
+}
+
+function LockCard({ lock, tenantId, canRelease, canRecordTest, isReleasing, onRelease, onRecordTest }) {
+  return (
+    <article className="flex flex-col gap-3 rounded-card border border-ink/10 bg-card p-4 sm:flex-row sm:items-start sm:justify-between">
+      <div className="min-w-0 space-y-1">
+        <div className="flex flex-wrap items-center gap-2">
+          <h2 className="text-section-title text-ink">{formatCowIdentity(lock)}</h2>
+          <SeverityChip severity={lock.severity} />
+        </div>
+        <p className="text-body text-ink">{lock.reason ?? copy.notRecorded}</p>
+        <p className="text-meta text-ink-muted">{copy.medication}: {lock.medication ?? copy.notRecorded}</p>
+        {lock.vetName && <p className="text-meta text-ink-muted">{copy.treatedBy(lock.vetName)}</p>}
+        {lock.source === 'manual' && <p className="text-meta text-ink-muted">{lock.updatedBy ? copy.heldBy(lock.updatedBy) : copy.manualHold}</p>}
+        {lock.latestTest && <p className="text-meta text-ink-muted">{copy.latestTest(lock.latestTest.test_type, lock.latestTest.result)}</p>}
+        {lock.notes && <p className="text-meta text-ink-muted">{copy.notes}: {lock.notes}</p>}
+        {lock.cowRecordId && (
+          <Link to={`/operations/animal/${lock.cowRecordId}`} className="inline-flex min-h-8 items-center text-body-strong text-brand hover:underline">
+            {copy.openCow}
+          </Link>
+        )}
+        <MilkTestHistory tenantId={tenantId} cowId={lock.cowId} />
+      </div>
+      <div className="flex shrink-0 flex-col gap-2 sm:items-end sm:text-right">
+        <p className="text-label text-ink-muted">{copy.columns.clears}</p>
+        <ClearsOn lockExpires={lock.lockExpires} />
+        {canRecordTest && (
+          <button type="button" onClick={() => onRecordTest(lock)} className="btn-ghost text-control">
+            {copy.recordTest}
+          </button>
+        )}
+        {canRelease && (
+          <button type="button" onClick={() => onRelease(lock)} disabled={isReleasing} className="btn-secondary text-control">
+            {copy.release}
+          </button>
+        )}
+      </div>
+    </article>
+  );
+}
+
+/** Cows whose milk is on hold (withdrawal), as the backend reports them. */
 export default function MilkSafetyBoard() {
   const { tenantId, farmId } = useTenant();
-  const [query, setQuery] = useState('');
-  const [severityFilter, setSeverityFilter] = useState('All');
-  const [selectedLock, setSelectedLock] = useState(null);
-  const [controlsOpen, setControlsOpen] = useState(true);
+  const { currentUser } = useAuth();
+  const queryClient = useQueryClient();
+  const confirmation = useConfirmation();
+  const filters = useSafetyFilters();
+  const { query, severity } = filters.values;
+  const canRelease = hasRole(currentUser, ['FARMER']);
+  // The backend lets anyone who can see the board hold milk or record a test.
+  const canRecord = hasRole(currentUser, ['FARMER', 'VET', 'FARM_HAND']);
 
-  const { data: hardlocksRaw, isLoading, error, refetch, isFetching } = useQuery({
-    queryKey: QUERY_KEYS.HARDLOCKS(tenantId, farmId),
-    queryFn: fetchHardlocks,
+  const boardQuery = useQuery({
+    queryKey: ['hardlocks-board', tenantId, farmId],
+    queryFn: () => safetyApi.hardlockPage(),
     enabled: !!tenantId && !!farmId,
   });
-  const { data: herdData = [] } = useQuery({
+  const { data: herd = [] } = useQuery({
     queryKey: ['herd', tenantId, farmId],
     queryFn: () => herdApi.list(),
     enabled: !!tenantId && !!farmId,
   });
 
-  const hardlocks = Array.isArray(hardlocksRaw)
-    ? hardlocksRaw
-    : Array.isArray(hardlocksRaw?.items)
-      ? hardlocksRaw.items
-      : Array.isArray(hardlocksRaw?.data)
-        ? hardlocksRaw.data
-        : [];
+  const { items, total } = useMemo(() => readHardlockPage(boardQuery.data), [boardQuery.data]);
+  const locks = useMemo(() => items.map((lock) => {
+    const identity = resolveCowIdentityFromHerd({ cowId: lock.cowId, cowTag: lock.cowTag ?? '', cowName: lock.cowName ?? '' }, herd);
+    return { ...lock, cowName: identity.name, cowTag: identity.earTag, cowRecordId: identity.recordId || lock.cowId };
+  }), [items, herd]);
+  const counts = useMemo(() => countBySeverity(locks), [locks]);
 
-  const normalizedHardlocks = useMemo(() => hardlocks.map((rawLock) => {
-    const lock = normalizeHardlock(rawLock);
-    const identity = resolveCowIdentityFromHerd({
-      cowId: lock.cowRecordId,
-      cowTag: lock.cowTag,
-      cowName: lock.cowName === 'Unknown cow' ? '' : lock.cowName,
-    }, herdData);
+  const visible = useMemo(() => {
+    const term = query.trim().toLowerCase();
+    return locks.filter((lock) => (severity === 'all' || lock.severity === severity)
+      && (!term || [lock.cowName, lock.cowTag, lock.reason, lock.medication, lock.notes].join(' ').toLowerCase().includes(term)));
+  }, [locks, query, severity]);
 
-    return {
-      ...lock,
-      cowName: identity.name,
-      cowTag: identity.earTag,
-      cowRecordId: identity.recordId || lock.cowRecordId,
-    };
-  }), [hardlocks, herdData]);
+  // A lock the backend says isn't safe to release yet; releasing needs an audited reason.
+  const [overrideLock, setOverrideLock] = useState(null);
+  // { kind: 'hold' | 'test', cowId?, cowName? }
+  const [form, setForm] = useState(null);
 
-  const filteredHardlocks = useMemo(() => {
-    const search = query.trim().toLowerCase();
+  const refreshBoard = () => Promise.all([
+    queryClient.invalidateQueries({ queryKey: ['hardlocks-board', tenantId, farmId] }),
+    queryClient.invalidateQueries({ queryKey: QUERY_KEYS.HARDLOCKS(tenantId, farmId) }),
+  ]);
+  const cowLabel = (cowId) => {
+    const cow = herd.find((candidate) => String(candidate.id) === String(cowId));
+    return cow ? formatCowIdentity(cow) : formatCowIdentity(locks.find((lock) => String(lock.cowId) === String(cowId)) ?? {});
+  };
+  const saveErrorMessage = (error, fallback) => (error?.response ? getApiErrorMessage(error, fallback) : copy.offlineSafety);
 
-    return normalizedHardlocks.filter((lock) => {
-      const matchesSearch = !search || [lock.cowName, lock.cowTag, lock.reason, lock.section, lock.medication, lock.notes]
-        .join(' ')
-        .toLowerCase()
-        .includes(search);
-      const matchesSeverity = severityFilter === 'All' || lock.severity === severityFilter;
-      return matchesSearch && matchesSeverity;
+  const placeHold = useMutation({
+    mutationFn: (values) => safetyApi.placeHold(values),
+    onSuccess: async (result, values) => {
+      setForm(null);
+      await refreshBoard();
+      toast.success(copy.held(cowLabel(values.cowId)));
+    },
+  });
+  const recordTest = useMutation({
+    mutationFn: (values) => safetyApi.recordMilkTest(values),
+    onSuccess: async (result, values) => {
+      setForm(null);
+      await Promise.all([refreshBoard(), queryClient.invalidateQueries({ queryKey: milkTestsKey(tenantId, values.cowId) })]);
+      const cow = cowLabel(values.cowId);
+      toast.success(result.placedOnHold ? copy.testFailedHeld(cow) : copy.testSaved(cow));
+    },
+  });
+  const openForm = (kind, lock) => {
+    placeHold.reset();
+    recordTest.reset();
+    // A cow added since the board loaded (another phone, another tab) must be choosable.
+    queryClient.invalidateQueries({ queryKey: ['herd', tenantId, farmId] });
+    setForm({ kind, cowId: lock?.cowId ?? '', cowName: lock ? formatCowIdentity(lock) : null });
+  };
+
+  const release = useMutation({
+    mutationFn: ({ lock, overrideReason }) => safetyApi.setHardlock(lock.cowId, false, { overrideReason }),
+    onSuccess: async (result, { lock }) => {
+      setOverrideLock(null);
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['hardlocks-board', tenantId, farmId] }),
+        queryClient.invalidateQueries({ queryKey: QUERY_KEYS.HARDLOCKS(tenantId, farmId) }),
+      ]);
+      toast.success(copy.released(formatCowIdentity(lock)));
+    },
+    onError: (error, { lock }) => {
+      // The withdrawal is still running on the server: ask for the reason instead.
+      if (getApiErrorCode(error) === 'WITHDRAWAL_ACTIVE') {
+        setOverrideLock({ ...lock, withdrawalEndsAt: error.response.data?.withdrawal_ends_at ?? lock.withdrawalEndsAt });
+        return;
+      }
+      toast.error(error?.response ? getApiErrorMessage(error, copy.releaseFailed) : copy.offlineRelease);
+    },
+  });
+
+  const confirmRelease = async (lock) => {
+    if (!lock.canRelease || lock.withdrawalActive) {
+      setOverrideLock(lock);
+      return;
+    }
+    const confirmed = await confirmation.confirm({
+      title: copy.releaseTitle(formatCowIdentity(lock)),
+      message: copy.releaseMessage,
+      confirmText: copy.release,
+      type: 'warning',
     });
-  }, [normalizedHardlocks, query, severityFilter]);
-
-  const activeFilterCount = [query.trim(), severityFilter !== 'All'].filter(Boolean).length;
-
-  const stats = useMemo(() => {
-    const critical = normalizedHardlocks.filter((lock) => lock.severity === 'CRITICAL').length;
-    const warning = normalizedHardlocks.filter((lock) => lock.severity === 'WARNING').length;
-    const cleared = normalizedHardlocks.filter((lock) => lock.severity === 'CLEARED').length;
-
-    return {
-      total: normalizedHardlocks.length,
-      critical,
-      warning,
-      cleared,
-    };
-  }, [normalizedHardlocks]);
-
-  const hasCritical = stats.critical > 0;
-
-  const severityTone = {
-    CRITICAL: 'bg-brand/15 text-brand-dark ring-1 ring-brand/20',
-    WARNING: 'bg-brand/10 text-brand ring-1 ring-brand/15',
-    CLEARED: 'bg-surface-raised text-ink-muted ring-1 ring-ink/10',
+    if (confirmed) release.mutate({ lock });
   };
-
-  const severityLabel = {
-    CRITICAL: 'Critical',
-    WARNING: 'Warning',
-    CLEARED: 'Cleared',
-  };
-
-  const safetyRows = filteredHardlocks.map((lock) => ({
-    ...lock,
-    clearanceDate: formatLockExpiry(lock.lockExpires),
-  }));
 
   return (
-    <div className="animate-reveal mx-auto max-w-7xl space-y-4 px-4 pb-6 pt-4 sm:px-6 lg:px-8">
-      <section className="rounded-md border border-gray-200 bg-white ">
-        <div className="flex flex-col gap-4 border-b border-gray-200 px-5 py-5 lg:flex-row lg:items-end lg:justify-between">
-          <div className="space-y-2">
-            <div className="inline-flex items-center gap-2 rounded-full bg-slate-100 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-600">
-              <Activity size={12} /> Milk safety operations
-            </div>
-            <h2 className="font-display text-2xl font-extrabold tracking-tight text-gray-900 sm:text-3xl">Milk Safety Board</h2>
-            <p className="max-w-2xl text-sm leading-6 text-gray-600">
-              Live list of cows whose milk must be isolated before collection, mixing, or sale.
-            </p>
-          </div>
+    <div className="mx-auto max-w-5xl space-y-5 px-4 pb-6 pt-4 animate-reveal sm:px-6">
+      <Confirmation {...confirmation} />
+      {overrideLock && (
+        <ReleaseMilkModal
+          lock={overrideLock}
+          cowName={formatCowIdentity(overrideLock)}
+          onClose={() => setOverrideLock(null)}
+          onConfirm={(overrideReason) => release.mutate({ lock: overrideLock, overrideReason })}
+          isPending={release.isPending}
+        />
+      )}
+      {form?.kind === 'hold' && (
+        <PlaceHoldModal
+          cows={herd}
+          initialCowId={form.cowId}
+          onClose={() => setForm(null)}
+          onSubmit={(values) => placeHold.mutate(values)}
+          isPending={placeHold.isPending}
+          error={placeHold.isError ? saveErrorMessage(placeHold.error, copy.holdFailed) : null}
+        />
+      )}
+      {form?.kind === 'test' && (
+        <RecordMilkTestModal
+          cows={herd}
+          initialCowId={form.cowId}
+          cowName={form.cowName}
+          onClose={() => setForm(null)}
+          onSubmit={(values) => recordTest.mutate(values)}
+          isPending={recordTest.isPending}
+          error={recordTest.isError ? saveErrorMessage(recordTest.error, copy.testSaveFailed) : null}
+        />
+      )}
 
-          <div className={`flex items-center gap-3 rounded-md border px-4 py-3 ${hasCritical ? 'border-brand/25 bg-brand/10' : 'border-brand/15 bg-brand/5'}`}>
-            {hasCritical ? <ShieldAlert className="text-brand-dark" size={28} /> : <ShieldCheck className="text-brand" size={28} />}
-            <div>
-              <p className={`text-sm font-semibold ${hasCritical ? 'text-brand-dark' : 'text-brand'}`}>
-                {hasCritical ? 'Do not mix flagged milk' : 'All active milk is clear'}
-              </p>
-              <p className="text-xs text-gray-500">
-                {stats.total} {stats.total === 1 ? 'cow' : 'cows'} currently under monitoring
-              </p>
-            </div>
-          </div>
+      <header className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <p className="text-label text-ink-muted">{copy.eyebrow}</p>
+          <h1 className="text-page-title text-ink">{shellCopy.nav.items.safety}</h1>
+          <p className="mt-1 max-w-2xl text-body text-ink-muted">{copy.subtitle}</p>
         </div>
-
-        <div className="grid border-b border-gray-200 bg-white md:grid-cols-4 md:divide-x md:divide-gray-200">
-          {[
-            { label: 'Total locks', value: stats.total, icon: Milk },
-            { label: 'Critical', value: stats.critical, icon: AlertTriangle },
-            { label: 'Warnings', value: stats.warning, icon: ShieldAlert },
-            { label: 'Cleared', value: stats.cleared, icon: CheckCircle2 },
-          ].map((item) => {
-            const Icon = item.icon;
-
-            return (
-              <div key={item.label} className="flex items-center justify-between gap-4 px-5 py-4">
-                <div>
-                  <p className="text-xs font-medium uppercase tracking-wider text-gray-500">{item.label}</p>
-                  <p className="mt-1 text-3xl font-semibold text-gray-900">{item.value}</p>
-                </div>
-                <div className="rounded-md border border-gray-200 bg-gray-50 p-3 text-slate-700">
-                  <Icon size={18} />
-                </div>
-              </div>
-            );
-          })}
+        <div className="flex flex-wrap gap-2 self-start sm:self-auto">
+          {canRecord && (
+            <>
+              <button type="button" onClick={() => openForm('hold')} className="btn-command text-control">
+                {copy.placeHold}
+              </button>
+              <button type="button" onClick={() => openForm('test')} className="btn-secondary text-control">
+                {copy.recordTest}
+              </button>
+            </>
+          )}
+          <button type="button" onClick={() => boardQuery.refetch()} disabled={boardQuery.isFetching} className="btn-ghost text-control">
+            {boardQuery.isFetching ? copy.refreshing : copy.refresh}
+          </button>
         </div>
-      </section>
+      </header>
 
-      <section className="rounded-md border border-gray-200 bg-white ">
-        <div className="flex flex-col gap-3 border-b border-gray-200 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <div className="flex items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.22em] text-gray-500">
-              <Search size={12} /> Search flagged records
-            </div>
-            <p className="mt-1 text-sm leading-6 text-gray-600">Find milk safety holds by cow, section, medication, or severity.</p>
-          </div>
+      {boardQuery.isError ? (
+        <AlertBanner type="danger" message={copy.loadFailed} onRetry={() => boardQuery.refetch()} />
+      ) : boardQuery.isLoading ? (
+        <div className="space-y-3" aria-busy="true">{[0, 1, 2].map((key) => <Skeleton key={key} className="h-28 w-full" />)}</div>
+      ) : (
+        <>
+          <HoldSummary total={total} counts={counts} />
 
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="rounded-full border border-gray-200 bg-gray-50 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.22em] text-gray-500">
-              {activeFilterCount} active
-            </span>
-            <button
-              type="button"
-              onClick={() => setControlsOpen((current) => !current)}
-              aria-expanded={controlsOpen}
-              className="inline-flex items-center gap-1.5 rounded-md border border-gray-200 bg-white px-3 py-1.5 text-xs font-semibold text-gray-700 transition-colors hover:bg-gray-50"
-            >
-              {controlsOpen ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
-              {controlsOpen ? 'Hide filters' : 'Show filters'}
-            </button>
-            <button
-              type="button"
-              onClick={() => refetch()}
-              disabled={isFetching}
-              className="inline-flex items-center gap-1.5 rounded-md border border-gray-200 bg-white px-3 py-1.5 text-xs font-semibold text-gray-700 transition-colors hover:bg-gray-50 disabled:cursor-wait disabled:opacity-60"
-            >
-              {isFetching ? 'Refreshing...' : 'Refresh'}
-            </button>
-          </div>
-        </div>
-
-        {controlsOpen && (
-          <div className="grid gap-4 px-5 py-4 lg:grid-cols-[1.4fr_0.8fr_auto] lg:items-end">
-            <label className="space-y-2">
-              <span className="flex items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.22em] text-gray-500">
-                <Search size={12} /> Search records
-              </span>
-              <div className="relative">
-                <input
-                  value={query}
-                  onChange={(event) => setQuery(event.target.value)}
-                  className="input-machined w-full pl-10"
-                  placeholder="Cow name, tag, reason, or notes"
+          {total > 0 && (
+            <FilterPanel title={copy.filtersTitle} activeCount={filters.activeCount} onReset={filters.reset}>
+              <Toolbar>
+                <ToolbarSearch label={copy.search} value={query} onChange={filters.setQuery} placeholder={copy.search} />
+                <ToolbarSelect
+                  label={copy.columns.risk}
+                  value={severity}
+                  onChange={filters.setSeverity}
+                  options={[['all', copy.allSeverities], ...SEVERITIES.map((value) => [value, copy.severity[value]])]}
                 />
-                <Search size={14} className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-brand" />
-              </div>
-            </label>
+              </Toolbar>
+            </FilterPanel>
+          )}
 
-            <label className="space-y-2">
-              <span className="flex items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.22em] text-gray-500">
-                <Filter size={12} /> Severity
-              </span>
-              <select className="input-machined w-full" value={severityFilter} onChange={(event) => setSeverityFilter(event.target.value)}>
-                <option value="All">All severities</option>
-                <option value="CRITICAL">Critical</option>
-                <option value="WARNING">Warning</option>
-                <option value="CLEARED">Cleared</option>
-              </select>
-            </label>
+          {total > locks.length && <p className="text-meta text-ink-muted">{copy.showing(locks.length, total)}</p>}
 
-            <button type="button" onClick={() => { setQuery(''); setSeverityFilter('All'); }} className="btn-command h-[46px] bg-gray-900 text-white">
-              Reset filters
-            </button>
+          <div className="space-y-3">
+            {visible.map((lock) => (
+              <LockCard
+                key={lock.id}
+                lock={lock}
+                tenantId={tenantId}
+                canRelease={canRelease}
+                canRecordTest={canRecord}
+                onRecordTest={(target) => openForm('test', target)}
+                isReleasing={release.isPending && release.variables?.lock?.cowId === lock.cowId}
+                onRelease={confirmRelease}
+              />
+            ))}
           </div>
-        )}
 
-        <div className="hidden overflow-x-auto md:block">
-          <table className="min-w-full border-separate border-spacing-0">
-            <thead className="bg-gray-50">
-              <tr className="text-left text-[10px] font-semibold uppercase tracking-[0.22em] text-gray-500">
-                <th scope="col" className="px-5 py-3">Cow</th>
-                <th scope="col" className="px-5 py-3">Tag</th>
-                <th scope="col" className="px-5 py-3">Status</th>
-                <th scope="col" className="px-5 py-3">Treatment</th>
-                <th scope="col" className="px-5 py-3">Clearance date</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-200 bg-white">
-              {isLoading && Array.from({ length: 3 }).map((_, index) => (
-                <tr key={index}>
-                  <td className="px-5 py-4"><Skeleton className="h-4 w-32" /></td>
-                  <td className="px-5 py-4"><Skeleton className="h-4 w-20" /></td>
-                  <td className="px-5 py-4"><Skeleton className="h-6 w-24 rounded-full" /></td>
-                  <td className="px-5 py-4"><Skeleton className="h-4 w-56" /></td>
-                  <td className="px-5 py-4"><Skeleton className="h-4 w-24" /></td>
-                </tr>
-              ))}
-
-              {error && !isLoading && (
-                <tr>
-                  <td colSpan={5} className="px-5 py-10 text-center text-sm text-brand">
-                    Could not load the safety list. Please check your connection and retry.
-                  </td>
-                </tr>
-              )}
-
-              {!isLoading && !error && safetyRows.map((lock) => (
-                <tr
-                  key={lock.id}
-                  role="button"
-                  tabIndex={0}
-                  onClick={() => setSelectedLock(lock)}
-                  onKeyDown={(event) => {
-                    if (event.key === 'Enter' || event.key === ' ') {
-                      event.preventDefault();
-                      setSelectedLock(lock);
-                    }
-                  }}
-                  className="cursor-pointer transition-colors hover:bg-gray-50 focus:bg-gray-50"
-                >
-                  <td className="px-5 py-4 align-top">
-                    <p className="font-semibold text-gray-900">{formatCowIdentity(lock)}</p>
-                    <p className="mt-1 text-xs text-gray-500">Section: {lock.section}</p>
-                  </td>
-                  <td className="px-5 py-4 align-top">
-                    <Link
-                      to={`/operations/animal/${lock.cowRecordId}`}
-                      className="text-sm font-semibold text-slate-700 hover:text-slate-900 hover:underline"
-                      onClick={(event) => event.stopPropagation()}
-                    >
-                      {lock.cowTag || 'Tag unavailable'}
-                    </Link>
-                  </td>
-                  <td className="px-5 py-4 align-top">
-                    <span className={`inline-flex rounded-md px-2.5 py-1 text-xs font-semibold ${severityTone[lock.severity] || severityTone.WARNING}`}>
-                      {severityLabel[lock.severity] || lock.severity}
-                    </span>
-                  </td>
-                  <td className="px-5 py-4 align-top">
-                    <p className="text-sm font-medium text-gray-900">{lock.reason}</p>
-                    <p className="mt-1 text-xs text-gray-500">{lock.medication}</p>
-                  </td>
-                  <td className="px-5 py-4 align-top text-sm text-gray-700">
-                    {lock.clearanceDate}
-                  </td>
-                </tr>
-              ))}
-
-              {!isLoading && !error && safetyRows.length === 0 && (
-                <tr>
-                  <td colSpan={5} className="px-5 py-12 text-center">
-                    <ShieldCheck className="mx-auto mb-3 text-brand" size={44} />
-                    <p className="text-base font-semibold text-gray-900">No records match the current filters</p>
-                    <p className="mt-1 text-sm text-gray-600">Try clearing the filters to see all milk safety alerts.</p>
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
-        <div className="space-y-3 p-3 md:hidden">
-          {isLoading ? Array.from({ length: 3 }).map((_, index) => <Skeleton key={index} className="h-32 w-full" />)
-            : error ? <p className="p-5 text-center text-sm text-brand">Could not load the safety list. Check your connection and retry.</p>
-              : safetyRows.length === 0 ? <p className="p-6 text-center text-sm text-ink-muted">No records match the current filters.</p>
-                : safetyRows.map((lock) => (
-                  <article key={lock.id} onClick={() => setSelectedLock(lock)} className="min-w-0 rounded-xl border border-ink/10 bg-surface p-4">
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="min-w-0"><h3 className="truncate text-sm font-bold text-ink">{formatCowIdentity(lock)}</h3><p className="mt-1 text-xs text-ink-muted">Section: {lock.section}</p></div>
-                      <span className={`shrink-0 rounded-full px-2 py-1 text-[10px] font-semibold ${severityTone[lock.severity] || severityTone.WARNING}`}>{severityLabel[lock.severity] || lock.severity}</span>
-                    </div>
-                    <div className="mt-3 grid grid-cols-2 gap-3 rounded-lg bg-surface-raised p-3 text-xs">
-                      <div><p className="text-ink-muted">Tag</p><Link to={`/operations/animal/${lock.cowRecordId}`} onClick={(event) => event.stopPropagation()} className="mt-1 block font-semibold text-brand">{lock.cowTag || 'Unavailable'}</Link></div>
-                      <div><p className="text-ink-muted">Clearance date</p><p className="mt-1 font-semibold text-ink">{lock.clearanceDate}</p></div>
-                      <div className="col-span-2"><p className="text-ink-muted">Treatment</p><p className="mt-1 font-semibold text-ink">{lock.reason} · {lock.medication}</p></div>
-                    </div>
-                    <button type="button" onClick={() => setSelectedLock(lock)} className="mt-3 w-full rounded-lg border border-brand/20 py-2 text-xs font-semibold text-brand">Open safety record</button>
-                  </article>
-                ))}
-        </div>
-      </section>
-
-          <Modal isOpen={!!selectedLock} onClose={() => setSelectedLock(null)} title="Milk Safety Details">
-            {selectedLock && (
-              <div className="space-y-6">
-                <div className="rounded-md border border-gray-200 bg-gray-50 p-4 sm:p-5">
-                  <div className="mb-3 flex items-center gap-3 text-slate-700">
-                    <ShieldAlert size={18} />
-                    <p className="text-xs font-bold uppercase tracking-wider">Safety Summary</p>
-                  </div>
-                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-                    <div>
-                      <p className="mb-1 text-[10px] font-bold uppercase tracking-wider text-gray-500">Cow</p>
-                      <p className="text-sm font-semibold text-gray-900">{formatCowIdentity(selectedLock)}</p>
-                    </div>
-                    <div>
-                      <p className="mb-1 text-[10px] font-bold uppercase tracking-wider text-gray-500">Tag</p>
-                      <p className="text-sm text-gray-900">{selectedLock.cowTag || 'Unavailable'}</p>
-                    </div>
-                    <div>
-                      <p className="mb-1 text-[10px] font-bold uppercase tracking-wider text-gray-500">Severity</p>
-                      <p className="text-sm text-gray-900">{selectedLock.severity}</p>
-                    </div>
-                    <div>
-                      <p className="mb-1 text-[10px] font-bold uppercase tracking-wider text-gray-500">Expires</p>
-                      <p className="text-sm text-gray-900">{new Date(selectedLock.lockExpires).toLocaleDateString()}</p>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                  <div className="rounded-md border border-gray-200 bg-white p-4">
-                    <p className="mb-1 text-[10px] font-bold uppercase tracking-wider text-gray-500">Reason</p>
-                    <p className="text-sm leading-6 text-gray-900">{selectedLock.reason}</p>
-                  </div>
-                  <div className="rounded-md border border-gray-200 bg-white p-4">
-                    <p className="mb-1 text-[10px] font-bold uppercase tracking-wider text-gray-500">Medication</p>
-                    <p className="text-sm leading-6 text-gray-900">{selectedLock.medication}</p>
-                  </div>
-                  <div className="rounded-md border border-gray-200 bg-white p-4 sm:col-span-2">
-                    <p className="mb-1 text-[10px] font-bold uppercase tracking-wider text-gray-500">Notes</p>
-                    <p className="text-sm leading-6 text-gray-900">{selectedLock.notes}</p>
-                  </div>
-                </div>
-
-                <div className="flex justify-end gap-3 border-t border-gray-200 pt-4">
-                  <button onClick={() => setSelectedLock(null)} className="btn-command inline-flex items-center gap-2 bg-gray-900 text-white">
-                    <X size={16} /> Close
-                  </button>
-                </div>
-              </div>
-            )}
-          </Modal>
+          {total > 0 && visible.length === 0 && (
+            <p className="text-body text-ink-muted">
+              {copy.noMatches}{' '}
+              <button type="button" onClick={filters.reset} className="text-control text-brand hover:underline">{copy.clearFilters}</button>
+            </p>
+          )}
+        </>
+      )}
     </div>
   );
 }

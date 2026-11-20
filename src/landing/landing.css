@@ -7,19 +7,30 @@
 @tailwind utilities;
 
 html {
-  scroll-behavior: smooth;
-  scroll-padding-top: 5rem;
+  scroll-padding-top: 1rem;
 }
 
 body {
-  background: var(--canvas-warm);
-  color: var(--ink);
-  font-family: var(--sans);
+  margin: 0;
+  background: #FFFFFF;
+  color: theme('colors.ink.900');
+  font-family: theme('fontFamily.sans');
   -webkit-font-smoothing: antialiased;
 }
 
 summary::-webkit-details-marker {
   display: none;
+}
+
+/* Visible focus on every link and button: brand blue on light sections, white on dark ones. */
+:focus-visible {
+  outline: 2px solid theme('colors.brand.DEFAULT');
+  outline-offset: 3px;
+  border-radius: 4px;
+}
+
+.scheme-dark :focus-visible {
+  outline-color: #FFFFFF;
 }
 
 /* Showcase tabs: without JavaScript every panel is shown and the tab bar is hidden. */
@@ -31,12 +42,46 @@ html.js [data-showcase-panel]:not([data-active]) {
   display: none;
 }
 
-@media (prefers-reduced-motion: reduce) {
-  html {
-    scroll-behavior: auto;
-  }
+/* Motion runs only when the visitor has not asked for less. */
+@keyframes landing-rise {
+  from { opacity: 0; transform: translateY(28px); }
+  to { opacity: 1; transform: none; }
+}
 
-  .card-machined {
-    animation: none;
+@keyframes landing-zoom {
+  from { transform: scale(1); }
+  to { transform: scale(1.08); }
+}
+
+@keyframes landing-float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-12px); }
+}
+
+@keyframes landing-tilt {
+  from { transform: rotateX(22deg) scale(0.9); opacity: 0.6; }
+  to { transform: none; opacity: 1; }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  html { scroll-behavior: smooth; }
+
+  .landing-zoom { animation: landing-zoom 18s ease-out both; }
+  .landing-rise { animation: landing-rise 0.9s ease-out both; }
+  .landing-float { animation: landing-float 5s ease-in-out infinite; }
+
+  /* Progressive enhancement: browsers without scroll-driven animations show the dashboard flat. */
+  @supports (animation-timeline: view()) {
+    .landing-tilt {
+      animation: landing-tilt linear both;
+      animation-timeline: view();
+      animation-range: entry 0% cover 40%;
+    }
   }
+}
+
+/* "Try the live demo" while the app opens (set by startDemo in landing.js). */
+[data-action][aria-busy="true"] {
+  cursor: progress;
+  opacity: 0.7;
 }

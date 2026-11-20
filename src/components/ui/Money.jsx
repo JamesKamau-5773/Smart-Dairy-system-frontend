@@ -1,4 +1,6 @@
+/* eslint-disable react-refresh/only-export-components */
 import { useState } from 'react';
+import { cn } from '../../lib/utils';
 
 /* ─── Currency metadata ─────────────────────────────────────────────────── */
 const CURRENCY_META = {
@@ -36,6 +38,13 @@ function formatValue(amount, currency) {
   }).format(amount);
 }
 
+/** Plain-text money for aria-labels and titles, e.g. "−KES 800.00". */
+export function formatMoneyText(amount, currency = 'KES') {
+  if (amount == null || isNaN(amount)) return '—';
+  const meta = CURRENCY_META[currency] ?? { ...DEFAULT_META, symbol: currency };
+  return `${amount < 0 ? '−' : ''}${meta.symbol || currency} ${formatValue(Math.abs(amount), currency)}`;
+}
+
 /* ─── Component ──────────────────────────────────────────────────────────── */
 /**
  * Money
@@ -44,11 +53,20 @@ function formatValue(amount, currency) {
  *  amount        number | null | undefined  — value to display
  *  currency      string                     — ISO-4217 code (default 'KES')
  *  showSign      boolean                    — always show +/- sign
- *  colored       boolean                    — green/red for positive/negative
+ *  tone          'net'                      — signed figure: money-positive / money-negative
+ *                                              token, true minus (U+2212), no plus sign
+ *                'signed'                   — as 'net', but only negatives are coloured
+ *  showCurrency  boolean                    — show the currency symbol (default true); hide it
+ *                                              where a column header already names the unit
+ *  colored       boolean                    — legacy alias of tone="net"
  *  animate       boolean                    — bounce animation on value change
  *  compact       boolean                    — abbreviate large numbers (1.2M, 45K)
  *  blurred       boolean                    — privacy mask (toggle with click)
- *  size          'xs'|'sm'|'md'|'lg'|'xl'  — preset text size
+ *  cents         'muted' | 'plain'          — 'muted' (default) fades the decimals; 'plain'
+ *                                              shows them like the whole number (same colour)
+ *  size          'body'|'stat-value'        — type role (default 'body'); the symbol and
+ *                                              decimals share it. Pass text-body-strong in
+ *                                              className for a bold body figure.
  *  className     string
  */
 export default function Money({
@@ -56,10 +74,13 @@ export default function Money({
   currency  = 'KES',
   showSign  = false,
   colored   = false,
+  tone      = null,
+  showCurrency = true,
   animate   = false,
   compact   = false,
   blurred   = false,
-  size      = 'md',
+  size      = 'body',
+  cents     = 'muted',
   className = '',
 }) {
   const [hidden, setHidden] = useState(blurred);
@@ -85,72 +106,73 @@ export default function Money({
   const formatted  = compactFormatted ?? formatValue(absAmount, currency);
   const { integer, decimal } = formatted ? splitAmount(formatted) : { integer: '—', decimal: '' };
 
-  /* ── Size scale ─────────────────────────────────────────────────────── */
-  const sizes = {
-    xs: { wrap: 'text-xs',  symbol: 'text-[9px]',  decimal: 'text-[10px]' },
-    sm: { wrap: 'text-sm',  symbol: 'text-[10px]', decimal: 'text-xs'     },
-    md: { wrap: 'text-sm',  symbol: 'text-xs',     decimal: 'text-sm'     },
-    lg: { wrap: 'text-xl',  symbol: 'text-sm',     decimal: 'text-base'   },
-    xl: { wrap: 'text-3xl', symbol: 'text-base',   decimal: 'text-xl'     },
-  };
-  const sz = sizes[size] ?? sizes.md;
+  /* ── Type role ──────────────────────────────────────────────────────── */
+  // The older preset names (xs–xl) still map onto the two roles until every caller moves.
+  const role = size === 'stat-value' || size === 'lg' || size === 'xl' ? 'text-stat-value' : 'text-body';
 
   /* ── Color classes ──────────────────────────────────────────────────── */
-  const colorClass = !colored || !isValid
+  // The sign is always shown with the colour, so colour is never the only signal.
+  const isSigned = tone === 'signed';
+  const isNet = tone === 'net' || colored || isSigned;
+  const colorClass = !isNet || !isValid
     ? ''
-    : isNeg ? 'text-brand-dark'
-    : isPos ? 'text-brand'
-    : 'text-inherit';
+    : isNeg ? 'text-money-negative'
+    : isPos && !isSigned ? 'text-money-positive'
+    : '';
 
   /* ── Sign prefix ────────────────────────────────────────────────────── */
-  const sign = !isValid ? '' : isNeg ? '−' : showSign ? '+' : '';
+  // A true minus (U+2212) directly before the currency; a net figure never gets a plus.
+  const sign = !isValid ? '' : isNeg ? '−' : showSign && !isNet ? '+' : '';
 
   /* ── Blur / privacy mask ────────────────────────────────────────────── */
   const privacyClass = hidden ? 'blur-sm select-none pointer-events-none' : '';
 
   return (
     <span
-      title={hidden ? 'Click to reveal' : `${currency} ${amount}`}
+      title={hidden ? 'Click to reveal' : formatMoneyText(amount, currency)}
       onClick={blurred ? () => setHidden(h => !h) : undefined}
-      className={[
-        'inline-flex items-baseline gap-0.5 font-mono tabular-nums',
+      className={cn(
+        'inline-flex items-baseline gap-0.5 tabular-nums',
         'transition-all duration-200',
-        sz.wrap,
+        role,
         colorClass,
-        blurred ? 'cursor-pointer' : '',
-        animate ? 'transition-colors' : '',
+        blurred && 'cursor-pointer',
+        animate && 'transition-colors',
         className,
-      ].filter(Boolean).join(' ')}
+      )}
     >
       {/* Sign */}
       {sign && (
-        <span className={`${sz.symbol} font-semibold leading-none self-center`} aria-hidden="true">
-          {sign}
+        <span className="-mr-0.5">
+          <span aria-hidden="true">{sign}</span>
+          <span className="sr-only">{isNeg ? 'minus ' : 'plus '}</span>
         </span>
       )}
 
       {/* Currency symbol */}
-      <span
-        className={`${sz.symbol} font-semibold opacity-70 leading-none self-center mr-0.5`}
-        aria-label={currency}
-      >
-        {meta.symbol || currency}
-      </span>
+      {showCurrency && (
+        <span
+          className="mr-0.5 opacity-70"
+          aria-label={currency}
+        >
+          {meta.symbol || currency}
+        </span>
+      )}
 
       {/* Amount — blurred content */}
       <span className={privacyClass}>
         {/* Integer part */}
         <span>{integer}</span>
 
-        {/* Decimal part — visually de-emphasised */}
+        {/* Decimal part: same size; faded unless `cents="plain"` */}
         {decimal && (
-          <span className={`${sz.decimal} opacity-60`}>{decimal}</span>
+          <span className={cents === 'plain' ? undefined : 'opacity-60'}>{decimal}</span>
         )}
       </span>
 
       {/* Compact suffix */}
       {compact && compactFormatted && (
-        <span className={`${sz.symbol} opacity-60 ml-0.5`} aria-hidden="true" />
+        <span className="ml-0.5 opacity-60" aria-hidden="true" />
       )}
     </span>
   );

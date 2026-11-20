@@ -3,6 +3,8 @@ import {
   normalizeCowIdentity,
   resolveCowIdentityFromHerd,
 } from './cowIdentity';
+import { toLocalIsoDate } from './localDate';
+import { reportError } from './telemetry';
 
 /**
  * Takes a raw form data object for a breeding log entry and transforms it
@@ -14,7 +16,7 @@ import {
  */
 export function normalizeBreedingLogPayload(formData) {
   if (!formData) {
-    console.error('normalizeBreedingLogPayload received null or undefined formData');
+    reportError(new Error('normalizeBreedingLogPayload received no form data'), { where: 'breedingUtils.normalize' });
     return null;
   }
 
@@ -43,7 +45,7 @@ export function normalizeBreedingLogPayload(formData) {
   };
 
   if (!payload.cow_id || !payload.insemination_date) {
-    console.error('Breeding log payload is missing required fields (cow_id, insemination_date).', payload);
+    reportError(new Error('Breeding log payload is missing cow_id or insemination_date'), { where: 'breedingUtils.normalize' });
     return null;
   }
 
@@ -146,7 +148,14 @@ export function normalizeBreedingLog(log = {}) {
     daysPostAI,
     status,
     notes: log.note ?? log.notes ?? '',
+    // When the backend last changed the record. TODO(BR-025): confirm `updated_at` is sent.
+    updatedAt: log.updatedAt ?? log.updated_at ?? null,
   };
+}
+
+/** "Malaika · KE-0046": how a breeding record names its cow. */
+export function formatBreedingCowLabel(log = {}) {
+  return formatCowIdentity({ cowName: log.cowName, cowTag: log.cowTag });
 }
 
 export function filterBreedingHistory(history, filter = 'All', searchTerm = '') {
@@ -157,7 +166,8 @@ export function filterBreedingHistory(history, filter = 'All', searchTerm = '') 
     .filter((entry) => !normalizedSearch || [entry.cowName, entry.cowTag, entry.cowId]
       .some((value) => String(value ?? '').toLowerCase().includes(normalizedSearch)))
     .slice()
-    .sort((left, right) => new Date(right.updatedAt) - new Date(left.updatedAt));
+    // Newest AI service first (YYYY-MM-DD compares as text); records without an AI date last.
+    .sort((left, right) => String(right.aiDate ?? '').localeCompare(String(left.aiDate ?? '')));
 }
 
 export function normalizeHerdOption(cow = {}) {
@@ -195,9 +205,7 @@ export function normalizeDateForApi(rawDate = '') {
     return input;
   }
 
-  const parsed = new Date(input);
-  if (Number.isNaN(parsed.getTime())) return '';
-  return parsed.toISOString().slice(0, 10);
+  return toLocalIsoDate(input) ?? '';
 }
 
 export function normalizeSemenCode(rawCode = '') {

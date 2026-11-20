@@ -1,14 +1,11 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import { readStoredTheme, THEME_KEY } from '../lib/themePreference';
 
 const ThemeContext = createContext(null);
 
 function getInitialTheme() {
   if (typeof window === 'undefined') return 'light';
-  const storedTheme = window.localStorage.getItem('color-theme');
-  if (storedTheme) {
-    return storedTheme;
-  }
-  return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+  return readStoredTheme();
 }
 
 export function ThemeProvider({ children }) {
@@ -21,7 +18,7 @@ export function ThemeProvider({ children }) {
   useEffect(() => {
     document.documentElement.dataset.theme = theme;
     try {
-      localStorage.setItem('color-theme', theme);
+      localStorage.setItem(THEME_KEY, theme);
     } catch (e) {
       console.warn('Could not save theme to localStorage', e);
     }

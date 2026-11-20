@@ -1,4 +1,3 @@
-import React from 'react';
 import { render, screen } from '@testing-library/react';
 import { waitFor } from '@testing-library/react';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
@@ -26,6 +25,11 @@ vi.mock('../../../lib/backendApi', async (importOriginal) => {
 
   return {
     ...actual,
+    // AuthProvider verifies the saved session in the background; keep that off the network.
+    authApi: {
+      ...actual.authApi,
+      me: vi.fn().mockRejectedValue(new Error('No server in unit tests')),
+    },
     safetyApi: {
       ...actual.safetyApi,
       activeHardlocks: vi.fn().mockResolvedValue([]),

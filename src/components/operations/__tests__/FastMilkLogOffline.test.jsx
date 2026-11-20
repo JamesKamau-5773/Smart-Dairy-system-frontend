@@ -55,3 +55,32 @@ describe('FastMilkLog when the save is queued offline', () => {
     expect(onSaveSuccess).not.toHaveBeenCalled();
   });
 });
+
+describe('FastMilkLog drafts', () => {
+  it('restores what was typed after the app closed, and Start over clears it', async () => {
+    localStorage.clear();
+    sessionStorage.setItem('jivu_user', JSON.stringify({ id: 7, farm_id: 'farm_1', token: 't' }));
+    const renderForm = () => render(
+      <QueryClientProvider client={queryClient}>
+        <MemoryRouter><FastMilkLog /></MemoryRouter>
+      </QueryClientProvider>,
+    );
+
+    const first = renderForm();
+    const cowSelect = await screen.findByRole('combobox');
+    await waitFor(() => expect(screen.getAllByRole('option').length).toBeGreaterThan(1));
+    fireEvent.change(cowSelect, { target: { value: '57' } });
+    fireEvent.change(screen.getByPlaceholderText('0.0'), { target: { value: '8.5' } });
+    await new Promise((resolve) => { setTimeout(resolve, 400); });
+    first.unmount();
+
+    renderForm();
+    expect(await screen.findByText('Restored what you were typing before the app closed.')).toBeTruthy();
+    expect(screen.getByPlaceholderText('0.0').value).toBe('8.5');
+
+    fireEvent.click(screen.getByRole('button', { name: 'Start over' }));
+    expect(screen.getByPlaceholderText('0.0').value).toBe('');
+    expect(screen.queryByText(/Restored what you were typing/)).toBeNull();
+    sessionStorage.clear();
+  });
+});

@@ -13,9 +13,11 @@ describe('AddEmployeeModal', () => {
     render(<AddEmployeeModal isOpen onClose={vi.fn()} onSave={vi.fn()} />, { container: host });
 
     const dialog = screen.getByRole('dialog', { name: 'Add employee' });
-    expect(dialog.parentElement).toBe(document.body);
-    expect(dialog.className).toContain('fixed');
-    expect(dialog.className).toContain('inset-0');
+    // BaseModal: the dialog sits in a full-screen overlay portalled to <body>.
+    const overlay = dialog.parentElement;
+    expect(overlay.parentElement).toBe(document.body);
+    expect(overlay.className).toContain('fixed');
+    expect(overlay.className).toContain('inset-0');
 
     expect(screen.getByLabelText(/full name/i)).toBeTruthy();
     expect(screen.getByLabelText(/job role/i)).toBeTruthy();

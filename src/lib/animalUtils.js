@@ -5,6 +5,7 @@
 import { formatDateTime } from './audit';
 import { resolveBackendAssetUrl } from './apiClient';
 import { formatCowIdentity, normalizeCowIdentity } from './cowIdentity';
+import { readAgeMonths } from './herdUtils';
 
 export function getAvatarLabel(animal) {
   const nameInitial = animal?.name?.trim()?.charAt(0)?.toUpperCase();
@@ -55,8 +56,9 @@ export function normalizeTimelineEvent(entry = {}, animalId = '') {
     cowId: entry.cow_id ?? entry.cowId ?? animalId,
     tenantId: entry.tenant_id ?? entry.tenantId ?? null,
     type: displayType,
-    title: entry.title ?? `${displayType} event`,
-    description: entry.description ?? 'No additional details provided.',
+    // Left empty when missing; the timeline shows a fallback in the chosen language.
+    title: entry.title ?? null,
+    description: entry.description ?? null,
     date: formatDateTime(entry.event_date ?? entry.created_at ?? entry.createdAt ?? new Date().toISOString()),
     rawDate: entry.event_date ?? entry.created_at ?? entry.createdAt ?? null,
     eventData: entry.event_data ?? entry.eventData ?? null,
@@ -89,7 +91,7 @@ function formatParentReference(parent, fallbackName, fallbackId) {
 
 export function normalizeAnimal(animal = {}, id = '') {
   const identity = normalizeCowIdentity({ ...animal, id: animal.id ?? animal.cow_id ?? id });
-  const ageMonths = Number(animal.ageMonths ?? animal.age_months ?? 0);
+  const ageMonths = readAgeMonths(animal);
   const yesterdayYieldLiters = Number(
     animal.yesterdayYieldLiters ?? animal.yesterday_yield_liters ?? 0
   );

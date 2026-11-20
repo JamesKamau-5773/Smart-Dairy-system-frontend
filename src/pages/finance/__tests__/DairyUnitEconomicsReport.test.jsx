@@ -5,6 +5,10 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import DairyUnitEconomicsReport from '../DairyUnitEconomicsReport';
 import { reportsApi } from '../../../lib/backendApi';
 
+vi.mock('../../../hooks/useTenant', () => ({
+  useTenant: () => ({ tenantId: 't1', farmId: 'f1' }),
+}));
+
 vi.mock('../../../lib/backendApi', () => ({
   reportsApi: {
     getDairyUnitEconomics: vi.fn(),
@@ -72,10 +76,10 @@ describe('DairyUnitEconomicsReport', () => {
       expect(screen.getByText('Customer Value & Profit')).toBeTruthy();
       expect(screen.getByText(/You gained/).textContent).toContain('You gained 3 new customers this period!');
       expect(screen.getByText(/KES 1,200/i)).toBeTruthy();
-      expect(screen.getByText('Total Profit per Customer')).toBeTruthy();
-      expect(screen.getByRole('button', { name: 'About Cost to Get a Customer' })).toBeTruthy();
-      expect(screen.getByRole('button', { name: 'About Total Profit per Customer' })).toBeTruthy();
-      expect(screen.getByRole('button', { name: 'About Profit vs. Cost Ratio' })).toBeTruthy();
+      expect(screen.getByText('Total profit per customer')).toBeTruthy();
+      expect(screen.getByRole('button', { name: 'About Cost to get a customer' })).toBeTruthy();
+      expect(screen.getByRole('button', { name: 'About Total profit per customer' })).toBeTruthy();
+      expect(screen.getByRole('button', { name: 'About Profit vs. cost ratio' })).toBeTruthy();
       expect(screen.getByText(/KES 2,400/i)).toBeTruthy();
       expect(screen.getByText('11')).toBeTruthy();
       expect(screen.getAllByText(/KES 13,200/i)).toHaveLength(2);

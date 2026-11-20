@@ -159,9 +159,15 @@ export const hasPermission = (user, permission) => {
   return getPermissionSet(user).includes(expected);
 };
 
+// A broader page key that also grants narrower ones (backend page access rules).
+// `feed` (planning, costs, recipes) includes `feeding` (daily feeding only).
+const PAGE_ACCESS_INCLUDES = Object.freeze({
+  feed: ['feeding'],
+});
+
 export const hasPageAccess = (user, pageKey) => {
   if (!Array.isArray(user?.page_access)) return true;
-  return user.page_access.includes(pageKey);
+  return user.page_access.some((granted) => granted === pageKey || PAGE_ACCESS_INCLUDES[granted]?.includes(pageKey));
 };
 
 // Command Center policy matrix (kept close to the guard for easy maintenance):

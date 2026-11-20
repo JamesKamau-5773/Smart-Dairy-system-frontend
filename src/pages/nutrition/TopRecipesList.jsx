@@ -1,16 +1,33 @@
 import React, { useState } from 'react';
-import { Trophy, ChevronDown, ChevronUp, ArrowRight, Info } from 'lucide-react';
+import { ChevronDown, ChevronUp } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { formatCostPerLitre, readFeedCostPerLitre } from '../../lib/feedCost';
+import { formatLitres } from '../../lib/numberFormat';
+import { hasRowsToShow } from '../../lib/listLoadState';
+import { CardSkeletons, ListLoadNotices } from '../../components/ui/ListLoadState';
+import { feedCopy } from '../../i18n/feed';
+
+const copy = feedCopy.recipes;
+
+// Values the backend didn't send show as "—", never as 0.
+const yieldOf = (recipe) => recipe?.performance?.avgDailyYieldLiters ?? recipe?.performance?.avg_daily_yield_liters ?? recipe?.yieldAvg ?? null;
+const shareOf = (ingredient) => {
+  const value = ingredient?.percentage ?? ingredient?.inclusion_percentage ?? ingredient?.inclusionPercentage;
+  return value === null || value === undefined || value === '' ? '—' : `${Number(value)}%`;
+};
+const proteinOf = (recipe) => {
+  const value = recipe?.target_protein_percentage ?? recipe?.protein;
+  return value === null || value === undefined || value === '' ? '—' : `${value}%`;
+};
 
 /**
  * SRP: Handles ONLY the friendly empty state for the farmer.
  */
 const EmptyMixState = () => (
   <div className="flex flex-col items-center justify-center p-8 text-center">
-    <Info className="mb-3 h-8 w-8 text-slate-500" />
-    <h4 className="mb-1 font-semibold text-slate-900">No feed records found</h4>
-    <p className="max-w-sm text-sm text-slate-600">
-      Once you log your daily feed and milk yields, your top performing mixes will appear here.
+    <h3 className="mb-1 text-section-title text-ink">{copy.emptyTitle}</h3>
+    <p className="max-w-sm text-body text-ink-muted">
+      {copy.emptyText}
     </p>
   </div>
 );
@@ -23,63 +40,62 @@ const FeedMixRow = ({ recipe, index, isExpanded, onToggle, onLoadToLab }) => {
   if (!recipe) return null;
   
   const recipeId = recipe?.id;
-  const name = recipe?.name || 'Unnamed Mix';
+  const name = recipe?.name || copy.unnamed;
   // Backend now returns a `performance` object; fall back to legacy flat fields.
   const perf = recipe?.performance ?? {};
-  const yieldAvg = Number(perf.avgDailyYieldLiters ?? perf.avg_daily_yield_liters ?? recipe?.yieldAvg ?? 0);
-  const costPerLiter = Number(perf.costPerLiter ?? perf.cost_per_liter ?? recipe?.costPerLiter ?? 0);
+  const yieldAvg = yieldOf(recipe);
+  const costPerLiter = readFeedCostPerLitre(perf) ?? readFeedCostPerLitre(recipe);
   // Safely check for either 'ingredients' or 'formula' depending on the payload shape
   const ingredientsList = Array.isArray(recipe?.ingredients) 
     ? recipe.ingredients 
     : (Array.isArray(recipe?.formula) ? recipe.formula : []);
     
   // The recipes API returns `target_protein_percentage`; fall back to `protein`.
-  const protein = recipe?.target_protein_percentage ?? recipe?.protein ?? '--';
-  const lastUsed = perf.lastFedOn ?? perf.last_fed_on ?? recipe?.lastUsed ?? 'Not recorded';
+  const protein = proteinOf(recipe);
+  const lastUsed = perf.lastFedOn ?? perf.last_fed_on ?? recipe?.lastUsed ?? copy.notRecorded;
 
   return (
     <React.Fragment>
-      <tr className="border-b border-slate-300 hover:bg-slate-50">
-        <td className="w-20 px-4 py-3 font-mono text-sm font-bold tabular-nums tracking-tight text-slate-700">{index + 1}</td>
+      <tr className="border-b border-ink/10 hover:bg-brand-50">
+        <td className="w-20 px-4 py-3 text-body-strong tabular-nums text-ink-muted">{index + 1}</td>
         <td className="min-w-[280px] px-4 py-3">
           <button
             type="button"
             onClick={() => onToggle(recipeId)}
-            className="flex w-full items-center justify-between gap-4 text-left font-bold text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900"
+            className="flex w-full items-center justify-between gap-4 text-left text-control text-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-brand"
             aria-expanded={isExpanded}
           >
             <span>{name}</span>
-            {isExpanded ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
+            {isExpanded ? <ChevronUp size={18} aria-hidden="true" /> : <ChevronDown size={18} aria-hidden="true" />}
           </button>
         </td>
-        <td className="min-w-[180px] px-4 py-3 font-mono text-sm font-bold tabular-nums tracking-tight text-slate-900">{yieldAvg.toFixed(1)} L</td>
-        <td className="min-w-[180px] px-4 py-3 font-mono text-sm font-bold tabular-nums tracking-tight text-slate-900">KES {costPerLiter.toFixed(2)} / L</td>
+        <td className="min-w-[180px] px-4 py-3 text-body-strong tabular-nums text-ink">{formatLitres(yieldAvg)}</td>
+        <td className="min-w-[180px] px-4 py-3 text-body-strong tabular-nums text-ink">{formatCostPerLitre(costPerLiter)}</td>
       </tr>
       {isExpanded && (
-        <tr className="border-b border-slate-300 bg-slate-50">
+        <tr className="border-b border-ink/10 bg-ink-50">
           <td colSpan={4} className="px-4 py-5">
           <div className="flex flex-col gap-6 sm:flex-row sm:gap-12">
             
             {/* Left: Ingredient List */}
             <div className="flex-1">
-              <p className="mb-3 text-xs font-bold uppercase tracking-wider text-slate-500">
-                Formula Breakdown
+              <p className="mb-3 text-label text-ink-muted">
+                {copy.breakdown}
               </p>
               <div className="space-y-2">
                 {ingredientsList.length > 0 ? (
                   ingredientsList.map((ing, idx) => {
-                    const ingName = ing?.name ?? ing?.ingredient_name ?? ing?.ingredientName ?? 'Unknown Ingredient';
-                    const ingPct = Number(ing?.percentage ?? ing?.inclusion_percentage ?? ing?.inclusionPercentage ?? 0);
+                    const ingName = ing?.name ?? ing?.ingredient_name ?? ing?.ingredientName ?? copy.unknownIngredient;
                     return (
-                      <div key={idx} className="flex items-center text-sm">
-                        <span className="flex-1 text-slate-900">{ingName}</span>
-                        <div className="mx-3 flex-1 border-b border-dotted border-slate-400"></div>
-                        <span className="font-mono font-bold tabular-nums tracking-tight text-slate-900">{ingPct}%</span>
+                      <div key={idx} className="flex items-center text-body">
+                        <span className="flex-1 text-ink">{ingName}</span>
+                        <div className="mx-3 flex-1 border-b border-dotted border-ink/20"></div>
+                        <span className="text-body-strong tabular-nums text-ink">{shareOf(ing)}</span>
                       </div>
                     );
                   })
                 ) : (
-                  <p className="text-xs italic text-slate-600">No formula data available for this mix.</p>
+                  <p className="text-meta text-ink-muted">{copy.noFormula}</p>
                 )}
               </div>
             </div>
@@ -88,12 +104,12 @@ const FeedMixRow = ({ recipe, index, isExpanded, onToggle, onLoadToLab }) => {
             <div className="sm:w-48 shrink-0 flex flex-col justify-between">
               <div className="flex gap-6 mb-4 sm:mb-0">
                 <div>
-                  <p className="mb-1 text-xs font-bold uppercase tracking-wider text-slate-500">Protein</p>
-                  <p className="font-mono text-sm font-bold tabular-nums tracking-tight text-slate-900">{protein}%</p>
+                  <p className="mb-1 text-label text-ink-muted">{copy.protein}</p>
+                  <p className="text-body-strong tabular-nums text-ink">{protein}</p>
                 </div>
                 <div>
-                  <p className="mb-1 text-xs font-bold uppercase tracking-wider text-slate-500">Last Fed</p>
-                  <p className="text-sm font-bold text-slate-900">{lastUsed}</p>
+                  <p className="mb-1 text-label text-ink-muted">{copy.lastFed}</p>
+                  <p className="text-body-strong text-ink">{lastUsed}</p>
                 </div>
               </div>
 
@@ -101,10 +117,9 @@ const FeedMixRow = ({ recipe, index, isExpanded, onToggle, onLoadToLab }) => {
                 type="button"
                 // Pass the ENTIRE recipe object up to the handler
                 onClick={(e) => onLoadToLab(e, recipe)}
-                className="group mt-2 flex w-fit items-center gap-1.5 text-sm font-bold text-slate-900 underline transition-colors hover:text-brand"
+                className="group mt-2 flex w-fit items-center text-control text-ink underline transition-colors hover:text-brand"
               >
-                Load into Lab 
-                <ArrowRight size={14} className="group-hover:translate-x-1 transition-transform" />
+                {copy.loadIntoLab}
               </button>
             </div>
           </div>
@@ -138,8 +153,9 @@ const getRecency = (recipe) => {
 // `recipe.performance`; prefer the higher-performing version of a formula, then
 // rank the list by yield so the best mix actually surfaces first.
 const getYield = (r) => Number(r?.performance?.avgDailyYieldLiters ?? r?.performance?.avg_daily_yield_liters ?? r?.yieldAvg ?? 0);
-const getCost = (r) => Number(r?.performance?.costPerLiter ?? r?.performance?.cost_per_liter ?? r?.costPerLiter ?? Infinity);
+const getCost = (r) => readFeedCostPerLitre(r?.performance) ?? readFeedCostPerLitre(r) ?? Infinity;
 
+// TODO(BR-004): ranking "best" mixes is the backend's call; replace this with its ranked list.
 function selectTopMixes(recipes) {
   const bestByFormula = new Map();
   for (const recipe of recipes) {
@@ -168,7 +184,15 @@ function selectTopMixes(recipes) {
     .slice(0, MAX_MIXES_SHOWN);
 }
 
-export default function TopRecipesList({ recipes }) {
+/**
+ * @param {object} props
+ * @param {Array<object>} props.recipes The backend's saved recipes.
+ * @param {'loading'|'offline'|'error'|'stale'|'ready'} [props.state] Load state of the recipes
+ *   (`getListLoadState`); the empty state only shows once they have loaded.
+ * @param {unknown} [props.error]
+ * @param {() => void} [props.onRetry]
+ */
+export default function TopRecipesList({ recipes, state = 'ready', error, onRetry }) {
   const [expandedId, setExpandedId] = useState(null);
   const navigate = useNavigate();
 
@@ -194,28 +218,29 @@ export default function TopRecipesList({ recipes }) {
   };
 
   return (
-    <div className="mt-8 border border-slate-300 bg-white p-6 md:p-8">
-      <div className="flex items-center gap-2 mb-2">
-        <Trophy size={18} className="text-slate-900" />
-        <h3 className="text-xs font-bold uppercase tracking-wider text-slate-500">
-          Best Performing Feed Mixes
-        </h3>
+    <div className="card-machined p-5 sm:p-6 md:p-8">
+      <div className="mb-2">
+        <h2 className="text-section-title text-ink-muted">
+          {copy.title}
+        </h2>
       </div>
-      <p className="mb-6 text-sm font-medium text-slate-600">
-        The feed mixes giving you the most milk for the least amount of money.
+      <p className="mb-6 text-body text-ink-muted">
+        {copy.subtitle}
       </p>
 
-      <div className="border border-slate-300">
-        {safeRecipes.length === 0 ? (
+      <div className="border border-ink/10">
+        <ListLoadNotices state={state} label={copy.listLabel} error={error} onRetry={onRetry} />
+        {state === 'loading' && <div className="divide-y divide-ink/10" aria-busy="true"><CardSkeletons rows={3} /></div>}
+        {!hasRowsToShow(state) ? null : safeRecipes.length === 0 ? (
           <EmptyMixState />
         ) : (
           <table className="hidden min-w-[760px] w-full border-collapse text-left md:table">
-            <thead className="bg-slate-100">
-              <tr className="border-b border-slate-300">
-                <th scope="col" className="w-20 px-4 py-3 text-xs font-bold uppercase tracking-wider text-slate-500">Rank</th>
-                <th scope="col" className="min-w-[280px] px-4 py-3 text-xs font-bold uppercase tracking-wider text-slate-500">Mix Name</th>
-                <th scope="col" className="min-w-[180px] px-4 py-3 text-xs font-bold uppercase tracking-wider text-slate-500">Daily Milk Average</th>
-                <th scope="col" className="min-w-[180px] px-4 py-3 text-xs font-bold uppercase tracking-wider text-slate-500">Cost per Liter</th>
+            <thead className="bg-ink-100">
+              <tr className="border-b border-ink/10">
+                <th scope="col" className="w-20 px-4 py-3 text-label text-ink-muted">{copy.rank}</th>
+                <th scope="col" className="min-w-[280px] px-4 py-3 text-label text-ink-muted">{copy.mixName}</th>
+                <th scope="col" className="min-w-[180px] px-4 py-3 text-label text-ink-muted">{copy.dailyMilk}</th>
+                <th scope="col" className="min-w-[180px] px-4 py-3 text-label text-ink-muted">{copy.costPerLitre}</th>
               </tr>
             </thead>
             <tbody>
@@ -233,28 +258,28 @@ export default function TopRecipesList({ recipes }) {
           </table>
         )}
       </div>
-      {safeRecipes.length > 0 && <div className="space-y-3 md:hidden">
+      {hasRowsToShow(state) && safeRecipes.length > 0 && <div className="space-y-3 md:hidden">
         {safeRecipes.map((recipe, index) => {
           const recipeId = recipe?.id;
           const perf = recipe?.performance ?? {};
-          const yieldAvg = Number(perf.avgDailyYieldLiters ?? perf.avg_daily_yield_liters ?? recipe?.yieldAvg ?? 0);
-          const costPerLiter = Number(perf.costPerLiter ?? perf.cost_per_liter ?? recipe?.costPerLiter ?? 0);
+          const yieldAvg = yieldOf(recipe);
+          const costPerLiter = readFeedCostPerLitre(perf) ?? readFeedCostPerLitre(recipe);
           const ingredients = Array.isArray(recipe?.ingredients) ? recipe.ingredients : Array.isArray(recipe?.formula) ? recipe.formula : [];
           const expanded = expandedId === recipeId;
           return <article key={recipeId || `mobile-${index}`} className="min-w-0 rounded-xl border border-ink/10 bg-surface p-4">
             <button type="button" onClick={() => handleToggle(recipeId)} aria-expanded={expanded} className="flex w-full min-w-0 items-center justify-between gap-3 text-left">
-              <span className="min-w-0"><span className="block text-[10px] font-semibold uppercase tracking-wider text-ink-muted">Rank {index + 1}</span><span className="mt-1 block break-words text-sm font-bold text-brand">{recipe?.name || 'Unnamed Mix'}</span></span>
-              {expanded ? <ChevronUp className="shrink-0 text-brand" size={18} /> : <ChevronDown className="shrink-0 text-brand" size={18} />}
+              <span className="min-w-0"><span className="block text-label text-ink-muted">{copy.rankN(index + 1)}</span><span className="mt-1 block break-words text-body-strong text-brand">{recipe?.name || copy.unnamed}</span></span>
+              {expanded ? <ChevronUp className="shrink-0 text-brand" size={18} aria-hidden="true" /> : <ChevronDown className="shrink-0 text-brand" size={18} aria-hidden="true" />}
             </button>
-            <div className="mt-3 grid grid-cols-2 gap-3 rounded-lg bg-surface-raised p-3 text-xs">
-              <div><p className="text-ink-muted">Daily milk average</p><p className="mt-1 font-mono font-bold tabular-nums text-ink">{yieldAvg.toFixed(1)} L</p></div>
-              <div><p className="text-ink-muted">Cost per liter</p><p className="mt-1 font-mono font-bold tabular-nums text-ink">KES {costPerLiter.toFixed(2)}</p></div>
+            <div className="mt-3 grid grid-cols-2 gap-3 rounded-lg bg-surface-raised p-3 text-meta">
+              <div><p className="text-ink-muted">{copy.dailyMilk}</p><p className="mt-1 text-body-strong tabular-nums text-ink">{formatLitres(yieldAvg)}</p></div>
+              <div><p className="text-ink-muted">{copy.costPerLitre}</p><p className="mt-1 text-body-strong tabular-nums text-ink">{formatCostPerLitre(costPerLiter)}</p></div>
             </div>
             {expanded && <div className="mt-3 space-y-3 border-t border-ink/10 pt-3">
-              <p className="text-[10px] font-bold uppercase tracking-wider text-ink-muted">Formula breakdown</p>
-              {ingredients.length ? ingredients.map((ingredient, ingredientIndex) => <div key={ingredientIndex} className="flex justify-between gap-3 text-xs"><span className="min-w-0 break-words text-ink">{ingredient?.name ?? ingredient?.ingredient_name ?? ingredient?.ingredientName ?? 'Unknown ingredient'}</span><span className="shrink-0 font-mono font-semibold text-ink">{Number(ingredient?.percentage ?? ingredient?.inclusion_percentage ?? ingredient?.inclusionPercentage ?? 0)}%</span></div>) : <p className="text-xs text-ink-muted">No formula data available.</p>}
-              <p className="text-xs text-ink-muted">Protein: {recipe?.target_protein_percentage ?? recipe?.protein ?? '--'}% · Last fed: {perf.lastFedOn ?? perf.last_fed_on ?? recipe?.lastUsed ?? 'Not recorded'}</p>
-              <button type="button" onClick={(event) => handleLoadRecipe(event, recipe)} className="w-full rounded-lg bg-brand px-3 py-2 text-xs font-semibold text-white">Load into Lab</button>
+              <p className="text-label text-ink-muted">{copy.breakdown}</p>
+              {ingredients.length ? ingredients.map((ingredient, ingredientIndex) => <div key={ingredientIndex} className="flex justify-between gap-3 text-meta"><span className="min-w-0 break-words text-ink">{ingredient?.name ?? ingredient?.ingredient_name ?? ingredient?.ingredientName ?? copy.unknownIngredient}</span><span className="shrink-0 text-body-strong text-ink tabular-nums">{shareOf(ingredient)}</span></div>) : <p className="text-meta text-ink-muted">{copy.noFormula}</p>}
+              <p className="text-meta text-ink-muted">{copy.proteinLastFed(proteinOf(recipe), perf.lastFedOn ?? perf.last_fed_on ?? recipe?.lastUsed ?? copy.notRecorded)}</p>
+              <button type="button" onClick={(event) => handleLoadRecipe(event, recipe)} className="w-full rounded-lg bg-brand px-3 py-2 text-control text-white">{copy.loadIntoLab}</button>
             </div>}
           </article>;
         })}

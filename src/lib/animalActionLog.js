@@ -5,6 +5,7 @@
  */
 import { ValidationRules } from './validation';
 import { normalizeBreedingLogPayload } from './breedingUtils';
+import { todayLocalIso } from './localDate';
 
 export function getAnimalActionValidationSchema(actionType) {
   if (actionType === 'Calving') {
@@ -41,7 +42,7 @@ export function getAnimalActionValidationSchema(actionType) {
 // produces an identical record regardless of which page it was logged from.
 export function buildHealthLogPayload(fields, cowId) {
   return {
-    date: fields.date || new Date().toISOString().split('T')[0],
+    date: fields.date || todayLocalIso(),
     cow: cowId,
     reason: fields.description.trim(),
     diagnosis: fields.diagnosis.trim(),

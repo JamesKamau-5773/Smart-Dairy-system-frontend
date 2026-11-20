@@ -6,6 +6,7 @@ import { createAsyncStoragePersister } from '@tanstack/query-async-storage-persi
 import { PersistQueryClientProvider } from '@tanstack/react-query-persist-client';
 import { useAuth } from '../contexts/AuthContext';
 import offlineQueue from '../lib/offlineQueue';
+import { DATA_SAVER_EVENT, DATA_SAVER_STALE_TIME_MS, NORMAL_STALE_TIME_MS, isDataSaverEnabled } from '../lib/dataSaver';
 
 const OFFLINE_RETRY_INTERVAL_MS = 30 * 1000;
 
@@ -24,19 +25,27 @@ function getCacheNamespace(user) {
 
 // Centralized Query Keys mapping
 export const QUERY_KEYS = {
-  COWS: (tenantId, farmId) => [tenantId, farmId, 'cows'],
+  // The herd list (herdApi.list). One key for every screen, so the offline prefetch fills the
+  // same cache entry the Cow Register, milk form and reports read.
+  COWS: (tenantId, farmId) => ['herd', tenantId, farmId],
   DASHBOARD_SUMMARY: (tenantId, farmId) => [tenantId, farmId, 'dashboard_summary'],
   YIELD_SUMMARY: (tenantId, farmId) => [tenantId, farmId, 'yield_summary'],
-  YIELD_TREND: (tenantId, farmId) => [tenantId, farmId, 'yield_trend'],
   MILK_DISPOSITIONS: (tenantId, farmId) => [tenantId, farmId, 'milk_dispositions'],
   UNIT_COST: (tenantId, farmId) => [tenantId, farmId, 'unit_cost'],
   HARDLOCKS: (tenantId, farmId) => [tenantId, farmId, 'hardlocks'],
+  CUSTOMERS: (tenantId, farmId) => ['customers', tenantId, farmId],
+  LEDGER_ENTRIES: (tenantId, farmId) => [tenantId, farmId, 'ledger_entries'],
+  LEDGER_SUMMARY: (tenantId, farmId) => [tenantId, farmId, 'ledger_summary'],
+  LEDGER_GROUP_TOTALS: (tenantId, farmId) => [tenantId, farmId, 'ledger_group_totals'],
+  YIELD_ROWS: (tenantId, farmId) => ['production-yield-rows', tenantId, farmId],
+  PRODUCTION_PERIOD_SUMMARY: (tenantId, farmId) => [tenantId, farmId, 'production_period_summary'],
+  PRODUCTION_GROUP_TOTALS: (tenantId, farmId) => [tenantId, farmId, 'production_group_totals'],
 };
 
 export const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      staleTime: 1000 * 60 * 5, 
+      staleTime: isDataSaverEnabled() ? DATA_SAVER_STALE_TIME_MS : NORMAL_STALE_TIME_MS,
       retry: 2,                 
       refetchOnWindowFocus: false,
     },
@@ -67,6 +76,19 @@ export function QueryProvider({ children }) {
       previousNamespace.current = namespace;
     }
   }, [namespace]);
+
+  useEffect(() => {
+    // Data saver keeps data "fresh" longer, so pages refetch less often on mobile data.
+    const onDataSaverChange = (event) => {
+      const queries = queryClient.getDefaultOptions().queries ?? {};
+      queryClient.setDefaultOptions({
+        ...queryClient.getDefaultOptions(),
+        queries: { ...queries, staleTime: event.detail ? DATA_SAVER_STALE_TIME_MS : NORMAL_STALE_TIME_MS },
+      });
+    };
+    window.addEventListener(DATA_SAVER_EVENT, onDataSaverChange);
+    return () => window.removeEventListener(DATA_SAVER_EVENT, onDataSaverChange);
+  }, []);
 
   useEffect(() => {
     // Flush any queued offline writes when back online

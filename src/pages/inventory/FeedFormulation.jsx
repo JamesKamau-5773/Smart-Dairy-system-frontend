@@ -1,12 +1,39 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Beaker, Tractor, Save, AlertCircle, XCircle } from 'lucide-react';
+import { AlertCircle } from 'lucide-react';
 import RecipeBuilder from '../nutrition/RecipeBuilder';
 import CreateBatchModal from '../../components/nutrition/CreateBatchModal';
 import FeedingGroupPlanner from '../../components/nutrition/FeedingGroupPlanner';
+import toast from 'react-hot-toast';
+import DataWarningList from '../../components/inventory/DataWarningList';
+import RecipeMeasurementFields from '../../components/nutrition/RecipeMeasurementFields';
 import { getApiErrorMessage, nutritionApi, inventoryApi } from '../../lib/backendApi';
+import { getApiErrorBody } from '../../lib/apiErrors';
+import { getFeedErrorMessage } from '../../lib/feedErrors';
+import { FEEDING_GROUPS } from '../../lib/feedingGroups';
+import { getDataWarnings } from '../../lib/inventoryItemRules';
+import { defaultMeasurements, toMeasurementPayload, validateMeasurements } from '../../lib/recipeMeasurements';
+import { getMixActionStates, getShareTotal } from '../../lib/mixPlannerRules';
+import { canManageInventoryItems } from '../../lib/permissions';
+import { useAuth } from '../../contexts/AuthContext';
 import { useTenant } from '../../hooks/useTenant';
+import { useInventoryItemActions } from '../../hooks/useInventoryItemActions';
+import { feedCopy } from '../../i18n/feed';
+import LABELS from '../../lib/labels';
+
+const copy = feedCopy.formulation;
+
+const MEASURES_BY_TYPE = {
+  dairy_meal: defaultMeasurements('dairy_meal'),
+  main_meal: defaultMeasurements('main_meal'),
+};
+
+/** A short line under a disabled button saying why it can't be used. */
+function DisabledReason({ state }) {
+  if (!state.disabled || !state.reason) return null;
+  return <p className="text-meta text-ink-muted">{state.reason}</p>;
+}
 
 const DEFAULT_BATCH_SIZE_BY_TYPE = {
   dairy_meal: 500,
@@ -41,6 +68,12 @@ function normalizeIngredientIdentifier(value) {
   return trimmed;
 }
 
+// A protein value the backend didn't send shows as "—", never as 0%.
+function formatProteinPercent(value) {
+  const number = Number(value);
+  return value === null || value === undefined || value === '' || !Number.isFinite(number) ? '—' : `${number.toFixed(1)}%`;
+}
+
 function getRequestErrorMessage(error, fallbackMessage) {
   return getApiErrorMessage(error, fallbackMessage);
 }
@@ -69,7 +102,7 @@ export function mapInventoryItemToRecipeIngredient(item = {}) {
     ingredientId,
     ingredient_id: ingredientId,
     inventory_item_id: ingredientId,
-    name: item.name ?? item.sku ?? 'Unknown Ingredient',
+    name: item.name ?? item.sku ?? copy.unknownIngredient,
     percentage,
     proteinContent: Number(item.protein_grams_per_kg ?? item.proteinContent ?? 0) / 10,
     pricePerKg: Number(item.cost_per_kg ?? item.costPerKg ?? 0),
@@ -122,7 +155,7 @@ function mapSuggestedIngredient(item = {}, index = 0) {
     ingredientId,
     ingredient_id: ingredientId,
     inventory_item_id: ingredientId,
-    name: item.name ?? item.ingredient_name ?? 'Ingredient',
+    name: item.name ?? item.ingredient_name ?? copy.ingredient,
     percentage,
     proteinContent: Number(item.protein_grams_per_kg ?? item.proteinContent ?? item.protein_percentage ?? item.protein_percent ?? 0) / 10,
     pricePerKg: Number(item.cost_per_kg ?? item.pricePerKg ?? 0),
@@ -163,7 +196,8 @@ export default function FeedFormulation() {
 
   const routerState = location.state || {};
   const importedDraft = routerState.isImportedDraft ? routerState : null;
-  const [activeTab, setActiveTab] = useState(importedDraft?.draftType || 'dairy_meal');
+  // A draft or a dashboard card can ask for a mix type's tab (state.mixType).
+  const [activeTab, setActiveTab] = useState(importedDraft?.draftType || routerState.mixType || 'dairy_meal');
 
   const { data: savedRecipeIngredients = [], isLoading: isRecipeLoading } = useQuery({
     queryKey: ['mixer-ingredients', activeTab, tenantId, farmId],
@@ -190,6 +224,16 @@ export default function FeedFormulation() {
   const [formulationError, setFormulationError] = useState('');
   const [suggestedMixMessage, setSuggestedMixMessage] = useState('');
   const [isBatchModalOpen, setIsBatchModalOpen] = useState(false);
+  const [suspectIngredients, setSuspectIngredients] = useState([]);
+  const [saveError, setSaveError] = useState('');
+  const [feedingGroup, setFeedingGroup] = useState(routerState.feedingGroup ?? '');
+  // Kept per mix type, so switching tabs doesn't carry dairy-meal buckets into the main meal.
+  const [measuresByType, setMeasuresByType] = useState(MEASURES_BY_TYPE);
+  const [measureErrors, setMeasureErrors] = useState({});
+  const measures = measuresByType[activeTab] ?? defaultMeasurements(activeTab);
+  const { currentUser } = useAuth();
+  const canFixIngredients = canManageInventoryItems(currentUser);
+  const { applyDataFix } = useInventoryItemActions();
 
   // Synchronize the tab if a new draft is loaded while the component is already open
   useEffect(() => {
@@ -323,11 +367,11 @@ export default function FeedFormulation() {
       const fromPlan = Number.isFinite(normalizedMix.dailyMealNeedKg) && normalizedMix.dailyMealNeedKg > 0;
       setSuggestedMixMessage(
         fromPlan
-          ? `${normalizedMix.batchSizeKg} kg batch size = your herd's daily meal need from the Milk Feeding Plan.`
-          : `${normalizedMix.batchSizeKg} kg suggested batch size loaded from Milk Lab.`
+          ? copy.fromPlan(normalizedMix.batchSizeKg)
+          : copy.fromLab(normalizedMix.batchSizeKg)
       );
     } else {
-      setSuggestedMixMessage(normalizedMix.message || 'Suggested mix loaded from Milk Lab.');
+      setSuggestedMixMessage(normalizedMix.message || copy.loadedFromLab);
     }
 
     const suggestedIngredients = normalizedMix.suggestedIngredients;
@@ -384,18 +428,18 @@ export default function FeedFormulation() {
       .filter(Boolean);
 
     if (normalizedBatchSize <= 0) {
-      throw new Error('Batch size is required and must be greater than 0 kg.');
+      throw new Error(copy.batchRequired);
     }
 
     if (normalizedIngredients.some(ing => ing.ingredient_id === null)) {
-      throw new Error('All ingredients must have a valid numeric ID linked to inventory to be processed by the backend.');
+      throw new Error(copy.needIds);
     }
 
     if (normalizedIngredients.length === 0) {
       throw new Error(
         allowZeroPercentages
-          ? 'Add at least one ingredient before auto-adjusting feed shares.'
-          : 'Add at least one ingredient with a share greater than 0% before checking nutrition.'
+          ? copy.needIngredientAdjust
+          : copy.needIngredientCheck
       );
     }
 
@@ -483,7 +527,7 @@ export default function FeedFormulation() {
       setFormulationError('');
     },
     onError: (error) => {
-      setFormulationError(getRequestErrorMessage(error, 'Could not calculate nutrition for this formula.'));
+      setFormulationError(getRequestErrorMessage(error, copy.nutritionFailed));
     },
   });
 
@@ -504,7 +548,7 @@ export default function FeedFormulation() {
         ?? [];
 
       if (!Array.isArray(suggestedIngredients) || suggestedIngredients.length === 0) {
-        setFormulationError('Formulation returned no adjusted ingredient shares.');
+        setFormulationError(copy.noShares);
         return;
       }
 
@@ -516,7 +560,7 @@ export default function FeedFormulation() {
       )) && normalizedIngredients.some((ingredient) => ingredient.percentage > 0);
 
       if (!hasSolvedShares) {
-        setFormulationError('Formulation returned invalid ingredient shares.');
+        setFormulationError(copy.badShares);
         return;
       }
 
@@ -525,72 +569,92 @@ export default function FeedFormulation() {
       setFormulationError('');
       setRecipe(normalizedIngredients);
     },
+    onMutate: () => setSuspectIngredients([]),
     onError: (error) => {
-      setFormulationError(getRequestErrorMessage(error, 'Could not formulate adjustments for this target.'));
+      // A 422 may name ingredients whose nutrition data is probably wrong; those come first.
+      const suspects = getApiErrorBody(error).suspect_ingredients;
+      setSuspectIngredients(Array.isArray(suspects) ? suspects : []);
+      setFormulationError(getRequestErrorMessage(error, copy.formulateFailed));
     },
   });
 
+  // Shares are sent exactly as shown: the save button is blocked until they add
+  // up to 100%, so nothing is rescaled behind the farmer's back.
   const saveRecipe = useMutation({
     mutationFn: async () => {
-      // This reverts to the original logic. The component should build the payload,
-      // and the API layer (via normalizeNutritionRequestPayload) is responsible for final normalization.
       const requestPayload = buildRecipeRequestPayload({
         recipe_type: activeTab,
         recipe_name: routerState?.draftName ?? defaultRecipeName,
         name: routerState?.draftName ?? defaultRecipeName,
         source: routerState?.fromMilkLab ? 'milk_lab_export' : 'manual',
-        feeding_group: routerState?.feedingGroup,
+        feeding_group: feedingGroup || undefined,
+        ...toMeasurementPayload(measures),
       });
 
-      // --- START: In-component Normalization for Robustness ---
-      // To guarantee the payload is valid before it leaves the component,
-      // we normalize the ingredient percentages to sum to 100.
-      const ingredients = requestPayload.ingredients || [];
-      const totalPercentage = ingredients.reduce((sum, ing) => sum + Number(ing.inclusion_percentage ?? 0), 0);
-      const needsNormalization = Math.abs(totalPercentage - 100) > 0.01 && totalPercentage > 0;
-
-      if (needsNormalization) {
-        requestPayload.ingredients = ingredients.map(ing => {
-          const normalizedShare = (Number(ing.inclusion_percentage ?? 0) / totalPercentage) * 100;
-          // Round to 2 decimal places to avoid floating point issues
-          const finalPercentage = Math.round(normalizedShare * 100) / 100;
-          return {
-            ...ing,
-            percentage: finalPercentage,
-            inclusion_percentage: finalPercentage,
-          };
-        });
-      }
-      // --- END: In-component Normalization ---
-
       // The /auto-save endpoint expects `adjusted_ingredients`, while other
-      // nutrition endpoints expect `ingredients`. We must rename the key here
-      // to match the API contract for this specific mutation.
-      const finalPayload = {
-        ...requestPayload,
-        adjusted_ingredients: requestPayload.ingredients,
-      };
-      delete finalPayload.ingredients;
-
-      return nutritionApi.autoSaveRecipe(finalPayload);
+      // nutrition endpoints expect `ingredients`.
+      const { ingredients, ...rest } = requestPayload;
+      return nutritionApi.autoSaveRecipe({ ...rest, adjusted_ingredients: ingredients });
     },
+    onMutate: () => setSaveError(''),
     onSuccess: () => {
       // Clear the draft state from the URL so a refresh doesn't reload it
       if (importedDraft || routerState?.feedingGroup) {
         navigate(location.pathname, { replace: true, state: {} });
       }
-      // Safe object syntax for React Query v4/v5 compatibility
-      queryClient.invalidateQueries({ queryKey: ['active-feed-recipe', tenantId, farmId] });
-      queryClient.invalidateQueries({ queryKey: ['feed-recipes', tenantId, farmId] });
-      queryClient.invalidateQueries({ queryKey: ['feed-formulation-suggested-mix', tenantId, farmId] });
-      queryClient.invalidateQueries({ queryKey: ['mixer-ingredients', 'dairy_meal', tenantId, farmId] });
-      queryClient.invalidateQueries({ queryKey: ['mixer-ingredients', 'main_meal', tenantId, farmId] });
-      queryClient.invalidateQueries({ queryKey: ['inventory-items', tenantId, farmId] });
-      queryClient.invalidateQueries({ queryKey: ['inventory-stock', tenantId, farmId] });
+      [
+        ['active-feed-recipe', tenantId, farmId],
+        ['feed-recipes', tenantId, farmId],
+        ['nutrition-recipes', tenantId, farmId],
+        ['feed-formulation-suggested-mix', tenantId, farmId],
+        ['mixer-ingredients'],
+        ['inventory-items', tenantId, farmId],
+        ['inventory-stock', tenantId, farmId],
+        // A saved mix can be assigned to a group, which changes the plan and today's feeding.
+        ['feeding-plan-by-group', tenantId, farmId],
+        ['feeding-today', tenantId, farmId],
+      ].forEach((queryKey) => queryClient.invalidateQueries({ queryKey }));
+      toast.success(feedCopy.mix.saved);
     },
     onError: (error) => {
-      console.error("Failed to save recipe:", { error });
-    }
+      setSaveError(`${feedCopy.planner.saveError} ${getFeedErrorMessage(error, feedCopy.errors.saveMix)}`);
+    },
+  });
+
+  const handleSave = () => {
+    const errors = validateMeasurements(measures);
+    setMeasureErrors(errors);
+    if (Object.keys(errors).length === 0) saveRecipe.mutate();
+  };
+
+  // Warnings by ingredient id, from inventory and from this mixer's ingredient list,
+  // so a row keeps its warning even after auto-adjust replaces the shares.
+  const ingredientWarnings = useMemo(() => {
+    const savedIngredientsArray = Array.isArray(savedRecipeIngredients)
+      ? savedRecipeIngredients
+      : (savedRecipeIngredients.ingredients || savedRecipeIngredients.adjusted_ingredients || []);
+    const byId = {};
+    [...allInventoryItems, ...savedIngredientsArray].forEach((source) => {
+      const id = Number(source.ingredient_id ?? source.id);
+      const warnings = getDataWarnings(source);
+      if (Number.isFinite(id) && warnings.length) byId[id] = warnings;
+    });
+    return byId;
+  }, [allInventoryItems, savedRecipeIngredients]);
+
+  const fixIngredient = canFixIngredients
+    ? (ingredient, code) => applyDataFix.mutate({ item: { id: ingredient.ingredientId ?? ingredient.ingredient_id, name: ingredient.name }, code })
+    : undefined;
+  const pendingFix = applyDataFix.isPending
+    ? { ingredientId: applyDataFix.variables?.item?.id, code: applyDataFix.variables?.code }
+    : null;
+
+  const actionStates = getMixActionStates({
+    hasIngredients: recipe.length > 0,
+    hasSharedIngredients: hasValidIngredients,
+    hasLinkedIngredients: hasEligibleIngredients,
+    shareTotal: getShareTotal(recipe),
+    isBusy: saveRecipe.isPending,
   });
 
   const handleDiscardDraft = () => {
@@ -603,11 +667,11 @@ export default function FeedFormulation() {
 
       {/* Page Header */}
       <div className="border-b border-ink/10 pb-6">
-        <h1 className="text-3xl font-black tracking-tight text-ink">Feed Mixing Planner</h1>
-        <p className="mt-2 text-sm text-ink-muted max-w-2xl">
-          Plan the right feed mix for your cows. Save your mix so the farm team can use it quickly during daily feeding.
+        <h1 className="text-page-title text-ink">{LABELS.FEED_FORMULATION}</h1>
+        <p className="mt-2 text-body text-ink-muted max-w-2xl">
+          {copy.subtitle}
         </p>
-        {routerState?.feedingGroup && <p className="mt-3 inline-flex rounded-full border border-brand/20 bg-brand-50 px-3 py-1 text-xs font-semibold capitalize text-brand-dark">Saving this mix for {String(routerState.feedingGroup).replaceAll('_', ' ')}</p>}
+        {routerState?.feedingGroup && <p className="mt-3 inline-flex rounded-full border border-brand/20 bg-brand-50 px-3 py-1 text-meta text-brand-dark">{copy.savingFor(FEEDING_GROUPS.find((group) => group.value === routerState.feedingGroup)?.label ?? String(routerState.feedingGroup).replaceAll('_', ' '))}</p>}
       </div>
 
       <FeedingGroupPlanner />
@@ -615,11 +679,11 @@ export default function FeedFormulation() {
       {/* Draft warning banner */}
       {importedDraft && (
         <div className="flex animate-fade-in items-start gap-3 rounded-xl border border-brand/20 bg-brand-50 p-4">
-          <AlertCircle className="mt-0.5 shrink-0 text-brand-dark" size={20} />
+          <AlertCircle className="mt-0.5 shrink-0 text-brand-dark" size={20} aria-hidden="true" />
           <div>
-            <h4 className="text-sm font-bold text-brand-dark">Draft Mode Active</h4>
-            <p className="text-sm font-medium text-ink/70 mt-1">
-              You are editing an imported feed mix. These changes are in draft mode and will not affect feeding until you save this mix.
+            <p className="text-body-strong text-brand-dark">{copy.draftTitle}</p>
+            <p className="text-body text-ink/70 mt-1">
+              {copy.draftText}
             </p>
           </div>
         </div>
@@ -627,14 +691,14 @@ export default function FeedFormulation() {
 
       {routerState?.fromMilkLab && (
         <div className="bg-brand/5 border border-brand/20 p-4 rounded-xl flex items-start gap-3 animate-fade-in">
-          <AlertCircle className="text-brand shrink-0 mt-0.5" size={20} />
+          <AlertCircle className="text-brand shrink-0 mt-0.5" size={20} aria-hidden="true" />
           <div>
-            <h4 className="font-bold text-brand text-sm">Imported From Milk Lab</h4>
-            <p className="text-sm font-medium text-ink/70 mt-1">
-              Protein goal was loaded from Milk Feeding Planner. You can adjust this mix, then save it for the next feeding batches.
+            <p className="text-body-strong text-brand">{copy.importedTitle}</p>
+            <p className="text-body text-ink/70 mt-1">
+              {copy.importedText}
             </p>
             {suggestedMixMessage && (
-              <p className="text-xs font-semibold text-brand-dark mt-2">{suggestedMixMessage}</p>
+              <p className="text-meta text-brand-dark mt-2">{suggestedMixMessage}</p>
             )}
           </div>
         </div>
@@ -644,23 +708,25 @@ export default function FeedFormulation() {
       <div className="flex p-1.5 bg-surface-raised border border-ink/5 rounded-lg max-w-md ">
         <button
           onClick={() => setActiveTab('dairy_meal')}
-          className={`flex-1 flex items-center justify-center gap-2 py-2.5 text-sm font-bold rounded-md transition-all ${
+          className={`flex-1 flex items-center justify-center gap-2 py-2.5 text-control rounded-md transition-all ${
             activeTab === 'dairy_meal'
               ? 'bg-white text-brand  border border-ink/5'
               : 'text-ink-muted hover:text-ink-strong'
           }`}
         >
-          <Beaker size={18} /> Dairy Meal Mix
+
+  {copy.tabs.dairy_meal}
         </button>
         <button
           onClick={() => setActiveTab('main_meal')}
-          className={`flex-1 flex items-center justify-center gap-2 py-2.5 text-sm font-bold rounded-md transition-all ${
+          className={`flex-1 flex items-center justify-center gap-2 py-2.5 text-control rounded-md transition-all ${
             activeTab === 'main_meal'
               ? 'bg-white text-brand  border border-ink/5'
               : 'text-ink-muted hover:text-ink-strong'
           }`}
         >
-          <Tractor size={18} /> Main Feed Mix
+
+  {copy.tabs.main_meal}
         </button>
       </div>
 
@@ -671,16 +737,15 @@ export default function FeedFormulation() {
         <div className="lg:col-span-2">
           {recipe.length === 0 && !isInventoryLoading && !isRecipeLoading && !importedDraft ? (
             <div className="flex flex-col items-center justify-center h-full p-8 text-center border-2 border-dashed rounded-lg border-ink/20 bg-surface animate-in fade-in">
-              <Tractor size={48} className="text-ink-muted" />
-              <h3 className="mt-4 text-lg font-bold text-ink-strong">No Feed Ingredients Available</h3>
-              <p className="mt-2 text-sm text-ink-muted max-w-sm">
-                The feed mixer is empty. To formulate a recipe, please add feed items to your inventory for this mix type.
+              <h2 className="text-section-title text-ink-strong">{copy.emptyTitle}</h2>
+              <p className="mt-2 text-body text-ink-muted max-w-sm">
+                {copy.emptyText}
               </p>
               <button
                 onClick={() => navigate('/operations/inventory')}
                 className="mt-6 btn-command"
               >
-                Go to Inventory
+                {copy.goToInventory}
               </button>
             </div>
           ) : (
@@ -694,6 +759,9 @@ export default function FeedFormulation() {
                 onBatchSizeChange={setBatchSizeKg}
                 targetProtein={targetProtein}
                 isLoading={isInventoryLoading || isRecipeLoading}
+                ingredientWarnings={ingredientWarnings}
+                onApplyFix={fixIngredient}
+                pendingFix={pendingFix}
               />
             </div>
           )}
@@ -702,13 +770,13 @@ export default function FeedFormulation() {
         {/* Right Column: Strategic Actions & Context */}
         <div className="space-y-6">
           <div className="bg-surface p-6 border border-ink/5 rounded-card ">
-            <h4 className="text-sm font-black text-ink-strong mb-2">Save This Feed Mix</h4>
-            <p className="text-xs text-ink-muted mb-6">
-              Save these feed shares so this becomes your current farm mix.
+            <h2 className="text-section-title text-ink-strong mb-2">{copy.saveTitle}</h2>
+            <p className="text-meta text-ink-muted mb-6">
+              {copy.saveText}
             </p>
 
             <div className="mb-4 space-y-2">
-              <label className="block text-[10px] font-black uppercase tracking-wider text-ink-muted">Protein Goal (%)</label>
+              <label className="block text-field-label text-ink-muted">{copy.proteinGoal}</label>
               <input
                 type="number"
                 min="1"
@@ -716,93 +784,140 @@ export default function FeedFormulation() {
                 step="0.1"
                 value={targetProtein}
                 onChange={(event) => setTargetProtein(event.target.value)}
-                className="w-full rounded-lg border border-ink/20 bg-surface-raised px-3 py-2 text-sm font-bold text-ink focus:outline-none focus:ring-2 focus:ring-brand/40"
+                className="input-machined w-full text-control"
               />
             </div>
 
             <div className="grid grid-cols-1 gap-2 mb-4">
               <button
+                type="button"
                 onClick={() => calculateNutritionMutation.mutate()}
-                disabled={calculateNutritionMutation.isPending || !hasValidIngredients}
-                className="w-full bg-surface-raised hover:bg-ink/5 text-ink-strong px-4 py-2.5 rounded-button font-bold text-sm transition-colors disabled:opacity-70"
+                disabled={calculateNutritionMutation.isPending || actionStates.check.disabled}
+                className="w-full bg-surface-raised hover:bg-ink/5 text-ink-strong px-4 py-2.5 rounded-button text-control transition-colors disabled:opacity-70"
               >
-                {calculateNutritionMutation.isPending ? 'Checking...' : 'Check Protein Level'}
+                {calculateNutritionMutation.isPending ? copy.checking : copy.check}
               </button>
+              <DisabledReason state={actionStates.check} />
               <button
+                type="button"
                 onClick={() => formulateMutation.mutate()}
-                disabled={formulateMutation.isPending || !hasEligibleIngredients}
-                className="w-full bg-brand/10 hover:bg-brand/20 text-brand-dark px-4 py-2.5 rounded-button font-bold text-sm transition-colors disabled:opacity-70"
+                disabled={formulateMutation.isPending || actionStates.adjust.disabled}
+                className="w-full bg-brand/10 hover:bg-brand/20 text-brand-dark px-4 py-2.5 rounded-button text-control transition-colors disabled:opacity-70"
               >
-                {formulateMutation.isPending ? 'Adjusting...' : 'Auto-Adjust Feed Shares'}
+                {formulateMutation.isPending ? copy.adjusting : copy.adjust}
               </button>
+              <DisabledReason state={actionStates.adjust} />
             </div>
 
             {!hasEligibleIngredients && ingredientEligibilityDiagnostics.total > 0 && (
-              <div className="mb-4 rounded-md border border-brand/20 bg-brand-50 p-3 text-xs text-brand-dark">
-                Auto-adjust is disabled because one or more feed items are missing backend identifiers.
+              <div className="mb-4 rounded-md border border-brand/20 bg-brand-50 p-3 text-meta text-brand-dark">
+                {copy.missingIds}
                 {ingredientEligibilityDiagnostics.missingIds.length > 0 && (
                   <span className="ml-1">
-                    Missing ID items: {ingredientEligibilityDiagnostics.missingIds.join(', ')}.
+                    {copy.missingIdItems(ingredientEligibilityDiagnostics.missingIds.join(', '))}
                   </span>
                 )}
               </div>
             )}
 
             {proteinDiagnostics && (
-              <div className="mb-4 rounded-md border border-ink/10 bg-surface-raised p-3 text-xs text-ink-muted">
-                Current protein level: <span className="font-black text-ink">{Number(
+              <div className="mb-4 rounded-md border border-ink/10 bg-surface-raised p-3 text-meta text-ink-muted">
+                {copy.currentProtein} <span className="text-body-strong text-ink">{formatProteinPercent(
                   proteinDiagnostics.average_protein_percent ??
                   proteinDiagnostics.current_protein_percentage ??
-                  proteinDiagnostics.currentProteinPercentage ?? 0
-                ).toFixed(1)}%</span>
+                  proteinDiagnostics.currentProteinPercentage
+                )}</span>
               </div>
             )}
 
             {formulationPreview && (
-              <div className="mb-4 rounded-md border border-brand/20 bg-brand/5 p-3 text-xs text-brand-dark">
-                Suggested feed shares are ready. Review and save to make this your current mix.
+              <div className="mb-4 rounded-md border border-brand/20 bg-brand/5 p-3 text-meta text-brand-dark">
+                {copy.sharesReady}
+              </div>
+            )}
+
+            {suspectIngredients.length > 0 && (
+              <div className="mb-4 space-y-2 rounded-md border border-brand/40 bg-brand-50 p-3">
+                <p className="text-meta text-ink">{feedCopy.dataWarnings.suspectTitle}</p>
+                <p className="text-meta text-ink-muted">{feedCopy.dataWarnings.suspectHint}</p>
+                {suspectIngredients.map((suspect) => (
+                  <DataWarningList
+                    key={suspect.ingredient_id}
+                    itemName={suspect.name}
+                    warnings={getDataWarnings({ data_warnings: suspect.warnings })}
+                    onApplyFix={fixIngredient ? (code) => fixIngredient({ ingredientId: suspect.ingredient_id, name: suspect.name }, code) : undefined}
+                    pendingCode={pendingFix?.ingredientId === suspect.ingredient_id ? pendingFix.code : null}
+                  />
+                ))}
               </div>
             )}
 
             {formulationError && (
-              <div className="mb-4 rounded-md border border-brand/30 bg-brand-50 p-3 text-xs text-brand-dark">
+              <div className="mb-4 rounded-md border border-brand/30 bg-brand-50 p-3 text-meta text-brand-dark">
                 {formulationError}
               </div>
             )}
 
+            <div className="mb-4 space-y-1">
+              <label htmlFor="mix-feeding-group" className="block text-field-label text-ink-muted">{feedCopy.planner.feedingGroup}</label>
+              <select
+                id="mix-feeding-group"
+                value={feedingGroup}
+                onChange={(event) => setFeedingGroup(event.target.value)}
+                className="input-machined w-full text-control"
+              >
+                <option value="">{feedCopy.planner.feedingGroupNone}</option>
+                {FEEDING_GROUPS.map((group) => <option key={group.value} value={group.value}>{group.label}</option>)}
+              </select>
+            </div>
+
+            <RecipeMeasurementFields
+              measures={measures}
+              errors={measureErrors}
+              onChange={(next) => {
+                setMeasuresByType((current) => ({ ...current, [activeTab]: next }));
+                setMeasureErrors({});
+              }}
+            />
+
             <div className="space-y-3">
               <button
-                onClick={() => saveRecipe.mutate()}
-                disabled={saveRecipe.isPending || !hasValidIngredients}
-                className="w-full bg-brand hover:bg-brand-dark text-white px-4 py-3 rounded-button font-bold text-sm transition-colors  flex items-center justify-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed"
+                type="button"
+                onClick={handleSave}
+                disabled={saveRecipe.isPending || actionStates.save.disabled}
+                className="w-full bg-brand hover:bg-brand-dark text-white px-4 py-3 rounded-button text-control transition-colors flex items-center justify-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed"
               >
-                <Save size={18} />
-                {saveRecipe.isPending ? 'Saving...' : 'Save As Current Feed Mix'}
+                {saveRecipe.isPending ? copy.saving : copy.save}
               </button>
+              {!saveRecipe.isPending && <DisabledReason state={actionStates.save} />}
+              {saveError && <p role="alert" className="text-meta text-danger">{saveError}</p>}
 
               {importedDraft && (
                 <button
                   onClick={handleDiscardDraft}
-                  className="w-full bg-surface-raised hover:bg-ink/5 text-ink-strong px-4 py-3 rounded-button font-bold text-sm transition-colors flex items-center justify-center gap-2"
+                  className="w-full bg-surface-raised hover:bg-ink/5 text-ink-strong px-4 py-3 rounded-button text-control transition-colors flex items-center justify-center gap-2"
                 >
-                  <XCircle size={18} className="text-brand-dark" /> Cancel Draft
+
+  {copy.cancelDraft}
                 </button>
               )}
 
               <button
+                type="button"
                 onClick={() => setIsBatchModalOpen(true)}
-                disabled={saveRecipe.isPending}
-                className="mt-3 flex w-full items-center justify-center gap-2 rounded-button bg-brand px-4 py-3 text-sm font-bold text-white transition-colors hover:bg-brand-dark disabled:opacity-70"
+                disabled={actionStates.batch.disabled}
+                className="mt-3 flex w-full items-center justify-center gap-2 rounded-button bg-brand px-4 py-3 text-control text-white transition-colors hover:bg-brand-dark disabled:opacity-70"
               >
-                Create Batch From This Mix
+                {copy.createBatch}
               </button>
+              <DisabledReason state={actionStates.batch} />
             </div>
           </div>
 
           <div className="bg-brand/5 p-6 border border-brand/20 rounded-card">
-            <h4 className="text-sm font-black text-brand-dark mb-2">Farmer Tip</h4>
-            <p className="text-xs text-brand-dark/80 leading-relaxed">
-              When mixing feed, moisture around 45-50% helps cows eat more evenly and reduces feed left behind.
+            <h2 className="text-section-title text-brand-dark mb-2">{copy.tipTitle}</h2>
+            <p className="text-meta text-brand-dark/80">
+              {copy.tipText}
             </p>
           </div>
         </div>

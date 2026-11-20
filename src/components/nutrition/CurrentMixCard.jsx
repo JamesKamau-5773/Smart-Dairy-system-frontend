@@ -1,150 +1,227 @@
-import React from 'react';
-import { PackageCheck, AlertCircle, Utensils } from 'lucide-react';
+import { useState } from 'react';
+import { AlertCircle } from 'lucide-react';
+import Skeleton from '../ui/Skeleton';
+import { FEEDING_GROUPS } from '../../lib/feedingGroups';
+import { feedCopy } from '../../i18n/feed';
+import { tone } from '../ui/tones';
 
-const FEEDING_GROUPS = [
-  { value: 'lactating', label: 'Lactating cows' },
-  { value: 'dry', label: 'Dry cows' },
-  { value: 'calf_0_3m', label: 'Calves 0-3 months' },
-  { value: 'calf_3_6m', label: 'Calves 3-6 months' },
-  { value: 'heifer', label: 'Heifers' },
-];
+const { currentMix: copy } = feedCopy;
+const critical = tone('critical');
 
-export default function CurrentMixCard({ mix, onRecordConsumption, isRecording = false }) {
-  const [consumedWeight, setConsumedWeight] = React.useState('');
-  const [feedingGroup, setFeedingGroup] = React.useState('');
+const LOW_STOCK_DAYS = 3;
 
-  if (!mix || !mix.totalWeight || mix.totalWeight <= 0) {
+/** Why "Record feeding" can't be pressed yet, or '' when it can. */
+function recordFeedingBlocker({ feedingGroup, amount, remaining }) {
+  if (!feedingGroup) return feedCopy.recordFeeding.chooseGroup;
+  if (!amount) return feedCopy.recordFeeding.enterAmount;
+  if (amount > remaining) return feedCopy.recordFeeding.onlyLeft(remaining);
+  return '';
+}
+
+function CardHeader({ recipeType, title, subtitle }) {
+  return (
+    <header className="flex items-start justify-between gap-3">
+      <div className="min-w-0">
+        <p className="text-label text-ink-muted">{copy.heading}</p>
+        <h2 className="mt-1 break-words text-section-title text-ink">{title}</h2>
+        {subtitle && <p className="mt-0.5 text-meta text-ink-muted">{subtitle}</p>}
+      </div>
+      <span className="inline-flex shrink-0 items-center rounded-badge bg-brand-50 px-2 py-1 text-badge text-brand-dark">
+        {copy.types[recipeType]}
+      </span>
+    </header>
+  );
+}
+
+function StockMeter({ percent, isLow }) {
+  return (
+    <div>
+      <div className="mb-1.5 flex justify-between text-meta text-ink">
+        <span>{copy.stockLevel}</span>
+        <span className="tabular-nums">{percent}%</span>
+      </div>
+      <div
+        className="h-2 w-full overflow-hidden rounded-full bg-ink-100"
+        role="meter"
+        aria-label={copy.stockLevel}
+        aria-valuemin={0}
+        aria-valuemax={100}
+        aria-valuenow={percent}
+      >
+        <div className={`h-full rounded-full transition-[width] duration-500 ${isLow ? critical.bar : 'bg-brand'}`} style={{ width: `${percent}%` }} />
+      </div>
+    </div>
+  );
+}
+
+function DepletionForecast({ daysLeft, feedingRate, isLow }) {
+  if (daysLeft === null) {
     return (
-      <div className="flex min-h-[240px] flex-col justify-center border border-slate-300 bg-white p-6 text-center">
-        <h3 className="mb-4 flex items-center justify-center gap-2 text-xs font-bold uppercase tracking-wider text-slate-500">
-          <PackageCheck size={16} /> What We're Feeding Now
-        </h3>
-        <p className="text-sm font-semibold text-slate-900">
-          No feed batch is active yet.
-        </p>
-        <p className="mt-2 text-xs leading-5 text-slate-600">
-          A saved mix is a recipe only. Create a feed batch from that recipe to track what is currently in store and being fed.
-        </p>
+      <div className="text-body">
+        <div>
+          <p className="text-body-strong text-ink">{copy.noForecast}</p>
+          <p className="text-meta text-ink-muted">{copy.noForecastHint}</p>
+        </div>
       </div>
     );
   }
+  return (
+    <div className="flex gap-2.5 text-body">
+      {isLow && <AlertCircle size={16} className={`mt-0.5 shrink-0 ${critical.icon}`} aria-hidden="true" />}
+      <div>
+        <p className={`text-body-strong ${isLow ? critical.icon : 'text-ink'}`}>{isLow ? copy.lowStock(daysLeft) : copy.daysLeft(daysLeft)}</p>
+        {feedingRate !== null && <p className="text-meta text-ink-muted">{copy.pace(feedingRate)}</p>}
+      </div>
+    </div>
+  );
+}
 
-  const stockPercentage = mix.totalWeight > 0
-    ? Math.round((mix.remainingWeight / mix.totalWeight) * 100)
-    : 0;
-  // Guard against division by zero when the daily feeding rate is unknown/not yet set.
-  const feedingRate = Number(mix.dailyFeedingRate) || 0;
-  const backendDaysLeft = Number(mix.daysUntilEmpty);
-  const daysLeft = Number.isFinite(backendDaysLeft)
-    ? backendDaysLeft
-    : (feedingRate > 0 ? Math.floor(mix.remainingWeight / feedingRate) : null);
-  const isLowStock = daysLeft !== null && daysLeft <= 3;
-  const hasRecordedPace = mix.rateBasis === 'recorded_events' && feedingRate > 0;
+function MixStats({ consumedWeight, remainingWeight }) {
+  return (
+    <dl className="grid grid-cols-2 divide-x divide-ink/10 rounded-card border border-ink/10">
+      {[[copy.fedSoFar, consumedWeight], [copy.inStore, remainingWeight]].map(([label, value]) => (
+        <div key={label} className="px-3 py-2.5 text-center">
+          <dt className="text-label text-ink-muted">{label}</dt>
+          <dd className="mt-0.5 text-body-strong tabular-nums text-ink">{value === null || value === undefined ? copy.unknown : `${value} kg`}</dd>
+        </div>
+      ))}
+    </dl>
+  );
+}
 
-  const handleRecordConsumption = async (event) => {
+function RecordFeedingForm({ mix, isRecording, onRecordConsumption }) {
+  const [consumedWeight, setConsumedWeight] = useState('');
+  const [feedingGroup, setFeedingGroup] = useState('');
+  const blocker = recordFeedingBlocker({ feedingGroup, amount: Number(consumedWeight), remaining: mix.remainingWeight });
+  const inputId = `consumption-${mix.batchId}`;
+
+  const submit = async (event) => {
     event.preventDefault();
-    const amount = Number(consumedWeight);
-    if (!Number.isFinite(amount) || amount <= 0 || amount > mix.remainingWeight) {
-      return;
-    }
+    if (blocker) return;
     try {
-      await onRecordConsumption?.({ consumedWeight: amount, feedingGroup });
+      await onRecordConsumption({ consumedWeight: Number(consumedWeight), feedingGroup });
       setConsumedWeight('');
     } catch {
-      // The parent mutation displays the backend validation message.
+      // The parent mutation shows the backend's message.
     }
   };
 
   return (
-    <div className="flex flex-col justify-between border border-slate-300 bg-white p-6">
-      <div>
-        <h3 className="mb-4 flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-slate-500">
-          <PackageCheck size={16} /> What We're Feeding Now
-        </h3>
+    <form onSubmit={submit} className="border-t border-ink/10 pt-4">
+      <label htmlFor={inputId} className="mb-2 block text-field-label text-ink-muted">{copy.feedUsed}</label>
+      <div className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto]">
+        <select
+          value={feedingGroup}
+          onChange={(event) => setFeedingGroup(event.target.value)}
+          aria-label={copy.group}
+          className="input-machined min-w-0 text-control"
+          required
+        >
+          <option value="">{copy.selectGroup}</option>
+          {FEEDING_GROUPS.map((group) => <option key={group.value} value={group.value}>{group.label}</option>)}
+        </select>
+        <input
+          id={inputId}
+          type="number"
+          inputMode="decimal"
+          min="0.001"
+          max={mix.remainingWeight}
+          step="any"
+          value={consumedWeight}
+          onChange={(event) => setConsumedWeight(event.target.value)}
+          placeholder={copy.upTo(mix.remainingWeight)}
+          className="input-machined min-w-0 text-control tabular-nums"
+        />
+        <button
+          type="submit"
+          disabled={isRecording || Boolean(blocker)}
+          aria-describedby={blocker ? `${inputId}-blocker` : undefined}
+          className="btn-command gap-2 px-4 text-control disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          {isRecording ? copy.recording : copy.record}
+        </button>
+      </div>
+      {blocker && !isRecording && <p id={`${inputId}-blocker`} className="mt-2 text-meta text-ink-muted">{blocker}</p>}
+    </form>
+  );
+}
 
-        <h4 className="text-xl font-black text-slate-900">{mix.name}</h4>
-        <p className="mt-1 text-xs font-medium text-slate-600">
-          Mixed on <span className="font-mono tabular-nums tracking-tight">{mix.mixedOn}</span>
-        </p>
+/**
+ * The batch of one mix type that is being fed now: what's left, how long it
+ * lasts, and recording what was fed. Shows an empty state with the next step
+ * when no batch of this type is in store.
+ */
+/**
+ * @param {object} props
+ * @param {'loading'|'offline'|'error'|'stale'|'ready'} [props.status] The load state of what's
+ *   in store (`getListLoadState`). `stale` shows the batch saved on this phone, like `ready`.
+ */
+export default function CurrentMixCard({ recipeType = 'dairy_meal', mix, status = 'ready', onRetry, onRecordConsumption, isRecording = false, onMixBatch }) {
+  const typeLabel = copy.types[recipeType];
 
-        <div className="mt-6">
-          <div className="mb-2 flex justify-between text-xs font-bold text-slate-900">
-            <span>Stock Level</span>
-            <span className="font-mono tabular-nums tracking-tight">{stockPercentage}%</span>
+  // Until the backend has answered, "nothing in store" would be a guess.
+  if (status !== 'ready' && status !== 'stale') {
+    return (
+      <section className="card-machined flex flex-col gap-4 p-5 sm:p-6" aria-label={typeLabel} aria-busy={status === 'loading' || undefined}>
+        <CardHeader recipeType={recipeType} title={typeLabel} />
+        {status === 'loading' ? (
+          <div role="status" className="space-y-3">
+            <span className="sr-only">{copy.loading}</span>
+            <Skeleton className="h-5 w-2/3" />
+            <Skeleton className="h-4 w-1/2" />
+            <Skeleton className="h-10 w-full" />
           </div>
-          <div className="h-2 w-full overflow-hidden bg-slate-200">
-            <div
-              className={`h-full transition-all duration-500 ${isLowStock ? 'bg-red-700' : 'bg-brand'}`}
-              style={{ width: `${stockPercentage}%` }}
-            />
-          </div>
-        </div>
-
-        <div className={`mt-4 border border-slate-300 border-l-4 bg-white p-4 text-slate-900 ${isLowStock ? 'border-l-red-700' : 'border-l-amber-500'}`}>
-          <div className="flex items-center gap-2 font-bold text-sm mb-1">
-            {isLowStock && <AlertCircle size={16} />}
-            {hasRecordedPace && daysLeft !== null
-              ? <>About <span className="font-mono tabular-nums tracking-tight">{daysLeft}</span> days remaining at the recorded pace</>
-              : 'No depletion forecast yet'}
-          </div>
-          <p className="text-xs font-medium text-slate-700">
-            {hasRecordedPace
-              ? <>Based on recorded feed use of <span className="font-mono tabular-nums tracking-tight">{feedingRate} kg</span> per day.</>
-              : 'Record feeding as it happens to calculate the daily rate and remaining days.'}
-          </p>
-        </div>
-
-        {mix.remainingWeight > 0 && onRecordConsumption && (
-          <form onSubmit={handleRecordConsumption} className="mt-4 border-t border-slate-300 pt-4">
-            <label htmlFor={`consumption-${mix.batchId}`} className="mb-2 block text-xs font-bold uppercase tracking-wider text-slate-500">
-              Feed used today (kg)
-            </label>
-            <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto]">
-              <select
-                value={feedingGroup}
-                onChange={(event) => setFeedingGroup(event.target.value)}
-                aria-label="Animal feeding group"
-                className="min-w-0 rounded-md border border-slate-400 bg-white px-3 py-2 text-sm font-semibold text-slate-900 focus:border-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-900"
-                required
-              >
-                <option value="">Select animal group</option>
-                {FEEDING_GROUPS.map((group) => (
-                  <option key={group.value} value={group.value}>{group.label}</option>
-                ))}
-              </select>
-              <input
-                id={`consumption-${mix.batchId}`}
-                type="number"
-                min="0.001"
-                max={mix.remainingWeight}
-                step="0.001"
-                value={consumedWeight}
-                onChange={(event) => setConsumedWeight(event.target.value)}
-                placeholder={`Up to ${mix.remainingWeight} kg`}
-                className="min-w-0 rounded-md border border-slate-400 bg-white px-3 py-2 font-mono text-sm font-semibold tabular-nums tracking-tight text-slate-900 focus:border-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-900"
-              />
-              <button
-                type="submit"
-                disabled={isRecording || !feedingGroup || !Number(consumedWeight) || Number(consumedWeight) > mix.remainingWeight}
-                className="btn-command gap-2 px-4 py-2.5 text-sm disabled:cursor-not-allowed disabled:opacity-50 sm:col-span-2 lg:col-span-1"
-              >
-                <Utensils size={15} /> {isRecording ? 'Recording' : 'Record feeding'}
+        ) : status === 'offline' ? (
+          <p role="status" className="text-body text-ink">{copy.loadOffline}</p>
+        ) : (
+          <>
+            <p role="alert" className="text-body text-ink">{copy.loadFailed}</p>
+            {onRetry && (
+              <button type="button" onClick={onRetry} className="btn-secondary gap-2 self-start text-control">
+                {copy.retry}
               </button>
-            </div>
-          </form>
+            )}
+          </>
         )}
-      </div>
+      </section>
+    );
+  }
 
-      <div className="mt-6 grid grid-cols-2 gap-4">
-        <div className="border border-slate-300 bg-white p-4 text-center">
-          <span className="mb-1 block text-xs font-bold uppercase tracking-wider text-slate-500">Fed So Far</span>
-          <span className="font-mono text-lg font-black tabular-nums tracking-tight text-slate-900">{mix.consumedWeight} kg</span>
-        </div>
-        <div className="border border-slate-300 bg-white p-4 text-center">
-          <span className="mb-1 block text-xs font-bold uppercase tracking-wider text-slate-500">Still In Store</span>
-          <span className="font-mono text-lg font-black tabular-nums tracking-tight text-slate-900">{mix.remainingWeight} kg</span>
-        </div>
-      </div>
-    </div>
+  if (!mix) {
+    return (
+      <section className="card-machined flex flex-col gap-4 p-5 sm:p-6" aria-label={typeLabel}>
+        <CardHeader recipeType={recipeType} title={copy.emptyTitle(typeLabel)} />
+        <p className="text-body text-ink-muted">{copy.emptyHint}</p>
+        {onMixBatch && (
+          <button type="button" onClick={onMixBatch} className="btn-secondary mt-auto gap-2 self-start text-control">
+            {copy.emptyAction(typeLabel)}
+          </button>
+        )}
+      </section>
+    );
+  }
+
+  // Display only: the share of the backend's total that the backend says is left.
+  const percent = mix.totalWeight > 0 && mix.remainingWeight !== null && mix.remainingWeight !== undefined
+    ? Math.max(0, Math.min(100, Math.round((mix.remainingWeight / mix.totalWeight) * 100)))
+    : null;
+  const daysLeft = mix.daysUntilEmpty ?? null;
+  const isLow = daysLeft !== null && daysLeft <= LOW_STOCK_DAYS;
+
+  return (
+    <section className="card-machined flex flex-col gap-4 p-5 sm:p-6" aria-label={typeLabel}>
+      <CardHeader recipeType={recipeType} title={mix.name} subtitle={mix.mixedOn ? `${copy.mixedOn} ${mix.mixedOn}` : null} />
+      {percent !== null && <StockMeter percent={percent} isLow={isLow} />}
+      <DepletionForecast daysLeft={daysLeft} feedingRate={mix.dailyFeedingRate ?? null} isLow={isLow} />
+      <MixStats consumedWeight={mix.consumedWeight} remainingWeight={mix.remainingWeight} />
+      {mix.remainingWeight > 0 && onRecordConsumption && (
+        <RecordFeedingForm mix={mix} isRecording={isRecording} onRecordConsumption={onRecordConsumption} />
+      )}
+      {onMixBatch && (
+        <button type="button" onClick={onMixBatch} className="btn-ghost gap-2 self-start text-control">
+          {copy.mixAgain}
+        </button>
+      )}
+    </section>
   );
 }

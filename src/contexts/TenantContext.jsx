@@ -2,7 +2,9 @@ import React, { createContext, useState, useEffect, useContext } from 'react';
 import { useAuth } from './AuthContext';
 import { tenantRef } from '../lib/tenantRef';
 import { queryClient } from '../providers/QueryProvider';
-import { authApi } from '../lib/backendApi';
+import { authApi, getApiErrorMessage } from '../lib/backendApi';
+import { offlineFailureMessage } from '../lib/offlinePolicy';
+import { reportError } from '../lib/telemetry';
 
 export const TenantContext = createContext();
 const ACTIVE_FARM_STORAGE_KEY = 'jivu_active_farm';
@@ -40,6 +42,7 @@ export function TenantProvider({ children }) {
   const { currentUser, updateSession } = useAuth();
   const [activeFarm, setActiveFarm] = useState(() => readStoredActiveFarm());
   const [isSwitching, setIsSwitching] = useState(false);
+  const [switchError, setSwitchError] = useState('');
 
   useEffect(() => {
     const scopedTenantId = currentUser?.tenant_id ?? currentUser?.cooperative_id;
@@ -76,6 +79,7 @@ export function TenantProvider({ children }) {
     if (!currentUser || currentUser.farm_id === newFarmId) return;
     
     setIsSwitching(true);
+    setSwitchError('');
     try {
       const response = await authApi.switchFarm(newFarmId);
       
@@ -95,7 +99,10 @@ export function TenantProvider({ children }) {
       writeStoredActiveFarm({ id: updatedUser.farm_id, name: updatedUser.farm_name });
 
     } catch (error) {
-      console.error("Failed to switch farm context", error);
+      // The farm didn't change; say so where the farmer chose it.
+      reportError(error, { where: 'TenantContext.switchFarm' });
+      setSwitchError(offlineFailureMessage(error, 'You’re still on the same farm.')
+        ?? getApiErrorMessage(error, 'Couldn’t switch farms. You’re still on the same farm. Try again.'));
     } finally {
       setIsSwitching(false);
     }
@@ -113,7 +120,8 @@ export function TenantProvider({ children }) {
       availableFarms: currentUser?.available_farms || [],
       isCooperative: currentUser?.tenant_type === 'cooperative' || Boolean(currentUser?.cooperative_id),
       switchFarm,
-      isSwitching
+      isSwitching,
+      switchError,
     }}>
       {children}
     </TenantContext.Provider>

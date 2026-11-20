@@ -1,84 +1,81 @@
 import { useMemo } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
-import { PackagePlus, Wheat } from 'lucide-react';
+import { Plus } from 'lucide-react';
 import toast from 'react-hot-toast';
 import CurrentMixCard from '../../components/nutrition/CurrentMixCard';
 import ProfitabilityChart from '../../components/nutrition/ProfitabilityChart';
 import TopRecipesList from './TopRecipesList';
 import { getApiErrorMessage, nutritionApi } from '../../lib/backendApi';
 import { useTenant } from '../../hooks/useTenant';
+import { todayLocalIso } from '../../lib/localDate';
+import LABELS from '../../lib/labels';
+import { readFeedCostPerLitre } from '../../lib/feedCost';
+import { MIX_TYPES, buildDraftFromBatch, selectActiveMixByType } from '../../lib/activeMixes';
+import { getListLoadState } from '../../lib/listLoadState';
+import { ListLoadNotices } from '../../components/ui/ListLoadState';
+import { feedCopy } from '../../i18n/feed';
 
 export default function NutritionDashboard() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { tenantId, farmId } = useTenant();
 
-  const { data: feedCostEfficiency } = useQuery({
+  const costQuery = useQuery({
     queryKey: ['nutrition-feed-cost-efficiency', tenantId, farmId],
     queryFn: () => nutritionApi.feedCostEfficiency(),
     enabled: !!tenantId && !!farmId,
   });
 
-  const { data: recipesData } = useQuery({
+  const recipesQuery = useQuery({
     queryKey: ['nutrition-recipes', tenantId, farmId],
     queryFn: () => nutritionApi.listRecipes(),
     enabled: !!tenantId && !!farmId,
   });
 
-  const { data: roiTrend } = useQuery({
+  const roiTrendQuery = useQuery({
     queryKey: ['nutrition-active-batch-roi-trend-weekly', tenantId, farmId],
     queryFn: () => nutritionApi.activeBatchRoiTrendWeekly(),
     enabled: !!tenantId && !!farmId,
   });
 
-  // feed-cost-efficiency returns { rows: [per-batch...] }, not a flat object.
-  // The "current mix" is the most recent non-depleted batch (fallback: latest row).
-  const currentMix = useMemo(() => {
-    const rows = Array.isArray(feedCostEfficiency?.rows) ? feedCostEfficiency.rows : [];
-    if (rows.length === 0) {
-      return null;
-    }
+  // The backend's list of batches in store (type, weights, days left). Same query
+  // key as the Today's Feeding page, so the two share one request.
+  const feedingTodayQuery = useQuery({
+    queryKey: ['feeding-today', tenantId, farmId],
+    queryFn: () => nutritionApi.feedingToday(),
+    enabled: !!tenantId && !!farmId,
+  });
+  const feedCostEfficiency = costQuery.data;
+  const recipesData = recipesQuery.data;
+  const roiTrend = roiTrendQuery.data;
+  const storeStatus = getListLoadState(feedingTodayQuery);
+  // Costs on the mix cards come from this query; until it answers they show "—", and a
+  // failure says so above the cards rather than leaving the dashes unexplained.
+  const costState = getListLoadState(costQuery);
 
-    const batch = rows.find((r) => !r.depletedOn) ?? rows[rows.length - 1];
-    const ingredients = Array.isArray(batch.ingredients)
-      ? batch.ingredients
-      : (Array.isArray(batch.ingredient_breakdown) ? batch.ingredient_breakdown : []);
-
-    const totalWeight = ingredients.reduce((sum, ing) => sum + (Number(ing.weight) || 0), 0);
-    const consumedWeight = Number(batch.consumedWeight ?? batch.consumed_weight ?? 0);
-    const remainingWeight = Number(batch.remainingWeight ?? batch.remaining_weight ?? (totalWeight - consumedWeight));
-
-    return {
-      batchId: batch.batchId,
-      name: batch.batchName ?? batch.name ?? 'Feed mix',
-      totalWeight: Number(totalWeight.toFixed(2)),
-      consumedWeight: Number(consumedWeight.toFixed(2)),
-      remainingWeight: Number(remainingWeight.toFixed(2)),
-      dailyFeedingRate: Number(
-        batch.dailyFeedingRateKg ?? batch.daily_feeding_rate_kg ?? batch.dailyFeedingRate ?? 0
-      ),
-      daysUntilEmpty: batch.daysUntilEmpty ?? batch.days_until_empty ?? null,
-      rateBasis: batch.rateBasis ?? batch.rate_basis ?? null,
-      mixedOn: batch.mixedOn ?? batch.mixed_on ?? null,
-    };
-  }, [feedCostEfficiency]);
+  const activeMixes = useMemo(
+    () => selectActiveMixByType(feedingTodayQuery.data, feedCostEfficiency?.rows),
+    [feedingTodayQuery.data, feedCostEfficiency],
+  );
 
   const consumptionMutation = useMutation({
     mutationFn: ({ batchId, consumedWeight, feedingGroup }) => nutritionApi.createConsumptionEvent(batchId, {
       consumedWeight,
-      consumedOn: new Date().toISOString().slice(0, 10),
+      // The farm's calendar date: the backend rejects dates after the farm's today.
+      consumedOn: todayLocalIso(),
       feeding_group: feedingGroup,
     }),
     onSuccess: async () => {
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ['nutrition-feed-cost-efficiency', tenantId, farmId] }),
         queryClient.invalidateQueries({ queryKey: ['nutrition-active-batch-roi-trend-weekly', tenantId, farmId] }),
+        queryClient.invalidateQueries({ queryKey: ['feeding-today', tenantId, farmId] }),
       ]);
-      toast.success('Feeding recorded.');
+      toast.success(feedCopy.today.feedingRecorded);
     },
     onError: (error) => {
-      toast.error(getApiErrorMessage(error, 'Could not record feeding. Check the details and try again.'));
+      toast.error(getApiErrorMessage(error, feedCopy.errors.recordFeeding));
     },
   });
 
@@ -92,83 +89,72 @@ export default function NutritionDashboard() {
 
     return rows.map((point, index) => ({
       week: point.week || point.weekStart || point.week_start || point.label || `Wk ${index + 1}`,
-      cost: Number(point.feedCostPerLiter ?? point.costPerLiter ?? point.cost ?? 0),
-      height: point.height || ['h-24', 'h-20', 'h-16', 'h-12', 'h-10'][Math.min(index, 4)],
+      cost: readFeedCostPerLitre(point),
       isCurrent: Boolean(point.isCurrent),
     }));
   }, [roiTrend]);
 
   const recipes = useMemo(() => (Array.isArray(recipesData) ? recipesData : []), [recipesData]);
 
-  // Thin launcher: route into the canonical Feed Mixing Planner with the active
-  // batch pre-loaded as an editable draft, instead of a parallel modal form.
-  const handleCreateBatch = () => {
-    const rows = Array.isArray(feedCostEfficiency?.rows) ? feedCostEfficiency.rows : [];
-    const activeBatch = rows.find((r) => !r.depletedOn) ?? rows[rows.length - 1] ?? null;
-    const ingredients = Array.isArray(activeBatch?.ingredients)
-      ? activeBatch.ingredients
-      : (Array.isArray(activeBatch?.ingredient_breakdown) ? activeBatch.ingredient_breakdown : []);
-
-    const draftFormula = ingredients.map((ing) => ({
-      id: String(ing.ingredientId ?? ing.ingredient_id ?? ing.ingredientName ?? ing.name),
-      ingredientId: ing.ingredientId ?? ing.ingredient_id ?? null,
-      ingredient_id: ing.ingredientId ?? ing.ingredient_id ?? null,
-      inventory_item_id: ing.ingredientId ?? ing.ingredient_id ?? null,
-      name: ing.ingredientName ?? ing.ingredient_name ?? ing.name ?? 'Ingredient',
-      percentage: Number(ing.percentage ?? ing.inclusion_percentage ?? 0),
-      proteinContent: Number(ing.proteinGramsPerKg ?? ing.protein_grams_per_kg ?? 0) / 10,
-      pricePerKg: Number(ing.lockedCostPerKg ?? ing.locked_cost_per_kg ?? 0),
-    }));
-
-    navigate('/feed-nutrition/mix', {
-      state: {
-        isImportedDraft: true,
-        draftType: activeBatch?.recipeType ?? activeBatch?.recipe_type ?? 'main_meal',
-        draftFormula,
-        draftName: activeBatch?.batchName ?? 'Current Mix',
-      },
-    });
+  // Thin launcher into the mixing planner: with a batch in store, its shares open as
+  // an editable draft; otherwise the planner opens on that mix type's tab.
+  const openPlanner = (recipeType) => {
+    const mix = activeMixes[recipeType];
+    navigate('/feed-nutrition/mix', { state: mix?.row ? buildDraftFromBatch(mix.row, recipeType, mix.name) : { mixType: recipeType } });
   };
 
   return (
     <div className="animate-reveal space-y-8 max-w-7xl mx-auto">
       {/* ── HEADER ── */}
-      <div className="flex flex-col gap-4 border-b border-slate-300 pb-6 sm:flex-row sm:items-end sm:justify-between">
+      <div className="flex flex-col gap-4 border-b border-ink/10 pb-6 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <div className="inline-flex items-center gap-2 rounded-full bg-brand/10 px-3 py-1 text-[10px] font-bold uppercase tracking-widest text-brand">
-            <Wheat size={12} /> Feed Planner
-          </div>
-          <h1 className="mt-3 text-3xl font-black tracking-tight text-ink">Feed Stock & Costs</h1>
-          <p className="mt-2 max-w-2xl text-sm leading-7 text-ink-muted">
+          <h1 className="text-page-title text-ink">{LABELS.FEED_DASHBOARD}</h1>
+          <p className="mt-2 max-w-2xl text-body text-ink-muted">
             Track what feed is in stock, what it costs, and which mix helps your cows give more milk.
           </p>
         </div>
 
         <button
           type="button"
-          onClick={handleCreateBatch}
-          className="btn-command gap-2 px-4 py-2.5 text-sm"
+          onClick={() => navigate('/feed-nutrition/mix')}
+          className="btn-command gap-2 px-4 py-2.5 text-control"
         >
-          <PackagePlus size={18} /> Create New Feed Batch
+          <Plus size={18} aria-hidden="true" /> {feedCopy.costs.createBatch}
         </button>
       </div>
 
-      {/* ── TOP GRID: STATUS & FINANCIALS ── */}
-      <div className="grid gap-6 xl:grid-cols-2">
-        <CurrentMixCard
-          mix={currentMix}
-          isRecording={consumptionMutation.isPending}
-          onRecordConsumption={({ consumedWeight, feedingGroup }) => consumptionMutation.mutateAsync({
-            batchId: currentMix.batchId,
-            consumedWeight,
-            feedingGroup,
-          })}
-        />
-        <ProfitabilityChart trends={trends} />
+      {/* ── WHAT'S BEING FED: one card per mix type ── */}
+      {costState !== 'loading' && costState !== 'ready' && (
+        <div className="overflow-hidden rounded-card border border-ink/10 bg-surface">
+          <ListLoadNotices state={costState} label={feedCopy.costs.listLabel} error={costQuery.error} onRetry={costQuery.refetch} />
+        </div>
+      )}
+      <div className="grid gap-6 lg:grid-cols-2">
+        {MIX_TYPES.map((recipeType) => {
+          const mix = activeMixes[recipeType];
+          return (
+            <CurrentMixCard
+              key={recipeType}
+              recipeType={recipeType}
+              mix={mix}
+              status={storeStatus}
+              onRetry={() => feedingTodayQuery.refetch()}
+              isRecording={consumptionMutation.isPending && consumptionMutation.variables?.batchId === mix?.batchId}
+              onRecordConsumption={({ consumedWeight, feedingGroup }) => consumptionMutation.mutateAsync({
+                batchId: mix.batchId,
+                consumedWeight,
+                feedingGroup,
+              })}
+              onMixBatch={() => openPlanner(recipeType)}
+            />
+          );
+        })}
       </div>
 
+      <ProfitabilityChart trends={trends} state={getListLoadState(roiTrendQuery)} error={roiTrendQuery.error} onRetry={roiTrendQuery.refetch} />
+
       {/* ── BOTTOM SECTION: HISTORICAL PLAYBOOK ── */}
-      <TopRecipesList recipes={recipes} />
+      <TopRecipesList recipes={recipes} state={getListLoadState(recipesQuery)} error={recipesQuery.error} onRetry={recipesQuery.refetch} />
     </div>
   );
 }

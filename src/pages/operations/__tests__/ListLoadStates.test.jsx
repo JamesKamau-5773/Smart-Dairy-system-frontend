@@ -18,6 +18,9 @@ vi.mock('../../../hooks/useTenant', () => ({
   useTenant: () => ({ tenantId: 'tenant_1', farmId: 'farm_1' }),
 }));
 
+// The milk log opens on the current year; a fixed today keeps its cache key stable.
+vi.mock('../../../lib/localDate', async (importOriginal) => ({ ...(await importOriginal()), todayLocalIso: () => '2026-11-16' }));
+
 vi.mock('../../../contexts/AuthContext', () => ({
   useAuth: () => ({ currentUser: { id: 1, role: 'FARMER', tenant_id: 'tenant_1', farm_id: 'farm_1' } }),
 }));
@@ -30,7 +33,11 @@ vi.mock('../../../lib/backendApi', async (importOriginal) => {
     productionApi: {
       listYield: api.listYield,
       summary: vi.fn().mockResolvedValue({}),
+      getPeriodSummary: vi.fn().mockResolvedValue({}),
+      getGroupTotals: vi.fn().mockResolvedValue({ groups: [] }),
       listMilkDispositions: resolvesEmpty(),
+      listMilkDispositionsWithTotals: vi.fn().mockResolvedValue({ items: [], count: 0, totalLitres: null }),
+      yieldTotals: vi.fn().mockResolvedValue({ totalRecords: null, totalLitres: null, verified: null, pending: null, flagged: null, isolated: null }),
       createYield: resolvesEmpty(),
       deleteYield: resolvesEmpty(),
       verifyYield: resolvesEmpty(),
@@ -57,10 +64,13 @@ const screens = [
     name: 'milk log',
     Page: YieldLog,
     load: api.listYield,
-    queryKey: ['production-yield-rows', 'tenant_1', 'farm_1'],
+    queryKey: ['production-yield-rows', 'tenant_1', 'farm_1', { date_from: '2026-01-01', date_to: '2026-11-16' }],
     label: 'milk records',
+    // The milk log's figures come from the period totals endpoint, not from the list.
+    hasListStats: false,
     noResults: /No milk log entries match/i,
     firstTimeEmpty: /No milk recorded yet/i,
+    firstTimeAction: /Record the first milking/i,
     cachedRow: { id: 'y1', cow_id: 'C-102', cow_name: 'Neema', amount: 12.5, session: 'morning', date: '2026-10-30' },
     cachedText: /Neema/,
   },
@@ -70,14 +80,16 @@ const screens = [
     load: api.listRecords,
     queryKey: ['medical-records', 'tenant_1', 'farm_1'],
     label: 'medical records',
+    hasListStats: true,
     noResults: /No medical records match/i,
     firstTimeEmpty: /No medical records yet/i,
+    firstTimeAction: /Log New Visit/i,
     cachedRow: { id: 12, cow: 'Mrembo · 005', date: '2026-09-23', diagnosis: 'Weight loss', vet: 'Dr. Njoroge', status: 'Closed', severity: 'Low' },
     cachedText: /Weight loss/,
   },
 ];
 
-describe.each(screens)('$name list states', ({ Page, load, queryKey, label, noResults, firstTimeEmpty, cachedRow, cachedText }) => {
+describe.each(screens)('$name list states', ({ Page, load, queryKey, label, hasListStats, noResults, firstTimeEmpty, firstTimeAction, cachedRow, cachedText }) => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
@@ -95,13 +107,14 @@ describe.each(screens)('$name list states', ({ Page, load, queryKey, label, noRe
     load.mockRejectedValueOnce(networkError()).mockResolvedValueOnce([cachedRow]);
     renderWithClient(<Page />);
 
-    expect(await screen.findByText(`Couldn’t load ${label}.`)).toBeTruthy();
-    expect(screen.getByText(/couldn’t reach the server/i)).toBeTruthy();
+    // A page with a phone list beside its desktop table says it in both (CSS shows one).
+    expect((await screen.findAllByText(`Couldn’t load ${label}.`)).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/couldn’t reach the server/i).length).toBeGreaterThan(0);
     expect(screen.queryByText(noResults)).toBeNull();
     expect(screen.queryByText('0.0 L')).toBeNull();
-    expect(screen.getAllByText(`Not available until ${label} load`).length).toBeGreaterThan(0);
+    if (hasListStats) expect(screen.getAllByText(`Not available until ${label} load`).length).toBeGreaterThan(0);
 
-    fireEvent.click(screen.getByRole('button', { name: /try again/i }));
+    fireEvent.click(screen.getAllByRole('button', { name: /try again/i })[0]);
     expect((await screen.findAllByText(cachedText)).length).toBeGreaterThan(0);
   });
 
@@ -112,7 +125,7 @@ describe.each(screens)('$name list states', ({ Page, load, queryKey, label, noRe
     renderWithClient(<Page />, queryClient);
 
     await waitFor(() => expect(load).toHaveBeenCalled());
-    expect(await screen.findByText(new RegExp(`Showing ${label} saved on this phone`, 'i'))).toBeTruthy();
+    expect((await screen.findAllByText(new RegExp(`Showing ${label} saved on this phone`, 'i'))).length).toBeGreaterThan(0);
     expect(screen.getAllByText(cachedText).length).toBeGreaterThan(0);
   });
 
@@ -120,18 +133,19 @@ describe.each(screens)('$name list states', ({ Page, load, queryKey, label, noRe
     onlineManager.setOnline(false);
     try {
       renderWithClient(<Page />);
-      expect(await screen.findByText(`You’re offline, and ${label} haven’t been saved on this phone yet.`)).toBeTruthy();
+      expect((await screen.findAllByText(`You’re offline, and ${label} haven’t been saved on this phone yet.`)).length).toBeGreaterThan(0);
       expect(load).not.toHaveBeenCalled();
     } finally {
       onlineManager.setOnline(true);
     }
   });
 
-  it('distinguishes a first-time empty list from filters that match nothing', async () => {
+  it('distinguishes a first-time empty list from filters that match nothing, and offers the first action', async () => {
     load.mockResolvedValue([]);
     renderWithClient(<Page />);
 
     expect((await screen.findAllByText(firstTimeEmpty)).length).toBeGreaterThan(0);
     expect(screen.queryByText(noResults)).toBeNull();
+    expect(screen.getAllByRole('button', { name: firstTimeAction }).length).toBeGreaterThan(0);
   });
 });

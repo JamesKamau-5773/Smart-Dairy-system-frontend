@@ -24,11 +24,6 @@ vi.mock('../../../lib/backendApi', () => ({
   },
 }));
 
-vi.mock('../../../lib/audit', () => ({
-  createAuditEntry: vi.fn((entry) => entry),
-  logToAuditTrail: vi.fn(),
-}));
-
 vi.mock('react-hot-toast', () => ({ default: { error: vi.fn(), success: vi.fn() } }));
 
 afterEach(() => {
@@ -85,8 +80,8 @@ describe('LogAIServiceForm edit mode', () => {
 
     expect(screen.getByPlaceholderText('e.g. Dr. Njeri').value).toBe('Dr. Njeri');
     expect(container.querySelector('input[type="date"]').value).toBe('2026-09-15');
-    expect(screen.getByRole('button', { name: 'Update Service' })).toBeTruthy();
-    fireEvent.click(screen.getByRole('button', { name: 'Update Service' }));
+    expect(screen.getByRole('button', { name: 'Update service' })).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'Update service' }));
 
     await waitFor(() => expect(mocks.updateLog).toHaveBeenCalled());
     expect(mocks.updateLog).toHaveBeenCalledWith(9, expect.objectContaining({

@@ -1,23 +1,36 @@
 import { normalizeCowIdentity } from './cowIdentity';
+import { getSearchSuggestions, matchesSearch } from './fuzzySearch';
 
 /**
  * @file Utility functions for processing and normalizing herd registry data.
  */
 
 import { formatDateTime, getRelativeTime } from './audit';
+import { formatDate as formatDisplayDate } from './dateFormat';
+import { herdCopy } from '../i18n/herd';
 
-export function formatAge(ageMonths) {
-  if (typeof ageMonths !== 'number' || !Number.isFinite(ageMonths)) return 'N/A';
-  const years = Math.floor(ageMonths / 12);
-  const months = ageMonths % 12;
-  return `${years}y ${months}m`;
+/**
+ * An animal's age in months as the backend sent it (`ageMonths`, `age_months` or
+ * `age_in_months`), or null when it sent none. Never 0 for "unknown".
+ */
+export function readAgeMonths(source = {}) {
+  const value = source?.ageMonths ?? source?.age_months ?? source?.age_in_months;
+  if (value === null || value === undefined || value === '') return null;
+  const months = Number(value);
+  return Number.isFinite(months) && months >= 0 ? months : null;
 }
 
+/** "3y 10m" for a known age, null when unknown (render it with <AnimalAge />). */
+export function formatAge(ageMonths) {
+  if (typeof ageMonths !== 'number' || !Number.isFinite(ageMonths)) return null;
+  const years = Math.floor(ageMonths / 12);
+  const months = ageMonths % 12;
+  return herdCopy.age.short(years, months);
+}
+
+// Day-first display ("03 Nov 2026"); one formatter for the whole app.
 export function formatDate(dateValue) {
-  if (!dateValue) return 'N/A';
-  const parsedDate = new Date(dateValue);
-  if (Number.isNaN(parsedDate.getTime())) return 'N/A';
-  return parsedDate.toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' });
+  return formatDisplayDate(dateValue);
 }
 
 function normalizeStatusValue(status = '') {
@@ -82,7 +95,7 @@ function getRelatedRecordName(value) {
 
 export function normalizeHerdCow(cow = {}, fallback = {}) {
   const identity = normalizeCowIdentity({ ...fallback, ...cow });
-  const ageMonths = Number(cow.ageMonths ?? cow.age_months ?? fallback.ageMonths ?? 0);
+  const ageMonths = readAgeMonths(cow) ?? readAgeMonths(fallback);
   const status = cow.current_status ?? cow.currentStatus ?? cow.status ?? cow.lactation_status ?? fallback.status ?? 'Cow';
   const displayId = identity.earTag || identity.recordId;
   const recordId = identity.recordId || identity.earTag;
@@ -120,12 +133,7 @@ export function getFilteredHerd(herd, statusFilter, searchTerm) {
   const normalizedSearch = searchTerm.trim().toLowerCase();
   return herd
     .filter((cow) => matchesStatusFilter(cow.status, statusFilter))
-    .filter((cow) => {
-      if (!normalizedSearch) return true;
-      return [cow.id, cow.name, cow.breed, cow.status].some((field) =>
-        String(field).toLowerCase().includes(normalizedSearch)
-      );
-    })
+    .filter((cow) => !normalizedSearch || matchesSearch([cow.id, cow.name, cow.breed, cow.status], normalizedSearch))
     .slice()
     .sort((a, b) => {
       if (a.id === b.id) return 0;
@@ -161,4 +169,11 @@ export function getHerdSummary(herd) {
     latestCalved,
     latestUpdatedAt,
   };
+}
+/**
+ * "Did you mean…" for a herd search with no results: cows whose name (or any word of it) or ear tag
+ * is within a couple of typos of what was typed. Closest first.
+ */
+export function getHerdSearchSuggestions(herd, searchTerm, limit = 3) {
+  return getSearchSuggestions(herd, searchTerm, (cow) => [cow.id, cow.name], limit);
 }

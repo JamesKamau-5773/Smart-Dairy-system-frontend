@@ -1,57 +1,139 @@
-import { BadgeCheck, CalendarDays, CreditCard, Download, Hash, ReceiptText, Share2, UserRound, X } from 'lucide-react';
-import { createPortal } from 'react-dom';
+import { Download, Loader2, Share2, ShieldCheck } from 'lucide-react';
+import BaseModal from '../ui/BaseModal';
+import BrandLogo from '../brand/BrandLogo';
 import { formatMoney, formatReceiptDate } from '../../lib/receipt';
+import { financeCopy } from '../../i18n/finance';
+import { humanizeEnum } from '../../lib/enumLabel';
 
-export default function ReceiptPreview({ receipt, isOpen, onClose, onDownload, onShare, isDownloading }) {
+// The backend's receipt statuses (ReceiptStatus: ISSUED, then VOIDED after a correction).
+// Anything else it adds later shows humanised, in neutral colours.
+const STATUS_TONE = {
+  ISSUED: 'border-success/25 bg-success/10 text-success',
+  VOIDED: 'border-danger/25 bg-danger-50 text-danger',
+};
+const NEUTRAL_TONE = 'border-ink/15 bg-ink-50 text-ink-muted';
+
+function DetailRow({ label, children, mono = false }) {
+  return (
+    <div className="flex items-baseline justify-between gap-6 py-2.5">
+      <dt className="shrink-0 text-meta text-ink-muted">{label}</dt>
+      <dd className={`min-w-0 break-words text-right text-body-strong text-ink ${mono ? 'break-all tabular-nums' : ''}`}>{children}</dd>
+    </div>
+  );
+}
+
+function ActionLabel({ busy, icon: Icon, busyLabel, label }) {
+  return (
+    <span className="inline-flex items-center justify-center gap-2">
+      {busy ? <Loader2 className="size-4 animate-spin" aria-hidden="true" /> : <Icon className="size-4" aria-hidden="true" />}
+      {busy ? busyLabel : label}
+    </span>
+  );
+}
+
+/**
+ * The receipt as a document: brand and number on top, the amount it confirms, who issued it and
+ * who paid, then the payment details. Every value is the backend's receipt as sent; a missing one
+ * reads "Not recorded".
+ */
+export default function ReceiptPreview({ receipt, isOpen, onClose, onDownload, onShare, isDownloading, isSharing = false }) {
   if (!isOpen || !receipt) return null;
+  const copy = financeCopy.receipt;
+  const status = String(receipt.status ?? '').toUpperCase();
+  const isVoided = status === 'VOIDED';
+  const issuer = receipt.tenant?.name || receipt.farm?.name || copy.farmReceipt;
+  // The farm's name under the account's, unless they are the same.
+  const issuerFarm = receipt.tenant?.name && receipt.farm?.name !== receipt.tenant.name ? receipt.farm?.name : null;
 
-  return createPortal(
-    <div className="fixed inset-0 z-[100] flex items-start justify-center overflow-y-auto overscroll-contain bg-black/50 p-3 animate-reveal-fast touch-pan-y sm:items-center sm:p-4">
-      <div role="dialog" aria-modal="true" aria-label="Payment receipt" className="my-auto max-h-[calc(100dvh-1.5rem)] w-full max-w-xl overflow-y-auto overscroll-contain rounded-lg border border-ink/10 bg-white touch-pan-y">
-        <div className="border-b-4 border-brand px-5 py-5">
-          <div className="flex items-start justify-between gap-4">
-            <div>
-              <div className="flex items-center gap-2 text-brand"><ReceiptText size={18} /><p className="text-[10px] font-black uppercase tracking-[0.18em]">Payment receipt</p></div>
-              <h3 className="mt-2 text-xl font-black text-ink">{receipt.tenant?.name || receipt.farm?.name || 'Farm receipt'}</h3>
-              <p className="mt-1 text-sm text-ink-muted">{receipt.farm?.name || 'Farm not recorded'}</p>
-            </div>
-            <div className="text-right">
-              <span className="inline-flex items-center gap-1 border border-success/20 bg-success/10 px-2 py-1 text-[10px] font-black uppercase tracking-wider text-success"><BadgeCheck size={12} /> {receipt.status}</span>
-              <p className="mt-3 font-mono text-xs font-bold text-ink">{receipt.receipt_number}</p>
-            </div>
-          </div>
-          <button type="button" aria-label="Close receipt preview" onClick={onClose} className="rounded-full p-2 hover:bg-slate-100 text-ink-muted">
-            <X size={18} />
+  return (
+    <BaseModal
+      isOpen
+      onClose={onClose}
+      title={copy.title}
+      size="xl"
+      closeLabel={copy.close}
+      footerActions={(
+        <>
+          <button
+            type="button"
+            onClick={onDownload}
+            disabled={isDownloading}
+            className="flex-1 rounded-button bg-brand px-4 py-2.5 text-control text-white transition-colors hover:bg-brand-dark disabled:opacity-70"
+          >
+            <ActionLabel busy={isDownloading} icon={Download} busyLabel={copy.preparing} label={copy.download} />
           </button>
-        </div>
-
-        <div className="space-y-5 p-5">
-          <div className="grid grid-cols-2 gap-3 border-y border-ink/10 py-3 text-sm"><div><p className="text-[10px] font-black uppercase tracking-wider text-ink-muted">Issued</p><p className="mt-1 flex items-center gap-1.5 font-bold text-ink"><CalendarDays size={14} /> {formatReceiptDate(receipt.issued_at)}</p></div><div><p className="text-[10px] font-black uppercase tracking-wider text-ink-muted">Received from</p><p className="mt-1 flex items-center gap-1.5 font-bold text-ink"><UserRound size={14} /> {receipt.counterparty_name || 'Not recorded'}</p></div></div>
-          <section><h4 className="text-[10px] font-black uppercase tracking-wider text-brand">Payment details</h4><div className="mt-2 grid grid-cols-1 gap-2 text-sm sm:grid-cols-2"><div><p className="text-ink-muted">Category</p><p className="font-bold text-ink">{receipt.category || 'Not recorded'}</p></div><div><p className="text-ink-muted">Method</p><p className="flex items-center gap-1.5 font-bold text-ink"><CreditCard size={14} /> {receipt.payment_method || 'Not recorded'}</p></div><div><p className="text-ink-muted">Reference</p><p className="font-mono font-bold text-ink">{receipt.payment_reference || 'Not recorded'}</p></div><div><p className="text-ink-muted">Transaction date</p><p className="font-bold text-ink">{formatReceiptDate(receipt.transaction_date)}</p></div></div></section>
-          <section className="border-l-4 border-brand/25 bg-surface-raised px-3 py-2"><p className="text-[10px] font-black uppercase tracking-wider text-ink-muted">Description</p><p className="mt-1 text-sm text-ink">{receipt.description || 'Payment received'}</p></section>
-          <div className="flex items-center justify-between border border-success/20 bg-success/10 px-4 py-4"><span className="text-xs font-black uppercase tracking-wider text-success">Total received</span><span className="text-xl font-black text-ink">{formatMoney(receipt.amount)}</span></div>
-          {receipt.document_sha256 && <details className="border-t border-ink/10 pt-3"><summary className="flex cursor-pointer items-center gap-1.5 text-xs font-bold text-ink-muted"><Hash size={13} /> Verification details</summary><p className="mt-2 break-all font-mono text-[10px] text-ink-muted">SHA-256: {receipt.document_sha256}</p></details>}
-
-          <div className="flex gap-3">
-            <button
-              type="button"
-              onClick={onDownload}
-              disabled={isDownloading}
-              className="flex-1 rounded-lg bg-brand px-4 py-2.5 text-sm font-black text-white hover:bg-brand-dark"
-            >
-              <span className="inline-flex items-center justify-center gap-2"><Download size={16} /> {isDownloading ? 'Preparing...' : 'Download PDF'}</span>
-            </button>
-            <button
-              type="button"
-              onClick={onShare}
-              className="flex-1 rounded-lg border border-ink/10 bg-surface-raised px-4 py-2.5 text-sm font-black text-ink hover:bg-surface"
-            >
-              <span className="inline-flex items-center justify-center gap-2"><Share2 size={16} /> Share receipt</span>
-            </button>
+          <button
+            type="button"
+            onClick={onShare}
+            disabled={isSharing}
+            className="flex-1 rounded-button border border-ink/15 bg-white px-4 py-2.5 text-control text-ink transition-colors hover:bg-ink-50 disabled:opacity-70"
+          >
+            <ActionLabel busy={isSharing} icon={Share2} busyLabel={copy.preparing} label={copy.share} />
+          </button>
+        </>
+      )}
+    >
+      <article aria-label={copy.title} className="overflow-hidden rounded-card border border-ink/10 border-t-4 border-t-brand bg-white">
+        {/* Brand and number: the same top row the PDF carries (BR-031). */}
+        <header className="flex items-center justify-between gap-4 px-5 pb-4 pt-5">
+          <BrandLogo variant="horizontal" size={36} />
+          <div className="min-w-0 text-right">
+            <p className="text-label text-ink-muted">{copy.receiptNumber}</p>
+            <p className="mt-0.5 break-all text-body-strong tabular-nums text-ink">{receipt.receipt_number || copy.notRecorded}</p>
           </div>
-        </div>
-      </div>
-    </div>,
-    document.body,
+        </header>
+
+        {/* The amount the receipt confirms. */}
+        <section className="mx-5 rounded-card bg-ink-50 px-4 py-4">
+          <div className="flex items-start justify-between gap-3">
+            <p className="text-label text-ink-muted">{copy.totalReceived}</p>
+            <span className={`inline-flex shrink-0 items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-badge ${STATUS_TONE[status] ?? NEUTRAL_TONE}`}>
+              <span className="size-1.5 rounded-full bg-current" aria-hidden="true" />
+              {copy.statuses[status] ?? humanizeEnum(receipt.status)}
+            </span>
+          </div>
+          <p className={`mt-1 text-money-value-primary text-ink ${isVoided ? 'line-through decoration-danger/60' : ''}`}>
+            {formatMoney(receipt.amount)}
+          </p>
+          <p className="mt-1 text-meta text-ink-muted">{copy.issuedOn(formatReceiptDate(receipt.issued_at))}</p>
+        </section>
+
+        {/* Parties. */}
+        <section className="grid grid-cols-1 gap-4 px-5 py-5 sm:grid-cols-2">
+          <div className="min-w-0">
+            <p className="text-label text-ink-muted">{copy.issuedBy}</p>
+            <p className="mt-1 break-words text-body-strong text-ink">{issuer}</p>
+            {issuerFarm && <p className="break-words text-meta text-ink-muted">{issuerFarm}</p>}
+          </div>
+          <div className="min-w-0 sm:text-right">
+            <p className="text-label text-ink-muted">{copy.receivedFrom}</p>
+            <p className="mt-1 break-words text-body-strong text-ink">{receipt.counterparty_name || copy.notRecorded}</p>
+          </div>
+        </section>
+
+        {/* Payment details, one per row. */}
+        <section className="border-t border-dashed border-ink/15 px-5 pb-3 pt-4">
+          <h4 className="text-label text-brand">{copy.paymentDetails}</h4>
+          <dl className="mt-1 divide-y divide-ink/5">
+            <DetailRow label={copy.category}>{receipt.category || copy.notRecorded}</DetailRow>
+            <DetailRow label={copy.method}>{receipt.payment_method || copy.notRecorded}</DetailRow>
+            <DetailRow label={copy.reference} mono={Boolean(receipt.payment_reference)}>{receipt.payment_reference || copy.notRecorded}</DetailRow>
+            <DetailRow label={copy.transactionDate}>{formatReceiptDate(receipt.transaction_date)}</DetailRow>
+            <DetailRow label={copy.description}>{receipt.description || copy.paymentReceived}</DetailRow>
+          </dl>
+        </section>
+
+        {receipt.document_sha256 && (
+          <details className="group border-t border-ink/10 bg-ink-50 px-5 py-3">
+            <summary className="flex cursor-pointer list-none items-center gap-2 text-control text-ink-muted hover:text-ink">
+              <ShieldCheck className="size-4 text-success" aria-hidden="true" />
+              {copy.verification}
+            </summary>
+            <p className="mt-2 text-meta text-ink-muted">{copy.verificationHint}</p>
+            <p className="mt-1 break-all text-meta text-ink">SHA-256: {receipt.document_sha256}</p>
+          </details>
+        )}
+      </article>
+    </BaseModal>
   );
 }

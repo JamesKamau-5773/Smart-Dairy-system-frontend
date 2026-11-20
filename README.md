@@ -1,283 +1,221 @@
-# Smart Dairy ERP System - Frontend
+# Maziwa Smart: frontend
 
-**jivu-frontend** is a modern React-based dashboard for farm management and dairy operations, featuring real-time production tracking, feed formulation, herd management, and business intelligence.
+The web app for Maziwa Smart, a dairy farm management system for Kenyan farms and
+cooperatives. Farmers and their staff record milk, manage the herd, feeding, stock, buyers,
+money and staff, from a phone, in English or Kiswahili, including when the connection drops.
 
-## Features
+This repo holds two things built together by Vite:
 
-### Core Modules
-- **HerdsmanView Dashboard** — Live herd status, today's plan, feed mix composition
-- **Feed & Nutrition** — Live mix builder with template persistence, profitability charts, recipe management
-- **Production Tracking** — Fast milk logging, yield history, medical records  
-- **Inventory Management** — Feed formulation, stock registry, buyer tracking
-- **Finance** — Ledger, customer profiles, payments
-- **HR & Staffing** — Payroll, staff registry
+- **The landing page** (`/`): a static marketing page generated at build time from
+  `src/landing/`.
+- **The app** (`/app.html` and every signed-in route): a React single-page app, installable as
+  a PWA.
 
-### UI/UX Highlights
-- Responsive design with Tailwind CSS
-- Dark/light theme toggle
-- Offline queue support (PWA-ready)
-- Loading skeletons and status indicators
-- Modal workflows for intuitive data entry
-
-### Developer Experience
-- MSW mocks for realistic API simulation
-- Comprehensive test suite (Vitest, 24+ tests)
-- React Query for efficient server state management
-- Hot module reloading with Vite
-- SRP component architecture
-
-### Backend Integration
-- Full frontend build integration contract: [docs/backend-integration-contract.md](docs/backend-integration-contract.md)
-- Endpoint map by routed module: [docs/backend-endpoint-map.md](docs/backend-endpoint-map.md)
-- Shared API client attaches auth plus tenant/farm isolation headers for every protected request
+The backend is a separate Flask API (`../../backend` in the monorepo). **The backend is the
+source of truth**: this app shows what the API sends and never invents business data. Where a
+value is missing it shows "—", and the gap is written up in
+[BACKEND_REQUESTS.md](BACKEND_REQUESTS.md).
 
 ---
 
-## Quick Start
+## What the app covers
 
-**Prerequisites:** Node.js 18+, npm 9+
+| Area | Pages |
+|---|---|
+| Daily work | Dashboard, Production Log (milk records), milk usage, daily routine, farm task view |
+| Herd | Cow register, animal records, breeding and AI history, medical records, milk-drop alerts |
+| Feeding | Today's feeding, feed stock and costs, feed mixes, ingredients, calf milk planner, unit helpers |
+| Money and supply | Buyers, customers, ledger with receipts, stock |
+| Reports | Farm reports, buyer value, cow profitability, milk inventory, milk safety |
+| People | Staff register, app access, advances, payroll |
+| Cooperatives | Member onboarding, cooperative and platform admin |
 
-### 1. Install Dependencies
+Across the app:
+
+- **Phone first.** Every screen is checked at 360px wide. Tables turn into cards on small screens.
+- **Works offline.** Milk records and other daily work are saved on the phone and sent when the
+  connection returns. Money and payroll need a connection.
+- **English and Kiswahili.** Chosen on the sign-in screens or in the profile menu.
+- **Plans and access.** Pages a user's role or plan doesn't include are hidden or shown locked.
+  Hiding is a convenience only; the backend enforces access.
+
+---
+
+## Getting started
+
+**Requires** Node.js 20.19 or newer and npm. The version is pinned in `.nvmrc`, and `.npmrc`
+refuses to install on an older Node. A running backend is needed for real data (see
+[Environment](#environment)).
 
 ```bash
-npm install --legacy-peer-deps
-```
-
-### 2. Start Development Server
-
-```bash
+nvm use
+npm install
 npm run dev
 ```
 
-Open [http://localhost:5173](http://localhost:5173) in your browser.
+The landing page opens at <http://localhost:5173>; sign in or register from there.
 
-### 3. Run Tests
+To see the Command Center with figures when your local database has no recent milk, put
+`VITE_MOCK_DASHBOARD=full` (or `empty`, `negative`) in `.env.development.local` and restart
+`npm run dev`. Only the dashboard's summary and trend requests are mocked; `?mock=empty` in the
+address switches scenario without a restart. Builds never include it (`src/dev/mockDashboard.js`).
 
-```bash
-npm test                    # Interactive watch mode
-npm test -- --run          # Single run (CI mode)
-```
+### Scripts
 
-### 4. Build for Production
+| Command | What it does |
+|---|---|
+| `npm run dev` | Development server with hot reload |
+| `npm run build` | Production build of the landing page and the app into `dist/` |
+| `npm run preview` | Serves the production build locally |
+| `npm test` | Unit and component tests (Vitest): watch mode in a terminal, single run in CI. `npx vitest run` for one run. |
+| `npm run test:watch` | Tests in watch mode |
+| `npm run lint` | ESLint |
+| `npm run test:e2e` | Phone-sized Playwright journeys against a built app with a mocked backend |
+| `npm run test:e2e:full` | The same journeys against a real backend (`E2E_BASE_URL`, default `http://localhost:5173`) |
+| `npm run images` | Regenerates the landing page's AVIF, WebP and JPEG photo sizes (needs ImageMagick 7 or 6.9.12+) |
 
-```bash
-npm run build              # Build optimized bundle
-npm run preview            # Preview production build locally
-```
-
-### 5. Lint Code
-
-```bash
-npm run lint               # Run ESLint
-```
+Before opening a pull request, run `npx vitest run`, `npm run lint` and `npm run build`.
 
 ---
 
-## Project Structure
+## Environment
+
+Variables are read at build time. Put local values in `.env.local`, which git ignores.
+`.env.production` is committed and holds only public values.
+
+| Variable | Default | Purpose |
+|---|---|---|
+| `VITE_API_BASE_URL` | `http://localhost:5000/api` | Backend address. `/api` is added if missing. Production uses `https://api.maziwasmart.co.ke`. |
+| `VITE_FEATURE_PLAN_INDICATORS` | on | Demo banner and locked-feature cards |
+| `VITE_FEATURE_CUSTOMER_DELETE` | off | Delete on the Customers page. Turn on once the backend route exists (BR-007). |
+| `VITE_FEATURE_CUSTOMER_PORTAL` | off | Shared buyer statement page. **Keep off** until statement links use private tokens (BR-016). |
+| `VITE_FEATURE_KISWAHILI` | on | The English / Kiswahili switch. Off keeps the app in English. |
+
+Flags take `true` or `false`; see [src/lib/featureFlags.js](src/lib/featureFlags.js).
+
+Never put secrets in a `VITE_` variable: everything in them is shipped to the browser.
+
+---
+
+## Project layout
 
 ```
 src/
-├── components/             # Reusable React components
-│   ├── ui/                # Generic UI components (Modal, DashboardCard, etc.)
-│   ├── nutrition/         # Feed & nutrition (MixBuilder, CurrentMixCard, etc.)
-│   ├── operations/        # Operational (FastMilkLog, etc.)
-│   └── forms/             # Form components
-├── pages/                 # Page-level components (routed)
-│   ├── operations/        # HerdsmanView, ProductionLog, etc.
-│   ├── inventory/         # FeedFormulation
-│   ├── nutrition/         # NutritionDashboard (Feed Dashboard)
-│   ├── finance/           # Finance pages
-│   └── auth/              # Auth pages
-├── layouts/               # Layout components (DashboardLayout, Sidebar, Header)
-├── contexts/              # React Context (Auth, Tenant)
-├── hooks/                 # Custom React hooks
-├── lib/                   # Utilities and helpers
-│   ├── apiClient.js       # Axios instance and config
-│   ├── offlineQueue.js    # Client-side queuing
-│   └── ...
-├── mocks/                 # MSW handlers and API simulation
-├── providers/             # Provider setup (QueryProvider for React Query)
-├── styles/                # Global CSS and Tailwind config
-└── App.jsx                # Main app + routes
+  App.jsx              Routes, sign-in gates and page access
+  main.jsx             App entry (React Query, auth, theme)
+  landing/             Landing page: content, templates and the Vite plugin that renders it
+  pages/               Routed pages, by area (operations, finance, inventory, nutrition, hr, auth, ...)
+  components/
+    ui/                Shared building blocks: BaseModal, Confirmation, list load states, FieldError, ...
+    data/              Toolbar, filters, tables
+    periods/           Week / Month / Year totals and date-grouped lists
+    <area>/            Components for one area (operations, finance, inventory, nutrition, forms)
+  layouts/             App shell: header, sidebar, phone bottom bar, page access gate
+  hooks/               Shared hooks (see below)
+  lib/                 API client, offline queue, formatting and other plain functions
+  i18n/                Text in English and Kiswahili
+  providers/           React Query setup and query keys
+  contexts/            Auth and tenant contexts
+e2e/                   Playwright journeys and the mock backend they use
+docs/                  Backend contracts, endpoint map, UX audit
 ```
 
 ---
 
-## Technology Stack
+## How things work
 
-| Layer | Technology | Version |
-|-------|-----------|---------|
-| **UI Framework** | React | 19 |
-| **Build Tool** | Vite | 8.0.10 |
-| **Styling** | Tailwind CSS | 3.4.19 |
-| **Routing** | React Router | v7 |
-| **State Mgmt** | @tanstack/react-query | 5.x |
-| **HTTP Client** | Axios | Latest |
-| **Mocking** | MSW | Latest |
-| **Testing** | Vitest | Latest |
-| **Icons** | Lucide React | Latest |
-| **Linting** | ESLint | Latest |
+### Talking to the backend
+
+All requests go through one client, [src/lib/apiClient.js](src/lib/apiClient.js). It adds the
+sign-in token, the `X-Tenant-ID` and `X-Farm-ID` headers, and an `Idempotency-Key` on writes so a
+retried save is never recorded twice. Endpoint helpers live in
+[src/lib/backendApi.js](src/lib/backendApi.js). Do not create a second HTTP client.
+
+Errors are worded by the backend's error **code**, never by its message text, so the same problem
+reads the same everywhere and in both languages (`getApiErrorMessage`). Validation errors that name
+a field appear under that field (`useServerFieldErrors`).
+
+### Keeping farms apart
+
+A user can belong to several farms, and several people can share a phone. Query keys, cached data,
+form drafts and offline records are always scoped by tenant and farm (see `QUERY_KEYS` in
+[src/providers/QueryProvider.jsx](src/providers/QueryProvider.jsx)). Phone numbers, tokens and
+balances never go in URLs, logs or unscoped storage. The only unscoped setting stored on the device
+is the language choice.
+
+### Offline
+
+Daily-work writes made offline go into a queue on the phone
+([src/lib/offlineQueue.js](src/lib/offlineQueue.js)) and are sent when the connection returns.
+[src/lib/offlinePolicy.js](src/lib/offlinePolicy.js) decides which writes may be queued; money and
+payroll may not. The header shows how many changes are waiting, and lets the user review them.
+
+### Languages
+
+Each area's text lives in `src/i18n/<area>.en.js` with a Kiswahili sibling `<area>.sw.js`, and
+`<area>.js` serves the current language:
+
+```js
+import { productionCopy as copy } from '../../i18n/production';
+<h1>{copy.title}</h1>
+```
+
+A key missing from the Kiswahili file falls back to English, so a page can be translated a piece at a
+time. A test checks that every Kiswahili key exists in English. Lines marked `// REVIEW` are best
+translations awaiting a native speaker's check.
+
+Pages not yet translated keep their English text in the component. New pages should put their text
+in `src/i18n/` from the start.
+
+### Shared pieces to reuse
+
+| Need | Use |
+|---|---|
+| A dialog | `components/ui/BaseModal` (Escape, focus kept inside, optional form mode) |
+| A yes/no or type-to-confirm prompt | `components/ui/Confirmation` with `useConfirmation()` |
+| List loading, offline and error states | `components/ui/ListLoadState` with `getListLoadState()` |
+| Filters that survive Back and reload | `hooks/useUrlFilters` (never for names or phone numbers) |
+| Server validation under each field | `hooks/useServerFieldErrors` with `components/ui/FieldError` |
+| Saving a half-filled form | `hooks/useFormDraft` |
+| Who sees a menu link | `lib/navAccess.js` and `lib/roles.js` |
+| Kenyan phone numbers | `lib/phone.js` |
+| Dates (day first, both languages) | `lib/dateFormat.js` |
 
 ---
 
-## Architecture Highlights
+## Testing
 
-### Single Responsibility Principle (SRP)
-Each component has one job. Example: **Nutrition Dashboard**
-- `NutritionDashboard.jsx` — Orchestrator (layout & mock data)
-- `CurrentMixCard.jsx` — Mix metrics only
-- `ProfitabilityChart.jsx` — Cost trends only
-- `TopRecipesList.jsx` — Recipe rankings only
-- `DashboardCard.jsx` — Shared UI shell
-
-### State Management Strategy
-- **Local State** — React `useState` for UI state (filters, modals, forms)
-- **Server State** — React Query for API data, caching, background sync
-- **Context** — Auth & Tenant contexts for app-wide settings
-- **Offline Queue** — Client-side persistence for offline workflows
-
-### Mock Server (MSW)
-Realistic development endpoints:
-- `GET /api/inventory/status` — Feed inventory
-- `GET /api/production/yield` — Production history
-- `DELETE /api/production/yield/:id` — Idempotent deletion
-- `POST /api/feed/batches` — Batch snapshots
-- More in [`src/mocks/handlers.js`](src/mocks/handlers.js)
-
-### Testing
-- Unit tests for utilities (`src/lib/__tests__/`)
-- Component tests for flows (`src/components/**/__tests__/`)
-- Mock handler validation (`src/mocks/__tests__/handlers.test.jsx`)
-- Layout & navigation tests
-- **Total:** 24+ passing tests
+- **Unit and component tests** sit next to the code in `__tests__` folders and run with Vitest
+  and Testing Library.
+- **End-to-end journeys** in `e2e/` run at phone size in Playwright. The `phone-mocked` project
+  builds the app and serves a mock backend from `e2e/support/mockBackend.js`.
+- On a busy machine, Vitest can time out; `npx vitest run --maxWorkers=3` helps.
 
 ---
 
-## Environment & Security
+## Working on the backend contract
 
-### Environment Variables
-Create `.env.local` in project root (excluded from git):
+- [BACKEND_REQUESTS.md](BACKEND_REQUESTS.md): every change the frontend needs from the API, with
+  the exact request, response and error codes. Start with its "Start here" section.
+- [docs/contracts/period-totals.md](docs/contracts/period-totals.md): the period totals API.
+- [docs/backend-integration-contract.md](docs/backend-integration-contract.md) and
+  [docs/backend-endpoint-map.md](docs/backend-endpoint-map.md): endpoints by page.
 
-```env
-VITE_API_BASE_URL=http://localhost:5000/api
-VITE_APP_NAME=Smart Dairy ERP
-VITE_LOG_LEVEL=debug
-```
-
-### Sensitive Data
-Files **excluded from git** (see [`.gitignore`](.gitignore)):
-- `.env*` — Environment variables
-- `.secrets/` — Credential files
-- `*.pem`, `*.key`, `*.crt` — Certificates
-- `credentials.json`, `apikeys.json` — API keys
-- `node_modules/`, `dist/` — Artifacts
-
-**Never commit secrets, API keys, or credentials to the repository.**
-
----
-
-## Git & Version Control
-
-### Commit Conventions
-Descriptive commit messages:
-
-```
-feat: add MixBuilder live formulation component
-fix: resolve modal backdrop blur visibility issue
-refactor: extract DashboardCard as shared UI shell
-docs: update README with architecture guide
-test: add handlers.test.jsx for MSW validation
-chore: update dependencies
-```
-
-### Branch Naming
-```
-feat/add-analytics-dashboard
-fix/production-yield-bug
-refactor/optimize-queries
-docs/api-documentation
-```
+Code waiting on the backend is marked `TODO(BR-0xx)`.
 
 ---
 
 ## Contributing
 
-### 1. Clone & Install
-```bash
-git clone https://github.com/JamesKamau-5773/Smart-Dairy-system-frontend.git
-cd jivu-frontend
-npm install --legacy-peer-deps
-```
-
-### 2. Create Feature Branch
-```bash
-git checkout -b feat/your-feature-name
-```
-
-### 3. Test & Build
-```bash
-npm test -- --run     # Verify tests pass
-npm run build         # Check for build errors
-```
-
-### 4. Commit & Push
-```bash
-git commit -m "feat: describe your change"
-git push origin feat/your-feature-name
-```
-
-### 5. Create Pull Request
-Open a PR on GitHub and request review.
-
----
-
-## Troubleshooting
-
-### Peer Dependency Issues
-```bash
-npm install --legacy-peer-deps
-```
-
-### Port Already in Use
-Vite will auto-increment to next available port. Check terminal for actual URL.
-
-### MSW Not Intercepting
-Ensure `mocks/browser.js` is imported **before** rendering in `src/main.jsx`:
-```javascript
-import { worker } from './mocks/browser';
-await worker.start();
-```
-
-### Tests Timeout
-For slow environments:
-```bash
-npm test -- --run --testTimeout=10000
-```
-
----
-
-## Documentation
-
-- **[React Router Docs](https://reactrouter.com/)**
-- **[Tailwind CSS](https://tailwindcss.com/)**
-- **[React Query](https://tanstack.com/query/latest)**
-- **[Vite Docs](https://vitejs.dev/)**
-- **[Vitest](https://vitest.dev/)**
-- **[MSW (Mock Service Worker)](https://mswjs.io/)**
+- Branch from `development`; open pull requests into `main`.
+- Commit messages follow Conventional Commits: `feat(scope): ...`, `fix(scope): ...`,
+  `docs: ...`, `chore: ...`. One logical change per commit.
+- User-visible changes get an entry in [CHANGELOG.md](CHANGELOG.md), written for farmers.
+- Large user-visible changes go behind a feature flag.
+- Ask before adding a dependency.
 
 ---
 
 ## License
 
-Proprietary — Smart Dairy ERP System (2024-2026)
-
----
-
-## Support
-
-- **Issues:** [GitHub Issues](https://github.com/JamesKamau-5773/Smart-Dairy-system-frontend/issues)
-- **Discussions:** [GitHub Discussions](https://github.com/JamesKamau-5773/Smart-Dairy-system-frontend/discussions)
-
----
-
-**Made with care by the Smart Dairy Development Team**
+Proprietary. All rights reserved.

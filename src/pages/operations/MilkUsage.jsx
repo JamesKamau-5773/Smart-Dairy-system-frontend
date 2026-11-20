@@ -1,6 +1,5 @@
 import React, { useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Baby, CalendarDays, Droplets, RotateCcw, Users } from 'lucide-react';
 import { productionApi } from '../../lib/backendApi';
 import { formatCowIdentity } from '../../lib/cowIdentity';
 import {
@@ -10,20 +9,27 @@ import {
   todayLocalIso,
 } from '../../lib/milkDisposition';
 import { useTenant } from '../../hooks/useTenant';
+import { useMilkUsageFilters } from '../../hooks/useMilkUsageFilters';
 import { QUERY_KEYS } from '../../providers/QueryProvider';
+import FilterPanel from '../../components/data/FilterPanel';
+import ToolbarDateRange from '../../components/data/ToolbarDateRange';
+import { Toolbar, ToolbarSelect } from '../../components/data/Toolbar';
 import CalfMilkFeedModal from '../../components/operations/CalfMilkFeedModal';
 import MilkDispositionHistory from '../../components/operations/MilkDispositionHistory';
+import { milkCopy } from '../../i18n/milk';
+import { shellCopy } from '../../i18n/shell';
 
 void React;
 
 const PAGE_SIZE = 12;
-const EMPTY_FILTERS = { calfId: '', from: '', to: '' };
 const EMPTY_RECORDS = [];
 
 export default function MilkUsage() {
+  const copy = milkCopy.usage;
   const { tenantId, farmId } = useTenant();
   const [showFeedModal, setShowFeedModal] = useState(false);
-  const [filters, setFilters] = useState(EMPTY_FILTERS);
+  const filterState = useMilkUsageFilters();
+  const filters = filterState.values;
   const [page, setPage] = useState(1);
 
   const dispositionsQuery = useQuery({
@@ -50,90 +56,72 @@ export default function MilkUsage() {
       .localeCompare(formatCowIdentity({ cowName: b.calfName, cowTag: b.calfTag })));
   }, [records]);
 
-  const updateFilter = (name, value) => {
-    setFilters((current) => ({ ...current, [name]: value }));
+  // A filter change starts the list again from page 1.
+  const fromFirstPage = (change) => (value) => {
+    change(value);
     setPage(1);
   };
+  const calfFilterOptions = [
+    ['', copy.allCalves],
+    ...calfOptions.map((record) => [String(record.calfId), formatCowIdentity({ cowName: record.calfName, cowTag: record.calfTag })]),
+  ];
 
   return (
     <div className="animate-reveal space-y-6">
       <section className="rounded-[28px] border border-brand/15 bg-brand-50 p-5 sm:p-6">
         <header className="flex min-w-0 flex-col gap-4 border-b border-ink/10 pb-5 sm:flex-row sm:items-end sm:justify-between">
           <div className="min-w-0">
-            <div className="mb-4 inline-flex items-center gap-2 rounded-md border border-brand/20 bg-brand/10 px-2 py-1 text-[10px] font-semibold text-brand">
-              <Droplets size={12} /> Milk Operations
-            </div>
-            <h1 className="m-0 break-words font-display text-3xl font-semibold tracking-tight text-brand sm:text-4xl">
-              Milk <span className="text-ink/30">Usage</span>
+            <h1 className="m-0 break-words text-page-title text-brand">
+              {shellCopy.nav.items.milkUsage}
             </h1>
-            <p className="mt-2 max-w-2xl text-sm leading-6 text-ink-muted">Review milk allocated to calves without mixing usage records into production entries.</p>
+            <p className="mt-2 max-w-2xl text-body text-ink-muted">{copy.subtitle}</p>
           </div>
-          <button type="button" onClick={() => setShowFeedModal(true)} className="btn-command w-full justify-center gap-2 whitespace-nowrap px-5 py-3 sm:w-auto">
-            <Baby size={16} /> Feed Calf
+          <button type="button" onClick={() => setShowFeedModal(true)} className="btn-command w-full justify-center whitespace-nowrap px-5 py-3 sm:w-auto">
+
+            {copy.feedCalf}
           </button>
         </header>
 
         <div className="mt-5 grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4">
           {[
-            { label: 'Fed today', value: `${summary.todayLiters.toFixed(2)} L`, icon: Droplets },
-            { label: 'Fed this month', value: `${summary.monthLiters.toFixed(2)} L`, icon: CalendarDays },
-            { label: 'Calves served', value: summary.calfCount, icon: Users },
-            { label: 'Feeding records', value: summary.recordCount, icon: Baby },
-          ].map(({ label, value, icon: Icon }) => (
-            <div key={label} className="flex min-w-0 items-start justify-between gap-2 rounded-2xl border border-ink/10 bg-surface p-3 sm:p-4">
+            { label: copy.fedToday, value: `${summary.todayLiters.toFixed(2)} L` },
+            { label: copy.fedThisMonth, value: `${summary.monthLiters.toFixed(2)} L` },
+            { label: copy.calvesServed, value: summary.calfCount },
+            { label: copy.feedingRecords, value: summary.recordCount },
+          ].map(({ label, value }) => (
+            <div key={label} className="min-w-0 rounded-2xl border border-ink/10 bg-surface p-3 sm:p-4">
               <div>
-                <p className="text-[10px] font-bold uppercase tracking-widest text-ink-muted">{label}</p>
-                <p className="mt-2 break-words text-2xl font-black tabular-nums text-brand sm:text-3xl">{value}</p>
+                <p className="text-label text-ink-muted">{label}</p>
+                <p className="mt-2 break-words text-stat-value tabular-nums text-brand">{value}</p>
               </div>
-              <Icon size={18} className="mt-1 text-brand" />
             </div>
           ))}
         </div>
       </section>
 
-      <section className="rounded-lg border border-slate-200 bg-white/90 px-5 py-4 backdrop-blur" aria-label="Milk usage filters">
-        <div className="grid gap-3 md:grid-cols-4">
-          <label className="form-control">
-            <span className="label-text">Calf</span>
-            <select value={filters.calfId} onChange={(event) => updateFilter('calfId', event.target.value)} className="input-machined w-full">
-              <option value="">All calves</option>
-              {calfOptions.map((record) => (
-                <option key={record.calfId} value={record.calfId}>{formatCowIdentity({ cowName: record.calfName, cowTag: record.calfTag })}</option>
-              ))}
-            </select>
-          </label>
-          <label className="form-control">
-            <span className="label-text">From</span>
-            <input type="date" value={filters.from} max={filters.to || todayLocalIso()} onChange={(event) => updateFilter('from', event.target.value)} className="input-machined w-full" />
-          </label>
-          <label className="form-control">
-            <span className="label-text">To</span>
-            <input type="date" value={filters.to} min={filters.from || undefined} max={todayLocalIso()} onChange={(event) => updateFilter('to', event.target.value)} className="input-machined w-full" />
-          </label>
-          <div className="flex items-end">
-            <button type="button" onClick={() => { setFilters(EMPTY_FILTERS); setPage(1); }} className="btn-ghost w-full justify-center gap-2 py-3">
-              <RotateCcw size={14} /> Reset filters
-            </button>
-          </div>
-        </div>
-      </section>
+      <FilterPanel title={copy.filtersTitle} activeCount={filterState.activeCount} onReset={fromFirstPage(filterState.reset)}>
+        <Toolbar>
+          <ToolbarSelect label={copy.calf} value={filters.calfId} onChange={fromFirstPage(filterState.setCalf)} options={calfFilterOptions} />
+          <ToolbarDateRange range={filterState.range} onChange={fromFirstPage(filterState.setRange)} maxDate={todayLocalIso()} />
+        </Toolbar>
+      </FilterPanel>
 
       {calfTotals.length > 0 && (
         <section className="overflow-hidden rounded-lg border border-slate-200 bg-white/90 backdrop-blur" aria-labelledby="calf-summary-heading">
           <div className="border-b border-ink/10 px-5 py-4">
-            <h2 id="calf-summary-heading" className="font-semibold text-ink">Consumption by calf</h2>
+            <h2 id="calf-summary-heading" className="text-section-title text-ink">{copy.byCalf}</h2>
           </div>
           <div className="max-h-64 overflow-auto">
             <table className="hidden w-full min-w-[520px] text-left md:table">
-              <thead className="sticky top-0 bg-surface-raised text-[10px] font-bold uppercase tracking-widest text-ink-muted">
-                <tr><th className="px-5 py-3">Calf</th><th className="px-5 py-3 text-right">Feedings</th><th className="px-5 py-3 text-right">Total milk</th></tr>
+              <thead className="sticky top-0 bg-surface-raised text-label text-ink-muted">
+                <tr><th className="px-5 py-3">{copy.calf}</th><th className="px-5 py-3 text-right">{copy.feedings}</th><th className="px-5 py-3 text-right">{copy.totalMilk}</th></tr>
               </thead>
               <tbody className="divide-y divide-ink/10">
                 {calfTotals.map((calf) => (
                   <tr key={calf.calfId}>
-                    <td className="px-5 py-3 text-sm font-semibold text-ink">{formatCowIdentity({ cowName: calf.calfName, cowTag: calf.calfTag })}</td>
-                    <td className="px-5 py-3 text-right text-sm tabular-nums text-ink-muted">{calf.feedings}</td>
-                    <td className="px-5 py-3 text-right text-sm font-semibold tabular-nums text-ink">{calf.liters.toFixed(2)} L</td>
+                    <td className="px-5 py-3 text-body-strong text-ink">{formatCowIdentity({ cowName: calf.calfName, cowTag: calf.calfTag })}</td>
+                    <td className="px-5 py-3 text-right text-body tabular-nums text-ink-muted">{calf.feedings}</td>
+                    <td className="px-5 py-3 text-right text-body-strong tabular-nums text-ink">{calf.liters.toFixed(2)} L</td>
                   </tr>
                 ))}
               </tbody>
@@ -142,10 +130,10 @@ export default function MilkUsage() {
           <div className="divide-y divide-ink/10 md:hidden">
             {calfTotals.map((calf) => (
               <article key={calf.calfId} className="min-w-0 p-4">
-                <p className="break-words font-semibold text-brand">{formatCowIdentity({ cowName: calf.calfName, cowTag: calf.calfTag })}</p>
-                <dl className="mt-3 grid grid-cols-2 gap-3 text-xs">
-                  <div><dt className="text-ink-muted">Feedings</dt><dd className="mt-1 font-semibold tabular-nums text-ink">{calf.feedings}</dd></div>
-                  <div><dt className="text-ink-muted">Total milk</dt><dd className="mt-1 font-semibold tabular-nums text-ink">{calf.liters.toFixed(2)} L</dd></div>
+                <p className="break-words text-body-strong text-brand">{formatCowIdentity({ cowName: calf.calfName, cowTag: calf.calfTag })}</p>
+                <dl className="mt-3 grid grid-cols-2 gap-3 text-meta">
+                  <div><dt className="text-ink-muted">{copy.feedings}</dt><dd className="mt-1 text-body-strong tabular-nums text-ink">{calf.feedings}</dd></div>
+                  <div><dt className="text-ink-muted">{copy.totalMilk}</dt><dd className="mt-1 text-body-strong tabular-nums text-ink">{calf.liters.toFixed(2)} L</dd></div>
                 </dl>
               </article>
             ))}
@@ -157,15 +145,15 @@ export default function MilkUsage() {
         records={pageRecords}
         isLoading={dispositionsQuery.isLoading}
         error={dispositionsQuery.error}
-        title="Feeding history"
+        title={copy.historyTitle}
         totalCount={filteredRecords.length}
         totalLiters={filteredLiters}
         footer={filteredRecords.length > PAGE_SIZE ? (
           <div className="flex items-center justify-between gap-4">
-            <span className="text-xs font-medium text-ink-muted">Page {currentPage} of {pageCount}</span>
+            <span className="text-meta text-ink-muted">{copy.page(currentPage, pageCount)}</span>
             <div className="flex gap-2">
-              <button type="button" onClick={() => setPage((value) => Math.max(1, value - 1))} disabled={currentPage === 1} className="btn-ghost px-3 py-2 text-xs disabled:opacity-40">Previous</button>
-              <button type="button" onClick={() => setPage((value) => Math.min(pageCount, value + 1))} disabled={currentPage === pageCount} className="btn-secondary px-3 py-2 text-xs disabled:opacity-40">Next</button>
+              <button type="button" onClick={() => setPage((value) => Math.max(1, value - 1))} disabled={currentPage === 1} className="btn-ghost px-3 py-2 text-control disabled:opacity-40">{copy.previous}</button>
+              <button type="button" onClick={() => setPage((value) => Math.min(pageCount, value + 1))} disabled={currentPage === pageCount} className="btn-secondary px-3 py-2 text-control disabled:opacity-40">{copy.next}</button>
             </div>
           </div>
         ) : null}

@@ -1,13 +1,12 @@
-const FIELD_LABELS = {
-  farm_name: 'Farm name',
-  full_name: 'Full name',
-  phone: 'Phone number',
-  phone_number: 'Phone number',
-  username: 'Username',
-  password: 'Password',
-  bootstrap_key: 'Owner setup code',
-  bootstrap_code: 'Owner setup code',
-};
+import { authCopy } from '../i18n/auth';
+import { getApiErrorCode } from './apiErrors';
+import { describeFieldDetail, getServerFieldErrors } from './serverFieldErrors';
+
+// Turns auth API failures into farmer-friendly text. Contract endpoints send a
+// machine-readable `code` (AUTH_API_CONTRACT §1.2); older ones only send a
+// status and `error`, so those still fall back to status-based messages.
+
+const { errors: copy } = authCopy;
 
 const TECHNICAL_ERROR = /sql|database|constraint|integrity|traceback|exception|stack trace|foreign key|not null|unique key|relation .* does not exist|column .* does not exist|sqlalchemy|sqlite|psycopg/i;
 
@@ -21,71 +20,112 @@ function getSafeServerMessage(data) {
   return message;
 }
 
-function getFieldErrors(data) {
-  const errors = data?.field_errors ?? data?.errors;
+function getRawFieldErrors(data) {
+  const errors = data?.fields ?? data?.field_errors ?? data?.errors;
   if (!errors || typeof errors !== 'object' || Array.isArray(errors)) return null;
+  return errors;
+}
+
+function getFieldErrorSummary(data) {
+  const errors = getRawFieldErrors(data);
+  if (!errors) return null;
 
   const messages = Object.entries(errors)
     .slice(0, 4)
     .map(([field, detail]) => {
-      const label = FIELD_LABELS[field] ?? field.replaceAll('_', ' ');
-      const detailText = Array.isArray(detail) ? detail[0] : detail;
-      const safeDetail = typeof detailText === 'string' && !TECHNICAL_ERROR.test(detailText)
-        ? detailText.trim()
-        : '';
-      return safeDetail ? `${label}: ${safeDetail}` : `Check the ${label.toLowerCase()} field.`;
+      const label = copy.fieldLabels[field] ?? field.replaceAll('_', ' ');
+      return `${label}: ${describeFieldDetail(detail)}`;
     });
 
   return messages.length ? messages.join(' ') : null;
 }
 
-export function getAuthErrorMessage(error, flow) {
-  const status = error?.response?.status;
-  const data = error?.response?.data;
+// Auth flows read the same envelope `code` as every other API call.
+export const getAuthErrorCode = getApiErrorCode;
 
-  if (!error?.response) {
-    return 'We couldn’t connect to Jivu. Check your internet connection and try again.';
-  }
+/** Seconds from the `Retry-After` header on a 429, or null. */
+export function getRetryAfterSeconds(error) {
+  if (error?.response?.status !== 429) return null;
+  const headers = error.response.headers ?? {};
+  const raw = typeof headers.get === 'function' ? headers.get('retry-after') : headers['retry-after'] ?? headers['Retry-After'];
+  const seconds = Number.parseInt(raw, 10);
+  return Number.isFinite(seconds) && seconds > 0 ? seconds : null;
+}
 
-  if (flow === 'login' && [401, 403].includes(status)) {
-    return 'Those sign-in details didn’t match an active account. Check your username or phone number and password, then try again. If you were invited, activate your account from the invite link first.';
-  }
+/** Backend password rule ids from a WEAK_PASSWORD response. */
+export function getPasswordViolationsFromError(error) {
+  const violations = error?.response?.data?.violations;
+  return getAuthErrorCode(error) === 'WEAK_PASSWORD' && Array.isArray(violations) ? violations : [];
+}
 
-  if (flow === 'bootstrap' && [401, 403].includes(status)) {
-    return 'The owner setup code could not be verified. Check the code provided by your platform administrator and try again.';
-  }
+// Codes that are about one input, so the message can sit next to that field.
+const CODE_FIELDS = {
+  INVALID_PHONE: 'phone_number',
+  PHONE_IN_USE: 'phone_number',
+  PHONE_REQUIRED: 'phone_number',
+  EMAIL_IN_USE: 'email',
+  WEAK_PASSWORD: 'password',
+  PASSWORD_MISMATCH: 'confirm_password',
+  INVALID_BOOTSTRAP_KEY: 'bootstrap_key',
+};
 
-  if (flow === 'bootstrap' && [404, 409, 410].includes(status)) {
-    return 'Initial platform setup is no longer available. Sign in with the platform administrator account.';
-  }
+/** `{ field: message }` for showing server validation next to each input (shared reader). */
+export function getFieldErrorsFromError(error) {
+  return getServerFieldErrors(error, {
+    codeFields: CODE_FIELDS,
+    codeMessage: (code) => {
+      const violation = getPasswordViolationsFromError(error)[0];
+      return (violation && authCopy.password.errors[violation]) ?? copy.codes[code];
+    },
+  });
+}
 
-  if (status === 429) {
-    return 'There have been too many attempts. Wait a moment, then try again.';
-  }
+function getStatusMessage(status, data, flow) {
+  const flowCopy = copy.byFlow[flow] ?? copy.byFlow.default;
 
-  if (flow === 'register' && status === 409) {
-    return 'A farm or account may already use these details. Check the phone number, or sign in if you already have an account.';
-  }
+  if (flow === 'login' && [401, 403].includes(status)) return flowCopy.unauthorized;
+  if (flow === 'bootstrap' && [401, 403].includes(status)) return flowCopy.unauthorized;
+  if (flow === 'bootstrap' && [404, 409, 410].includes(status)) return flowCopy.unavailable;
+  if (flow === 'register' && status === 409) return flowCopy.conflict;
+  // The backend answers 404 when the demo is switched off (docs/demo-account.md).
+  if (flow === 'demo' && status === 404) return flowCopy.unavailable;
 
   if ([400, 422].includes(status)) {
-    return getFieldErrors(data)
-      ?? getSafeServerMessage(data)
-      ?? 'Some details need attention. Review the labeled fields and try again.';
+    return getFieldErrorSummary(data) ?? getSafeServerMessage(data) ?? copy.validation;
   }
 
-  if (status >= 500) {
-    if (flow === 'login') return 'We couldn’t sign you in right now. Please try again shortly.';
-    if (flow === 'claim') return 'We couldn’t activate your account right now. Please try again shortly.';
-    if (flow === 'passwordReset') return 'We couldn’t update your password right now. Please try again shortly.';
-    return 'We couldn’t complete that request right now. Please try again shortly.';
+  if (status >= 500) return flowCopy.server ?? copy.server;
+
+  return getSafeServerMessage(data) ?? flowCopy.fallback ?? copy.byFlow.default.fallback;
+}
+
+export function getAuthErrorMessage(error, flow) {
+  if (!error?.response) return copy.network;
+
+  const { status, data } = error.response;
+
+  if (status === 429) {
+    const seconds = getRetryAfterSeconds(error);
+    return seconds ? copy.rateLimitedFor(seconds) : copy.rateLimited;
   }
 
-  return getSafeServerMessage(data)
-    ?? ({
-      login: 'We couldn’t sign you in. Check your username or phone number and password, then try again.',
-      claim: 'We couldn’t activate your account. Reopen the invite link and check the details you entered.',
-      passwordReset: 'We couldn’t update your password. Check the password requirements and try again.',
-      bootstrap: 'We couldn’t complete platform setup. Review the details and try again.',
-      register: 'We couldn’t create the account. Review the fields and try again. If the problem continues, contact support.',
-    }[flow] ?? 'We couldn’t complete that request. Please try again.');
+  const code = getAuthErrorCode(error);
+  if (code === 'VALIDATION_ERROR') return getFieldErrorSummary(data) ?? copy.validation;
+  if (code && copy.codes[code]) return copy.codes[code];
+
+  return getStatusMessage(status, data, flow);
+}
+
+/**
+ * Everything a form needs from a failed auth call, so screens don't each
+ * re-parse the error.
+ */
+export function describeAuthError(error, flow) {
+  return {
+    message: getAuthErrorMessage(error, flow),
+    code: getAuthErrorCode(error),
+    retryAfter: getRetryAfterSeconds(error),
+    fieldErrors: getFieldErrorsFromError(error),
+    passwordViolations: getPasswordViolationsFromError(error),
+  };
 }

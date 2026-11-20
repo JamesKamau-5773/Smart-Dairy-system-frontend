@@ -2,9 +2,16 @@ import { Suspense, lazy } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from './contexts/AuthContext';
 import { canAccessCommandCenter, getDefaultLandingPath, hasRole, isSingleTenantUser } from './lib/roles';
+import { AUTH_STATES, getAuthState, getGateRoute } from './lib/authState';
+import { getPageKeyForPath } from './lib/pageRoutes';
+import { UNIT_HELPER_ROLES } from './lib/navAccess';
+import { useLocale } from './i18n/useLocale';
 
 // Import the StaffProvider to fix the useStaff context error
 import { StaffProvider } from './providers/StaffProvider';
+import PageSkeleton from './components/ui/PageSkeleton';
+import ErrorBoundary from './components/errors/ErrorBoundary';
+import NotFound from './pages/NotFound';
 
 // Layouts
 import DashboardLayout from './layouts/DashboardLayout';
@@ -14,6 +21,12 @@ const LoginPage = lazy(() => import('./pages/auth/LoginPage.jsx'));
 const RegisterPage = lazy(() => import('./pages/auth/RegisterPage.jsx'));
 const ClaimAccountPage = lazy(() => import('./pages/auth/ClaimAccountPage.jsx'));
 const RequiredPasswordResetPage = lazy(() => import('./pages/auth/RequiredPasswordResetPage.jsx'));
+const ForgotPasswordPage = lazy(() => import('./pages/auth/ForgotPasswordPage.jsx'));
+const ResetPasswordPage = lazy(() => import('./pages/auth/ResetPasswordPage.jsx'));
+const VerifyPhonePage = lazy(() => import('./pages/auth/VerifyPhonePage.jsx'));
+const VerifyEmailPage = lazy(() => import('./pages/auth/VerifyEmailPage.jsx'));
+const GoogleCompletePage = lazy(() => import('./pages/auth/GoogleCompletePage.jsx'));
+const DemoStartPage = lazy(() => import('./pages/auth/DemoStartPage.jsx'));
 const SystemAdminDashboardPage = lazy(() => import('./pages/auth/SystemAdminDashboardPage.jsx'));
 const SuperAdminCooperativeSetupPage = lazy(() => import('./pages/auth/SuperAdminCooperativeSetupPage.jsx'));
 const CooperativeAdminOnboardingPage = lazy(() => import('./pages/auth/CooperativeAdminOnboardingPage.jsx'));
@@ -42,6 +55,7 @@ const DairyUnitEconomicsReport = lazy(() => import('./pages/finance/DairyUnitEco
 const AnimalEconomicsReport = lazy(() => import('./pages/finance/AnimalEconomicsReport.jsx'));
 const CustomersPage = lazy(() => import('./pages/operations/Customers.jsx'));
 const NutritionDashboard = lazy(() => import('./pages/nutrition/NutritionDashboard.jsx'));
+const TodayFeedingPage = lazy(() => import('./pages/nutrition/TodayFeedingPage.jsx'));
 // UPDATED: Pointing to the new correct location in the nutrition folder
 const UnitConversions = lazy(() => import('./pages/nutrition/UnitConversions.jsx'));
 const DailyRoutinePlanner = lazy(() => import('./pages/operations/DailyRoutinePlanner.jsx'));
@@ -49,6 +63,7 @@ const FinancialLedger = lazy(() => import('./pages/finance/FinancialLedger.jsx')
 const InventoryRegistry = lazy(() => import('./pages/inventory/InventoryRegistry.jsx'));
 const BuyersList = lazy(() => import('./pages/finance/BuyersList.jsx'));
 const CustomerProfile = lazy(() => import('./pages/finance/CustomerProfile.jsx'));
+const ProfilePage = lazy(() => import('./pages/account/ProfilePage.jsx'));
 const StaffRegistry = lazy(() => import('./pages/hr/StaffRegistry.jsx'));
 const Payroll = lazy(() => import('./pages/hr/Payroll.jsx'));
 
@@ -59,32 +74,41 @@ const Payroll = lazy(() => import('./pages/hr/Payroll.jsx'));
 export const ProtectedRoute = ({ children }) => {
   const { currentUser, isLoading } = useAuth();
 
-  if (isLoading) {
-    return (
-      <div className="min-h-screen bg-surface-warm flex items-center justify-center">
-        <div className="glass-panel font-sans font-medium text-ink animate-pulse p-6">
-          Verifying access…
-        </div>
-      </div>
-    );
-  }
+  if (isLoading) return <PublicRouteFallback label="Verifying access…" />;
 
   if (!currentUser) return <Navigate to="/login" replace />;
-  if (currentUser.requires_password_reset) return <Navigate to="/reset-required-password" replace />;
+  const gateRoute = getGateRoute(currentUser);
+  if (gateRoute) return <Navigate to={gateRoute} replace />;
 
   return children;
 };
 
-const RouteLoadingFallback = ({ label = 'Loading route…' }) => (
-  <div className="min-h-screen bg-surface-warm flex items-center justify-center">
-    <div className="font-sans text-sm text-ink-muted animate-pulse">{label}</div>
-  </div>
-);
+// Inside the app shell: a page-shaped skeleton in the content area.
+const RouteLoadingFallback = ({ label = 'Loading page…' }) => <PageSkeleton label={label} />;
+// Outside the shell (sign-in, verification, shared statements): a full-screen form card.
+function PublicRouteFallback({ label = 'Loading…' }) {
+  return <PageSkeleton variant="card" label={label} />;
+}
 
 const renderLazyPage = (Page, label) => (
   <Suspense fallback={<RouteLoadingFallback label={label} />}>
     <Page />
   </Suspense>
+);
+
+// Screens outside the app shell get their own error boundary (the shell has one for its
+// pages), reset when the address changes, so a crash on sign-in can be retried in place.
+function PublicPageBoundary({ children }) {
+  const { pathname } = useLocation();
+  return <ErrorBoundary resetKey={pathname}>{children}</ErrorBoundary>;
+}
+
+const renderPublicPage = (Page, label) => (
+  <PublicPageBoundary>
+    <Suspense fallback={<PublicRouteFallback label={label} />}>
+      <Page />
+    </Suspense>
+  </PublicPageBoundary>
 );
 
 const getDefaultRoute = (user) => {
@@ -94,9 +118,22 @@ const getDefaultRoute = (user) => {
 export const RequiredPasswordResetRoute = ({ children }) => {
   const { currentUser, isLoading } = useAuth();
 
-  if (isLoading) return <RouteLoadingFallback label="Checking password status…" />;
+  if (isLoading) return <PublicRouteFallback label="Checking password status…" />;
   if (!currentUser) return <Navigate to="/login" replace />;
-  if (!currentUser.requires_password_reset) return <Navigate to={getDefaultRoute(currentUser)} replace />;
+  if (getAuthState(currentUser) !== AUTH_STATES.PASSWORD_RESET_REQUIRED) return <Navigate to={getDefaultRoute(currentUser)} replace />;
+
+  return children;
+};
+
+// Open to any signed-in user: the Google sign-in gate sends people here, and the
+// dashboard banner lets everyone else add or verify a phone. A required password
+// reset still comes first.
+export const PhoneVerificationRoute = ({ children }) => {
+  const { currentUser, isLoading } = useAuth();
+
+  if (isLoading) return <PublicRouteFallback label="Checking your account…" />;
+  if (!currentUser) return <Navigate to="/login" replace />;
+  if (getAuthState(currentUser) === AUTH_STATES.PASSWORD_RESET_REQUIRED) return <Navigate to="/reset-required-password" replace />;
 
   return children;
 };
@@ -113,16 +150,11 @@ const RoleRoute = ({ children, allowedRoles }) => {
     return <Navigate to="/login" replace />;
   }
 
-  if (Array.isArray(currentUser.page_access)) {
-    const pagePaths = [
-      '/dashboard', '/operations/yield', '/operations/milk-usage', '/operations/routine', '/tasks',
-      '/operations/herd', '/operations/breeding', '/operations/records', '/operations/milk-drop-reports',
-      '/feed-nutrition', '/operations/lab', '/settings/unit-conversions', '/operations/customers',
-      '/finance/buyers', '/finance/ledger', '/operations/inventory', '/operations/reports',
-      '/finance/reports', '/operations/safety', '/hr/staff', '/hr/payroll',
-    ];
-    const assignedPageRoute = pagePaths.some((path) => pathname === path || pathname.startsWith(`${path}/`));
-    if (assignedPageRoute) return children;
+  // Staff with explicit page access: DashboardLayout's page gate decides these routes.
+  // Member onboarding also needs an admin role, so it stays with the role check below.
+  const pageKey = getPageKeyForPath(pathname);
+  if (Array.isArray(currentUser.page_access) && pageKey && pageKey !== 'member_admin') {
+    return children;
   }
 
   if (isSingleTenantUser(currentUser)) {
@@ -164,32 +196,62 @@ export const RoleLandingRedirect = () => {
   return <Navigate to={getDefaultRoute(currentUser)} replace />;
 };
 
-const UnknownRouteRedirect = () => {
-  const { currentUser } = useAuth();
-  return <Navigate to={getDefaultRoute(currentUser)} replace />;
+/**
+ * An address the app doesn't have: say so. Signed in, inside the app shell with a way back to
+ * the user's dashboard; signed out, a public page with a way to log in.
+ */
+export const NotFoundRoute = () => {
+  const { currentUser, isLoading } = useAuth();
+  if (isLoading) return <PublicRouteFallback label="Loading…" />;
+  if (!currentUser) {
+    return <PublicPageBoundary><NotFound variant="public" /></PublicPageBoundary>;
+  }
+  return (
+    <ProtectedRoute>
+      <DashboardLayout><NotFound homePath={getDefaultRoute(currentUser)} /></DashboardLayout>
+    </ProtectedRoute>
+  );
 };
 
 export default function App() {
+  // Remounting the routes when the language changes re-reads every page's text in the new
+  // language without each page subscribing. Server data stays cached; only screen state resets.
+  const { locale } = useLocale();
   return (
     <BrowserRouter>
       {/* Wrap all routes with StaffProvider.
         Now any page, including Payroll and StaffRegistry, can call useStaff() without crashing.
       */}
       <StaffProvider>
-        <Routes>
-          <Route path="/register" element={renderLazyPage(RegisterPage, 'Loading registration…')} />
-          <Route path="/login" element={renderLazyPage(LoginPage, 'Loading login…')} />
-          <Route path="/claim-account" element={renderLazyPage(ClaimAccountPage, 'Loading claim account…')} />
+        <Routes key={locale}>
+          <Route path="/register" element={renderPublicPage(RegisterPage, 'Loading registration…')} />
+          <Route path="/login" element={renderPublicPage(LoginPage, 'Loading login…')} />
+          <Route path="/demo" element={renderPublicPage(DemoStartPage, 'Starting the demo…')} />
+          <Route path="/claim-account" element={renderPublicPage(ClaimAccountPage, 'Loading claim account…')} />
+          <Route path="/forgot-password" element={renderPublicPage(ForgotPasswordPage, 'Loading password reset…')} />
+          <Route path="/reset-password" element={renderPublicPage(ResetPasswordPage, 'Loading password reset…')} />
+          <Route path="/verify-email" element={renderPublicPage(VerifyEmailPage, 'Loading email verification…')} />
+          <Route path="/auth/google/complete" element={renderPublicPage(GoogleCompletePage, 'Signing you in…')} />
+          <Route
+            path="/verify-phone"
+            element={(
+              <PhoneVerificationRoute>
+                {renderPublicPage(VerifyPhonePage, 'Loading phone verification…')}
+              </PhoneVerificationRoute>
+            )}
+          />
           <Route
             path="/reset-required-password"
             element={(
               <RequiredPasswordResetRoute>
-                {renderLazyPage(RequiredPasswordResetPage, 'Loading password setup…')}
+                {renderPublicPage(RequiredPasswordResetPage, 'Loading password setup…')}
               </RequiredPasswordResetRoute>
             )}
           />
-          <Route path="/shared/statement/:token" element={renderLazyPage(CustomerPortal, 'Loading statement…')} />
-          <Route path="/" element={
+          <Route path="/shared/statement/:token" element={renderPublicPage(CustomerPortal, 'Loading statement…')} />
+          {/* The app shell is a pathless layout, so an unknown address falls through to the
+              top-level not-found route below instead of being silently redirected. */}
+          <Route element={
             <ProtectedRoute>
               <DashboardLayout />
             </ProtectedRoute>
@@ -197,6 +259,8 @@ export default function App() {
             <Route index element={<RoleLandingRedirect />} />
             {/* Public "/" is the static landing page (index.html); /app is the SPA's entry point. */}
             <Route path="app" element={<RoleLandingRedirect />} />
+            {/* Everyone's own profile: details, staff record and password (no page access needed). */}
+            <Route path="profile" element={renderLazyPage(ProfilePage, 'Loading your profile…')} />
 
             {/* Role-based landing areas */}
             <Route
@@ -259,12 +323,14 @@ export default function App() {
             <Route path="operations/lab" element={renderLazyPage(MilkLab, 'Loading milk feeding planner…')} />
             <Route path="operations/nutrition" element={renderLazyPage(NutritionDashboard, 'Loading feed planner…')} />
             <Route path="feed-nutrition" element={renderLazyPage(NutritionDashboard, 'Loading feed planner…')} />
+            {/* Page access `feeding` (or `feed`); DashboardLayout's page gate enforces it. */}
+            <Route path="feeding" element={renderLazyPage(TodayFeedingPage, 'Loading today’s feeding…')} />
 
             {/* UPDATED: Unit Helpers moved to operations layer to match sidebar UX */}
             <Route
               path="operations/unit-conversions"
               element={(
-                <RoleRoute allowedRoles={['SUPER_ADMIN', 'ADMIN']}>
+                <RoleRoute allowedRoles={UNIT_HELPER_ROLES}>
                   {renderLazyPage(UnitConversions, 'Loading unit helpers…')}
                 </RoleRoute>
               )}
@@ -391,8 +457,8 @@ export default function App() {
               )}
             />
 
-            <Route path="*" element={<UnknownRouteRedirect />} />
           </Route>
+          <Route path="*" element={<NotFoundRoute />} />
         </Routes>
       </StaffProvider>
     </BrowserRouter>

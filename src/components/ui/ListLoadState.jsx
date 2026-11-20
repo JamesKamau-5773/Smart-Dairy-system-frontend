@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
-import { AlertTriangle, CloudOff, Loader2, RefreshCw } from 'lucide-react';
+import { AlertTriangle, CloudOff, Loader2 } from 'lucide-react';
 import Skeleton from './Skeleton';
 import { getApiErrorMessage } from '../../lib/backendApi';
+import { commonCopy } from '../../i18n/common';
 
 export function TableSkeletonRows({ columns, rows = 5 }) {
   return Array.from({ length: rows }).map((_, rowIndex) => (
@@ -34,23 +35,20 @@ export function CardSkeletons({ rows = 4 }) {
 export function ListLoadMessage({ state, label, error, onRetry }) {
   const isOffline = state === 'offline';
   const Icon = isOffline ? CloudOff : AlertTriangle;
-  const title = isOffline
-    ? `You’re offline, and ${label} haven’t been saved on this phone yet.`
-    : `Couldn’t load ${label}.`;
-  const detail = isOffline
-    ? 'They will load automatically when your connection returns.'
-    : getApiErrorMessage(error, 'Check your connection and try again.');
+  const { list } = commonCopy;
+  const title = isOffline ? list.offlineTitle(label) : list.errorTitle(label);
+  const detail = isOffline ? list.offlineDetail : getApiErrorMessage(error, list.errorDetail);
 
   return (
     <div role={isOffline ? 'status' : 'alert'} className="mx-auto max-w-md space-y-3 p-8 text-center">
       <div className={`mx-auto flex h-12 w-12 items-center justify-center rounded-full ${isOffline ? 'bg-brand-50 text-brand' : 'bg-danger-50 text-danger-900'}`}>
         <Icon size={20} aria-hidden="true" />
       </div>
-      <p className="font-semibold text-ink">{title}</p>
-      <p className="text-sm leading-6 text-ink-muted">{detail}</p>
+      <p className="text-body-strong text-ink">{title}</p>
+      <p className="text-body text-ink-muted">{detail}</p>
       {!isOffline && onRetry && (
-        <button type="button" onClick={() => onRetry()} className="btn-command inline-flex items-center gap-2">
-          <RefreshCw size={14} aria-hidden="true" /> Try again
+        <button type="button" onClick={() => onRetry()} className="btn-command inline-flex items-center">
+          {list.tryAgain}
         </button>
       )}
     </div>
@@ -60,15 +58,15 @@ export function ListLoadMessage({ state, label, error, onRetry }) {
 /** Slim notice shown above cached rows when a refresh failed. */
 export function StaleDataNotice({ label, error, onRetry }) {
   return (
-    <div role="status" className="flex flex-wrap items-center justify-between gap-3 border-b border-warning-500/30 bg-warning-50 px-4 py-3 text-sm text-ink">
+    <div role="status" className="flex flex-wrap items-center justify-between gap-3 border-b border-warning-500/30 bg-warning-50 px-4 py-3 text-body text-ink">
       <span className="flex min-w-0 items-start gap-2">
         <AlertTriangle size={16} className="mt-0.5 shrink-0 text-warning-700" aria-hidden="true" />
         <span>
-          Showing {label} saved on this phone. Couldn’t refresh: {getApiErrorMessage(error, 'check your connection.')}
+          {commonCopy.list.stale(label)} {getApiErrorMessage(error, commonCopy.list.staleDetail)}
         </span>
       </span>
-      <button type="button" onClick={() => onRetry()} className="inline-flex items-center gap-1.5 text-sm font-semibold text-brand hover:underline">
-        <RefreshCw size={14} aria-hidden="true" /> Try again
+      <button type="button" onClick={() => onRetry()} className="inline-flex items-center text-control text-brand hover:underline">
+        {commonCopy.list.tryAgain}
       </button>
     </div>
   );
@@ -82,13 +80,42 @@ export function StatValue({ state, label, className, children }) {
   if (state === 'loading') return <Skeleton className="mt-3 h-7 w-20" />;
   if (state === 'offline' || state === 'error') {
     return (
-      <p className="mt-2 text-3xl font-black text-ink-muted" title={`Not available until ${label} load`}>
+      <p className="mt-2 text-stat-value text-ink-muted" title={commonCopy.list.statUnavailable(label)}>
         <span aria-hidden="true">—</span>
-        <span className="sr-only">Not available until {label} load</span>
+        <span className="sr-only">{commonCopy.list.statUnavailable(label)}</span>
       </p>
     );
   }
   return <p className={className}>{children}</p>;
+}
+
+/**
+ * The notice a list shows for its load state, so every list says the same thing the same way.
+ * Pair it with skeletons while loading and with the rows (or the empty state) when
+ * `hasRowsToShow(state)` is true.
+ *
+ * - loading: a "still loading" hint, only once loading drags on
+ * - stale: rows saved on this phone are shown, with "Couldn't refresh" and Try again
+ * - offline / error: a full-area message (with Try again on error)
+ * - ready: nothing
+ *
+ * @param {object} props
+ * @param {'loading'|'offline'|'error'|'stale'|'ready'} props.state From `getListLoadState(query)`.
+ * @param {string} props.label Plural noun for the rows, e.g. "stock items".
+ * @param {unknown} [props.error] The query error, for a readable reason.
+ * @param {() => void} props.onRetry Usually `query.refetch`.
+ *
+ * @example
+ * const state = getListLoadState(itemsQuery);
+ * <ListLoadNotices state={state} label="stock items" error={itemsQuery.error} onRetry={itemsQuery.refetch} />
+ */
+export function ListLoadNotices({ state, label, error, onRetry }) {
+  if (state === 'loading') return <SlowLoadingHint label={label} />;
+  if (state === 'stale') return <StaleDataNotice label={label} error={error} onRetry={onRetry} />;
+  if (state === 'offline' || state === 'error') {
+    return <ListLoadMessage state={state} label={label} error={error} onRetry={onRetry} />;
+  }
+  return null;
 }
 
 /** Appears only when loading drags on, so a slow connection isn't mistaken for a frozen app. */
@@ -100,9 +127,9 @@ export function SlowLoadingHint({ label, after = 4000 }) {
   }, [after]);
   if (!visible) return null;
   return (
-    <p role="status" className="flex items-center gap-2 border-b border-ink/10 bg-brand-50 px-4 py-2.5 text-sm text-brand-900">
+    <p role="status" className="flex items-center gap-2 border-b border-ink/10 bg-brand-50 px-4 py-2.5 text-body text-brand-900">
       <Loader2 size={14} className="shrink-0 animate-spin motion-reduce:animate-none" aria-hidden="true" />
-      Still loading {label} – your connection seems slow. They’ll appear as soon as they arrive.
+      {commonCopy.list.slow(label)}
     </p>
   );
 }

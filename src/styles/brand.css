@@ -3,6 +3,135 @@
  * (src/landing/landing.css) so both stay on one design system. */
 
 /* ============================================================
+   TYPOGRAPHY TOKENS
+   The only file that sets raw type values (the typography lint rule allows it).
+   Roles are named in src/styles/typeRoles.js and used as `text-<role>` classes.
+   ============================================================ */
+
+/* Inter, self-hosted: one variable woff2 (weight axis 100-900, so 800 is a true weight, not a
+ * synthesised bold), Latin subset. Characters outside it (₦, ₵, ₹) fall back to system-ui. */
+@font-face {
+  font-family: 'Inter';
+  font-style: normal;
+  font-display: swap;
+  font-weight: 100 900;
+  src: url('@fontsource-variable/inter/files/inter-latin-wght-normal.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+:root {
+  --font-sans: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+
+  /* The only weights: 400, 500, 600, and 800. 800 is for the page title and the headline
+   * figures only (page-title, stat-value, money-value-*; EXTRABOLD_ROLES in typeRoles.js).
+   * The type-weight-scale lint rule keeps every other role at 600 or below. */
+  --weight-regular:   400;
+  --weight-medium:    500;
+  --weight-semibold:  600;
+  --weight-extrabold: 800;
+
+  /* Letter spacing is 0 unless a role sets --type-<role>-tracking. */
+  --type-page-title-size:      1.5rem;    /* 24 */
+  --type-page-title-line:      2rem;      /* 32 */
+  --type-page-title-weight:    var(--weight-extrabold);
+  --type-page-title-tracking:  -0.02em;
+
+  --type-section-title-size:   1rem;      /* 16 */
+  --type-section-title-line:   1.5rem;    /* 24 */
+  --type-section-title-weight: var(--weight-semibold);
+
+  --type-body-size:            0.875rem;  /* 14 */
+  --type-body-line:            1.25rem;   /* 20 */
+  --type-body-weight:          var(--weight-regular);
+
+  --type-body-strong-size:     0.875rem;
+  --type-body-strong-line:     1.25rem;
+  --type-body-strong-weight:   var(--weight-semibold);
+
+  --type-label-size:           0.75rem;   /* 12: the smallest text in the app */
+  --type-label-line:           1rem;      /* 16 */
+  --type-label-weight:         var(--weight-medium);
+  --type-label-tracking:       0.04em;
+
+  --type-meta-size:            0.8125rem; /* 13 */
+  --type-meta-line:            1.125rem;  /* 18 */
+  --type-meta-weight:          var(--weight-regular);
+
+  /* Form field names: the meta size at semibold, sentence case (never uppercase). */
+  --type-field-label-size:     var(--type-meta-size);
+  --type-field-label-line:     var(--type-meta-line);
+  --type-field-label-weight:   var(--weight-semibold);
+
+  --type-stat-value-size:      1.25rem;   /* 20 */
+  --type-stat-value-line:      1.75rem;   /* 28 */
+  --type-stat-value-weight:    var(--weight-extrabold);
+  --type-stat-value-tracking:  -0.02em;
+
+  /* A stat card's name, above its figure (dashboard cards). Uppercase, like label, but
+   * semibold and tighter; label itself stays as it is for table headers. */
+  --type-stat-label-size:      var(--type-label-size);
+  --type-stat-label-line:      var(--type-label-line);
+  --type-stat-label-weight:    var(--weight-semibold);
+  --type-stat-label-tracking:  0.02em;
+
+  /* The unit after a stat figure ("Liters", "Cows", "L/cow"). */
+  --type-stat-unit-size:       var(--type-body-size);
+  --type-stat-unit-line:       var(--type-body-line);
+  --type-stat-unit-weight:     var(--weight-medium);
+
+  /* Money headline figures. Primary is the one figure a page leads with (Daily profit on the
+   * dashboard); secondary sits beside it at the stat-value size. */
+  --type-money-value-primary-size:       1.75rem;  /* 28 */
+  --type-money-value-primary-line:       2.25rem;  /* 36 */
+  --type-money-value-primary-weight:     var(--weight-extrabold);
+  --type-money-value-primary-tracking:   -0.01em;
+
+  --type-money-value-secondary-size:     var(--type-stat-value-size);
+  --type-money-value-secondary-line:     var(--type-stat-value-line);
+  --type-money-value-secondary-weight:   var(--weight-extrabold);
+  --type-money-value-secondary-tracking: -0.01em;
+
+  /* A record's litres in a list row, and the large figure in its details (Production Log on
+   * phones). Medium weight: the figures read clearly without shouting in a long list. */
+  --type-record-figure-size:      1rem;      /* 16 */
+  --type-record-figure-line:      1.5rem;    /* 24 */
+  --type-record-figure-weight:    var(--weight-medium);
+
+  --type-record-figure-lg-size:   2.25rem;   /* 36 */
+  --type-record-figure-lg-line:   2.5rem;    /* 40 */
+  --type-record-figure-lg-weight: var(--weight-medium);
+
+  --type-control-size:         var(--type-body-size);
+  --type-control-line:         var(--type-body-line);
+  --type-control-weight:       var(--weight-medium);
+
+  --type-badge-size:           var(--type-meta-size);
+  --type-badge-line:           var(--type-meta-line);
+  --type-badge-weight:         var(--weight-medium);
+
+  /* Large numeric entry, used only where a farmer types litres. It keeps its size on phones
+   * (it is already above 16px, so iOS does not zoom). */
+  --type-numeric-input-size:   1.75rem;   /* 28 */
+  --type-numeric-input-line:   2.25rem;   /* 36 */
+  --type-numeric-input-weight: var(--weight-semibold);
+
+  /* The one documented exception to the control role: at <=640px inputs are 16px, because
+   * iOS Safari zooms the page when a smaller input takes focus. Applied in src/index.css. */
+  --type-control-phone-size:   1rem;      /* 16 */
+  --type-control-phone-line:   1.5rem;    /* 24 */
+}
+
+/* Chart text (Recharts axis ticks, legends, tooltips) takes the meta role. CSS outranks the
+ * fontSize attributes Recharts writes on its SVG text. */
+.recharts-text,
+.recharts-legend-item-text,
+.recharts-default-tooltip {
+  font-size: var(--type-meta-size);
+  line-height: var(--type-meta-line);
+  font-weight: var(--type-meta-weight);
+}
+
+/* ============================================================
    GLASS CLINICAL TOKENS
    ============================================================ */
 :root {
@@ -12,7 +141,7 @@
   --surface-warm:   rgba(56, 189, 248, 0.12);
   --surface-raised: rgba(255, 255, 255, 0.90);
   --surface-strong: rgba(255, 255, 255, 0.96);
-  --brand:          #0369A1;
+  --brand:          #0A5F96;
   --brand-dark:     #0C4A6E;
   --accent-sky:     #38BDF8;
   --canvas-warm:    #F9F8F6;
@@ -25,7 +154,7 @@
   --card-foreground: 224 71.4% 4.1%;
   --popover: 0 0% 100%;
   --popover-foreground: 224 71.4% 4.1%;
-  --primary: 201 96% 32%;
+  --primary: 204 88% 31%; /* #0A5F96 */
   --primary-foreground: 210 20% 98%;
   --secondary: 220 14.3% 95.9%;
   --secondary-foreground: 220.9 39.3% 11%;
@@ -46,15 +175,14 @@
 
   --border-thick:   1px;
   --radius:         16px;
-  --sans:           'Inter Tight', 'Inter', system-ui, sans-serif;
-  --display:        'Inter Tight', 'Inter', system-ui, sans-serif;
-  --mono:           'JetBrains Mono', SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', monospace;
-  
+  /* Old family names, all Inter now. Removed in the typography cleanup phase. */
+  --sans:           var(--font-sans);
+  --display:        var(--font-sans);
+  --mono:           var(--font-sans);
+
   --text-strong: rgba(15,23,42,0.92);
   --text-normal: rgba(15,23,42,0.78);
   --text-muted:  rgba(15,23,42,0.52);
-  --heading-weight: 700;
-  --ui-weight: 600;
 }
 
 @layer components {
@@ -89,7 +217,7 @@
   }
 
   .btn-command {
-    @apply flex items-center justify-center font-semibold transition-all relative;
+    @apply flex items-center justify-center text-control transition-all relative;
     background: var(--brand);
     color: white;
     border: 1px solid rgba(3, 105, 161, 0.2);
@@ -97,8 +225,6 @@
     min-height: 40px;
     padding: 0.65rem 1.2rem;
     box-shadow: none;
-    letter-spacing: normal;
-    text-transform: none;
     overflow: hidden;
   }
 
@@ -129,7 +255,7 @@
   }
 
   .btn-secondary {
-    @apply inline-flex items-center justify-center;
+    @apply inline-flex items-center justify-center text-control;
     min-height: 40px;
     padding: 0.62rem 1rem;
     background: rgba(255, 255, 255, 0.82);
@@ -144,8 +270,25 @@
     color: var(--brand-dark);
   }
 
+  .btn-outline-brand {
+    @apply inline-flex items-center justify-center text-control;
+    min-height: 40px;
+    padding: 0.62rem 1rem;
+    border-radius: 10px;
+    background: transparent;
+    color: var(--brand);
+    border: 1px solid var(--brand);
+    box-shadow: none;
+  }
+
+  .btn-outline-brand:hover {
+    @apply bg-brand-50;
+    color: var(--brand-dark);
+    border-color: var(--brand-dark);
+  }
+
   .btn-danger {
-    @apply inline-flex items-center justify-center;
+    @apply inline-flex items-center justify-center text-control;
     min-height: 40px;
     padding: 0.62rem 1rem;
     background: rgba(239, 68, 68, 0.08);
