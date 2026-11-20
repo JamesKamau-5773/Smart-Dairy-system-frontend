@@ -2,7 +2,8 @@ import React, { useRef, useState } from 'react';
 import { useFocusTrap } from '../hooks/useFocusTrap';
 import { DESKTOP_QUERY, useMediaQuery } from '../hooks/useMediaQuery';
 import { Link, useLocation } from 'react-router-dom';
-import { X, ChevronRight, ChevronDown } from 'lucide-react';
+import { X, ChevronRight, ChevronDown, Building2, HandCoins, Handshake, Wheat } from 'lucide-react';
+import { CowHead, Farmhand, MilkChurn, MilkDropCheck, MilkYieldChart } from '../components/icons/farmIcons';
 import { useAuth } from '../contexts/AuthContext';
 import FarmSwitcher from './FarmSwitcher';
 import { canSeeBuyers, canSeeLedger, canSeeProductionLog, UNIT_HELPER_ROLES } from '../lib/navAccess';
@@ -10,11 +11,34 @@ import { canAccessCommandCenter, canViewAdminControls, isCooperativeAdmin, isSup
 import { navItemHref } from '../lib/navigation';
 import { activeNavRoute, NAV_GROUPS, NAV_ROUTES } from '../lib/navRoutes';
 import { shellCopy } from '../i18n/shell';
-import { SITE } from '../landing/content';
+import BrandLogo from '../components/brand/BrandLogo';
 
-const { nav: copy } = shellCopy;
+const { nav: copy, brand: brandCopy } = shellCopy;
 
-const PHONE_FOLDED_GROUPS = new Set(['herd', 'feeding', 'finance', 'reports', 'compliance', 'hr']);
+// One icon per section header, drawn for the farm where lucide only has a generic one
+// (components/icons/farmIcons). The owner's call (2026-11-18): an exception to the
+// functional-icons rule (d7f86bc) for section headers only; links stay text.
+const GROUP_ICONS = {
+  platform: Building2,
+  cooperative: Handshake,
+  operations: MilkChurn,
+  herd: CowHead,
+  feeding: Wheat,
+  finance: HandCoins,
+  reports: MilkYieldChart,
+  compliance: MilkDropCheck,
+  hr: Farmhand,
+};
+
+function SectionTitle({ groupId, title }) {
+  const Icon = GROUP_ICONS[groupId];
+  return (
+    <span className="flex min-w-0 items-center gap-2">
+      {Icon && <Icon size={18} aria-hidden="true" className="shrink-0" />}
+      <span className="truncate">{title}</span>
+    </span>
+  );
+}
 
 export default function Sidebar({ mobileOpen = false, setMobileOpen = () => {} }) {
   const { currentUser } = useAuth();
@@ -86,22 +110,12 @@ export default function Sidebar({ mobileOpen = false, setMobileOpen = () => {} }
   const activeItem = activeNavRoute(location, allNavItems);
   const activeGroupId = activeItem?.group ?? null;
 
-  // Moving to a page in a section the user folded unfolds it, so the current page's link is never hidden.
-  const [shownActiveGroupId, setShownActiveGroupId] = useState(activeGroupId);
-  if (activeGroupId !== shownActiveGroupId) {
-    setShownActiveGroupId(activeGroupId);
-    if (activeGroupId && collapsedGroups[activeGroupId]) {
-      setCollapsedGroups((prev) => ({ ...prev, [activeGroupId]: false }));
-    }
-  }
-
-  // collapsedGroups holds only the sections the user folded or unfolded; the rest use the default.
-  // Desktop starts with every section open. The phone drawer starts with these folded, by id
-  // (titles change with the language), except the one holding the current page.
+  // The owner's call (2026-11-20): every section starts folded, on desktop and in the phone
+  // drawer, including the one holding the current page (its title is coloured instead). A section
+  // opens and closes only when its header is tapped. collapsedGroups holds those taps, by id.
   const isGroupCollapsed = (groupId) => {
     if (!groupId) return false;
-    if (groupId in collapsedGroups) return collapsedGroups[groupId];
-    return mobileOpen && groupId !== activeGroupId && PHONE_FOLDED_GROUPS.has(groupId);
+    return collapsedGroups[groupId] ?? true;
   };
 
   const toggleGroup = (groupId) => {
@@ -137,11 +151,17 @@ export default function Sidebar({ mobileOpen = false, setMobileOpen = () => {} }
         z-[25] md:z-20
       `}>
 
-      {/* Logo Block */}
+      {/* Logo: the white horizontal lock-up on the dark header. Desktop: 34px tall, linking home
+          (/app sends the user to their own landing page). Phone drawer: 32px, not a link, so
+          opening the drawer still puts focus on Close. */}
       <div className="flex h-16 shrink-0 items-center justify-between border-b border-ink/10 bg-ink-900 px-4 md:px-6">
-        <p className="m-0 text-body-strong text-white">
-          {SITE.name}
-        </p>
+        {isDesktop ? (
+          <Link to="/app" aria-label={brandCopy.home} className="inline-flex rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-400">
+            <BrandLogo variant="horizontal" tone="dark" size={34} decorative />
+          </Link>
+        ) : (
+          <BrandLogo variant="horizontal" tone="dark" size={32} />
+        )}
         <button type="button" onClick={() => setMobileOpen(false)} className="inline-flex h-10 w-10 items-center justify-center rounded-lg text-white hover:bg-white/10 md:hidden" aria-label={copy.closeMenu}><X size={20} aria-hidden="true" /></button>
       </div>
 
@@ -153,18 +173,19 @@ export default function Sidebar({ mobileOpen = false, setMobileOpen = () => {} }
           <div key={group.id || 'core'} className="flex flex-col gap-2">
             {group.title && (
               <div>
-                {/* px-4 matches the items' 14px padding plus their 2px active border. */}
+                {/* The title starts 42px in (16px padding, 18px icon, 8px gap); the links below line up with it. */}
                 <button
                   type="button"
                   onClick={() => toggleGroup(group.id)}
-                  // Their collapsing, hover and colours; the label role (500) instead of extrabold, so the
-                  // headers stand out by colour within the 400/500/600 weights.
-                  className={`group w-full px-4 py-1.5 flex items-center justify-between text-label rounded-md transition-colors hover:bg-ink-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-400 ${activeGroupId === group.id ? 'text-brand-700' : 'text-ink-900'}`}
+                  // Section headers are larger than their links (section-title 16/600 vs body-strong
+                  // 14/600), so the two never look alike; title case, because 16px capitals don't fit
+                  // the 240px sidebar. Colour marks the current section.
+                  className={`group w-full px-4 py-1.5 flex items-center justify-between gap-2 text-section-title rounded-md transition-colors hover:bg-ink-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-400 ${activeGroupId === group.id ? 'text-brand-700' : 'text-ink-900'}`}
                   aria-expanded={!isGroupCollapsed(group.id)}
                   aria-label={copy.toggleSection(group.title)}
                 >
-                  <span>{group.title}</span>
-                  <span className="text-ink-400 group-hover:text-ink-600">
+                  <SectionTitle groupId={group.id} title={group.title} />
+                  <span className="shrink-0 text-ink-400 group-hover:text-ink-600">
                     {isGroupCollapsed(group.id) ? <ChevronRight size={14} aria-hidden="true" /> : <ChevronDown size={14} aria-hidden="true" />}
                   </span>
                 </button>
@@ -183,10 +204,13 @@ export default function Sidebar({ mobileOpen = false, setMobileOpen = () => {} }
                     aria-current={itemIsActive ? 'page' : undefined}
                     // Active state comes from activeNavRoute, which also reads the query.
                     // Hover is a plain light background only; the left border belongs to the active item.
-                    className={`flex items-center pl-3.5 pr-4 py-3 min-h-[44px] text-body-strong transition-colors duration-100 border-l-2 rounded-md relative ${
+                    // Under a section header the text starts where the header's title does (2px border
+                    // + 40px = 42px), so each section reads as a group; the highlight still fills the row.
+                    className={`flex items-center ${group.title ? 'pl-10' : 'pl-3.5'} pr-4 py-3 min-h-[44px] text-body-strong transition-colors duration-100 border-l-2 rounded-md relative ${
                       itemIsActive
                         ? 'border-brand-400 bg-ink-900 text-white'
-                        : 'border-transparent text-ink-600 hover:bg-ink-100 hover:text-ink-900'
+                        // ink-500 (4.8:1 on white): a step lighter than the ink-900 section titles.
+                        : 'border-transparent text-ink-500 hover:bg-ink-100 hover:text-ink-900'
                     }`}
                   >
                     {item.label}
