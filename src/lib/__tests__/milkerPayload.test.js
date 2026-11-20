@@ -23,3 +23,11 @@ describe('milker_id on milk records', () => {
     expect(saved).toMatchObject({ status: 'Flagged', significant_drop: true });
   });
 });
+
+describe('productionApi.listMilkers', () => {
+  it('reads the backend’s milker list as it sends it', async () => {
+    vi.spyOn(apiClient, 'get').mockResolvedValue({ data: { items: [{ id: 4, name: 'Wairimu', job_title: 'Milker', status: 'ACTIVE', is_me: true }], count: 1 } });
+    expect(await productionApi.listMilkers()).toEqual([{ id: 4, name: 'Wairimu', jobTitle: 'Milker', status: 'ACTIVE', isMe: true }]);
+    expect(apiClient.get).toHaveBeenCalledWith('/production/milkers');
+  });
+});

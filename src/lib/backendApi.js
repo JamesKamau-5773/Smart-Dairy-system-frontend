@@ -1005,6 +1005,19 @@ export const productionApi = {
       };
     });
   },
+  /**
+   * Who can be named as milker on a milk record: the farm's current employees, as the backend
+   * lists them for every role that records milk: `[{ id, name, jobTitle, status, isMe }]`.
+   */
+  listMilkers() {
+    return apiClient.get('/production/milkers').then((response) => toArray(response.data?.items ?? response.data).map((row) => ({
+      id: row.id,
+      name: row.name ?? '',
+      jobTitle: row.job_title ?? null,
+      status: row.status ?? null,
+      isMe: row.is_me === true,
+    })));
+  },
   createYield(payload, config = {}) {
     return apiClient.post('/production/yield', buildProductionYieldPayload(payload), config).then((response) => toObject(response.data));
   },

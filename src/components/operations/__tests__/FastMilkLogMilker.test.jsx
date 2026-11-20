@@ -1,10 +1,10 @@
-// The "Milked by" picker: the farm's staff, sent as milker_id (none = the person recording).
+// The "Milked by" picker: the backend's milker list, sent as milker_id (none = the person recording).
 import { QueryClientProvider } from '@tanstack/react-query';
 import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import FastMilkLog from '../FastMilkLog';
-import { hrApi, productionApi } from '../../../lib/backendApi';
+import { productionApi } from '../../../lib/backendApi';
 import { queryClient } from '../../../providers/QueryProvider';
 
 vi.mock('../../../hooks/useTenant', () => ({ useTenant: () => ({ tenantId: 'tenant_1', farmId: 'farm_1' }) }));
@@ -14,19 +14,19 @@ vi.mock('../../../lib/backendApi', async (importOriginal) => {
     ...actual,
     herdApi: { list: vi.fn().mockResolvedValue([{ id: 57, tag_number: 'KE-012', name: 'Neema', status: 'Milking' }]) },
     safetyApi: { activeHardlocks: vi.fn().mockResolvedValue([]) },
-    hrApi: { listStaff: vi.fn() },
-    productionApi: { ...actual.productionApi, createYield: vi.fn(), updateYield: vi.fn() },
+    productionApi: { ...actual.productionApi, createYield: vi.fn(), updateYield: vi.fn(), listMilkers: vi.fn() },
   };
 });
 
+// As the backend sends them (already only current employees); is_me is the person recording.
 const STAFF = [
-  { id: 4, name: 'Wairimu Njoroge', status: 'ACTIVE' },
-  { id: 5, name: 'Ochieng Odera', status: 'ACTIVE' },
-  { id: 6, name: 'Left Last Year', status: 'TERMINATED' },
+  { id: 3, name: 'Kiprop Langat', status: 'ACTIVE', isMe: true },
+  { id: 4, name: 'Wairimu Njoroge', status: 'ACTIVE', isMe: false },
+  { id: 5, name: 'Ochieng Odera', status: 'ON_LEAVE', isMe: false },
 ];
 
 beforeEach(() => {
-  hrApi.listStaff.mockReset();
+  productionApi.listMilkers.mockReset();
   productionApi.createYield.mockReset().mockResolvedValue({ id: 1 });
   productionApi.updateYield.mockReset().mockResolvedValue({ id: 9, status: 'Recorded', significant_drop: false });
 });
@@ -41,8 +41,8 @@ const renderForm = (props = {}) => render(
 );
 
 describe('FastMilkLog milker picker', () => {
-  it('lists the farm’s active staff, and sends the chosen one as milker_id', async () => {
-    hrApi.listStaff.mockResolvedValue(STAFF);
+  it('lists the backend’s milkers except the recorder, and sends the chosen one as milker_id', async () => {
+    productionApi.listMilkers.mockResolvedValue(STAFF);
     renderForm();
     const milker = await screen.findByLabelText('Milked by');
     expect([...milker.options].map((option) => option.textContent))
@@ -58,7 +58,7 @@ describe('FastMilkLog milker picker', () => {
   });
 
   it('sends no milker when the person recording milked', async () => {
-    hrApi.listStaff.mockResolvedValue(STAFF);
+    productionApi.listMilkers.mockResolvedValue(STAFF);
     renderForm();
     await screen.findByLabelText('Milked by');
     fireEvent.change(screen.getByLabelText('Select cow'), { target: { value: '57' } });
@@ -68,16 +68,16 @@ describe('FastMilkLog milker picker', () => {
     expect(productionApi.createYield.mock.calls[0][0]).not.toHaveProperty('milker_id');
   });
 
-  it('hides the picker when the staff list can’t be read (roles without staff access)', async () => {
-    hrApi.listStaff.mockRejectedValue({ response: { status: 403, data: {} } });
+  it('hides the picker when the milker list can’t be read', async () => {
+    productionApi.listMilkers.mockRejectedValue({ response: { status: 403, data: {} } });
     renderForm();
     await screen.findByLabelText('Select cow');
-    await waitFor(() => expect(hrApi.listStaff).toHaveBeenCalled());
+    await waitFor(() => expect(productionApi.listMilkers).toHaveBeenCalled());
     expect(screen.queryByLabelText('Milked by')).toBeNull();
   });
 
   it('on edit, starts from the record’s milker and clears it with null', async () => {
-    hrApi.listStaff.mockResolvedValue(STAFF);
+    productionApi.listMilkers.mockResolvedValue(STAFF);
     const record = { id: 9, cowId: 'KE-012', cowName: 'Neema', amount: 11, session: 'Morning', date: '2026-11-19', milkerId: 4 };
     renderForm({ mode: 'edit', record });
     const milker = await screen.findByLabelText('Milked by');
@@ -90,7 +90,7 @@ describe('FastMilkLog milker picker', () => {
   });
 
   it('on edit, leaves the milker out when it didn’t change', async () => {
-    hrApi.listStaff.mockResolvedValue(STAFF);
+    productionApi.listMilkers.mockResolvedValue(STAFF);
     const record = { id: 9, cowId: 'KE-012', cowName: 'Neema', amount: 11, session: 'Morning', date: '2026-11-19', milkerId: 4 };
     renderForm({ mode: 'edit', record });
     await screen.findByLabelText('Milked by');

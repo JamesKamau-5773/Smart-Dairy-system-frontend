@@ -6,7 +6,7 @@ import toast from 'react-hot-toast';
 import { useTenant } from '../../hooks/useTenant';
 import { useSubmissionKey } from '../../hooks/useSubmissionKey';
 import { QUERY_KEYS } from '../../providers/QueryProvider';
-import { getApiErrorMessage, herdApi, hrApi, productionApi, safetyApi } from '../../lib/backendApi';
+import { getApiErrorMessage, herdApi, productionApi, safetyApi } from '../../lib/backendApi';
 import { getApiErrorCode } from '../../lib/apiErrors';
 import { reportError } from '../../lib/telemetry';
 import AlertBanner from '../../components/ui/AlertBanner';
@@ -227,7 +227,7 @@ const FastMilkUI = ({
           </div>
         </div>
 
-        {/* Only when the farm's staff list could be read (it is not shown to every role). */}
+        {/* Only when the milker list could be read and has someone other than the recorder. */}
         {milkers.length > 0 && (
           <div className="space-y-2">
             <label htmlFor="fast-milk-milker" className="block text-field-label text-ink-muted">{copy.milkedBy}</label>
@@ -344,17 +344,18 @@ export default function FastMilkLog({ onClose, onSaveSuccess, onDeleteSuccess, m
 
   const displayHerd = herd;
 
-  // Who can be named as milker: the farm's active staff. Roles that can't read the staff list
-  // get an error here, and the picker simply isn't shown (the recorder stays the milker).
-  const { data: staff } = useQuery({
+  // Who can be named as milker: the farm's current employees, as the backend lists them for
+  // every role that records milk. The person's own record is left out ("Me" covers it). If the
+  // list can't be read, the picker isn't shown and the recorder stays the milker.
+  const { data: milkerList } = useQuery({
     queryKey: ['milk-log-milkers', tenantId, farmId],
-    queryFn: () => hrApi.listStaff(),
+    queryFn: () => productionApi.listMilkers(),
     enabled: !!farmId,
     retry: false,
     staleTime: 5 * 60 * 1000,
   });
-  const milkers = (Array.isArray(staff) ? staff : [])
-    .filter((employee) => employee.id != null && employee.name && String(employee.status).toUpperCase() === 'ACTIVE');
+  const milkers = (Array.isArray(milkerList) ? milkerList : [])
+    .filter((employee) => employee.id != null && employee.name && !employee.isMe);
 
   // Hardlocks
   const { data: hardlocksRaw } = useQuery({
