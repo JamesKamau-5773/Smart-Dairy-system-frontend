@@ -25,7 +25,7 @@ export default function ReleaseMilkModal({ lock, cowName, onClose, onConfirm, is
           {ends ? copy.overrideWhy(ends) : null} {testFailed ? copy.overrideFailedTest : null}
         </p>
         <div>
-          <label htmlFor="release-override" className="mb-1.5 block text-field-label text-ink">{copy.overrideLabel}</label>
+          <label htmlFor="release-override" className="mb-1.5 block text-field-label text-ink-muted">{copy.overrideLabel}</label>
           <textarea
             id="release-override"
             rows={2}

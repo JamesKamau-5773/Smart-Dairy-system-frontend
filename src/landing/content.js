@@ -41,15 +41,14 @@ export const PLACEHOLDERS = [
   'SITE.sameAs',
   'PLANS (prices)',
   'FOOTER.legal (Privacy and Terms pages)',
-  'public/og-image.png and public/logo.png artwork',
 ];
 
 export const SITE = {
   name: 'Maziwa Smart',
   legalName: 'Maziwa Smart', // TODO: registered company name
   url: 'https://www.maziwasmart.co.ke',
-  logo: 'https://www.maziwasmart.co.ke/logo.png',
-  ogImage: 'https://www.maziwasmart.co.ke/og-image.png',
+  logo: 'https://www.maziwasmart.co.ke/brand/icon-512.png',
+  ogImage: 'https://www.maziwasmart.co.ke/brand/og-image.png',
   phone: '+254 758 763 260', // international format for tel: links and JSON-LD
   phoneDisplay: '0758 763 260',
   whatsapp: '254758763260', // international format, digits only (used in wa.me links)
@@ -157,7 +156,6 @@ export const DASHBOARD_PREVIEW = {
   intro: 'Open Maziwa Smart on a computer in the office or a phone in the shed. Everyone on the farm sees the same records.',
   label: 'Maziwa Smart dashboard on a computer and the milk recording screen on a phone, shown with sample data',
   address: 'maziwasmart.co.ke/dashboard',
-  appName: 'Smart Dairy',
   workspaceLabel: 'Active Workspace',
   farm: 'Silato Farm',
   menu: [
@@ -316,12 +314,16 @@ export const FAQ = {
       a: 'Maziwa Smart is dairy farm management software made for Kenyan farmers. It keeps your milk records, cow details, breeding dates, feed, buyers and money in one place, on your phone or computer.',
     },
     {
+      q: 'Can I try it before I sign up?',
+      a: 'Yes. Tap “Try the live demo” to look around a demo farm for a while, without creating an account.',
+    },
+    {
       q: 'Does it work without internet?',
       a: 'Yes. You can record milk and other daily work when the network is down. Maziwa Smart saves the entries on your phone and sends them automatically once you are back online.',
     },
     {
       q: 'Do I need a computer?',
-      a: 'No. Maziwa Smart runs in the browser on any smartphone. On Android you can add it to your home screen and open it like an app.',
+      a: 'No. Maziwa Smart runs in the browser on any smartphone. You can add it to your home screen and open it like an app: on Android from the browser menu, on iPhone from Share, then Add to Home Screen.',
     },
     {
       q: 'Can my workers use it too?',
@@ -332,12 +334,20 @@ export const FAQ = {
       a: 'Yes. A cooperative can onboard its member farmers, and each farm keeps its own private records.',
     },
     {
+      q: 'Can I give buyers a receipt?',
+      a: 'Yes. Every payment you record in the Ledger has a receipt you can preview, download as a PDF, or share from your phone, for example on WhatsApp.',
+    },
+    {
       q: 'Is my farm data safe?',
-      a: 'Every farm’s records are kept separate, and only the people you add to your farm can see them. You need a password to sign in.',
+      a: 'Every farm’s records are kept separate, and only the people you add to your farm can see them. Each person signs in with their own phone number or email and password, or with Google.',
     },
     {
       q: 'Is it available in Kiswahili?',
-      a: 'Maziwa Smart is in English today. Call or WhatsApp us if you need help in Kiswahili.', // TODO: update once a Kiswahili version is planned
+      a: 'Yes. Switch between English and Kiswahili on the sign-in screen or from your profile menu. Your phone remembers the choice.',
+    },
+    {
+      q: 'How much does it cost?',
+      a: 'You can start free today. We are finalising our paid plans, and we will tell you before any of them begins. Call or WhatsApp us if you want to ask about pricing.',
     },
     {
       q: 'How do I get started?',

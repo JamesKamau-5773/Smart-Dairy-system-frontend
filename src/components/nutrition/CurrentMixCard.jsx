@@ -108,7 +108,7 @@ function RecordFeedingForm({ mix, isRecording, onRecordConsumption }) {
 
   return (
     <form onSubmit={submit} className="border-t border-ink/10 pt-4">
-      <label htmlFor={inputId} className="mb-2 block text-field-label text-ink">{copy.feedUsed}</label>
+      <label htmlFor={inputId} className="mb-2 block text-field-label text-ink-muted">{copy.feedUsed}</label>
       <div className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto]">
         <select
           value={feedingGroup}

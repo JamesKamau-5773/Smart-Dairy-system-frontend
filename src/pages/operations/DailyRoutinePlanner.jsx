@@ -196,7 +196,7 @@ export default function DailyRoutinePlanner() {
                 value={activeTask?.checklist ?? ''}
                 onChange={(event) => handleChecklistChange(event.target.value)}
                 placeholder={copy.checklistPlaceholder}
-                className="w-full h-64 p-4 rounded-xl border border-ink/20 focus:border-brand focus:ring-1 focus:ring-brand bg-white text-control text-ink-strong resize-none transition-colors"
+                className="input-machined w-full text-control h-64 resize-none"
               />
 
               <p className="text-meta text-ink-muted mt-3 text-center">

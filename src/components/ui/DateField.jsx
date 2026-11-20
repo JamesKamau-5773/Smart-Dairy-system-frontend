@@ -4,6 +4,7 @@ import { Calendar } from './calendar';
 import { Popover, PopoverContent, PopoverTrigger } from './popover';
 import { commonCopy } from '../../i18n/common';
 import { formatDate, maskInputDate, parseInputDate, toInputDate } from '../../lib/dateFormat';
+import { FIELD_CONTROL } from './formFieldStyles';
 
 const pad = (value) => String(value).padStart(2, '0');
 const isoOf = (date) => `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
@@ -27,7 +28,7 @@ function dateFieldError(text, iso, { min, max } = {}) {
  * `value` and `onChange` use YYYY-MM-DD; '' while the typed date is incomplete or invalid.
  * `error` shows a message from outside the field (e.g. the server's) when the typed date is fine.
  */
-export default function DateField({ label, value = '', onChange, min, max, required = false, name, className = '', inputClassName = 'input-machined', hideLabel = false, error: externalError }) {
+export default function DateField({ label, value = '', onChange, min, max, required = false, name, className = '', inputClassName = FIELD_CONTROL, hideLabel = false, error: externalError }) {
   const id = useId();
   const errorId = `${id}-error`;
   const [text, setText] = useState(() => toInputDate(value));

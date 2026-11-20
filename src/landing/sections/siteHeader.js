@@ -1,6 +1,6 @@
 import { each, escapeHtml } from '../html.js';
 import { buttonClass } from '../parts/button.js';
-import { logo } from '../parts/logo.js';
+import { brandLogo } from '../parts/logo.js';
 
 /**
  * Logo (links home) on the left, section links in the middle, log in and the
@@ -11,7 +11,7 @@ export const siteHeader = ({ name, links, login, start }) => `
 <header class="border-b border-ink-200 bg-white">
   <div class="mx-auto flex max-w-[1200px] flex-wrap items-center justify-between gap-x-4 gap-y-1 px-6 py-3.5">
     <a href="/" aria-label="${escapeHtml(name)} home" class="flex min-h-11 items-center">
-      ${logo(name, { className: 'flex items-center gap-2.5 text-[19px] font-extrabold tracking-[-0.02em] text-brand' })}
+      ${brandLogo({ variant: 'horizontal', size: 40, loading: 'eager' })}
     </a>
     <nav aria-label="Main" class="order-last w-full md:order-none md:w-auto">
       <ul class="flex flex-wrap gap-x-7 text-[15px] font-semibold">${each(links, (link) => `

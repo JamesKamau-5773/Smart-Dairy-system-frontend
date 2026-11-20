@@ -1,6 +1,8 @@
 import { WifiOff } from 'lucide-react';
 import { authCopy } from '../../i18n/auth';
 import LanguageSwitch from '../ui/LanguageSwitch';
+import BrandLogo from '../brand/BrandLogo';
+import { shellCopy } from '../../i18n/shell';
 
 const { layout: copy } = authCopy;
 
@@ -17,12 +19,7 @@ export default function AuthLayout({ headerAction, offline = false, children }) 
         <div className="absolute inset-0 bg-[#F9F8F6]/55" />
       </div>
 
-      <header className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-4">
-        {/* Plain link: "/" is the static landing page, outside the SPA router. */}
-        <a href="/" className="flex items-center gap-2 text-body-strong text-brand">
-          <img src="/logo.png" alt="" width="32" height="32" className="size-8 rounded-badge" />
-          {authCopy.common.brand}
-        </a>
+      <header className="mx-auto flex max-w-6xl items-center justify-end gap-4 px-4 py-4">
         <div className="flex items-center gap-3">
           <LanguageSwitch />
           {headerAction}
@@ -37,6 +34,12 @@ export default function AuthLayout({ headerAction, offline = false, children }) 
             <span>{copy.offline}</span>
           </p>
         )}
+
+        {/* The endorsed logo centred above the form, with at least 24px clear around it. A plain
+            link: "/" is the static landing page, outside the SPA router. */}
+        <a href="/" aria-label={shellCopy.brand.home} className="mx-auto mb-6 inline-flex rounded-md p-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-400">
+          <BrandLogo variant="stacked-endorsed" size={220} decorative className="w-[180px] sm:w-[220px]" />
+        </a>
 
         <div className="card-machined mx-auto grid w-full max-w-md lg:max-w-none lg:grid-cols-[minmax(0,1fr)_minmax(0,0.85fr)]">
           <div className="p-6 sm:p-8 lg:p-10">{children}</div>

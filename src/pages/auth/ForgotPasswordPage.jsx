@@ -117,7 +117,7 @@ export default function ForgotPasswordPage() {
         <form onSubmit={submit} noValidate className="space-y-5">
           {options.channels.length > 1 && (
             <fieldset>
-              <legend className="mb-2 block text-field-label text-ink-900">{copy.channelLabel}</legend>
+              <legend className="mb-2 block text-field-label text-ink-muted">{copy.channelLabel}</legend>
               <div className="grid grid-cols-2 gap-2">
                 {options.channels.map((option) => {
                   const selected = channel === option.id;

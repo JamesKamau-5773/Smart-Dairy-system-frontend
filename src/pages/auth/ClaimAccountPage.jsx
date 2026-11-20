@@ -93,19 +93,19 @@ export default function ClaimAccountPage() {
             </div>
           ) : (
           <form onSubmit={handleClaim} className="space-y-4">
-            <label className="block text-field-label text-[#5f4a82]">
+            <label className="block text-field-label text-ink-muted">
               {copy.inviteToken}
               <input
-                className="mt-2 w-full rounded-lg border border-[#5a3b8d]/20 bg-[#faf7ff] px-4 py-3 text-control text-[#2f1d4d] outline-none"
+                className="input-machined w-full text-control mt-2"
                 value={token}
                 readOnly
               />
             </label>
 
-            <label className="block text-field-label text-[#5f4a82]">
+            <label className="block text-field-label text-ink-muted">
               {copy.chooseUsername}
               <input
-                className="mt-2 w-full rounded-lg border border-[#5a3b8d]/20 bg-[#faf7ff] px-4 py-3 text-control text-[#2f1d4d] outline-none focus:border-[#5a3b8d] focus:ring-2 focus:ring-[#5a3b8d]/20"
+                className="input-machined w-full text-control mt-2"
                 value={username}
                 onChange={(event) => setUsername(event.target.value.toLowerCase())}
                 minLength={3}
@@ -118,13 +118,13 @@ export default function ClaimAccountPage() {
               <span className="mt-1 block text-meta normal-case text-[#6b5b86]">{copy.usernameHint}</span>
             </label>
 
-            <label className="block text-field-label text-[#5f4a82]">
+            <label className="block text-field-label text-ink-muted">
               {copy.newPassword}
               <div className="relative mt-2">
                 <input
                   type={showPassword ? 'text' : 'password'}
                   autoComplete="new-password"
-                  className="w-full rounded-lg border border-[#5a3b8d]/20 bg-[#faf7ff] py-3 pl-4 pr-12 text-control text-[#2f1d4d] outline-none focus:border-[#5a3b8d] focus:ring-2 focus:ring-[#5a3b8d]/20"
+                  className="input-machined w-full text-control pr-12"
                   value={password}
                   onChange={(event) => setPassword(event.target.value)}
                   required
@@ -141,13 +141,13 @@ export default function ClaimAccountPage() {
               </div>
             </label>
 
-            <label className="block text-field-label text-[#5f4a82]">
+            <label className="block text-field-label text-ink-muted">
               {copy.confirmPassword}
               <div className="relative mt-2">
                 <input
                   type={showConfirmPassword ? 'text' : 'password'}
                   autoComplete="new-password"
-                  className="w-full rounded-lg border border-[#5a3b8d]/20 bg-[#faf7ff] py-3 pl-4 pr-12 text-control text-[#2f1d4d] outline-none focus:border-[#5a3b8d] focus:ring-2 focus:ring-[#5a3b8d]/20"
+                  className="input-machined w-full text-control pr-12"
                   value={confirmPassword}
                   onChange={(event) => setConfirmPassword(event.target.value)}
                   required

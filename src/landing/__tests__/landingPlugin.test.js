@@ -59,21 +59,23 @@ describe('landing page rendering', () => {
 });
 
 describe('photos', () => {
-  it('preloads only the hero photo and lazy-loads every other image', () => {
+  it('preloads only the header logo and the hero photo, and lazy-loads every other image', () => {
     const html = renderedLanding();
-    expect(count(html, /rel="preload" as="image"/g)).toBe(1);
+    expect(count(html, /rel="preload" as="image"/g)).toBe(2);
     expect(html).toContain(`/images/landing/${PHOTOS.hero.name}-`);
 
     const images = html.match(/<img [^>]+>/g);
     const eager = images.filter((img) => !img.includes('loading="lazy"'));
-    expect(eager).toHaveLength(1);
-    expect(eager[0]).toContain('fetchpriority="high"');
-    expect(eager[0]).toContain(PHOTOS.hero.name);
+    expect(eager).toHaveLength(2);
+    expect(eager[0]).toContain('src="/brand/logo-horizontal.svg"');
+    expect(eager[1]).toContain('fetchpriority="high"');
+    expect(eager[1]).toContain(PHOTOS.hero.name);
   });
 
-  it('gives every image alt text and dimensions', () => {
+  it('gives every photo alt text, every logo the product name or none, and every image dimensions', () => {
     renderedLanding().match(/<img [^>]+>/g).forEach((img) => {
-      expect(img).toMatch(/alt="[^"]{10,}"/);
+      // A logo inside a labelled link or a labelled drawing has an empty alt; otherwise the name.
+      expect(img).toMatch(img.includes('src="/brand/') ? /alt="(Maziwa Smart)?"/ : /alt="[^"]{10,}"/);
       expect(img).toMatch(/width="\d+" height="\d+"/);
     });
   });
@@ -231,5 +233,37 @@ describe('crawler files', () => {
 
   it('marks the SPA shell noindex', () => {
     expect(readRoot('app.html')).toContain('<meta name="robots" content="noindex, nofollow" />');
+  });
+});
+
+describe('landing page brand logo', () => {
+  it('shows the supplied horizontal logo in the header, linking home, and no hand-drawn mark', () => {
+    const html = renderedLanding();
+    const header = html.slice(html.indexOf('<header'), html.indexOf('</header>'));
+
+    expect(header).toMatch(/<a href="\/" aria-label="Maziwa Smart home"[^>]*>\s*<img src="\/brand\/logo-horizontal\.svg" width="117" height="40" alt=""/);
+    // The old calf mark was an inline SVG on a brand tile.
+    expect(header).not.toContain('<svg');
+  });
+
+  it('shows the white logo in the footer and no faint name watermark', () => {
+    const html = siteFooter({ name: SITE.name, year: 2026, footer: FOOTER });
+
+    expect(html).toContain('<img src="/brand/logo-horizontal-white.svg" width="136" height="48" alt="Maziwa Smart"');
+    expect(html).not.toContain('text-white/[0.06]');
+  });
+
+  it('shows the white logo in the app drawing’s sidebar instead of a typed name', () => {
+    const html = renderedLanding();
+
+    expect(occurrences(html, 'src="/brand/logo-horizontal-white.svg"')).toBe(2);
+    expect(html).not.toContain('Smart Dairy');
+  });
+
+  it('preloads the header logo and points the organisation logo at the brand icon', () => {
+    const html = renderedLanding();
+
+    expect(html).toContain('<link rel="preload" as="image" type="image/svg+xml" href="/brand/logo-horizontal.svg" />');
+    expect(graphNode('Organization').logo).toBe(`${SITE.url}/brand/icon-512.png`);
   });
 });

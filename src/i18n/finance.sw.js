@@ -313,6 +313,7 @@ export const financeCopy = {
     receiptShared: 'Risiti imetumwa.',
     receiptCopied: 'Risiti imenakiliwa.',
     shareFailed: 'Imeshindwa kutuma risiti.',
+    shareTapAgain: 'PDF ya risiti iko tayari. Gusa Tuma tena ili uitume.', // REVIEW
     actionsFor: (party, date) => `Vitendo vya ${party}, ${date}`,
     noDate: 'hakuna tarehe',
     viewReceipt: 'Angalia risiti',
@@ -435,6 +436,11 @@ export const financeCopy = {
     paymentReceived: 'Malipo yamepokelewa',
     totalReceived: 'Jumla iliyopokelewa',
     verification: 'Taarifa za uthibitisho',
+    receiptNumber: 'Nambari ya risiti', // REVIEW
+    issuedBy: 'Imetolewa na', // REVIEW
+    issuedOn: (date) => `Imetolewa ${date}`, // REVIEW
+    statuses: { ISSUED: 'Imetolewa', VOIDED: 'Imebatilishwa' }, // REVIEW
+    verificationHint: 'Alama ya PDF asili ya risiti. Nakala iliyobadilishwa haitalingana nayo.', // REVIEW
     text: {
       fallbackTitle: 'Risiti ya malipo',
       official: 'Risiti rasmi ya malipo',

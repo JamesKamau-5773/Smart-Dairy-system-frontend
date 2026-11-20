@@ -101,7 +101,7 @@ function IngredientAllocationRow({ item, warnings, onPercentageChange, onApplyFi
           min="0"
           max="100"
           step="any"
-          className="w-24 rounded-md border border-ink/15 bg-surface-raised px-2 py-1 text-right text-control text-brand focus:outline-none"
+          className="input-machined px-2 py-1.5 text-control w-24 text-right"
           value={item.percentage}
           onChange={(e) => onPercentageChange(item.id, e.target.value)}
           aria-label={copy.percentageLabel(item.name)}

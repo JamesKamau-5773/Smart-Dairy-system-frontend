@@ -25,7 +25,7 @@ export default function FarmSwitcher() {
 
   return (
     <div className="p-4 border-b border-ink/10 bg-surface-raised">
-      <label htmlFor="workspace-switcher" className="block text-field-label text-ink mb-2">
+      <label htmlFor="workspace-switcher" className="block text-field-label text-ink-muted mb-2">
         Active Workspace
       </label>
       <select

@@ -27,6 +27,8 @@ Everything below is open. Suggested order:
    **Production Log on phones: BR-029** (day + session totals, who recorded vs who milked, entry time).
 6. **Language: BR-018, BR-024** (receipt status values in the contract).
 7. **Safe saves and missing features:** BR-005, BR-006, BR-007, BR-010.
+8. **Brand: BR-031** (logo on server-made PDFs, receipts and emails).
+9. **Demo farm: BR-032** (done on backend `development`; run migration `p8a9b0c1d2e3`).
 
 Each entry names the frontend files waiting on it; search for `TODO(BR-0xx)`.
 
@@ -827,3 +829,70 @@ as `recognized_sales` and `net_profit`:
   `one_dp` in `app/api/finance.py`; test `test_kpi_cards_send_profit_margin_as_one_dp_string`.
 
 Until a backend with this field is deployed, the card shows "—" (the field is absent).
+
+## BR-031 — Brand logo on server-made PDFs, receipts and emails
+
+**Status:** Partly done (2026-11-20, backend `development`): payment receipt PDFs carry the logo and the app's receipt layout (template 3; `scripts/upgrade_receipt_pdfs.py` re-renders older receipts). Payslip and animal passport PDFs, thermal prints and emails are still open. · **Raised:** 2026-11-20 · **Frontend:** `components/brand/BrandLogo.jsx` (the app's logo rules), `lib/receipt.js`, `hooks/useLedgerRecordActions.js`
+
+The app now shows the logo through one component, from the files in `public/brand/` (served at
+`https://www.maziwasmart.co.ke/brand/…`). The documents the backend makes need the same marks;
+the frontend only downloads, previews and shares them:
+
+- `GET /api/finance/receipts/{id}/pdf` (payment receipts), the payslip PDF and the animal passport PDF.
+
+Brand rules for these:
+
+1. **PDF reports, receipts and invoices:** the horizontal logo, 40 mm wide, top left. Use
+   `brand/logo-horizontal.svg`, or a PNG export of it if the PDF library can't embed SVG.
+2. **Thermal receipts** (if the backend prints any): the ink wordmark, `brand/wordmark-ink.svg`,
+   30–40 mm wide. No mascot on thermal prints.
+3. **Emails:** the horizontal logo as PNG, 36 px tall, by absolute URL
+   (`https://www.maziwasmart.co.ke/brand/…`).
+4. The artwork is used exactly as supplied: no redrawing, recolouring, cropping or stretching.
+
+Receipts are shared from the phone as the PDF file itself (WhatsApp, email), so the PDF is what
+buyers see. Nothing changes in the API contract.
+
+---
+
+## BR-032 — Demo farm: fill every page and chart
+
+**Status:** Done (2026-11-20, backend `development`) except receipt photos on expenses, which need stored files · **Raised:** 2026-11-20 · **Backend:** `app/services/demo_seed_service.py`, migration `p8a9b0c1d2e3` · **Frontend:** none (each page already shows what the backend sends)
+
+Done: today's payment and feed purchase, receipts for every payment (preview only; PDFs stay
+unavailable in the demo), genetic profiles and dam lines over four birth years, timelines,
+per-cow vet and AI costs, three payroll runs, feed batches with daily use, two milk drop alerts,
+unit helpers and a registration number. Migration `p8a9b0c1d2e3` lets only the demo's purge
+delete its own receipts on databases that carry the receipt triggers; run it before deploying.
+
+The live demo should show the finished product. It is the "Try the live demo" button on the
+landing page. A probe of every GET the app makes, signed in as the demo (local backend,
+2026-11-20), found these empty or zero. The cause is the same throughout: `DemoFarmGenerator`
+writes rows directly, so nothing the services make as a side effect exists (receipts, payroll
+runs, timeline events, cost allocations, feed batches, alerts, genetic profiles).
+
+| Page / chart | Endpoint | What the demo returns | What the seed needs |
+|---|---|---|---|
+| Command Center: transaction revenue, today's feed cost, daily profit, profit per litre | `GET /production/summary` | all `0.0` | A payment and a `FEED_PURCHASE` expense dated **today** (the summary counts today's ledger rows only). Seeding runs daily (`refresh_if_stale`), so "today" stays current. |
+| Ledger → View receipt | `GET /finance/ledger` | every payment has `receipt: null` | Issue the 29 payments through `ReceiptService` (or the same code path), so each has a receipt and PDF. |
+| Breeding → Herd genetic progress | `GET /herd/genetic-progress` | `items: []` | `GeneticProfile` + `milk_volume` `GeneticTraitScore` for dams and daughters, with dam–daughter pairs born in at least 3 different years (today only 2 calves have a dam, both born this year). |
+| Cow details → Timeline | `GET /animals/{id}/events` | `total: 0` for every cow | `AnimalTimelineEvent`s for the seeded calvings, services, heats, treatments and tests (via `animal_timeline_service`). |
+| Cow details → Economics (costs) | `GET /reports/animal-economics/{id}` | `costs_by_type_kes: {}` for every cow | `AnimalCostAllocation`s for the vet, AI and feed expenses (via `animal_cost_allocation_service`). |
+| Payroll | `GET /hr/payroll/runs/summary` | `runs: []` | Two or three monthly `PayrollRun`s with line items for the seeded staff (via `payroll_run_service`), the latest one unpaid. |
+| Feed Mixing Planner / feeding today | `GET /v1/nutrition/feeding/today` | `active_batches: []` | One active `FeedBatch` per feeding group (via `nutrition_service`). |
+| Nutrition analytics: batch ROI trend, feed cost efficiency | `GET /v1/nutrition/analytics/active-batch-roi-trend-weekly`, `…/feed-cost-efficiency` | `rows: []` | Follows from feed batches with consumption events across the 75 days. |
+| Milk Drop Alerts | `GET /production/milk-drop-alerts` | `items: []` | One or two open alerts on cows whose seeded yield already dips (for example the mastitis cow, SF-005). |
+| Ledger → receipt photos | `GET /finance/ledger` | `attachments: []` | Optional: one or two sample receipt photos on expenses. |
+| Settings → Units | `GET /units/conversions` | `[]` | One or two common conversions (for example "bag = 70 kg"). |
+
+Two backend errors seen on the way (not demo-specific):
+
+- `GET /reports/buyer-performance` without `start_date` raises a 500
+  (`reports.py:611`, `SalesLedger.date >= None`). The app always sends dates, so users do not
+  see it; it should default the range or return 400.
+- `GET /inventory/movements` returns 500 for the demo farm. No page calls it at the moment.
+
+Already full in the demo: herd, breeding logs and performance, heat watch, semen tank, milk
+records and trend, milk usage, dispositions, buyers and customers, deliveries, ledger and its
+totals, dairy unit economics, milk inventory report, safety board and holds, inventory and stock,
+feed recipes, feeding groups, yield targets, routines.

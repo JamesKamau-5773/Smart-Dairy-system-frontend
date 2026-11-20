@@ -51,7 +51,7 @@ export default function RequiredPasswordResetPage() {
 
         <form onSubmit={handleSubmit} className="mt-6 space-y-5">
           <div>
-            <label htmlFor="new-password" className="mb-2 block text-field-label text-ink-normal">{copy.newPassword}</label>
+            <label htmlFor="new-password" className="mb-2 block text-field-label text-ink-muted">{copy.newPassword}</label>
             <div className="relative">
               <input
                 id="new-password"
@@ -60,7 +60,7 @@ export default function RequiredPasswordResetPage() {
                 onChange={(event) => setPassword(event.target.value)}
                 minLength={12}
                 autoComplete="new-password"
-                className="glass-input w-full rounded-md px-4 py-3 pr-12 text-control text-ink-normal focus:outline-none focus:ring-2 focus:ring-brand/30"
+                className="input-machined w-full text-control pr-12"
                 required
               />
               <button type="button" onClick={() => setShowPassword((visible) => !visible)} className="absolute right-2 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center text-ink-muted" aria-label={showPassword ? copy.hidePasswords : copy.showPasswords}>
@@ -71,14 +71,14 @@ export default function RequiredPasswordResetPage() {
           </div>
 
           <div>
-            <label htmlFor="confirm-password" className="mb-2 block text-field-label text-ink-normal">{copy.confirmPassword}</label>
+            <label htmlFor="confirm-password" className="mb-2 block text-field-label text-ink-muted">{copy.confirmPassword}</label>
             <input
               id="confirm-password"
               type={showPassword ? 'text' : 'password'}
               value={confirmPassword}
               onChange={(event) => setConfirmPassword(event.target.value)}
               autoComplete="new-password"
-              className="glass-input w-full rounded-md px-4 py-3 text-control text-ink-normal focus:outline-none focus:ring-2 focus:ring-brand/30"
+              className="input-machined w-full text-control"
               required
             />
           </div>

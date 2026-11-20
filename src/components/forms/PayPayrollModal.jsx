@@ -39,13 +39,13 @@ export default function PayPayrollModal({ run, onClose, onConfirm, isPending }) 
 
         <div className="grid gap-4 sm:grid-cols-2">
           <div>
-            <label htmlFor="pay-method" className="mb-1.5 block text-field-label text-ink">{copy.paidBy}</label>
+            <label htmlFor="pay-method" className="mb-1.5 block text-field-label text-ink-muted">{copy.paidBy}</label>
             <select id="pay-method" value={method} onChange={(event) => setMethod(event.target.value)} className="input-machined w-full text-control">
               {PAYMENT_METHODS.map((value) => <option key={value} value={value}>{copy.methods[value] ?? value}</option>)}
             </select>
           </div>
           <div>
-            <label htmlFor="pay-reference" className="mb-1.5 block text-field-label text-ink">
+            <label htmlFor="pay-reference" className="mb-1.5 block text-field-label text-ink-muted">
               {needsReference ? copy.reference : copy.referenceOptional}
             </label>
             <input

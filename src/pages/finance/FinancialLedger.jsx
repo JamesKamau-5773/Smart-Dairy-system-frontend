@@ -156,6 +156,7 @@ const FinancialLedger = () => {
           onDownload={actions.receipt.download}
           onShare={actions.receipt.share}
           isDownloading={actions.receipt.isDownloading}
+          isSharing={actions.receipt.isSharing}
         />
       )}
     </div>

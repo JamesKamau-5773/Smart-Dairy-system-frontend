@@ -7,24 +7,24 @@ export default function MedicalCertificationsTab({ medicalData, setMedicalData, 
     <form onSubmit={onSubmit} className="space-y-4">
       <div className="grid gap-4 rounded-md border border-gray-200 bg-white p-4">
         <label className="space-y-1.5">
-          <span className="text-field-label text-gray-500">{copy.certifications}</span>
+          <span className="text-field-label text-ink-muted">{copy.certifications}</span>
           <textarea
             rows="4"
             value={medicalData.certificationsText}
             onChange={(event) => setMedicalData((current) => ({ ...current, certificationsText: event.target.value }))}
             placeholder={copy.certificationsPlaceholder}
-            className="w-full rounded-md border border-gray-200 bg-white px-3 py-3 text-control text-gray-900 outline-none transition-colors focus:border-brand focus:ring-2 focus:ring-brand/15"
+            className="input-machined w-full text-control"
           />
         </label>
 
         <label className="space-y-1.5">
-          <span className="text-field-label text-gray-500">{copy.medicalNotes}</span>
+          <span className="text-field-label text-ink-muted">{copy.medicalNotes}</span>
           <textarea
             rows="4"
             value={medicalData.notes}
             onChange={(event) => setMedicalData((current) => ({ ...current, notes: event.target.value }))}
             placeholder={copy.medicalPlaceholder}
-            className="w-full rounded-md border border-gray-200 bg-white px-3 py-3 text-control text-gray-900 outline-none transition-colors focus:border-brand focus:ring-2 focus:ring-brand/15"
+            className="input-machined w-full text-control"
           />
         </label>
       </div>

@@ -209,7 +209,7 @@ export default function MilkDropReports() {
               <div key={cat.id} className="p-4 rounded-xl border border-ink/10 bg-surface-raised">
                 <p className="text-body-strong mb-2">{copy.categories[cat.id]}</p>
                 {cat.options.map(opt => (
-                  <label key={opt} className="flex items-center gap-2 text-field-label">
+                  <label key={opt} className="flex items-center gap-2 text-field-label text-ink-muted">
                     <input type="checkbox" checked={selectedReasons.includes(opt)} onChange={() => toggleReason(opt)} /> {copy.reasons[opt] ?? opt}
                   </label>
                 ))}
@@ -219,7 +219,7 @@ export default function MilkDropReports() {
           <textarea
             value={managerNotes}
             onChange={(e) => setManagerNotes(e.target.value)}
-            className="w-full p-3 border border-ink/20 rounded-lg text-control"
+            className="input-machined w-full text-control"
             placeholder={copy.notesPlaceholder}
             rows={3}
           />

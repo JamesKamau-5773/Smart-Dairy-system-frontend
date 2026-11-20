@@ -6,9 +6,10 @@ import { todayLocalIso } from '../../lib/localDate';
 import { OFFBOARDING_REASONS, hasAppAccount } from '../../lib/staffLabels';
 import { tone } from '../ui/tones';
 import { staffCopy } from '../../i18n/staff';
+import { FIELD_CONTROL } from '../ui/formFieldStyles';
 
-const fieldClass = 'input-machined w-full';
-const labelClass = 'mb-1.5 block text-field-label text-ink';
+const fieldClass = FIELD_CONTROL;
+const labelClass = 'mb-1.5 block text-field-label text-ink-muted';
 
 /**
  * Marks someone as former staff with a last working day and a reason. Records

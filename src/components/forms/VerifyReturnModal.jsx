@@ -54,7 +54,7 @@ export default function VerifyReturnModal({ isOpen, staff, onClose, onConfirm })
         </div>
 
         <label className="block space-y-1.5">
-          <span className="text-field-label text-gray-500">
+          <span className="text-field-label text-ink-muted">
             {returned === 'NO' ? copy.disciplinaryNote : copy.verificationNote}
           </span>
           <textarea
@@ -62,7 +62,7 @@ export default function VerifyReturnModal({ isOpen, staff, onClose, onConfirm })
             value={note}
             onChange={(event) => setNote(event.target.value)}
             placeholder={returned === 'NO' ? copy.recordPlaceholder : copy.returnPlaceholder}
-            className="w-full rounded-md border border-gray-200 bg-white px-3 py-2.5 text-control text-gray-900 outline-none transition-colors focus:border-slate-900"
+            className="input-machined w-full text-control"
           />
         </label>
 

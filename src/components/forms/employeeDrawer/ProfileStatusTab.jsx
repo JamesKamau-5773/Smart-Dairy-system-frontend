@@ -19,7 +19,7 @@ export default function ProfileStatusTab({ profileData, setProfileData, errors, 
 
           <div className="grid gap-x-5 gap-y-4 sm:grid-cols-2">
             <label className="block">
-              <span className="mb-2 block text-field-label text-ink-500">
+              <span className="mb-2 block text-field-label text-ink-muted">
               {copy.fullName} <span className="text-danger">*</span></span>
           <input
             required
@@ -33,7 +33,7 @@ export default function ProfileStatusTab({ profileData, setProfileData, errors, 
         </label>
 
             <label className="block">
-              <span className="mb-2 block text-field-label text-ink-500">
+              <span className="mb-2 block text-field-label text-ink-muted">
               {copy.jobRole} <span className="text-danger">*</span></span>
               <select
             required
@@ -48,7 +48,7 @@ export default function ProfileStatusTab({ profileData, setProfileData, errors, 
         </label>
 
             <label className="block">
-              <span className="mb-2 block text-field-label text-ink-500">
+              <span className="mb-2 block text-field-label text-ink-muted">
               {copy.phone} <span className="text-danger">*</span></span>
               <input
                 required
@@ -65,7 +65,7 @@ export default function ProfileStatusTab({ profileData, setProfileData, errors, 
             </label>
 
             <label className="block">
-              <span className="mb-2 block text-field-label text-ink-500">
+              <span className="mb-2 block text-field-label text-ink-muted">
               {copy.status}</span>
           <select
             value={profileData.status}
@@ -81,11 +81,11 @@ export default function ProfileStatusTab({ profileData, setProfileData, errors, 
       {isOnLeave && (
           <section className="grid gap-4 rounded-md border border-ink-200 bg-ink-50 p-4 sm:grid-cols-2">
           <label className="space-y-1.5">
-            <span className="text-field-label text-gray-500">{copy.leaveType}</span>
+            <span className="text-field-label text-ink-muted">{copy.leaveType}</span>
             <select
               value={profileData.leaveType}
               onChange={(event) => setProfileData((current) => ({ ...current, leaveType: event.target.value }))}
-              className="w-full rounded-md border border-gray-200 bg-white px-3 py-3 text-control text-gray-900 outline-none transition-colors focus:border-brand focus:ring-2 focus:ring-brand/15"
+              className="input-machined w-full text-control"
             >
               <option value="">{copy.selectLeaveType}</option>
               {['UNPAID', 'PAID', 'SICK', 'MATERNITY', 'COMPASSIONATE'].map((type) => <option key={type} value={type}>{staffCopy.leaveTypes[type]}</option>)}
@@ -93,33 +93,33 @@ export default function ProfileStatusTab({ profileData, setProfileData, errors, 
           </label>
 
           <label className="space-y-1.5">
-            <span className="text-field-label text-gray-500">{copy.unpaidDays}</span>
+            <span className="text-field-label text-ink-muted">{copy.unpaidDays}</span>
             <input
               type="number"
               min="0"
               value={profileData.unpaidLeaveDaysThisMonth}
               onChange={(event) => setProfileData((current) => ({ ...current, unpaidLeaveDaysThisMonth: event.target.value }))}
-              className="w-full rounded-md border border-gray-200 bg-white px-3 py-3 text-control text-gray-900 outline-none transition-colors focus:border-brand focus:ring-2 focus:ring-brand/15"
+              className="input-machined w-full text-control"
             />
           </label>
 
           <label className="space-y-1.5">
-            <span className="text-field-label text-gray-500">{copy.leaveStart}</span>
+            <span className="text-field-label text-ink-muted">{copy.leaveStart}</span>
             <input
               type="date"
               value={profileData.leaveStartDate}
               onChange={(event) => setProfileData((current) => ({ ...current, leaveStartDate: event.target.value }))}
-              className="w-full rounded-md border border-gray-200 bg-white px-3 py-3 text-control text-gray-900 outline-none transition-colors focus:border-brand focus:ring-2 focus:ring-brand/15"
+              className="input-machined w-full text-control"
             />
           </label>
 
           <label className="space-y-1.5">
-            <span className="text-field-label text-gray-500">{copy.expectedReturn}</span>
+            <span className="text-field-label text-ink-muted">{copy.expectedReturn}</span>
             <input
               type="date"
               value={profileData.leaveEndDate}
               onChange={(event) => setProfileData((current) => ({ ...current, leaveEndDate: event.target.value }))}
-              className="w-full rounded-md border border-gray-200 bg-white px-3 py-3 text-control text-gray-900 outline-none transition-colors focus:border-brand focus:ring-2 focus:ring-brand/15"
+              className="input-machined w-full text-control"
             />
           </label>
           </section>

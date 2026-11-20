@@ -1,9 +1,10 @@
 import { feedCopy } from '../../i18n/feed';
 import { QUANTITY_BASES } from '../../lib/recipeMeasurements';
+import { FIELD_CONTROL } from '../ui/formFieldStyles';
 
 const { mix: copy } = feedCopy;
 
-const inputClass = 'w-full rounded-lg border border-ink/20 bg-surface-raised px-3 py-2 text-control text-ink focus:outline-none focus:ring-2 focus:ring-brand/40';
+const inputClass = FIELD_CONTROL;
 const labelClass = 'block text-field-label text-ink-muted';
 
 function NumberField({ id, label, hint, value, error, onChange }) {
@@ -33,7 +34,7 @@ export default function RecipeMeasurementFields({ measures, errors = {}, onChang
 
   return (
     <fieldset className="mb-4 space-y-3 rounded-lg border border-ink/10 p-3">
-      <legend className="px-1 text-field-label text-ink-strong">{copy.measuresTitle}</legend>
+      <legend className="px-1 text-field-label text-ink-muted">{copy.measuresTitle}</legend>
 
       <div className="space-y-1">
         <label htmlFor="mix-quantity-basis" className={labelClass}>{copy.basis}</label>

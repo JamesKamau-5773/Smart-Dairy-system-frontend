@@ -1,5 +1,6 @@
 import { cx, each, escapeHtml } from '../html.js';
 import { sectionHeading } from '../parts/sectionHeading.js';
+import { brandLogo } from '../parts/logo.js';
 
 /*
  * "Your whole farm on one screen": a drawing of the app on a computer and a
@@ -31,9 +32,9 @@ const browserBar = (address) => `
         <span class="ml-3 flex-1 truncate rounded-[6px] border border-ink-200 px-2.5 py-1 font-mono text-[11px] text-ink-600">${escapeHtml(address)}</span>
       </div>`;
 
-const sidebar = ({ appName, workspaceLabel, farm, menu }) => `
+const sidebar = ({ workspaceLabel, farm, menu }) => `
         <div class="hidden w-[184px] shrink-0 flex-col border-r border-ink-200 bg-white text-xs font-semibold text-ink-700 lg:flex">
-          <div class="bg-[#0F1B2D] p-4 text-sm font-extrabold text-white">${escapeHtml(appName)}</div>
+          <div class="bg-[#0F1B2D] px-4 py-3">${brandLogo({ variant: 'horizontal', tone: 'dark', size: 32 })}</div>
           <div class="border-b border-[#EDF0F3] px-3 pb-2.5 pt-3">
             <div class="mb-1.5 text-[10px]">${escapeHtml(workspaceLabel)}</div>
             <div class="flex justify-between rounded-button border border-ink-300 px-2.5 py-2 text-brand"><span>${escapeHtml(farm)}</span><span>⌄</span></div>

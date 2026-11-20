@@ -77,24 +77,24 @@ export default function AnimalNutritionPlanner({ animal, tenantId, farmId }) {
           <div className="space-y-4">
             <div>
               <label className="mb-1.5 block text-field-label text-ink-muted">{copy.goal}</label>
-              <input type="number" placeholder={copy.goalPlaceholder} value={targetYield} onChange={(event) => setTargetYield(event.target.value)} className="w-full rounded-lg border border-ink/20 bg-surface p-2.5 text-control text-ink outline-none transition-colors focus:border-brand" />
+              <input type="number" placeholder={copy.goalPlaceholder} value={targetYield} onChange={(event) => setTargetYield(event.target.value)} className="input-machined w-full text-control" />
             </div>
 
             <div className="grid grid-cols-3 gap-4">
               <div>
                 <label className="mb-1.5 block text-field-label text-ink-muted" title={LABELS.PERIOD_DAYS}>{LABELS.PERIOD_DAYS}</label>
-                <input type="number" value={horizonDays} onChange={(event) => setHorizonDays(Number(event.target.value))} className="w-full rounded-lg border border-ink/20 bg-surface p-2.5 text-control text-ink outline-none focus:border-brand" />
+                <input type="number" value={horizonDays} onChange={(event) => setHorizonDays(Number(event.target.value))} className="input-machined w-full text-control" />
               </div>
 
               <div>
                 <label className="mb-1.5 block text-field-label text-ink-muted" title={LABELS.MEAL_RATIO}>{LABELS.MEAL_RATIO}</label>
-                <input type="number" step="0.1" value={feedEfficiency} onChange={(event) => setFeedEfficiency(Number(event.target.value))} className="w-full rounded-lg border border-ink/20 bg-surface p-2.5 text-control text-ink outline-none focus:border-brand" />
+                <input type="number" step="0.1" value={feedEfficiency} onChange={(event) => setFeedEfficiency(Number(event.target.value))} className="input-machined w-full text-control" />
                 <p className="mt-1 text-meta text-ink-muted">{copy.ratioHint}</p>
               </div>
 
               <div>
                 <label className="mb-1.5 block text-field-label text-ink-muted" title={LABELS.PRICE_PER_KG}>{LABELS.PRICE_PER_KG}</label>
-                <input type="number" placeholder={copy.pricePlaceholder} value={feedPrice} onChange={(event) => setFeedPrice(Number(event.target.value))} className="w-full rounded-lg border border-ink/20 bg-surface p-2.5 text-control text-ink outline-none focus:border-brand" />
+                <input type="number" placeholder={copy.pricePlaceholder} value={feedPrice} onChange={(event) => setFeedPrice(Number(event.target.value))} className="input-machined w-full text-control" />
               </div>
             </div>
           </div>

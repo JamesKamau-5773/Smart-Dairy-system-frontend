@@ -58,7 +58,7 @@ export default function StockCountModal({ item, onClose, onSubmit }) {
             }}
             aria-invalid={error ? true : undefined}
             aria-describedby="stock-count-hint"
-            className="w-full rounded-lg border border-ink/15 bg-card p-3 text-control text-ink outline-none focus:ring-2 focus:ring-brand/20"
+            className="input-machined w-full text-control"
           />
           <p id="stock-count-hint" className="mt-1.5 text-meta text-ink-muted">{copy.countHint}</p>
           {error && <p className="mt-1 text-meta text-danger">{error}</p>}

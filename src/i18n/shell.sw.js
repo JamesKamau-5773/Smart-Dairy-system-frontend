@@ -134,6 +134,12 @@ export const shellCopy = {
     back: 'Rudi',
   },
 
+  brand: {
+    name: 'Maziwa Smart',
+    endorsed: 'Maziwa Smart, inayoendeshwa na Jivu Systems', // REVIEW
+    home: 'Ukurasa wa mwanzo wa Maziwa Smart', // REVIEW
+  },
+
   demo: {
     banner: 'Unatazama shamba la majaribio lenye data za mfano. Mabadiliko hayahifadhiwi.', // REVIEW
     endsIn: (time) => `Majaribio yanaisha baada ya ${time}`, // REVIEW

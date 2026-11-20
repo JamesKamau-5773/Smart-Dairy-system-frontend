@@ -394,7 +394,7 @@ export default function LogAIServiceForm({
             checked={logForm.isRepeatService}
             onChange={(event) => setLogForm((current) => ({ ...current, isRepeatService: event.target.checked }))}
           />
-          <label htmlFor="repeat-service" className="text-field-label text-ink-strong cursor-pointer">
+          <label htmlFor="repeat-service" className="text-field-label text-ink-muted cursor-pointer">
             {copy.repeatService}
           </label>
         </div>
@@ -414,7 +414,7 @@ export default function LogAIServiceForm({
         <div>
           <label className="mb-2 block text-field-label text-ink-muted">{copy.semenSource}</label>
           <div className={`grid grid-cols-1 gap-2 rounded-lg border p-2 md:grid-cols-2 ${formErrors.semenSource ? 'border-rose-300 bg-rose-50' : 'border-ink/10 bg-surface-raised'}`}>
-            <label className="flex cursor-pointer items-center gap-2 rounded-md border border-ink/10 bg-surface px-3 py-2 text-field-label text-ink-strong hover:border-brand/30">
+            <label className="flex cursor-pointer items-center gap-2 rounded-md border border-ink/10 bg-surface px-3 py-2 text-field-label text-ink-muted hover:border-brand/30">
               <input
                 type="radio"
                 name="semen-source"
@@ -427,7 +427,7 @@ export default function LogAIServiceForm({
               />
               {breedingCopy.sources.farm_stock}
             </label>
-            <label className="flex cursor-pointer items-center gap-2 rounded-md border border-ink/10 bg-surface px-3 py-2 text-field-label text-ink-strong hover:border-brand/30">
+            <label className="flex cursor-pointer items-center gap-2 rounded-md border border-ink/10 bg-surface px-3 py-2 text-field-label text-ink-muted hover:border-brand/30">
               <input
                 type="radio"
                 name="semen-source"

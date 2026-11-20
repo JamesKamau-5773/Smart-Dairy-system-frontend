@@ -61,7 +61,7 @@ export default function SessionExpiredSheet() {
           </p>
         </div>
 
-        <label className="block text-field-label text-ink" htmlFor="session-username">
+        <label className="block text-field-label text-ink-muted" htmlFor="session-username">
           {commonCopy.session.identifier}
           <input
             id="session-username"
@@ -71,7 +71,7 @@ export default function SessionExpiredSheet() {
             className="input-machined mt-1 w-full"
           />
         </label>
-        <label className="block text-field-label text-ink" htmlFor="session-password">
+        <label className="block text-field-label text-ink-muted" htmlFor="session-password">
           {commonCopy.session.password}
           <input
             id="session-password"

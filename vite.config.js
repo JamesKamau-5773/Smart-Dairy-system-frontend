@@ -21,28 +21,29 @@ export default defineConfig({
     react(),
     VitePWA({
       registerType: 'autoUpdate',
-      includeAssets: ['favicon.svg', 'pwa-192x192.png', 'pwa-512x512.png'],
+      // The brand files the app shows, precached so the logo and icons work offline. Only these:
+      // public/brand/ also holds large PNG exports (PDFs, print, social) the app never loads.
+      includeAssets: [
+        'brand/logo-horizontal.svg',
+        'brand/logo-horizontal-white.svg',
+        'brand/logo-stacked-endorsed.svg',
+        'brand/mascot.png',
+        'brand/favicon*',
+        'brand/apple-touch-icon.png',
+      ],
       manifest: {
         name: 'Maziwa Smart',
         short_name: 'Maziwa Smart',
         description: 'Dairy farm management for Kenyan farmers: milk records, breeding, feed, buyers and finances, with offline support.',
         theme_color: '#0A5F96',
-        background_color: '#f9f8f6',
+        background_color: '#F7F6F3',
         display: 'standalone',
         start_url: '/app',
         scope: '/',
         icons: [
-          {
-            src: '/pwa-192x192.png',
-            sizes: '192x192',
-            type: 'image/png',
-          },
-          {
-            src: '/pwa-512x512.png',
-            sizes: '512x512',
-            type: 'image/png',
-            purpose: 'any maskable',
-          },
+          { src: '/brand/icon-192.png', sizes: '192x192', type: 'image/png', purpose: 'any' },
+          { src: '/brand/icon-512.png', sizes: '512x512', type: 'image/png', purpose: 'any' },
+          { src: '/brand/icon-maskable-512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
         ],
       },
       workbox: {

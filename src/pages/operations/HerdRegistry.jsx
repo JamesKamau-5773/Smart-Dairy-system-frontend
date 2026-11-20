@@ -970,7 +970,7 @@ export default function HerdRegistry() {
               className="w-4 h-4 cursor-pointer"
               aria-label={form.hasCalved}
             />
-            <label htmlFor="hasCalved" className="text-field-label text-ink-strong cursor-pointer">
+            <label htmlFor="hasCalved" className="text-field-label text-ink-muted cursor-pointer">
               {form.hasCalved}
             </label>
           </div>
