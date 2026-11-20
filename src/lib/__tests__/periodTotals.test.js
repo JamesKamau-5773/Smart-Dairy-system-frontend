@@ -104,7 +104,7 @@ describe('production log page rules', () => {
     expect(['246.0', '8', 4, 3.5, '1306.4'].map((value) => litres(value))).toEqual(['246.0 L', '8.0 L', '4.0 L', '3.5 L', '1,306.4 L']);
   });
 
-  it('shows the backend’s change against the 5-day average with its sign, or "—"', async () => {
+  it('shows the backend’s change against the 7-day average with its sign, or "—"', async () => {
     const { formatSignedLitres } = await import('../numberFormat');
     expect(['0.4', '-2.1', 0, null, '', 'n/a'].map((value) => formatSignedLitres(value)))
       .toEqual(['+0.4 L', '−2.1 L', '0.0 L', '—', '—', '—']);

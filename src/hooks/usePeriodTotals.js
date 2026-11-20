@@ -106,5 +106,9 @@ export function useInvalidateProduction() {
     queryClient.invalidateQueries({ queryKey: QUERY_KEYS.PRODUCTION_PERIOD_SUMMARY(tenantId, farmId) }),
     queryClient.invalidateQueries({ queryKey: QUERY_KEYS.PRODUCTION_GROUP_TOTALS(tenantId, farmId) }),
     queryClient.invalidateQueries({ queryKey: QUERY_KEYS.YIELD_SUMMARY(tenantId, farmId) }),
+    // A new or corrected record can raise a milk-drop alert or close one (the backend re-checks
+    // it), so the alert lists are read again too.
+    queryClient.invalidateQueries({ queryKey: ['milk-drop-reports', tenantId, farmId] }),
+    queryClient.invalidateQueries({ queryKey: ['safety-dashboard', tenantId, farmId] }),
   ]), [queryClient, tenantId, farmId]);
 }

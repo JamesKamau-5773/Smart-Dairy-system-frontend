@@ -98,7 +98,7 @@ describe('Production Log', () => {
     renderLog();
     const table = await screen.findByRole('table');
     expect(within(table).getAllByRole('columnheader').map((th) => th.textContent)).toEqual(
-      ['', 'Cow', 'Morning', 'Midday', 'Evening', 'Milker', 'Total (L)', 'Status', 'vs 5-day Avg', 'Recorded By', 'Actions'],
+      ['', 'Cow', 'Morning', 'Midday', 'Evening', 'Milker', 'Total (L)', 'Status', 'vs 7-day Avg', 'Recorded By', 'Actions'],
     );
 
     const evening = await cellsOf(table, 'Joyce');

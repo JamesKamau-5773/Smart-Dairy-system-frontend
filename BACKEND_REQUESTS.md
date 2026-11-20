@@ -719,9 +719,9 @@ If it is already sent under another name, say which and the frontend will read t
 
 ---
 
-## BR-026 — Milk records: change against the cow's 5-day average
+## BR-026 — Milk records: change against the cow's average (now 7 days, same session)
 
-**Status:** Open · **Raised:** 2026-11-17 · **Frontend:** `pages/operations/productionLog.jsx` (`TODO(BR-026)`, the "vs 5-day Avg" column)
+**Status:** Done (backend, 2026-11-20): `vs_avg_litres` against the cow's 7-day average for the same session; the column reads "vs 7-day Avg". Records saved before then keep the old rule's Flagged status unless edited; an edit re-checks it (`status`, `significant_drop` in the PATCH answer). · **Raised:** 2026-11-17 · **Frontend:** `pages/operations/productionLog.jsx`, `lib/milkRecords.js`
 
 The Production Log has a **vs 5-day Avg** column, with a significant drop in bold red. The
 frontend never works this out; it shows "—" until the backend sends it. On each row of
@@ -741,7 +741,7 @@ frontend never works this out; it shows "—" until the backend sends it. On eac
 
 ## BR-027 — Calf feedings: total litres
 
-**Status:** Open · **Raised:** 2026-11-17 · **Frontend:** `lib/backendApi.js` (`listMilkDispositionsWithTotals`, `TODO(BR-027)`), `components/operations/RecentCalfFeedings.jsx`
+**Status:** Done (backend, 2026-11-20): `count` and `total_liters` come with the list. · **Raised:** 2026-11-17 · **Frontend:** `lib/backendApi.js` (`listMilkDispositionsWithTotals`), `components/operations/RecentCalfFeedings.jsx`
 
 The Production Log's "Recent calf milk allocations" card reads "53 feedings · 310.00 L allocated".
 `GET /api/production/milk-dispositions` already sends `count`; it shows "— allocated" until the
