@@ -100,10 +100,32 @@ apiClient.interceptors.request.use((config) => {
   return Promise.reject(error);
 });
 
+/**
+ * A file request (`responseType: 'blob'`) gets its error body as a Blob too. When that body is
+ * the backend's JSON error, read it back into an object so its `code` (a demo refusal, a plan
+ * limit) and message reach the farmer like any other error.
+ */
+export async function readBlobErrorBody(error) {
+  const data = error?.response?.data;
+  if (typeof Blob === 'undefined' || !(data instanceof Blob) || !/json/i.test(data.type)) return;
+  try {
+    const text = await new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result);
+      reader.onerror = () => reject(reader.error);
+      reader.readAsText(data);
+    });
+    error.response.data = JSON.parse(text);
+  } catch {
+    // Not readable JSON after all: leave the body as it came.
+  }
+}
+
 apiClient.interceptors.response.use(
   (response) => response,
   async (error) => {
     const config = error.config;
+    await readBlobErrorBody(error);
     if (error.response?.status === 401 && sessionStorage.getItem('jivu_user')) {
       // The page stays mounted (keeping anything typed) while AuthProvider asks the farmer to sign in again.
       window.dispatchEvent(new CustomEvent(SESSION_EXPIRED_EVENT));

@@ -39,22 +39,54 @@ export function formatReceiptText(receipt) {
   ].join('\n');
 }
 
+/** The PDF's file name: the receipt number the backend issued. */
+export const receiptFileName = (receipt) => `${receipt.receipt_number || 'receipt'}.pdf`;
+
 export function downloadReceiptPdf(receipt, blob) {
-  downloadBlob(blob, `${receipt.receipt_number || 'receipt'}.pdf`);
+  downloadBlob(blob, receiptFileName(receipt));
 }
 
-export function shareReceiptText(receipt) {
+function canShareFiles(files) {
+  try {
+    return Boolean(navigator.canShare?.({ files }));
+  } catch {
+    return false;
+  }
+}
+
+/** Whether this browser can hand a PDF to another app (WhatsApp, email), so it's worth fetching first. */
+export function canSharePdf() {
+  if (typeof File === 'undefined') return false;
+  return canShareFiles([new File([''], 'receipt.pdf', { type: 'application/pdf' })]);
+}
+
+/**
+ * Shares a receipt the best way the device allows: the backend's PDF as a file, else the receipt
+ * as text, else the text copied to the clipboard. Rejects as navigator.share does (AbortError
+ * when the user closes the share sheet, NotAllowedError when the tap is too long ago).
+ *
+ * @param {object} receipt The receipt from GET /finance/receipts/{id}.
+ * @param {Blob|null} [pdf] Its PDF, when already downloaded.
+ * @returns {Promise<'file'|'text'|'copied'|'none'>} How it was shared; 'none' when the device can do neither.
+ */
+export async function shareReceipt(receipt, pdf = null) {
+  const title = financeCopy.receipt.text.shareTitle(receipt.receipt_number);
+  if (pdf) {
+    const files = [new File([pdf], receiptFileName(receipt), { type: 'application/pdf' })];
+    if (canShareFiles(files)) {
+      await navigator.share({ files, title });
+      return 'file';
+    }
+  }
+
   const text = formatReceiptText(receipt);
   if (navigator.share) {
-    return navigator.share({
-      title: financeCopy.receipt.text.shareTitle(receipt.receipt_number),
-      text,
-    });
+    await navigator.share({ title, text });
+    return 'text';
   }
-
   if (navigator.clipboard?.writeText) {
-    return navigator.clipboard.writeText(text);
+    await navigator.clipboard.writeText(text);
+    return 'copied';
   }
-
-  return Promise.resolve();
+  return 'none';
 }

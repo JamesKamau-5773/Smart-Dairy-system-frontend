@@ -316,6 +316,8 @@ export const financeCopy = {
     receiptShared: 'Receipt shared.',
     receiptCopied: 'Receipt copied.',
     shareFailed: 'Could not share receipt.',
+    // The phone allows a share only right after a tap; a slow PDF download can outlast that.
+    shareTapAgain: 'The receipt PDF is ready. Tap Share again to send it.',
     actionsFor: (party, date) => `Actions for ${party}, ${date}`,
     noDate: 'no date',
     viewReceipt: 'View receipt',
@@ -440,6 +442,11 @@ export const financeCopy = {
     paymentReceived: 'Payment received',
     totalReceived: 'Total received',
     verification: 'Verification details',
+    receiptNumber: 'Receipt no.',
+    issuedBy: 'Issued by',
+    issuedOn: (date) => `Issued ${date}`,
+    statuses: { ISSUED: 'Issued', VOIDED: 'Voided' },
+    verificationHint: 'The fingerprint of the original receipt PDF. A changed copy will not match it.',
     // The receipt as shared from the phone (lib/receipt.js).
     text: {
       fallbackTitle: 'Payment receipt',
